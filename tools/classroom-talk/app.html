@@ -1,0 +1,2242 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>授業発話分析ラボ — データ分析ラボ</title>
+<style>
+:root{
+  --ink:#141920;        /* 墨 */
+  --ink-soft:#3D4652;
+  --muted:#6C7683;
+  --paper:#EDEFF2;      /* 作業面 */
+  --card:#FFFFFF;
+  --rule:#E1E6EA;       /* 罫 */
+  --rule-2:#EFF2F5;
+  --ai:#27548A;         /* 藍：教師 */
+  --ai-soft:#E8EEF6;
+  --kaki:#C1552C;       /* 柿：児童生徒 */
+  --kaki-soft:#FAEAE2;
+  --take:#2E8468;       /* 若竹：相互作用 */
+  --take-soft:#E4F1EC;
+  --nezu:#98A1AC;       /* 鼠：沈黙 */
+  --nezu-soft:#EAEDF0;
+  --amber:#B5822A;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+  --gothic:"Hiragino Sans","Yu Gothic",YuGothic,"Noto Sans JP",Meiryo,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+  --shadow:0 1px 2px rgba(20,25,32,.05), 0 8px 24px -18px rgba(20,25,32,.35);
+  --wrap:1200px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--gothic);font-size:14px;line-height:1.8;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+h1,h2{font-family:var(--mincho);font-weight:600;letter-spacing:.07em;margin:0}
+h3{margin:0}
+button,select,input,textarea{font-family:inherit;font-size:inherit;color:inherit}
+::selection{background:#FBE7A6}
+:focus-visible{outline:2px solid var(--ai);outline-offset:2px;border-radius:2px}
+
+/* ══ ヘッダー：記録用紙の罫線を地紋に ══════════════════ */
+header{
+  background:var(--ink);color:#EEF1F4;padding:34px 24px 0;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 29px,rgba(255,255,255,.038) 29px 30px);
+}
+.hwrap{max-width:var(--wrap);margin:0 auto;padding-bottom:26px}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:#7F94B2;text-transform:uppercase}
+header h1{font-size:31px;letter-spacing:.16em;margin:10px 0 0}
+/* 授業の呼吸を思わせる細い帯 */
+.breath{display:flex;height:3px;width:132px;margin:14px 0 16px;border-radius:2px;overflow:hidden}
+.breath i{display:block;height:100%}
+header p{margin:0;color:#A2AEBC;font-size:12.5px;max-width:62ch;line-height:1.85}
+.hmeta{display:flex;gap:8px 26px;flex-wrap:wrap;margin-top:20px;font-size:11.5px;color:#75828F}
+.hmeta b{color:#CBD4DD;font-weight:600;letter-spacing:.06em;margin-right:5px}
+
+/* ══ レイアウト ═══════════════════════════════════════ */
+main{max-width:var(--wrap);margin:0 auto;padding:26px 24px 80px}
+.card{
+  background:var(--card);border:1px solid var(--rule);border-radius:4px;
+  padding:24px 26px;margin-bottom:20px;box-shadow:var(--shadow);
+}
+.card>h2{
+  font-size:18px;display:flex;align-items:center;gap:12px;
+  padding-bottom:13px;margin-bottom:18px;border-bottom:1px solid var(--ink);
+}
+.card>h2 .idx{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted);
+  border:1px solid var(--rule);border-radius:2px;padding:2px 6px;line-height:1.4;
+}
+h3{
+  font-size:13.5px;font-weight:600;letter-spacing:.05em;
+  margin:26px 0 10px;padding-left:10px;border-left:2px solid var(--ai);
+}
+.card>h3:first-of-type{margin-top:6px}
+.hint{color:var(--muted);font-size:12px;line-height:1.8;margin:0 0 14px}
+.hint code{font-family:var(--mono);font-size:11.5px;background:var(--nezu-soft);padding:1px 5px;border-radius:2px}
+
+/* ══ 入力 ═════════════════════════════════════════════ */
+#drop{
+  border:1px solid var(--rule);border-radius:3px;background:#FCFDFD;
+  transition:border-color .15s,background .15s,box-shadow .15s;
+}
+#drop:focus-within{border-color:var(--ai);box-shadow:0 0 0 3px var(--ai-soft)}
+#drop.over{border-color:var(--ai);border-style:dashed;background:var(--ai-soft)}
+textarea{
+  display:block;width:100%;min-height:216px;border:0;background:transparent;padding:15px 16px;
+  resize:vertical;font-family:var(--mono);font-size:12.5px;line-height:1.95;outline:none;
+}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:16px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:11px;color:var(--muted);letter-spacing:.05em}
+.fld input,.fld select,.fld textarea{
+  border:1px solid var(--rule);border-radius:3px;padding:7px 9px;background:#fff;min-width:132px;
+  transition:border-color .15s,box-shadow .15s;
+}
+.fld input:focus,.fld select:focus,.fld textarea:focus{
+  outline:none;border-color:var(--ai);box-shadow:0 0 0 3px var(--ai-soft);
+}
+.fld textarea{min-height:74px;font-family:var(--gothic);font-size:12px;line-height:1.7;resize:vertical}
+.btn{
+  border:1px solid var(--ink);background:var(--ink);color:#fff;padding:9px 22px;border-radius:3px;
+  cursor:pointer;letter-spacing:.1em;font-size:13px;transition:background .15s,border-color .15s,color .15s,transform .06s;
+}
+.btn:hover{background:#000;border-color:#000}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:#fff;color:var(--ink-soft);border-color:var(--rule)}
+.btn.ghost:hover{background:var(--nezu-soft);border-color:var(--nezu);color:var(--ink)}
+.btn.sm{padding:6px 13px;font-size:12px;letter-spacing:.04em}
+details{border:1px solid var(--rule);border-radius:3px;padding:0;margin:16px 0 0;background:#FCFDFD}
+summary{cursor:pointer;font-size:12.5px;font-weight:600;letter-spacing:.04em;padding:11px 15px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"＋";color:var(--muted);margin-right:8px;font-weight:400}
+details[open] summary::before{content:"−"}
+details[open] summary{border-bottom:1px solid var(--rule)}
+details>.row{padding:0 15px 15px;margin-top:15px}
+
+/* ══ タブ ═════════════════════════════════════════════ */
+#tabs{
+  display:flex;gap:2px;margin:26px 0 20px;border-bottom:1px solid var(--rule);
+  position:sticky;top:0;z-index:30;background:var(--paper);
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+#tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:0 0 auto;background:none;border:0;border-bottom:2px solid transparent;
+  padding:11px 15px 10px;cursor:pointer;font-size:13px;color:var(--muted);
+  letter-spacing:.05em;white-space:nowrap;transition:color .15s,border-color .15s;
+}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ai)}
+.pane{display:none}
+.pane.on{display:block;animation:fade .22s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* ══ 指標 ═════════════════════════════════════════════ */
+.stats{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(163px,1fr));
+  gap:1px;background:var(--card);border:1px solid var(--rule);border-radius:3px;overflow:hidden;
+}
+.stat{background:#fff;padding:13px 15px 14px;border-top:2px solid transparent;box-shadow:0 0 0 1px var(--rule)}
+.stat .k{font-size:10.5px;color:var(--muted);letter-spacing:.04em;line-height:1.6}
+.stat .v{
+  font-family:var(--mono);font-size:24px;font-weight:600;line-height:1.35;
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+}
+.stat .u{font-size:11px;color:var(--nezu);margin-left:3px;font-weight:400}
+.stat.ai{border-top-color:var(--ai)} .stat.ai .v{color:var(--ai)}
+.stat.kaki{border-top-color:var(--kaki)} .stat.kaki .v{color:var(--kaki)}
+.stat.take{border-top-color:var(--take)} .stat.take .v{color:var(--take)}
+
+/* ══ 表 ═══════════════════════════════════════════════ */
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{border-bottom:1px solid var(--rule-2);padding:7px 10px;text-align:left;vertical-align:top}
+th{
+  background:#F7F9FA;font-weight:600;font-size:11px;letter-spacing:.05em;color:var(--ink-soft);
+  border-bottom:1px solid var(--rule);white-space:nowrap;
+}
+tbody tr:hover td{background:#FAFBFC}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.scroll{overflow:auto;max-height:520px;border:1px solid var(--rule);border-radius:3px;background:#fff}
+.scroll th{position:sticky;top:0;z-index:2;box-shadow:0 1px 0 var(--rule)}
+.mtx td,.mtx th{padding:4px 6px;text-align:center;font-family:var(--mono);font-size:11px;min-width:36px;border-right:1px solid var(--rule-2)}
+.mtx th{background:#F7F9FA}
+.pill{display:inline-block;padding:1px 8px;border-radius:2px;font-size:11px;letter-spacing:.03em;white-space:nowrap;font-weight:600}
+.p-T{background:var(--ai-soft);color:var(--ai)}
+.p-S{background:var(--kaki-soft);color:var(--kaki)}
+.p-X{background:var(--nezu-soft);color:var(--ink-soft)}
+.tag{display:inline-block;padding:0 7px;border:1px solid var(--rule);border-radius:2px;font-size:10.5px;color:var(--ink-soft);margin-right:4px;background:#fff}
+
+/* ══ 授業の呼吸 ═══════════════════════════════════════ */
+.tapebox{
+  position:relative;height:214px;background:#FBFCFD;
+  border:1px solid var(--rule);border-radius:3px;overflow:hidden;
+}
+.tapebox .tbar{position:absolute;border-radius:1px 1px 0 0;transition:filter .12s}
+.tapebox .tbar:hover{filter:brightness(1.18) saturate(1.1)}
+.tapebox .base{position:absolute;left:0;right:0;top:53.333%;height:1px;background:var(--ink);opacity:.75}
+.tapebox .tlab{position:absolute;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--nezu);z-index:2}
+.balbox{
+  position:relative;height:56px;background:#FBFCFD;border:1px solid var(--rule);border-radius:3px;
+  display:flex;gap:2px;padding:0 1px;overflow:hidden;margin-top:10px;
+}
+.balseg{flex:1 1 0;min-width:0;display:flex;flex-direction:column;transition:opacity .12s}
+.balseg:hover{opacity:.78}
+.tapelab{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--nezu);margin-top:7px;letter-spacing:.04em}
+.legend{display:flex;gap:6px 18px;flex-wrap:wrap;margin:12px 0 4px;font-size:11.5px;color:var(--ink-soft)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* ══ 図 ═══════════════════════════════════════════════ */
+svg{max-width:100%;display:block}
+.svgbox{border:1px solid var(--rule);background:#fff;border-radius:3px;overflow:hidden}
+.svgfit{position:relative;width:100%;height:0;overflow:hidden}
+.svgfit>svg{position:absolute;top:0;left:0;width:100%;height:100%}
+#tip{
+  position:fixed;pointer-events:none;display:none;z-index:99;max-width:340px;
+  background:var(--ink);color:#F2F4F6;padding:9px 12px;border-radius:3px;
+  font-size:12px;line-height:1.65;box-shadow:0 6px 22px rgba(20,25,32,.3);
+}
+#tip .sp{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:#93A9C6;margin-bottom:4px}
+
+/* ══ 注記・引用・コード ═══════════════════════════════ */
+.note{background:#FAFCFB;border:1px solid var(--rule);border-left:2px solid var(--take);padding:14px 17px;border-radius:3px;margin:16px 0 0}
+.note p{margin:0 0 9px;font-size:12.5px;line-height:1.85}
+.note p:last-child{margin:0}
+.note.warn{background:#FDFAF3;border-left-color:var(--amber)}
+.quote{
+  font-family:var(--mincho);font-size:14.5px;line-height:2.1;
+  background:#FCFCFA;border:1px solid var(--rule);padding:22px 24px;border-radius:3px;
+}
+pre{
+  background:var(--ink);color:#E3E8ED;padding:17px 18px;border-radius:3px;overflow:auto;
+  font-family:var(--mono);font-size:12px;line-height:1.7;max-height:560px;margin:0;
+}
+pre .c{color:#69768A;font-style:italic}
+pre .f{color:#7FB4EC}
+pre .s{color:#BFDE96}
+pre .n{color:#E2A76B}
+pre .k{color:#D492C4}
+.empty{color:var(--nezu);padding:30px 0;text-align:center;font-size:13px}
+
+/* ══ エラーバナー ═════════════════════════════════════ */
+#err{
+  max-width:var(--wrap);margin:18px auto 0;padding:14px 18px;background:#FCEDE8;
+  border:1px solid var(--kaki);border-left-width:3px;border-radius:3px;color:#8A331A;
+  font-size:12.5px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all;line-height:1.75;
+}
+#err b{font-family:var(--gothic);display:block;margin-bottom:5px;font-size:13px}
+
+/* ══ フッター ═════════════════════════════════════════ */
+footer{border-top:1px solid var(--rule);background:#E7EAEE}
+.fwrap{
+  max-width:var(--wrap);margin:0 auto;padding:22px 24px 30px;
+  display:flex;flex-wrap:wrap;gap:6px 28px;color:var(--muted);font-size:11.5px;line-height:1.8;
+}
+.fname{font-family:var(--mincho);font-size:12.5px;letter-spacing:.1em;color:var(--ink-soft)}
+.fver{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--nezu);margin-left:auto}
+
+/* ══ 画面が狭いとき ═══════════════════════════════════ */
+@media (max-width:720px){
+  header{padding:24px 16px 0}
+  header h1{font-size:23px;letter-spacing:.1em}
+  main{padding:18px 14px 60px}
+  .card{padding:16px 15px;border-radius:3px}
+  .card>h2{font-size:16px}
+  .stats{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}
+  .stat .v{font-size:20px}
+  .tapebox{height:158px}
+  .balbox{height:46px}
+  .quote{padding:16px 15px;font-size:13.5px;line-height:1.95}
+  .fwrap{padding:18px 14px 24px}
+  .fver{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none !important;animation:none !important}
+}
+</style>
+<!-- 通報役。本体スクリプトより前に、別のタグとして読み込む。
+     本体が構文エラーで丸ごと失敗しても、この塊は生き残って画面に出す。 -->
+<script>
+var APP_VERSION = '2026-08-14-G';
+window.__errs = [];
+window.__mainRan = false;
+function __show(title, detail) {
+  var e = document.getElementById('err');
+  if (!e) { return; }
+  e.hidden = false;
+  e.innerHTML = '<b>' + title + '</b>' + detail;
+}
+window.onerror = function (msg, src, line, col) {
+  window.__errs.push(msg + '  （' + line + ':' + col + '）');
+  __show('エラーが発生しました。この赤い枠の文をそのままコピーして知らせてください。',
+         window.__errs.join('\n'));
+  return false;
+};
+window.addEventListener('load', function () {
+  var v = document.getElementById('ver');
+  if (v) { v.textContent = 'ver. ' + APP_VERSION; }
+  if (window.__errs.length) {
+    __show('エラーが発生しました。この赤い枠の文をそのままコピーして知らせてください。',
+           window.__errs.join('\n'));
+    return;
+  }
+  if (!window.__mainRan) {
+    __show('本体スクリプトが実行されていません。',
+      'エラーは記録されていません。次のどれかに当てはまります。\n'
+      + '1) HTMLが途中で切れている（貼り付け時の欠落）\n'
+      + '2) 古いデプロイを表示している（版の表示を確認してください）\n'
+      + '3) スクリプトの読み込みが外部要因で止められている\n'
+      + 'この画面の版： ' + APP_VERSION);
+  }
+});
+</script>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-text);--paper:var(--al-bg);--card:var(--al-surface);--ink:var(--al-ink);--ink-soft:var(--al-ink-2);--muted:var(--al-ink-3);--rule:var(--al-line);--rule-2:var(--al-line-2);--mincho:var(--al-serif);--gothic:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#text">質的・テキスト</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>授業発話分析ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<header>
+  <div class="hwrap">
+    <div class="eyebrow">Classroom Discourse Analysis</div>
+    <h1>授業発話分析ラボ</h1>
+    <div class="breath" aria-hidden="true">
+      <i style="background:#27548A;width:34%"></i><i style="background:#C1552C;width:19%"></i><i style="background:#27548A;width:26%"></i><i style="background:#98A1AC;width:8%"></i><i style="background:#C1552C;width:13%"></i>
+    </div>
+    <p>逐語録を貼るだけで、授業の相互作用を数える・見る・書く。ブラウザだけで完結し、発話データは外部に送信されません。</p>
+    <div class="hmeta">
+      <span><b>FIAC</b> フランダース相互作用分析</span>
+      <span><b>発問</b> 開閉×認知レベル</span>
+      <span><b>IRF</b> 三部構造連鎖</span>
+      <span><b>語彙</b> 特徴語・共起</span>
+    </div>
+  </div>
+</header>
+
+<div id="err" hidden></div>
+<main>
+<!-- ══ 入力 ══════════════════════════════════════ -->
+<section class="card">
+  <h2><span class="idx">01</span>逐語録を読み込む</h2>
+  <p class="hint">1行1発話。<b>話者</b>と<b>発話</b>を「：」「,」「タブ」のいずれかで区切ります。行頭に <code>00:12:30</code> のような時刻を置くと待ち時間も測ります。ファイルはここにドラッグ＆ドロップできます（.txt / .csv / .tsv）。</p>
+  <div id="drop">
+    <textarea id="src" spellcheck="false" placeholder="T：それでは、昨日の実験の結果から考えてみましょう。どうして水の温度は途中で上がらなくなったのかな？&#10;S1：えっと、熱が逃げてるからだと思います。&#10;T：なるほど、熱が逃げている。今の意見について、どう思いますか？"></textarea>
+  </div>
+  <div class="row">
+    <div class="fld"><label for="tpat">教師とみなす話者名（｜区切りの正規表現）</label>
+      <input id="tpat" value="T|Ｔ|教師|先生|教|MT|Teacher" style="min-width:230px"></div>
+    <div class="fld"><label for="silpat">沈黙・その他とみなす話者名</label>
+      <input id="silpat" value="沈黙|間|全体|—|-|X" style="min-width:170px"></div>
+    <div class="fld"><label for="minlen">語として拾う最小文字数</label>
+      <select id="minlen"><option>1</option><option selected>2</option><option>3</option></select></div>
+    <button class="btn" id="run" onclick="analyze()">分析する</button>
+    <button class="btn ghost" id="demo" onclick="loadDemo()">サンプル授業を入れる</button>
+    <button class="btn ghost" id="clr" onclick="clearAll()">消去</button>
+  </div>
+  <details>
+    <summary>語彙分析の設定（ストップワード・追加語）</summary>
+    <div class="row" style="align-items:flex-start">
+      <div class="fld" style="flex:1;min-width:240px"><label for="stop">除外する語（スペースまたは改行区切り）</label>
+        <textarea id="stop" style="min-height:70px;border:1px solid var(--rule);border-radius:2px;font-size:12px">こと もの これ それ あれ ここ そこ どこ よう ため とき ところ ひと みんな 先生 はい ええ うん あの その この えっと ちょっと ほう かた たち さん くん ふう</textarea></div>
+      <div class="fld" style="flex:1;min-width:240px"><label for="force">まとめて1語として扱う語（改行区切り）</label>
+        <textarea id="force" style="min-height:70px;border:1px solid var(--rule);border-radius:2px;font-size:12px" placeholder="二等辺三角形&#10;食物連鎖"></textarea></div>
+    </div>
+  </details>
+</section>
+
+<div id="out" style="display:none">
+<div id="tabs"></div>
+<div id="panes"></div>
+</div>
+</main>
+
+<div id="tip"></div>
+<footer>
+  <div class="fwrap">
+    <span class="fname">授業発話分析ラボ</span>
+    <span>計算はすべてこのブラウザ内で完結します。発話データが外部に送られることはありません。</span>
+    <span>自動分類は規則にもとづく推定です。研究に用いる際は「コード修正」タブで確認してください。</span>
+    <span id="ver" class="fver">版 —</span>
+  </div>
+</footer>
+<script>
+"use strict";
+
+/* 本体が動き始めた印。head側の通報役がこれを見て判定する。 */
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
+function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t.return || t.return(); } finally { if (u) throw o; } } }; }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+window.__mainRan = true;
+function showErr(msg) {
+  window.__errs.push(String(msg));
+  __show("エラーが発生しました。この赤い枠の文をそのままコピーして知らせてください。", window.__errs.join("\n"));
+}
+window.addEventListener("unhandledrejection", function (ev) {
+  showErr("Promise: " + ev.reason);
+});
+window.__errs = [];
+window.addEventListener("error", function (e) {
+  return window.__errs.push((e.message || "error") + " @" + (e.lineno || "?"));
+});
+/* ══════════════════════════════════════════════════════════
+   0. 定数
+   ══════════════════════════════════════════════════════════ */
+var FIAC = [{
+  n: 1,
+  g: "T",
+  name: "感情の受容",
+  ab: "受容",
+  c: "#5B8FD4",
+  d: "児童生徒の気持ちを受けとめ、言語化する"
+}, {
+  n: 2,
+  g: "T",
+  name: "賞賛・励まし",
+  ab: "賞賛",
+  c: "#3E6FB8",
+  d: "ほめる、うなずく、励ます"
+}, {
+  n: 3,
+  g: "T",
+  name: "考えの受容・利用",
+  ab: "取上",
+  c: "#2A4C7D",
+  d: "児童生徒の考えを繰り返す・言い直す・発展させる"
+}, {
+  n: 4,
+  g: "T",
+  name: "発問",
+  ab: "発問",
+  c: "#1D3557",
+  d: "応答を求める問いかけ"
+}, {
+  n: 5,
+  g: "T",
+  name: "講義・説明",
+  ab: "説明",
+  c: "#7E93AE",
+  d: "事実や意見を伝える、解説する"
+}, {
+  n: 6,
+  g: "T",
+  name: "指示",
+  ab: "指示",
+  c: "#A6784E",
+  d: "行動を求める、作業を割り当てる"
+}, {
+  n: 7,
+  g: "T",
+  name: "批判・権威",
+  ab: "批判",
+  c: "#8B3A2E",
+  d: "叱る、行動を正す、権威を主張する"
+}, {
+  n: 8,
+  g: "S",
+  name: "応答的発話",
+  ab: "応答",
+  c: "#C8552B",
+  d: "教師の問いかけへの応答"
+}, {
+  n: 9,
+  g: "S",
+  name: "自発的発話",
+  ab: "自発",
+  c: "#E08C4F",
+  d: "児童生徒が自ら始めた発話"
+}, {
+  n: 10,
+  g: "X",
+  name: "沈黙・混乱",
+  ab: "沈黙",
+  c: "#B7BEC6",
+  d: "作業・沈黙・聞き取れない場面"
+}];
+var FC = function FC(n) {
+  return FIAC[n - 1];
+};
+
+/* ── サンプル授業（小4理科・水の沸騰） ───────────── */
+var DEMO = "00:00 T\uFF1A\u305D\u308C\u3067\u306F\u59CB\u3081\u307E\u3059\u3002\u30CE\u30FC\u30C8\u3092\u958B\u3044\u3066\u3001\u524D\u306E\u6642\u9593\u306E\u5B9F\u9A13\u306E\u7D50\u679C\u3092\u51FA\u3057\u3066\u304F\u3060\u3055\u3044\u3002\n00:12 T\uFF1A\u6628\u65E5\u306F\u6C34\u3092\u71B1\u3057\u7D9A\u3051\u3066\u6E29\u5EA6\u3092\u6E2C\u308A\u307E\u3057\u305F\u306D\u3002\u4F55\u5EA6\u307E\u3067\u4E0A\u304C\u308A\u307E\u3057\u305F\u304B\u3002\n00:20 S1\uFF1A100\u5EA6\u3067\u3059\u3002\n00:22 T\uFF1A100\u5EA6\u3002\u4ED6\u306E\u73ED\u306F\u3069\u3046\u3067\u3057\u305F\u304B\u3002\n00:26 S2\uFF1A\u308F\u305F\u3057\u305F\u3061\u306E\u73ED\u306F98\u5EA6\u3067\u3057\u305F\u3002\n00:30 T\uFF1A98\u5EA6\u3002\u5C11\u3057\u9055\u3044\u307E\u3057\u305F\u306D\u3002\u3067\u306F\u3001100\u5EA6\u306B\u306A\u3063\u305F\u3042\u3068\u306F\u3069\u3046\u306A\u308A\u307E\u3057\u305F\u304B\u3002\n00:38 S3\uFF1A\u305D\u308C\u4EE5\u4E0A\u3001\u4E0A\u304C\u3089\u306A\u304F\u306A\u308A\u307E\u3057\u305F\u3002\n00:42 T\uFF1A\u305D\u3046\u3067\u3059\u306D\u3001\u4E0A\u304C\u3089\u306A\u304F\u306A\u3063\u305F\u3002\u4ECA\u306E\u7530\u4E2D\u3055\u3093\u306E\u767A\u8A00\u3001\u307F\u3093\u306A\u805E\u3044\u3066\u3044\u307E\u3057\u305F\u304B\u3002\u4E0A\u304C\u3089\u306A\u304F\u306A\u3063\u305F\u3093\u3067\u3059\u306D\u3002\n00:55 T\uFF1A\u3053\u3053\u304C\u4ECA\u65E5\u306E\u554F\u984C\u3067\u3059\u3002\u3069\u3046\u3057\u3066\u71B1\u3057\u7D9A\u3051\u3066\u3044\u308B\u306E\u306B\u3001\u6E29\u5EA6\u306F\u4E0A\u304C\u3089\u306A\u304F\u306A\u3063\u305F\u306E\u3067\u3057\u3087\u3046\u304B\u3002\n01:10 S4\uFF1A\u3048\u3063\u3068\u3001\u71B1\u304C\u5916\u306B\u9003\u3052\u3066\u308B\u304B\u3089\u3060\u3068\u601D\u3044\u307E\u3059\u3002\n01:18 T\uFF1A\u71B1\u304C\u5916\u306B\u9003\u3052\u3066\u3044\u308B\u3002\u306A\u308B\u307B\u3069\u3002\u305D\u3046\u8003\u3048\u305F\u7406\u7531\u3092\u6559\u3048\u3066\u304F\u3060\u3055\u3044\u3002\n01:28 S4\uFF1A\u6E6F\u6C17\u304C\u305F\u304F\u3055\u3093\u51FA\u3066\u3044\u305F\u304B\u3089\u3001\u305D\u3053\u304B\u3089\u71B1\u3082\u4E00\u7DD2\u306B\u51FA\u3066\u3044\u3063\u305F\u306E\u304B\u306A\u3063\u3066\u3002\n01:40 T\uFF1A\u6E6F\u6C17\u3068\u4E00\u7DD2\u306B\u71B1\u3082\u51FA\u3066\u3044\u304F\u3002\u304A\u3082\u3057\u308D\u3044\u8003\u3048\u3067\u3059\u306D\u3002\u4ED6\u306B\u8003\u3048\u305F\u4EBA\u306F\u3044\u307E\u3059\u304B\u3002\n01:52 S5\uFF1A\u307C\u304F\u306F\u3001\u6C34\u304C\u5168\u90E8\u3042\u308F\u306B\u306A\u308B\u306E\u306B\u71B1\u3092\u4F7F\u3063\u3066\u308B\u304B\u3089\u3060\u3068\u601D\u3044\u307E\u3059\u3002\n02:05 T\uFF1A\u6C34\u304C\u3042\u308F\u306B\u306A\u308B\u306E\u306B\u71B1\u3092\u4F7F\u3063\u3066\u3044\u308B\u3002\u4ECA\u3001\u4E8C\u3064\u306E\u8003\u3048\u304C\u51FA\u307E\u3057\u305F\u306D\u3002\n02:15 T\uFF1A\u5C71\u7530\u3055\u3093\u306E\u300C\u71B1\u304C\u9003\u3052\u308B\u300D\u3068\u3001\u4F50\u85E4\u3055\u3093\u306E\u300C\u3042\u308F\u306B\u306A\u308B\u306E\u306B\u71B1\u3092\u4F7F\u3046\u300D\u3002\u3069\u3061\u3089\u304C\u6B63\u3057\u3044\u3068\u601D\u3044\u307E\u3059\u304B\u3002\n02:30 S6\uFF1A\u307C\u304F\u306F\u4F50\u85E4\u3055\u3093\u306E\u65B9\u3060\u3068\u601D\u3044\u307E\u3059\u3002\u3060\u3063\u3066\u3001\u3075\u305F\u3092\u3057\u3066\u3082\u6E29\u5EA6\u306F\u4E0A\u304C\u3089\u306A\u304B\u3063\u305F\u304B\u3089\u3002\n02:44 T\uFF1A\u3075\u305F\u3092\u3057\u3066\u3082\u4E0A\u304C\u3089\u306A\u304B\u3063\u305F\u3002\u305D\u308C\u306F\u5927\u4E8B\u306A\u8A3C\u62E0\u3067\u3059\u306D\u3002\n02:52 S2\uFF1A\u3067\u3082\u3001\u3075\u305F\u3092\u3057\u305F\u3089\u5C11\u3057\u3060\u3051\u4E0A\u304C\u3063\u305F\u3088\u3002\n02:58 S6\uFF1A\u3048\u3063\u3001\u305D\u3046\u3060\u3063\u305F\uFF1F\n03:02 T\uFF1A\u4ECA\u3001\u73ED\u306E\u306A\u304B\u3067\u610F\u898B\u304C\u5206\u304B\u308C\u307E\u3057\u305F\u306D\u3002\u3082\u3046\u4E00\u5EA6\u3001\u5B9F\u9A13\u306E\u8A18\u9332\u3092\u898B\u3066\u78BA\u304B\u3081\u3066\u307F\u307E\u3057\u3087\u3046\u3002\n03:14 T\uFF1A3\u5206\u9593\u3001\u30B0\u30EB\u30FC\u30D7\u3067\u8A18\u9332\u3092\u898B\u6BD4\u3079\u3066\u304F\u3060\u3055\u3044\u3002\n03:20 \u6C88\u9ED9\uFF1A\uFF08\u30B0\u30EB\u30FC\u30D7\u6D3B\u52D5\u30FB\u8A18\u9332\u306E\u78BA\u8A8D\uFF09\n06:20 T\uFF1A\u306F\u3044\u3001\u3084\u3081\u3066\u304F\u3060\u3055\u3044\u3002\u4F55\u304C\u308F\u304B\u308A\u307E\u3057\u305F\u304B\u3002\n06:28 S2\uFF1A\u3075\u305F\u3092\u3057\u305F\u73ED\u3082\u300199\u5EA6\u304B\u3089\u4E0A\u304C\u3063\u3066\u3044\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u307C\u304F\u306E\u898B\u307E\u3061\u304C\u3044\u3067\u3057\u305F\u3002\n06:40 T\uFF1A\u78BA\u304B\u3081\u3066\u304F\u308C\u3066\u3042\u308A\u304C\u3068\u3046\u3002\u6B63\u76F4\u306B\u8A00\u3048\u305F\u306E\u304C\u3059\u3070\u3089\u3057\u3044\u3067\u3059\u306D\u3002\n06:50 T\uFF1A\u3067\u306F\u3001\u3042\u308F\u306B\u306A\u308B\u306E\u306B\u71B1\u3092\u4F7F\u3046\u3068\u3044\u3046\u8003\u3048\u3067\u3001\u8AAC\u660E\u304C\u3067\u304D\u305D\u3046\u3067\u3059\u304B\u3002\n07:00 S5\uFF1A\u306F\u3044\u3002\u6C34\u304C\u3042\u308F\u3001\u6C34\u3058\u3087\u3046\u6C17\u306B\u306A\u308B\u3068\u304D\u306B\u71B1\u3092\u305C\u3093\u3076\u4F7F\u3046\u304B\u3089\u3001\u6E29\u5EA6\u304C\u4E0A\u304C\u3089\u306A\u3044\u3093\u3060\u3068\u601D\u3044\u307E\u3059\u3002\n07:15 T\uFF1A\u6C34\u304C\u6C34\u3058\u3087\u3046\u6C17\u306B\u5909\u308F\u308B\u3068\u304D\u306B\u71B1\u304C\u4F7F\u308F\u308C\u308B\u3002\u3053\u308C\u3092\u300C\u3058\u3087\u3046\u767A\u300D\u3068\u8A00\u3044\u307E\u3059\u3002\n07:28 T\uFF1A\u3058\u3087\u3046\u767A\u3057\u3066\u3044\u308B\u9593\u306F\u3001\u52A0\u3048\u305F\u71B1\u306F\u6E29\u5EA6\u3092\u4E0A\u3052\u308B\u305F\u3081\u3067\u306F\u306A\u304F\u3001\u3059\u304C\u305F\u3092\u5909\u3048\u308B\u305F\u3081\u306B\u4F7F\u308F\u308C\u307E\u3059\u3002\n07:45 T\uFF1A\u30CE\u30FC\u30C8\u306B\u3001\u4ECA\u306E\u8AAC\u660E\u3092\u81EA\u5206\u306E\u3053\u3068\u3070\u3067\u66F8\u3044\u3066\u304F\u3060\u3055\u3044\u3002\n07:52 \u6C88\u9ED9\uFF1A\uFF08\u8A18\u8FF0\u6D3B\u52D5\uFF09\n10:30 T\uFF1A\u66F8\u3051\u305F\u4EBA\u3001\u8AAD\u3093\u3067\u304F\u308C\u307E\u3059\u304B\u3002\n10:36 S3\uFF1A\u6C34\u304C\u6C34\u3058\u3087\u3046\u6C17\u306B\u306A\u308B\u3068\u304D\u3001\u71B1\u304C\u3059\u304C\u305F\u3092\u5909\u3048\u308B\u306E\u306B\u4F7F\u308F\u308C\u308B\u304B\u3089\u3001\u6E29\u5EA6\u304C\u4E0A\u304C\u3089\u306A\u3044\u3002\n10:50 T\uFF1A\u3068\u3066\u3082\u3088\u304F\u307E\u3068\u307E\u3063\u3066\u3044\u307E\u3059\u3002\u3042\u308A\u304C\u3068\u3046\u3002\n10:56 S1\uFF1A\u5148\u751F\u3001\u3058\u3083\u3042\u6C37\u304C\u3068\u3051\u308B\u3068\u304D\u3082\u540C\u3058\u3067\u3059\u304B\u3002\n11:04 T\uFF1A\u304A\u304A\u3001\u3044\u3044\u8CEA\u554F\u304C\u51FA\u307E\u3057\u305F\u306D\u3002\u6C37\u304C\u3068\u3051\u308B\u3068\u304D\u3082\u540C\u3058\u304B\u3069\u3046\u304B\u3002\u307F\u3093\u306A\u306F\u3069\u3046\u601D\u3044\u307E\u3059\u304B\u3002\n11:16 S4\uFF1A\u540C\u3058\u3060\u3068\u601D\u3044\u307E\u3059\u3002\u6C37\u304C\u3068\u3051\u3066\u3044\u308B\u9593\u30010\u5EA6\u306E\u307E\u307E\u3060\u3063\u305F\u304B\u3089\u3002\n11:26 T\uFF1A0\u5EA6\u306E\u307E\u307E\u3060\u3063\u305F\u3002\u524D\u306E\u5B9F\u9A13\u3092\u899A\u3048\u3066\u3044\u307E\u3057\u305F\u306D\u3002\n11:34 T\uFF1A\u6B21\u306E\u6642\u9593\u306F\u3001\u305D\u3053\u3092\u78BA\u304B\u3081\u308B\u5B9F\u9A13\u3092\u3057\u307E\u3059\u3002\u4ECA\u65E5\u306F\u3053\u3053\u307E\u3067\u306B\u3057\u307E\u3057\u3087\u3046\u3002";
+var RX = {
+  qEnd: /(?:か|かな|かい|かしら|だろう|でしょ)\s*[、,]?\s*$/,
+  qw: /なぜ|どうして|どういう|どのよう|どんな|どう思|どうやっ|どうすれ|どうしたら|どこが|何が|何を|何で|いかに|理由|わけ|どちら.{0,10}(思|考え|よい|いい)|どう考え|考えましたか|説明(して|できま)|気づいた/,
+  qwClosed: /いくつ|何個|何番|何回|何色|どちら|どっち|正しい|合って|できた|わかっ|よい(です)?か|いい(です)?か|ますか|ですか/,
+  praise: /いいね|いいですね|すごい|素晴らし|すばらし|よくできま|よくまとま|よく気づ|よく見て|よく考え|その通り|正解|ばっちり|なるほど|えらい|上手|グッド|よし、|よくやっ|さすが|ありがとう|いい(質問|考え|意見)|おもしろい(考え|意見)/,
+  accept: /(さん|くん|ちゃん)の(意見|考え|発言|言っ|話|[「『])|今の(意見|考え|発言|話)|って言っ|と言ってくれ|つまり|言いかえ|言い換え|みんな聞|というと|ということ(ですね|だね)|付け足|同じ考え|に近い|が出まし?た|意見が(出|分かれ)/,
+  feel: /難しかった|不安|心配|つらかっ|大変だった|わかるよ|困った|もやもや|悔しかっ|うれしかっ|気持ち(は|も)/,
+  direct: /なさい|ましょう|てください|下さい|開いて|書いて|出して|読んで|見て|立って|座って|やってみ|始めて|止めて|ノートに|手を挙げ|話し合っ|グループ|3分|５分|5分/,
+  crit: /静かに|だめ|ダメ|いけません|やめなさい|何度も言|集中し|聞いてない|うるさい|ちゃんと(し|やり)|遊ばない|前を向/,
+  revoice: /つまり|ということは|言いかえる|言い換える|要する|まとめると|ってこと|という(こと|意味)/,
+  sil: /^[（(]?(沈黙|間|無言|作業|板書|挙手|静か|聞き取れ|…+|\.\.\.)[^）)]*[）)]?$/,
+  bloom: [["創造", /考えて(み|作)|作っ|つくっ|予想|新しく|提案|デザイン|もし.*だったら|どうすれば(よい|いい)|工夫/], ["評価", /どう思|どちらが(よい|いい)|判断|評価|よいと思|大切だと思|選ぶ|選び|批判|賛成|反対|納得/], ["分析", /なぜ|どうして|理由|比べ|くらべ|違い|ちがい|共通|関係|原因|しくみ|仕組み|分け(て|る)|根拠/], ["応用", /使って|当てはめ|あてはめ|解いて|計算し|やってみ|この方法で|同じように/], ["理解", /どういうこと|説明し|まとめ|言いかえ|言い換え|要する|意味|わかっ|理解/], ["記憶", /いつ|どこ|だれ|誰|いくつ|何個|覚えて|習っ|前の時間|昨日|前回|名前は|何とい/]]
+};
+var HIRA_STOP = new Set("これ それ あれ どれ ここ そこ どこ こと もの ため よう とき ところ もう まだ さっき あと まえ ほう つぎ とても すごく ちょっと やっぱり やはり たぶん だいたい ぜんぶ みんな だれ そう こう ああ です ます ない いい よい ある いる する なる やる した して しま いっ いう みた なんか まあ ほら そこで それで じゃあ では そして しかし だから でも ええと えっと あのー えっ ええ あっ おお うわ はい いいえ うん うーん ねえ もっと すこし きて きた ここで とき たち ほんと".split(/\s+/));
+var PART = /(?:ですね|ますね|でしょう|ください|ました|ません|でした|ですか|ますか|です|ます|だった|ている|ていた|という|ような|ように|って|から|けど|ので|のに|には|では|とか|でも|よね|んだ|なあ|ねえ|[はがをにでともへのやよねかさぞなぁ])+$/;
+function trimHira(w) {
+  var p = w;
+  for (var i = 0; i < 6; i++) {
+    var q = p.replace(PART, "");
+    if (q === p) break;
+    p = q;
+    if (p.length < 2) return "";
+  }
+  return p;
+}
+function isQuestion(x) {
+  return x.replace(/([。．！!？?])/g, "$1\x01").split("\x01").some(function (sn) {
+    sn = sn.trim();
+    if (!sn) return false;
+    if (/[？?]/.test(sn)) return true;
+    return RX.qEnd.test(sn.replace(/[。．！!、,]+$/, ""));
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   1. 逐語録のパース
+   ══════════════════════════════════════════════════════════ */
+function parse(raw, tpat, silpat) {
+  var tRe = new RegExp("^\\s*(?:" + tpat + ")\\s*\\d*\\s*$", "i");
+  var xRe = new RegExp("^\\s*(?:" + silpat + ")\\s*\\d*\\s*$", "i");
+  var turns = [];
+  raw.split(/\r?\n/).forEach(function (line, i) {
+    var s = line.trim();
+    if (!s) return;
+    var time = null;
+    var tm = s.match(/^[\[（(]?((?:\d{1,2}:)?\d{1,2}:\d{2})[\]）)]?[\s,、\t]*/);
+    if (tm) {
+      time = toSec(tm[1]);
+      s = s.slice(tm[0].length).trim();
+    }
+    var sp = "",
+      txt = s;
+    var m = s.match(/^([^：:,\t]{1,12})[：:,\t]\s*(.*)$/);
+    if (m) {
+      sp = m[1].trim();
+      txt = m[2].trim();
+    } else if (turns.length) {
+      turns[turns.length - 1].text += s;
+      return;
+    } // 継続行
+    else {
+      sp = "?";
+    }
+    if (!txt) txt = "（  ）";
+    var grp = tRe.test(sp) ? "T" : xRe.test(sp) ? "X" : "S";
+    if (RX.sil.test(txt)) grp = "X";
+    turns.push({
+      i: turns.length,
+      line: i + 1,
+      time: time,
+      speaker: sp || "?",
+      group: grp,
+      text: txt
+    });
+  });
+  return turns;
+}
+var toSec = function toSec(t) {
+  var p = t.split(":").map(Number);
+  return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
+};
+var fmtT = function fmtT(s) {
+  return s == null ? "—" : (s >= 3600 ? Math.floor(s / 3600) + ":" : "") + String(Math.floor(s % 3600 / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+};
+
+/* ══════════════════════════════════════════════════════════
+   2. フランダース分類（規則ベース）
+   ══════════════════════════════════════════════════════════ */
+function classify(turns) {
+  turns.forEach(function (t, i) {
+    var x = t.text,
+      prev = i > 0 ? turns[i - 1] : null;
+    if (t.group === "X") {
+      t.cat = 10;
+      return;
+    }
+    if (t.group === "S") {
+      t.cat = prev && prev.group === "T" && prev.cat === 4 ? 8 : 9;
+      return;
+    }
+    // 教師発話：優先順位で判定
+    if (RX.crit.test(x)) t.cat = 7;else if (isQuestion(x)) t.cat = 4;else if (RX.praise.test(x) && x.length < 40) t.cat = 2;else if (RX.feel.test(x)) t.cat = 1;else if (RX.accept.test(x) && prev && prev.group === "S") t.cat = 3;else if (RX.direct.test(x)) t.cat = 6;else t.cat = 5;
+    if (t.cat === 4 && RX.praise.test(x.slice(0, 14)) && x.length > 20) t.subPraise = true;
+  });
+  // 待ち時間（教師の発問→次発話までの秒）
+  turns.forEach(function (t, i) {
+    if (t.cat === 4 && t.time != null && turns[i + 1] && turns[i + 1].time != null) t.wait = turns[i + 1].time - t.time;
+  });
+  return turns;
+}
+
+/* ══════════════════════════════════════════════════════════
+   3. 基本統計・FIAC指標
+   ══════════════════════════════════════════════════════════ */
+function basics(turns) {
+  var n = turns.length,
+    len = function len(t) {
+      return t.text.replace(/[（(].*?[）)]/g, "").length;
+    };
+  var T = turns.filter(function (t) {
+      return t.group === "T";
+    }),
+    S = turns.filter(function (t) {
+      return t.group === "S";
+    }),
+    X = turns.filter(function (t) {
+      return t.group === "X";
+    });
+  var sum = function sum(a) {
+    return a.reduce(function (s, t) {
+      return s + len(t);
+    }, 0);
+  };
+  var sw = 0;
+  for (var i = 1; i < n; i++) if (turns[i].group !== turns[i - 1].group) sw++;
+  var trans = {
+    TS: 0,
+    ST: 0,
+    SS: 0,
+    TT: 0
+  };
+  for (var _i = 1; _i < n; _i++) {
+    var a = turns[_i - 1].group,
+      b = turns[_i].group;
+    if (a === "T" && b === "S") trans.TS++;else if (a === "S" && b === "T") trans.ST++;else if (a === "S" && b === "S") trans.SS++;else if (a === "T" && b === "T") trans.TT++;
+  }
+  var spk = {};
+  S.forEach(function (t) {
+    return spk[t.speaker] = (spk[t.speaker] || 0) + 1;
+  });
+  var counts = Object.values(spk).sort(function (a, b) {
+    return a - b;
+  });
+  var waits = turns.filter(function (t) {
+    return t.wait != null && t.wait >= 0 && t.wait < 120;
+  }).map(function (t) {
+    return t.wait;
+  });
+  var dur = turns.filter(function (t) {
+    return t.time != null;
+  });
+  return {
+    n: n,
+    nT: T.length,
+    nS: S.length,
+    nX: X.length,
+    cT: sum(T),
+    cS: sum(S),
+    cAll: sum(turns),
+    avgT: T.length ? sum(T) / T.length : 0,
+    avgS: S.length ? sum(S) / S.length : 0,
+    maxT: T.length ? Math.max.apply(Math, _toConsumableArray(T.map(len))) : 0,
+    maxS: S.length ? Math.max.apply(Math, _toConsumableArray(S.map(len))) : 0,
+    switches: sw,
+    trans: trans,
+    speakers: spk,
+    nSpk: Object.keys(spk).length,
+    gini: gini(counts),
+    participation: counts,
+    wait: waits.length ? waits.reduce(function (a, b) {
+      return a + b;
+    }, 0) / waits.length : null,
+    nWait: waits.length,
+    minute: dur.length > 1 ? (dur[dur.length - 1].time - dur[0].time) / 60 : null
+  };
+}
+function gini(a) {
+  // 発話回数の偏り（0=完全均等）
+  if (a.length < 2) return 0;
+  var s = a.reduce(function (x, y) {
+    return x + y;
+  }, 0);
+  if (!s) return 0;
+  var c = 0;
+  a.forEach(function (v, i) {
+    return c += (2 * (i + 1) - a.length - 1) * v;
+  });
+  return c / (a.length * s);
+}
+function fiacStats(turns) {
+  var c = Array(11).fill(0);
+  turns.forEach(function (t) {
+    return c[t.cat]++;
+  });
+  var M = Array.from({
+    length: 11
+  }, function () {
+    return Array(11).fill(0);
+  });
+  for (var i = 1; i < turns.length; i++) M[turns[i - 1].cat][turns[i].cat]++;
+  var tot = turns.length || 1,
+    S = function S() {
+      for (var _len = arguments.length, a = new Array(_len), _key = 0; _key < _len; _key++) {
+        a[_key] = arguments[_key];
+      }
+      return a.reduce(function (s, i) {
+        return s + c[i];
+      }, 0);
+    };
+  var TT = S(1, 2, 3, 4, 5, 6, 7),
+    PT = S(8, 9),
+    SC = c[10];
+  var ind = function ind(a, b) {
+    return b ? a / b : null;
+  };
+  var rowSum = function rowSum(r) {
+    return M[r].reduce(function (a, b) {
+      return a + b;
+    }, 0);
+  };
+  var ss89 = M[8][8] + M[9][9],
+    all89 = rowSum(8) + rowSum(9);
+  return {
+    c: c,
+    M: M,
+    tot: tot,
+    TT: TT / tot * 100,
+    PT: PT / tot * 100,
+    SC: SC / tot * 100,
+    ID: ind(S(1, 2, 3, 4), S(5, 6, 7)),
+    rID: ind(S(1, 2, 3), S(6, 7)),
+    CCR: S(4, 5) / tot * 100,
+    TQR: ind(c[4], c[4] + c[5]),
+    PIR: ind(c[9], c[8] + c[9]),
+    TRR: ind(S(1, 2, 3), S(1, 2, 3, 6, 7)),
+    SSR: all89 ? ss89 / all89 * 100 : null,
+    steady: _toConsumableArray(Array(10)).reduce(function (s, _, k) {
+      return s + M[k + 1][k + 1];
+    }, 0) / Math.max(1, turns.length - 1) * 100
+  };
+}
+
+/* ══════════════════════════════════════════════════════════
+   4. 発問分析
+   ══════════════════════════════════════════════════════════ */
+function questions(turns) {
+  return turns.filter(function (t) {
+    return t.cat === 4;
+  }).map(function (t) {
+    var x = t.text;
+    var open = RX.qw.test(x) && !/^(はい|いいえ)/.test(x);
+    var bloom = "記憶";
+    var _iterator = _createForOfIteratorHelper(RX.bloom),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _step$value = _slicedToArray(_step.value, 2),
+          lv = _step$value[0],
+          re = _step$value[1];
+        if (re.test(x)) {
+          bloom = lv;
+          break;
+        }
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    var nxt = turns[t.i + 1];
+    return _objectSpread(_objectSpread({}, t), {}, {
+      open: open,
+      type: open ? "開いた発問" : "閉じた発問",
+      bloom: bloom,
+      answered: !!(nxt && nxt.group === "S"),
+      ansLen: nxt && nxt.group === "S" ? nxt.text.length : 0
+    });
+  });
+}
+/* IRF（教師の問い→児童の応答→教師の返し）連鎖 */
+function irf(turns) {
+  var out = [];
+  for (var i = 0; i < turns.length - 1; i++) {
+    var I = turns[i];
+    if (I.cat !== 4) continue;
+    var R = turns[i + 1];
+    if (R.group !== "S") continue;
+    var F = null,
+      j = i + 2,
+      chain = [R];
+    while (turns[j] && turns[j].group === "S") {
+      chain.push(turns[j]);
+      j++;
+    }
+    if (turns[j] && turns[j].group === "T") F = turns[j];
+    var ftype = "なし";
+    if (F) {
+      if (F.cat === 4) ftype = "追発問";else if (F.cat === 3 || RX.revoice.test(F.text)) ftype = "リボイシング";else if (F.cat === 2) ftype = "評価・賞賛";else if (F.cat === 5) ftype = "説明で引き取り";else if (F.cat === 6) ftype = "指示へ移行";else ftype = "その他";
+    }
+    out.push({
+      I: I,
+      R: chain,
+      F: F,
+      ftype: ftype,
+      len: 2 + (F ? 1 : 0) + (chain.length - 1),
+      structure: F ? ftype === "追発問" || ftype === "リボイシング" ? "IRF（発展）" : "IRE（評価）" : "IR（応答止まり）"
+    });
+    i = j - 1;
+  }
+  return out;
+}
+
+/* ══════════════════════════════════════════════════════════
+   5. 語彙分析（文字種ベースの簡易切り出し）
+   ══════════════════════════════════════════════════════════ */
+var STOP = new Set(),
+  FORCE = [],
+  MINLEN = 2;
+function tokenize(text) {
+  var s = text.replace(/[（(][^）)]*[）)]/g, "　");
+  var got = [];
+  FORCE.forEach(function (w) {
+    if (!w) return;
+    var k = 0;
+    while (s.indexOf(w) >= 0) {
+      s = s.replace(w, "　");
+      got.push(w);
+      if (++k > 50) break;
+    }
+  });
+  var re = /[一-龥々〆ヵヶ]+|[ァ-ヴー]+|[ぁ-ん]+|[A-Za-z][A-Za-z0-9']*|[0-9]+[0-9．.]*/g;
+  var m;
+  while (m = re.exec(s)) {
+    var w = m[0];
+    if (/^[0-9]/.test(w)) continue;
+    if (/^[ぁ-ん]+$/.test(w)) {
+      var prev = s[m.index - 1] || "";
+      if (/[一-龥々〆ァ-ヴー]/.test(prev)) continue; // 送りがな・活用語尾は除く
+      w = trimHira(w);
+      if (w.length < 2 || w.length > 5 || HIRA_STOP.has(w)) continue;
+    }
+    if (/^[一-龥々〆ヵヶ]+$/.test(w) && w.length > 6) continue;
+    if (w.length < MINLEN) continue;
+    if (STOP.has(w)) continue;
+    got.push(w);
+  }
+  return got;
+}
+function lexicon(turns) {
+  var docs = turns.map(function (t) {
+    return {
+      g: t.group,
+      ws: tokenize(t.text)
+    };
+  });
+  var cnt = {
+      T: {},
+      S: {},
+      all: {}
+    },
+    df = {};
+  docs.forEach(function (d) {
+    var uniq = new Set(d.ws);
+    uniq.forEach(function (w) {
+      return df[w] = (df[w] || 0) + 1;
+    });
+    d.ws.forEach(function (w) {
+      cnt.all[w] = (cnt.all[w] || 0) + 1;
+      if (d.g === "T") cnt.T[w] = (cnt.T[w] || 0) + 1;else if (d.g === "S") cnt.S[w] = (cnt.S[w] || 0) + 1;
+    });
+  });
+  var NT = Object.values(cnt.T).reduce(function (a, b) {
+      return a + b;
+    }, 0) || 1,
+    NS = Object.values(cnt.S).reduce(function (a, b) {
+      return a + b;
+    }, 0) || 1;
+  var keys = Object.keys(cnt.all);
+  var llr = keys.map(function (w) {
+    var a = cnt.T[w] || 0,
+      b = cnt.S[w] || 0,
+      E1 = NT * (a + b) / (NT + NS),
+      E2 = NS * (a + b) / (NT + NS);
+    var g = 2 * ((a ? a * Math.log(a / E1) : 0) + (b ? b * Math.log(b / E2) : 0));
+    return {
+      w: w,
+      T: a,
+      S: b,
+      all: a + b,
+      df: df[w],
+      g: g * (a / NT >= b / NS ? 1 : -1)
+    };
+  }).filter(function (o) {
+    return o.all >= 2;
+  });
+  return {
+    cnt: cnt,
+    df: df,
+    NT: NT,
+    NS: NS,
+    docs: docs,
+    teacher: llr.filter(function (o) {
+      return o.g > 0;
+    }).sort(function (a, b) {
+      return b.g - a.g;
+    }).slice(0, 25),
+    student: llr.filter(function (o) {
+      return o.g < 0;
+    }).sort(function (a, b) {
+      return a.g - b.g;
+    }).slice(0, 25),
+    top: keys.map(function (w) {
+      return {
+        w: w,
+        n: cnt.all[w],
+        T: cnt.T[w] || 0,
+        S: cnt.S[w] || 0
+      };
+    }).sort(function (a, b) {
+      return b.n - a.n;
+    }).slice(0, 60)
+  };
+}
+/* 共起（発話単位・Jaccard） */
+function cooc(lex, minN, topE) {
+  var freq = Object.entries(lex.cnt.all).filter(function (_ref) {
+    var _ref2 = _slicedToArray(_ref, 2),
+      w = _ref2[0],
+      n = _ref2[1];
+    return n >= minN;
+  }).sort(function (a, b) {
+    return b[1] - a[1];
+  }).slice(0, 45);
+  var keep = new Set(freq.map(function (f) {
+    return f[0];
+  }));
+  var pair = {};
+  lex.docs.forEach(function (d) {
+    var u = _toConsumableArray(new Set(d.ws)).filter(function (w) {
+      return keep.has(w);
+    });
+    for (var i = 0; i < u.length; i++) for (var j = i + 1; j < u.length; j++) {
+      var k = [u[i], u[j]].sort().join("\x01");
+      pair[k] = (pair[k] || 0) + 1;
+    }
+  });
+  var all = Object.entries(pair).map(function (_ref3) {
+    var _ref4 = _slicedToArray(_ref3, 2),
+      k = _ref4[0],
+      v = _ref4[1];
+    var _k$split = k.split("\x01"),
+      _k$split2 = _slicedToArray(_k$split, 2),
+      a = _k$split2[0],
+      b = _k$split2[1];
+    return {
+      a: a,
+      b: b,
+      n: v,
+      j: v / (lex.df[a] + lex.df[b] - v)
+    };
+  });
+  var edges = all.filter(function (e) {
+    return e.n >= 2;
+  }).sort(function (x, y) {
+    return y.j - x.j;
+  }).slice(0, topE);
+  if (edges.length < 8) edges = all.sort(function (x, y) {
+    return y.j - x.j;
+  }).slice(0, topE);
+  var used = new Set();
+  edges.forEach(function (e) {
+    used.add(e.a);
+    used.add(e.b);
+  });
+  var nodes = _toConsumableArray(used).map(function (w) {
+    return {
+      id: w,
+      n: lex.cnt.all[w],
+      T: lex.cnt.T[w] || 0,
+      S: lex.cnt.S[w] || 0
+    };
+  });
+  return {
+    nodes: nodes,
+    edges: edges
+  };
+}
+/* 話者間の発話連鎖ネットワーク */
+function speakerNet(turns) {
+  var nodes = {},
+    edges = {};
+  turns.forEach(function (t) {
+    if (t.group === "X") return;
+    nodes[t.speaker] = nodes[t.speaker] || {
+      id: t.speaker,
+      g: t.group,
+      n: 0,
+      chars: 0
+    };
+    nodes[t.speaker].n++;
+    nodes[t.speaker].chars += t.text.length;
+  });
+  for (var i = 1; i < turns.length; i++) {
+    var a = turns[i - 1],
+      b = turns[i];
+    if (a.group === "X" || b.group === "X" || a.speaker === b.speaker) continue;
+    var k = a.speaker + "\x01" + b.speaker;
+    edges[k] = (edges[k] || 0) + 1;
+  }
+  return {
+    nodes: Object.values(nodes),
+    edges: Object.entries(edges).map(function (_ref5) {
+      var _ref6 = _slicedToArray(_ref5, 2),
+        k = _ref6[0],
+        v = _ref6[1];
+      var _k$split3 = k.split("\x01"),
+        _k$split4 = _slicedToArray(_k$split3, 2),
+        a = _k$split4[0],
+        b = _k$split4[1];
+      return {
+        a: a,
+        b: b,
+        n: v
+      };
+    }).sort(function (x, y) {
+      return y.n - x.n;
+    }).slice(0, 60)
+  };
+}
+
+/* ══════════════════════════════════════════════════════════
+   6. 力学配置（共通）
+   ══════════════════════════════════════════════════════════ */
+function layout(nodes, edges, W, H, iter) {
+  var idx = {};
+  nodes.forEach(function (n, i) {
+    idx[n.id] = i;
+    var a = i / nodes.length * Math.PI * 2;
+    n.x = W / 2 + Math.cos(a) * W * 0.3;
+    n.y = H / 2 + Math.sin(a) * H * 0.3;
+  });
+  var L = edges.map(function (e) {
+    return {
+      s: idx[e.a],
+      t: idx[e.b],
+      w: e.j != null ? e.j : e.n
+    };
+  });
+  var k = Math.sqrt(W * H / Math.max(1, nodes.length)) * 0.8;
+  var _loop = function _loop() {
+    var temp = (1 - it / iter) * W * 0.08 + 1;
+    var fx = Array(nodes.length).fill(0),
+      fy = Array(nodes.length).fill(0);
+    for (var i = 0; i < nodes.length; i++) for (var j = i + 1; j < nodes.length; j++) {
+      var dx = nodes[i].x - nodes[j].x,
+        dy = nodes[i].y - nodes[j].y;
+      var d = Math.hypot(dx, dy) || 0.01;
+      var f = k * k / d / d;
+      fx[i] += dx * f;
+      fy[i] += dy * f;
+      fx[j] -= dx * f;
+      fy[j] -= dy * f;
+    }
+    L.forEach(function (e) {
+      var dx = nodes[e.s].x - nodes[e.t].x,
+        dy = nodes[e.s].y - nodes[e.t].y;
+      var d = Math.hypot(dx, dy) || 0.01;
+      var f = d / k * 0.55 * (0.4 + e.w);
+      fx[e.s] -= dx / d * f * 10;
+      fy[e.s] -= dy / d * f * 10;
+      fx[e.t] += dx / d * f * 10;
+      fy[e.t] += dy / d * f * 10;
+    });
+    nodes.forEach(function (n, i) {
+      fx[i] += (W / 2 - n.x) * 0.012;
+      fy[i] += (H / 2 - n.y) * 0.012;
+      var d = Math.hypot(fx[i], fy[i]) || 1,
+        m = Math.min(d, temp);
+      n.x = Math.max(46, Math.min(W - 46, n.x + fx[i] / d * m));
+      n.y = Math.max(26, Math.min(H - 26, n.y + fy[i] / d * m));
+    });
+  };
+  for (var it = 0; it < iter; it++) {
+    _loop();
+  }
+  return nodes;
+}
+
+/* ══════════════════════════════════════════════════════════
+   7. 描画ユーティリティ
+   ══════════════════════════════════════════════════════════ */
+var $ = function $(s) {
+    return document.querySelector(s);
+  },
+  esc = function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;"
+      }[c];
+    });
+  };
+var f1 = function f1(x) {
+    return x == null ? "—" : (Math.round(x * 10) / 10).toFixed(1);
+  },
+  f2 = function f2(x) {
+    return x == null ? "—" : (Math.round(x * 100) / 100).toFixed(2);
+  };
+var tip = $("#tip");
+function hov(el, html) {
+  if (!el || !tip) return;
+  el.addEventListener("mousemove", function (e) {
+    tip.innerHTML = html;
+    tip.style.display = "block";
+    tip.style.left = Math.min(e.clientX + 14, innerWidth - 360) + "px";
+    tip.style.top = e.clientY + 16 + "px";
+  });
+  el.addEventListener("mouseleave", function () {
+    tip.style.display = "none";
+  });
+}
+function statBox(items) {
+  return '<div class="stats">' + items.map(function (i) {
+    return "<div class=\"stat ".concat(i.cls || '', "\"><div class=\"k\">").concat(i.k, "</div><div class=\"v\">").concat(i.v, "<span class=\"u\">").concat(i.u || "", "</span></div></div>");
+  }).join("") + "</div>";
+}
+function tbl(head, rows, cls) {
+  return "<div class=\"scroll\"><table class=\"".concat(cls || '', "\"><thead><tr>").concat(head.map(function (h) {
+    return "<th class=\"".concat(/^#|数|率|％|%|比|長|回|秒$/.test(h) ? 'num' : '', "\">").concat(h, "</th>");
+  }).join(""), "</tr></thead>\n    <tbody>").concat(rows.map(function (r) {
+    return "<tr>" + r.map(function (c) {
+      return typeof c === "object" ? "<td class=\"".concat(c.c || '', "\">").concat(c.v, "</td>") : "<td>".concat(c, "</td>");
+    }).join("") + "</tr>";
+  }).join(""), "</tbody></table></div>");
+}
+/* ── 画像の書き出し ────────────────────────────
+   表示とは切り離し、保存するときだけSVG文字列を組み立てる。
+   width / height を明示しないとPNG変換で0×0になる環境がある。 */
+function saveSVGString(inner, W, H, name, png) {
+  var xml = '<' + '?xml version="1.0" encoding="UTF-8"?' + '>\n' + '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + inner + '</svg>';
+  if (!png) {
+    dl(new Blob([xml], {
+      type: "image/svg+xml"
+    }), name + ".svg", "text");
+    return;
+  }
+  var img = new Image();
+  img.onload = function () {
+    try {
+      var c = document.createElement("canvas");
+      c.width = W * 2;
+      c.height = H * 2;
+      var g = c.getContext("2d");
+      g.fillStyle = "#fff";
+      g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      if (c.toBlob) c.toBlob(function (b) {
+        return b ? dl(b, name + ".png", "img") : saveSVGString(inner, W, H, name, false);
+      });else dl(dataURItoBlob(c.toDataURL("image/png")), name + ".png", "img");
+    } catch (e) {
+      alert("PNGに変換できませんでした。「SVGで保存」をお使いください。");
+    }
+  };
+  img.onerror = function () {
+    return alert("PNGに変換できませんでした。「SVGで保存」をお使いください。");
+  };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+}
+function dataURItoBlob(u) {
+  var b = atob(u.split(",")[1]),
+    a = new Uint8Array(b.length);
+  for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+  return new Blob([a], {
+    type: "image/png"
+  });
+}
+/* 表示中のネットワーク（ドラッグ後の位置を保ったまま）を保存 */
+function saveNet(id, name, png) {
+  var el = document.getElementById(id);
+  if (!el) {
+    alert("図がまだ描かれていません。");
+    return;
+  }
+  var vb = el.viewBox.baseVal;
+  saveSVGString(el.innerHTML, vb.width, vb.height, name, png);
+}
+function saveTape(png) {
+  saveSVGString(tapeInner(ST.turns), 1120, 210, "発話タイムライン", png);
+}
+function saveBalance(png) {
+  saveSVGString(balanceInner(ST.turns, 10), 1120, 54, "区間別発話バランス", png);
+}
+function dl(blob, name, kind) {
+  try {
+    var a = document.createElement("a");
+    if (typeof a.download === "undefined") throw new Error("no download attr");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 4000);
+  } catch (e) {
+    fallbackSave(blob, name, kind);
+  }
+}
+/* サンドボックス内iframe（GASなど）でダウンロードがブロックされた場合 */
+function fallbackSave(blob, name, kind) {
+  var r = new FileReader();
+  r.onload = function () {
+    var w = window.open("", "_blank");
+    if (!w) {
+      alert("この環境ではダウンロードがブロックされています。ポップアップを許可するか、Webアプリを新しいタブで開いてから実行してください。");
+      return;
+    }
+    var body = kind === "text" ? '<p style="font:13px sans-serif">全選択してコピーし、' + name + ' として保存してください。</p><textarea style="width:98%;height:80vh;font:12px monospace">' + String(r.result).split(",").slice(1).join(",") + '</textarea>' : '<p style="font:13px sans-serif">画像を右クリックして「名前を付けて保存」を選んでください（' + name + '）。</p><img src="' + r.result + '" style="max-width:100%">';
+    w.document.write('<meta charset="utf-8"><title>' + name + '</title>' + body);
+    w.document.close();
+    if (kind === "text") {
+      var ta = w.document.querySelector("textarea");
+      ta.value = decodeURIComponent(escape(atob(ta.value)));
+    }
+  };
+  r.readAsDataURL(blob);
+}
+function dlText(txt, name) {
+  dl(new Blob(["\uFEFF" + txt], {
+    type: "text/plain;charset=utf-8"
+  }), name, "text");
+}
+/* padding-bottom が効かない環境では実寸の高さを入れる */
+function fitSVGs(root) {
+  (root || document).querySelectorAll(".svgfit").forEach(function (w) {
+    var svg = w.querySelector("svg");
+    if (!svg) return;
+    var vb = svg.viewBox && svg.viewBox.baseVal;
+    if (!vb || !vb.width) return;
+    var wide = w.clientWidth || w.parentNode.clientWidth || 0;
+    if (w.getBoundingClientRect().height < 4 && wide > 0) {
+      w.style.paddingBottom = "0";
+      w.style.height = Math.round(wide * vb.height / vb.width) + "px";
+    }
+  });
+}
+addEventListener("resize", function () {
+  document.querySelectorAll(".svgfit").forEach(function (w) {
+    if (!w.style.height) return;
+    var vb = w.querySelector("svg").viewBox.baseVal,
+      wide = w.clientWidth || w.parentNode.clientWidth;
+    if (wide > 0) w.style.height = Math.round(wide * vb.height / vb.width) + "px";
+  });
+});
+
+/* ══════════════════════════════════════════════════════════
+   8. SVGはDOM APIで組み立てる（innerHTML経由だと環境により落ちる）
+   ══════════════════════════════════════════════════════════ */
+var SVGNS = "http://www.w3.org/2000/svg";
+function mk(tag, attrs, text) {
+  var e = document.createElementNS(SVGNS, tag);
+  if (attrs) for (var k in attrs) {
+    if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+  }
+  if (text != null) e.textContent = text;
+  return e;
+}
+/* 生成したSVGを比率つきの箱に入れて設置する */
+function mount(host, built) {
+  if (!host || !built) return null;
+  var svg = built.svg,
+    W = built.W,
+    H = built.H;
+  host.textContent = "";
+  var fit = document.createElement("div");
+  fit.className = "svgfit";
+  fit.style.paddingBottom = (H / W * 100).toFixed(3) + "%";
+  fit.appendChild(svg);
+  host.appendChild(fit);
+  var fix = function fix() {
+    var w = fit.clientWidth || host.clientWidth || host.parentNode.clientWidth || 0;
+    if (fit.getBoundingClientRect().height < 4 && w > 0) {
+      fit.style.paddingBottom = "0";
+      fit.style.height = Math.round(w * H / W) + "px";
+    }
+  };
+  fix();
+  setTimeout(fix, 80);
+  return svg;
+}
+
+/* ── 署名要素：発話ターン・テープ ─────────────────
+   表示はHTMLのdivバーで行う。SVGを経由しないため、
+   サンドボックス内iframe（GASなど）でも確実に描画される。 */
+function tapeHTML(turns) {
+  var H = 210,
+    base = 112,
+    pc = function pc(v) {
+      return (v / H * 100).toFixed(3);
+    };
+  var total = turns.reduce(function (a, t) {
+    return a + Math.max(6, t.text.length);
+  }, 0) || 1;
+  var x = 0,
+    bars = "";
+  turns.forEach(function (t) {
+    var w = Math.max(6, t.text.length) / total * 100;
+    var h = Math.min(84, 10 + Math.sqrt(t.text.length) * 7);
+    var pos;
+    if (t.group === "T") pos = "bottom:" + (100 - base / H * 100).toFixed(3) + "%;height:" + pc(h) + "%";else if (t.group === "S") pos = "top:" + pc(base + 2) + "%;height:" + pc(h) + "%";else pos = "top:" + pc(base - 5) + "%;height:" + pc(10) + "%";
+    bars += '<div class="tbar" data-i="' + t.i + '" style="left:' + x.toFixed(4) + "%;width:" + Math.max(w, 0.12).toFixed(4) + "%;" + pos + ";background:" + FC(t.cat).c + ";opacity:" + (t.group === "X" ? 0.55 : 0.92) + '"></div>';
+    x += w;
+  });
+  return '<div class="tapebox" id="tapebox"><span class="tlab" style="top:4px;left:8px">教師 ↑</span>' + '<span class="tlab" style="bottom:4px;left:8px">↓ 児童生徒</span>' + bars + '<div class="base"></div></div>';
+}
+function balanceHTML(turns, seg) {
+  var n = turns.length;
+  var out = "";
+  var _loop2 = function _loop2() {
+    var sl = turns.slice(Math.floor(n * i / seg), Math.floor(n * (i + 1) / seg));
+    var c = function c(g) {
+      return sl.filter(function (t) {
+        return t.group === g;
+      }).reduce(function (a, t) {
+        return a + t.text.length;
+      }, 0);
+    };
+    var tT = c("T"),
+      tS = c("S"),
+      tX = c("X"),
+      tot = tT + tS + tX || 1;
+    out += '<div class="balseg" title="第' + (i + 1) + "区間　教師" + (tT / tot * 100).toFixed(0) + "％／児童生徒" + (tS / tot * 100).toFixed(0) + '％">' + '<div style="height:' + (tT / tot * 100).toFixed(2) + '%;background:#2A4C7D"></div>' + '<div style="height:' + (tS / tot * 100).toFixed(2) + '%;background:#C8552B"></div>' + '<div style="height:' + (tX / tot * 100).toFixed(2) + '%;background:#B7BEC6"></div></div>';
+  };
+  for (var i = 0; i < seg; i++) {
+    _loop2();
+  }
+  return '<div class="balbox">' + out + "</div>";
+}
+/* 発話バーにカーソルを合わせたときの吹き出し */
+function bindTape(root) {
+  (root || document).querySelectorAll(".tbar[data-i]").forEach(function (r) {
+    var t = ST.turns[+r.getAttribute("data-i")];
+    if (!t) return;
+    hov(r, '<span class="sp">' + esc(t.speaker) + "｜" + FC(t.cat).n + ". " + FC(t.cat).name + "｜" + t.text.length + "字" + (t.time != null ? "｜" + fmtT(t.time) : "") + "</span>" + esc(t.text.slice(0, 140)));
+  });
+}
+/* 書き出し用：同じ図をSVGの中身として組み立てる */
+function tapeInner(turns) {
+  var W = 1120,
+    H = 210,
+    base = 112,
+    pad = 8;
+  var total = turns.reduce(function (a, t) {
+    return a + Math.max(6, t.text.length);
+  }, 0) || 1;
+  var x = pad,
+    o = '<rect width="' + W + '" height="' + H + '" fill="#FBFCFC"/>' + '<text x="' + pad + '" y="18" font-family="monospace" font-size="11" fill="#8B93A0">教師 ↑</text>' + '<text x="' + pad + '" y="' + (H - 8) + '" font-family="monospace" font-size="11" fill="#8B93A0">↓ 児童生徒</text>';
+  turns.forEach(function (t) {
+    var w = Math.max(1.4, Math.max(6, t.text.length) / total * (W - pad * 2));
+    var h = Math.min(84, 10 + Math.sqrt(t.text.length) * 7);
+    var y, hh;
+    if (t.group === "T") {
+      y = base - h;
+      hh = h;
+    } else if (t.group === "S") {
+      y = base + 2;
+      hh = h;
+    } else {
+      y = base - 5;
+      hh = 10;
+    }
+    o += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(2) + '" height="' + hh.toFixed(1) + '" fill="' + FC(t.cat).c + '" opacity="' + (t.group === "X" ? 0.55 : 0.92) + '"/>';
+    x += w;
+  });
+  return o + '<line x1="' + pad + '" y1="' + base + '" x2="' + (W - pad) + '" y2="' + base + '" stroke="#171B22" stroke-width="1"/>';
+}
+function balanceInner(turns, seg) {
+  var W = 1120,
+    H = 54,
+    n = turns.length;
+  var o = '<rect width="' + W + '" height="' + H + '" fill="#FBFCFC"/>';
+  var _loop3 = function _loop3() {
+    var sl = turns.slice(Math.floor(n * k / seg), Math.floor(n * (k + 1) / seg));
+    var c = function c(g) {
+      return sl.filter(function (t) {
+        return t.group === g;
+      }).reduce(function (a, t) {
+        return a + t.text.length;
+      }, 0);
+    };
+    var tot = c("T") + c("S") + c("X") || 1,
+      x = k / seg * W + 0.75,
+      w = W / seg - 1.5;
+    var hT = c("T") / tot * H,
+      hS = c("S") / tot * H,
+      hX = c("X") / tot * H;
+    o += '<rect x="' + x + '" y="0" width="' + w + '" height="' + hT + '" fill="#2A4C7D"/>' + '<rect x="' + x + '" y="' + hT + '" width="' + w + '" height="' + hS + '" fill="#C8552B"/>' + '<rect x="' + x + '" y="' + (hT + hS) + '" width="' + w + '" height="' + hX + '" fill="#B7BEC6"/>';
+  };
+  for (var k = 0; k < seg; k++) {
+    _loop3();
+  }
+  return o;
+}
+
+/* ══════════════════════════════════════════════════════════
+   9. ネットワーク（ドラッグ可）
+   ══════════════════════════════════════════════════════════ */
+function netEl(id, nodes, edges, W, H, opt) {
+  layout(nodes, edges, W, H, 320);
+  var svg = mk("svg", {
+    id: id,
+    viewBox: "0 0 " + W + " " + H,
+    preserveAspectRatio: "xMidYMid meet"
+  });
+  svg.appendChild(mk("rect", {
+    width: W,
+    height: H,
+    fill: "#FFFFFF"
+  }));
+  var gE = mk("g", {
+      class: "edges"
+    }),
+    gN = mk("g", {
+      class: "nodes"
+    });
+  var mxN = Math.max.apply(Math, _toConsumableArray(nodes.map(function (n) {
+      return n.n || 1;
+    }))) || 1,
+    mxE = Math.max.apply(Math, _toConsumableArray(edges.map(function (e) {
+      return e.j != null ? e.j : e.n;
+    }))) || 1;
+  edges.forEach(function (e) {
+    var a = nodes.find(function (n) {
+        return n.id === e.a;
+      }),
+      b = nodes.find(function (n) {
+        return n.id === e.b;
+      });
+    if (!a || !b) return;
+    var v = (e.j != null ? e.j : e.n) / mxE;
+    gE.appendChild(mk("line", {
+      class: "ed",
+      "data-a": e.a,
+      "data-b": e.b,
+      x1: a.x.toFixed(1),
+      y1: a.y.toFixed(1),
+      x2: b.x.toFixed(1),
+      y2: b.y.toFixed(1),
+      stroke: "#9AA3AF",
+      "stroke-width": (0.6 + v * 4).toFixed(2),
+      opacity: (0.3 + v * 0.5).toFixed(2)
+    }));
+  });
+  nodes.forEach(function (n) {
+    var r = 8 + Math.sqrt((n.n || 1) / mxN) * (opt.rmax || 18);
+    var g = mk("g", {
+      class: "nd",
+      "data-id": n.id,
+      transform: "translate(" + n.x.toFixed(1) + "," + n.y.toFixed(1) + ")"
+    });
+    g.style.cursor = "grab";
+    g.appendChild(mk("circle", {
+      r: r.toFixed(1),
+      fill: opt.color(n),
+      "fill-opacity": 0.88,
+      stroke: "#fff",
+      "stroke-width": 1.5
+    }));
+    g.appendChild(mk("text", {
+      y: (r + 13).toFixed(0),
+      "text-anchor": "middle",
+      "font-size": opt.fs || 12.5,
+      "font-family": "'Hiragino Sans','Yu Gothic',sans-serif",
+      fill: "#171B22",
+      stroke: "#FFF",
+      "stroke-width": 3,
+      "paint-order": "stroke"
+    }, n.id));
+    gN.appendChild(g);
+  });
+  svg.appendChild(gE);
+  svg.appendChild(gN);
+  return {
+    svg: svg,
+    W: W,
+    H: H
+  };
+}
+function makeDraggable(svg) {
+  if (!svg || typeof svg === "string") svg = document.getElementById(svg);
+  if (!svg) return;
+  var cur = null,
+    off = {
+      x: 0,
+      y: 0
+    };
+  var pt = function pt(e) {
+    var r = svg.getBoundingClientRect(),
+      vb = svg.viewBox.baseVal;
+    return {
+      x: (e.clientX - r.left) / r.width * vb.width,
+      y: (e.clientY - r.top) / r.height * vb.height
+    };
+  };
+  svg.addEventListener("pointerdown", function (e) {
+    var g = e.target.closest ? e.target.closest(".nd") : null;
+    if (!g) return;
+    cur = g;
+    var p = pt(e),
+      m = g.getAttribute("transform").match(/translate\(([-\d.]+),([-\d.]+)\)/);
+    off = {
+      x: p.x - +m[1],
+      y: p.y - +m[2]
+    };
+    g.style.cursor = "grabbing";
+    try {
+      svg.setPointerCapture(e.pointerId);
+    } catch (_) {}
+  });
+  svg.addEventListener("pointermove", function (e) {
+    if (!cur) return;
+    var p = pt(e),
+      x = p.x - off.x,
+      y = p.y - off.y;
+    cur.setAttribute("transform", "translate(" + x + "," + y + ")");
+    var id = cur.getAttribute("data-id");
+    svg.querySelectorAll(".ed").forEach(function (l) {
+      if (l.getAttribute("data-a") === id) {
+        l.setAttribute("x1", x);
+        l.setAttribute("y1", y);
+      }
+      if (l.getAttribute("data-b") === id) {
+        l.setAttribute("x2", x);
+        l.setAttribute("y2", y);
+      }
+    });
+  });
+  svg.addEventListener("pointerup", function () {
+    if (cur) {
+      cur.style.cursor = "grab";
+      cur = null;
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   10. 状態とタブ構築
+   ══════════════════════════════════════════════════════════ */
+var ST = null;
+var TABS = [["overview", "概観"], ["fiac", "相互作用（FIAC）"], ["q", "発問"], ["irf", "IRF連鎖"], ["lex", "語彙・共起"], ["edit", "コード修正"], ["read", "読み取り・記述例"], ["r", "Rコード"]];
+function analyze() {
+  try {
+    runAnalysis();
+  } catch (e) {
+    showErr("[分析] " + (e && e.stack ? e.stack : e));
+  }
+}
+function runAnalysis() {
+  var e0 = $("#err");
+  if (e0) e0.hidden = true;
+  var raw = $("#src").value;
+  if (!raw.trim()) {
+    alert("逐語録を入力してください。");
+    return;
+  }
+  STOP = new Set($("#stop").value.split(/[\s,、]+/).filter(Boolean));
+  FORCE = $("#force").value.split(/\r?\n/).map(function (s) {
+    return s.trim();
+  }).filter(Boolean).sort(function (a, b) {
+    return b.length - a.length;
+  });
+  MINLEN = +$("#minlen").value;
+  var turns = parse(raw, $("#tpat").value || "T", $("#silpat").value || "沈黙");
+  if (!turns.length) {
+    alert("発話を1つも認識できませんでした。区切り記号（：, カンマ, タブ）を確認してください。");
+    return;
+  }
+  classify(turns);
+  ST = {
+    turns: turns
+  };
+  recompute();
+  $("#out").style.display = "block";
+  buildTabs();
+  $("#out").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
+function recompute() {
+  var t = ST.turns;
+  ST.b = basics(t);
+  ST.f = fiacStats(t);
+  ST.qs = questions(t);
+  ST.ir = irf(t);
+  ST.lex = lexicon(t);
+  ST.co = cooc(ST.lex, 2, 60);
+  ST.snet = speakerNet(t);
+}
+function buildTabs() {
+  $("#tabs").innerHTML = TABS.map(function (_ref7, i) {
+    var _ref8 = _slicedToArray(_ref7, 2),
+      k = _ref8[0],
+      l = _ref8[1];
+    return "<button class=\"tab".concat(i ? '' : ' on', "\" data-k=\"").concat(k, "\">").concat(l, "</button>");
+  }).join("");
+  $("#panes").innerHTML = TABS.map(function (_ref9, i) {
+    var _ref0 = _slicedToArray(_ref9, 1),
+      k = _ref0[0];
+    return "<div class=\"pane".concat(i ? '' : ' on', "\" id=\"pane-").concat(k, "\"></div>");
+  }).join("");
+  document.querySelectorAll(".tab").forEach(function (b) {
+    return b.onclick = function () {
+      document.querySelectorAll(".tab").forEach(function (x) {
+        return x.classList.remove("on");
+      });
+      document.querySelectorAll(".pane").forEach(function (x) {
+        return x.classList.remove("on");
+      });
+      b.classList.add("on");
+      $("#pane-" + b.dataset.k).classList.add("on");
+      render(b.dataset.k);
+    };
+  });
+  TABS.forEach(function (_ref1) {
+    var _ref10 = _slicedToArray(_ref1, 1),
+      k = _ref10[0];
+    document.getElementById("pane-" + k).dataset.done = "";
+  });
+  render("overview");
+}
+function renderAll() {
+  TABS.forEach(function (_ref11) {
+    var _ref12 = _slicedToArray(_ref11, 1),
+      k = _ref12[0];
+    var p = document.getElementById("pane-" + k);
+    if (p) p.dataset.done = "";
+  });
+  render(document.querySelector(".tab.on").dataset.k);
+}
+function render(k) {
+  var p = document.getElementById("pane-" + k);
+  if (!p || p.dataset.done === "1") return;
+  try {
+    ({
+      overview: pOverview,
+      fiac: pFiac,
+      q: pQ,
+      irf: pIrf,
+      lex: pLex,
+      edit: pEdit,
+      read: pRead,
+      r: pR
+    })[k](p);
+  } catch (e) {
+    p.innerHTML = '<section class="card"><p class="empty">このタブの描画に失敗しました。</p></section>';
+    showErr("[" + k + "タブ] " + (e && e.stack ? e.stack : e));
+    return;
+  }
+  p.dataset.done = "1";
+  fitSVGs(p);
+  setTimeout(function () {
+    return fitSVGs(p);
+  }, 60);
+}
+
+/* ── 01 概観 ─────────────────────────────────── */
+function pOverview(p) {
+  var b = ST.b,
+    f = ST.f;
+  p.innerHTML = "\n  <section class=\"card\"><h2><span class=\"idx\">01</span>\u6388\u696D\u306E\u547C\u5438</h2>\n    <p class=\"hint\">\u6A2A\u5E45\uFF1D\u767A\u8A71\u91CF\uFF08\u6587\u5B57\u6570\uFF09\u3002\u7DDA\u306E\u4E0A\u304C\u6559\u5E2B\u3001\u4E0B\u304C\u5150\u7AE5\u751F\u5F92\u3002\u8272\u306F\u30D5\u30E9\u30F3\u30C0\u30FC\u30B9\u306E\u30AB\u30C6\u30B4\u30EA\u30FC\u3002\u30D0\u30FC\u306B\u30AB\u30FC\u30BD\u30EB\u3092\u5408\u308F\u305B\u308B\u3068\u767A\u8A71\u304C\u51FA\u307E\u3059\u3002</p>\n    ".concat(tapeHTML(ST.turns), "\n    <div class=\"tapelab\"><span>\u6388\u696D\u306E\u306F\u3058\u3081</span><span>\u7DCF ").concat(b.cAll.toLocaleString(), " \u5B57 \uFF0F ").concat(b.n, " \u30BF\u30FC\u30F3</span><span>\u304A\u308F\u308A</span></div>\n    <div class=\"legend\">").concat(FIAC.map(function (c) {
+    return "<span><i style=\"background:".concat(c.c, "\"></i>").concat(c.n, ". ").concat(c.ab, "</span>");
+  }).join(""), "</div>\n    <h3>\u533A\u9593\u5225\u306E\u767A\u8A71\u30D0\u30E9\u30F3\u30B9\uFF0810\u7B49\u5206\uFF09</h3>\n    ").concat(balanceHTML(ST.turns, 10), "\n    <div class=\"tapelab\"><span>\u25A0 \u6559\u5E2B\u3000\u25A0 \u5150\u7AE5\u751F\u5F92\u3000\u25A0 \u6C88\u9ED9\u30FB\u4F5C\u696D</span><span>\u7E26\uFF1D\u5404\u533A\u9593\u5185\u306E\u6587\u5B57\u6570\u6BD4</span></div>\n    <div class=\"row\"><button class=\"btn ghost sm\" onclick=\"saveTape(true)\">\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u3092PNG\u3067\u4FDD\u5B58</button>\n      <button class=\"btn ghost sm\" onclick=\"saveTape(false)\">SVG\u3067\u4FDD\u5B58</button>\n      <button class=\"btn ghost sm\" onclick=\"saveBalance(true)\">\u30D0\u30E9\u30F3\u30B9\u5E2F\u3092PNG\u3067\u4FDD\u5B58</button></div>\n  </section>\n\n  <section class=\"card\"><h2><span class=\"idx\">02</span>\u57FA\u672C\u7D71\u8A08</h2>\n  ").concat(statBox([{
+    k: "総発話ターン",
+    v: b.n,
+    u: "回"
+  }, {
+    k: "教師の発話",
+    v: b.nT,
+    u: "回",
+    cls: "ai"
+  }, {
+    k: "児童生徒の発話",
+    v: b.nS,
+    u: "回",
+    cls: "kaki"
+  }, {
+    k: "発話者数（児童生徒）",
+    v: b.nSpk,
+    u: "人"
+  }, {
+    k: "教師の発話量比",
+    v: f1(b.cT / (b.cAll || 1) * 100),
+    u: "％",
+    cls: "ai"
+  }, {
+    k: "児童生徒の発話量比",
+    v: f1(b.cS / (b.cAll || 1) * 100),
+    u: "％",
+    cls: "kaki"
+  }, {
+    k: "教師1発話の平均",
+    v: f1(b.avgT),
+    u: "字",
+    cls: "ai"
+  }, {
+    k: "児童1発話の平均",
+    v: f1(b.avgS),
+    u: "字",
+    cls: "kaki"
+  }, {
+    k: "話者交替",
+    v: b.switches,
+    u: "回",
+    cls: "take"
+  }, {
+    k: "児童→児童の連鎖",
+    v: b.trans.SS,
+    u: "回",
+    cls: "take"
+  }, {
+    k: "発話量の偏り（ジニ）",
+    v: f2(b.gini),
+    u: ""
+  }, {
+    k: "発問後の平均待ち時間",
+    v: b.wait == null ? "—" : f1(b.wait),
+    u: b.wait == null ? "" : "秒"
+  }]), "\n  <h3>\u5150\u7AE5\u751F\u5F92\u306E\u53C2\u52A0\u72B6\u6CC1</h3>\n  ").concat(b.nSpk ? tbl(["話者", "発話回数", "総文字数", "平均文字数", "全児童発話に占める割合"], Object.entries(b.speakers).sort(function (a, c) {
+    return c[1] - a[1];
+  }).map(function (_ref13) {
+    var _ref14 = _slicedToArray(_ref13, 2),
+      sp = _ref14[0],
+      n = _ref14[1];
+    var ts = ST.turns.filter(function (t) {
+        return t.speaker === sp;
+      }),
+      ch = ts.reduce(function (s, t) {
+        return s + t.text.length;
+      }, 0);
+    return ["<span class=\"pill p-S\">".concat(esc(sp), "</span>"), {
+      v: n,
+      c: "num"
+    }, {
+      v: ch,
+      c: "num"
+    }, {
+      v: f1(ch / n),
+      c: "num"
+    }, {
+      v: f1(n / b.nS * 100) + " ％",
+      c: "num"
+    }];
+  })) : '<p class="empty">児童生徒の発話が検出されませんでした。</p>', "\n  <div class=\"note\"><p>\u30B8\u30CB\u4FC2\u6570\u306F\u5150\u7AE5\u751F\u5F92\u306E\u767A\u8A71\u56DE\u6570\u306E\u504F\u308A\u3067\u3059\u30020\u306B\u8FD1\u3044\u307B\u3069\u767A\u8A71\u304C\u5168\u54E1\u306B\u5206\u6563\u3057\u30010.5\u3092\u8D85\u3048\u308B\u3068\u4E00\u90E8\u306E\u5150\u7AE5\u306B\u767A\u8A71\u304C\u96C6\u4E2D\u3057\u3066\u3044\u308B\u72B6\u614B\u3092\u793A\u3057\u307E\u3059\uFF08\u672C\u6388\u696D\uFF1D<b>").concat(f2(b.gini), "</b>\uFF09\u3002</p></div>\n  </section>");
+  bindTape(p);
+}
+
+/* ── 02 FIAC ─────────────────────────────────── */
+function pFiac(p) {
+  var f = ST.f,
+    mx = Math.max.apply(Math, _toConsumableArray(f.M.slice(1).map(function (r) {
+      return Math.max.apply(Math, _toConsumableArray(r.slice(1)));
+    }))) || 1;
+  var head = ["<th>先行＼後続</th>"].concat(FIAC.map(function (c) {
+    return "<th title=\"".concat(c.name, "\">").concat(c.n, "</th>");
+  }), "<th>計</th>").join("");
+  var rows = FIAC.map(function (c) {
+    var r = f.M[c.n],
+      sum = r.reduce(function (a, b) {
+        return a + b;
+      }, 0);
+    return "<tr><th title=\"".concat(c.name, "\" style=\"text-align:left;white-space:nowrap\">").concat(c.n, ". ").concat(c.ab, "</th>") + FIAC.map(function (d) {
+      var v = r[d.n],
+        o = v / mx;
+      return "<td style=\"background:rgba(42,76,125,".concat((o * 0.75).toFixed(3), ");color:").concat(o > 0.55 ? '#fff' : '#171B22', "\">").concat(v || "", "</td>");
+    }).join("") + "<td style=\"font-weight:600\">".concat(sum, "</td></tr>");
+  }).join("");
+  var key = [[4, 8, "発問→応答：問いが応答を引き出した"], [8, 3, "応答→取り上げ：児童の考えを教師が受け止めた"], [9, 3, "自発→取り上げ：自発的発言を活かした"], [4, 4, "発問→発問：問い直し・畳みかけ"], [5, 5, "説明の連続：講義的な場面"], [8, 8, "児童の応答の連続：児童間で話がつながった"], [9, 9, "自発発話の連続：児童主導の議論"], [10, 10, "沈黙・作業の持続"]];
+  p.innerHTML = "\n  <section class=\"card\"><h2><span class=\"idx\">03</span>\u30D5\u30E9\u30F3\u30C0\u30FC\u30B9\u76F8\u4E92\u4F5C\u7528\u5206\u6790</h2>\n    <p class=\"hint\">\u9023\u7D9A\u3059\u308B2\u767A\u8A71\u306E\u7D44\u3092\u6570\u3048\u305F10\xD710\u884C\u5217\u3067\u3059\u3002\u884C\u304C\u5148\u884C\u3001\u5217\u304C\u5F8C\u7D9A\u306E\u30AB\u30C6\u30B4\u30EA\u30FC\u3002\u6FC3\u3044\u30BB\u30EB\u307B\u3069\u983B\u7E41\u306B\u8D77\u304D\u305F\u6D41\u308C\u3067\u3059\u3002</p>\n    ".concat(statBox([{
+    k: "教師発話率 TT%",
+    v: f1(f.TT),
+    u: "％",
+    cls: "ai"
+  }, {
+    k: "児童生徒発話率 PT%",
+    v: f1(f.PT),
+    u: "％",
+    cls: "kaki"
+  }, {
+    k: "沈黙・混乱 SC%",
+    v: f1(f.SC),
+    u: "％"
+  }, {
+    k: "I/D比（間接／直接）",
+    v: f2(f.ID),
+    u: "",
+    cls: "take"
+  }, {
+    k: "修正I/D比",
+    v: f2(f.rID),
+    u: "",
+    cls: "take"
+  }, {
+    k: "内容重視率 CCR",
+    v: f1(f.CCR),
+    u: "％"
+  }, {
+    k: "発問率 TQR",
+    v: f2(f.TQR),
+    u: ""
+  }, {
+    k: "児童発話開始率 PIR",
+    v: f2(f.PIR),
+    u: "",
+    cls: "kaki"
+  }, {
+    k: "教師応答比 TRR",
+    v: f2(f.TRR),
+    u: "",
+    cls: "ai"
+  }, {
+    k: "児童発話持続 SSR",
+    v: f1(f.SSR),
+    u: "％",
+    cls: "kaki"
+  }]), "\n    <h3>\u30AB\u30C6\u30B4\u30EA\u30FC\u5225\u306E\u51FA\u73FE</h3>\n    ").concat(tbl(["#", "カテゴリー", "説明", "発話数", "構成比"], FIAC.map(function (c) {
+    return ["<span class=\"tag\" style=\"background:".concat(c.c, ";color:#fff;border-color:").concat(c.c, "\">").concat(c.n, "</span>"), c.name, "<span style=\"color:#5E6874;font-size:11.5px\">".concat(c.d, "</span>"), {
+      v: f.c[c.n],
+      c: "num"
+    }, {
+      v: f1(f.c[c.n] / f.tot * 100) + " ％",
+      c: "num"
+    }];
+  })), "\n    <h3>\u76F8\u4E92\u4F5C\u7528\u884C\u5217\uFF08\u5148\u884C\u2192\u5F8C\u7D9A\uFF09</h3>\n    <div class=\"scroll\"><table class=\"mtx\"><thead><tr>").concat(head, "</tr></thead><tbody>").concat(rows, "</tbody></table></div>\n    <h3>\u8AAD\u307F\u3069\u3053\u308D\u306E\u30BB\u30EB</h3>\n    ").concat(tbl(["流れ", "回数", "意味"], key.map(function (_ref15) {
+    var _ref16 = _slicedToArray(_ref15, 3),
+      a = _ref16[0],
+      bb = _ref16[1],
+      d = _ref16[2];
+    return ["".concat(a, " \u2192 ").concat(bb, "\u3000<span style=\"color:#5E6874;font-size:11px\">").concat(FC(a).ab, "\u2192").concat(FC(bb).ab, "</span>"), {
+      v: f.M[a][bb],
+      c: "num"
+    }, d];
+  })), "\n    <div class=\"note\"><p><b>I/D\u6BD4</b>\u306F\u300C\u9593\u63A5\u7684\u5F71\u97FF\uFF08\u53D7\u5BB9\u30FB\u8CDE\u8CDB\u30FB\u8003\u3048\u306E\u5229\u7528\u30FB\u767A\u554F\uFF09\u300D\xF7\u300C\u76F4\u63A5\u7684\u5F71\u97FF\uFF08\u8AAC\u660E\u30FB\u6307\u793A\u30FB\u6279\u5224\uFF09\u300D\u30021.0\u3092\u8D85\u3048\u308B\u3068\u5150\u7AE5\u306E\u8003\u3048\u3092\u8EF8\u306B\u9032\u3080\u6388\u696D\u3001\u4E0B\u56DE\u308B\u3068\u6559\u5E2B\u4E3B\u5C0E\u306E\u4F1D\u9054\u578B\u306B\u50BE\u304D\u307E\u3059\u3002\u672C\u6388\u696D\u306F <b>").concat(f2(f.ID), "</b>\u3002</p>\n    <p><b>SSR</b>\u306F\u5150\u7AE5\u751F\u5F92\u306E\u767A\u8A71\u304C\u6B21\u3082\u5150\u7AE5\u751F\u5F92\u306B\u7D9A\u3044\u305F\u5272\u5408\u3067\u3001\u5150\u7AE5\u9593\u306E\u76F8\u4E92\u4F5C\u7528\u306E\u76EE\u5B89\u306B\u306A\u308A\u307E\u3059\uFF08\u672C\u6388\u696D\uFF1D<b>").concat(f1(f.SSR), "\uFF05</b>\uFF09\u3002</p></div>\n  </section>");
+}
+
+/* ── 03 発問 ─────────────────────────────────── */
+function pQ(p) {
+  var qs = ST.qs,
+    n = qs.length;
+  if (!n) {
+    p.innerHTML = '<section class="card"><h2><span class="idx">04</span>発問</h2><p class="empty">発問が検出されませんでした。「？」や「〜ですか」を含む教師発話があるか確認してください。</p></section>';
+    return;
+  }
+  var open = qs.filter(function (q) {
+    return q.open;
+  }).length;
+  var BL = ["記憶", "理解", "応用", "分析", "評価", "創造"];
+  var bc = BL.map(function (l) {
+    return qs.filter(function (q) {
+      return q.bloom === l;
+    }).length;
+  });
+  var bmax = Math.max.apply(Math, _toConsumableArray(bc)) || 1;
+  var bars = BL.map(function (l, i) {
+    var w = bc[i] / bmax * 100,
+      hi = i >= 3;
+    return "<tr><td style=\"white-space:nowrap\">".concat(l, "</td><td class=\"num\">").concat(bc[i], "</td><td class=\"num\">").concat(f1(bc[i] / n * 100), " \uFF05</td>\n      <td style=\"width:55%\"><div style=\"background:").concat(hi ? '#2F8F6E' : '#7E93AE', ";height:13px;width:").concat(w, "%;border-radius:1px\"></div></td></tr>");
+  }).join("");
+  var answered = qs.filter(function (q) {
+    return q.answered;
+  }).length;
+  var waits = qs.filter(function (q) {
+    return q.wait != null && q.wait < 120;
+  });
+  p.innerHTML = "\n  <section class=\"card\"><h2><span class=\"idx\">04</span>\u767A\u554F\u306E\u5206\u6790</h2>\n    ".concat(statBox([{
+    k: "発問の総数",
+    v: n,
+    u: "回",
+    cls: "ai"
+  }, {
+    k: "開いた発問",
+    v: open,
+    u: "回",
+    cls: "take"
+  }, {
+    k: "閉じた発問",
+    v: n - open,
+    u: "回"
+  }, {
+    k: "開いた発問の割合",
+    v: f1(open / n * 100),
+    u: "％",
+    cls: "take"
+  }, {
+    k: "高次発問（分析以上）",
+    v: bc[3] + bc[4] + bc[5],
+    u: "回",
+    cls: "take"
+  }, {
+    k: "応答が得られた発問",
+    v: f1(answered / n * 100),
+    u: "％"
+  }, {
+    k: "平均応答文字数",
+    v: f1(qs.reduce(function (s, q) {
+      return s + q.ansLen;
+    }, 0) / n),
+    u: "字",
+    cls: "kaki"
+  }, {
+    k: "平均待ち時間",
+    v: waits.length ? f1(waits.reduce(function (s, q) {
+      return s + q.wait;
+    }, 0) / waits.length) : "—",
+    u: waits.length ? "秒" : ""
+  }]), "\n    <h3>\u8A8D\u77E5\u30EC\u30D9\u30EB\uFF08\u30D6\u30EB\u30FC\u30E0\u306E\u5206\u985E\u306B\u57FA\u3065\u304F\u63A8\u5B9A\uFF09</h3>\n    <table><thead><tr><th>\u30EC\u30D9\u30EB</th><th class=\"num\">\u767A\u554F\u6570</th><th class=\"num\">\u5272\u5408</th><th>\u5206\u5E03</th></tr></thead><tbody>").concat(bars, "</tbody></table>\n    <p class=\"hint\">\u7DD1\u306F\u300C\u5206\u6790\u30FB\u8A55\u4FA1\u30FB\u5275\u9020\u300D\uFF1D\u601D\u8003\u3092\u4FC3\u3059\u9AD8\u6B21\u767A\u554F\u3067\u3059\u3002</p>\n    <h3>\u767A\u554F\u306E\u4E00\u89A7</h3>\n    ").concat(tbl(["行", "時刻", "開／閉", "認知レベル", "発問", "直後の応答"], qs.map(function (q) {
+    var nx = ST.turns[q.i + 1];
+    return [{
+      v: q.line,
+      c: "num"
+    }, fmtT(q.time), "<span class=\"pill ".concat(q.open ? 'p-S' : 'p-X', "\">").concat(q.open ? "開" : "閉", "</span>"), "<span class=\"tag\">".concat(q.bloom, "</span>"), esc(q.text), nx && nx.group === "S" ? "<span style=\"color:#5E6874\">".concat(esc(nx.text.slice(0, 60)), "</span>") : '<span style="color:#B7BEC6">—</span>'];
+  })), "\n    <div class=\"note ").concat(open / n < 0.3 ? 'warn' : '', "\"><p>\u958B\u3044\u305F\u767A\u554F\u306E\u5272\u5408\u306F <b>").concat(f1(open / n * 100), "\uFF05</b>\u3067\u3059\u3002").concat(open / n < 0.3 ? "閉じた発問が中心で、確認・想起を求める場面が多い授業でした。思考を広げたい場面では「なぜ」「どのように」「どう思うか」を意図的に置くと、児童の応答が長くなりやすくなります。" : "開いた発問が一定数含まれ、児童の思考を引き出す場面が確保されています。", "</p></div>\n  </section>");
+}
+
+/* ── 04 IRF ──────────────────────────────────── */
+function pIrf(p) {
+  var ir = ST.ir;
+  if (!ir.length) {
+    p.innerHTML = '<section class="card"><h2><span class="idx">05</span>IRF連鎖</h2><p class="empty">教師の発問→児童の応答という連鎖が検出されませんでした。</p></section>';
+    return;
+  }
+  var ire = ir.filter(function (x) {
+      return x.structure === "IRE（評価）";
+    }).length,
+    irf = ir.filter(function (x) {
+      return x.structure === "IRF（発展）";
+    }).length,
+    irr = ir.filter(function (x) {
+      return x.structure === "IR（応答止まり）";
+    }).length;
+  var ft = {};
+  ir.forEach(function (x) {
+    return ft[x.ftype] = (ft[x.ftype] || 0) + 1;
+  });
+  p.innerHTML = "\n  <section class=\"card\"><h2><span class=\"idx\">05</span>IRF\u9023\u9396\uFF08\u767A\u554F\u2014\u5FDC\u7B54\u2014\u8FD4\u3057\uFF09</h2>\n    <p class=\"hint\">\u6559\u5E2B\u306E\u767A\u554F\uFF08I\uFF09\u306B\u5150\u7AE5\u304C\u5FDC\u7B54\u3057\uFF08R\uFF09\u3001\u6559\u5E2B\u304C\u3069\u3046\u8FD4\u3057\u305F\u304B\uFF08F\uFF09\u30921\u3064\u306E\u307E\u3068\u307E\u308A\u3068\u3057\u3066\u6570\u3048\u307E\u3059\u3002\u8FD4\u3057\u304C\u300C\u8A55\u4FA1\u300D\u3067\u9589\u3058\u308B\u3068IRE\u3001\u554F\u3044\u76F4\u3057\u3084\u8A00\u3044\u76F4\u3057\u3067\u958B\u304F\u3068IRF\u3067\u3059\u3002</p>\n    ".concat(statBox([{
+    k: "検出した連鎖",
+    v: ir.length,
+    u: "件"
+  }, {
+    k: "IRF（発展）",
+    v: irf,
+    u: "件",
+    cls: "take"
+  }, {
+    k: "IRE（評価で完結）",
+    v: ire,
+    u: "件",
+    cls: "ai"
+  }, {
+    k: "IR（返しなし）",
+    v: irr,
+    u: "件"
+  }, {
+    k: "発展率",
+    v: f1(irf / ir.length * 100),
+    u: "％",
+    cls: "take"
+  }, {
+    k: "1連鎖の平均発話数",
+    v: f1(ir.reduce(function (s, x) {
+      return s + x.len;
+    }, 0) / ir.length),
+    u: "回"
+  }, {
+    k: "複数児が応答した連鎖",
+    v: ir.filter(function (x) {
+      return x.R.length > 1;
+    }).length,
+    u: "件",
+    cls: "kaki"
+  }]), "\n    <h3>\u6559\u5E2B\u306E\u8FD4\u3057\uFF08F\uFF09\u306E\u5185\u8A33</h3>\n    ").concat(tbl(["返しの型", "件数", "割合"], Object.entries(ft).sort(function (a, b) {
+    return b[1] - a[1];
+  }).map(function (_ref17) {
+    var _ref18 = _slicedToArray(_ref17, 2),
+      k = _ref18[0],
+      v = _ref18[1];
+    return [k, {
+      v: v,
+      c: "num"
+    }, {
+      v: f1(v / ir.length * 100) + " ％",
+      c: "num"
+    }];
+  })), "\n    <h3>\u9023\u9396\u306E\u4E00\u89A7</h3>\n    ").concat(tbl(["行", "構造", "I（発問）", "R（応答）", "F（返し）"], ir.map(function (x) {
+    return [{
+      v: x.I.line,
+      c: "num"
+    }, "<span class=\"pill ".concat(x.structure[2] === "F" ? 'p-S' : 'p-T', "\">").concat(x.structure, "</span>"), esc(x.I.text.slice(0, 70)), x.R.map(function (r) {
+      return "<span class=\"tag\">".concat(esc(r.speaker), "</span>").concat(esc(r.text.slice(0, 50)));
+    }).join("<br>"), x.F ? "<span class=\"tag\">".concat(x.ftype, "</span>").concat(esc(x.F.text.slice(0, 60))) : '<span style="color:#B7BEC6">—</span>'];
+  })), "\n    <div class=\"note\"><p>\u767A\u5C55\u7387\uFF08IRF\uFF0F\u5168\u9023\u9396\uFF09\u306F <b>").concat(f1(irf / ir.length * 100), "\uFF05</b>\u3002\u3053\u306E\u5024\u304C\u9AD8\u3044\u307B\u3069\u3001\u5150\u7AE5\u306E\u767A\u8A00\u3092\u53D7\u3051\u3066\u6B21\u306E\u601D\u8003\u3078\u3064\u306A\u3050\u5BFE\u8A71\u7684\u306A\u6388\u696D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002IRE\u304C\u591A\u3044\u5834\u5408\u306F\u6B63\u8AA4\u306E\u78BA\u8A8D\u304C\u4E2D\u5FC3\u3067\u3001\u5FDC\u7B54\u304C\u77ED\u304F\u7D42\u308F\u308A\u3084\u3059\u3044\u50BE\u5411\u304C\u3042\u308A\u307E\u3059\u3002</p></div>\n  </section>");
+}
+
+/* ── 05 語彙・共起 ───────────────────────────── */
+function pLex(p) {
+  var L = ST.lex,
+    co = ST.co,
+    sn = ST.snet;
+  var feat = function feat(arr, cls) {
+    return arr.length ? tbl(["語", "教師", "児童", "対数尤度比"], arr.map(function (o) {
+      return [esc(o.w), {
+        v: o.T,
+        c: "num"
+      }, {
+        v: o.S,
+        c: "num"
+      }, {
+        v: f1(Math.abs(o.g)),
+        c: "num"
+      }];
+    })) : '<p class="empty">十分な語がありません。</p>';
+  };
+  p.innerHTML = "\n  <section class=\"card\"><h2><span class=\"idx\">06</span>\u8A9E\u5F59\u306E\u3061\u304C\u3044</h2>\n    <p class=\"hint\">\u6587\u5B57\u7A2E\u306B\u3082\u3068\u3065\u304F\u7C21\u6613\u7684\u306A\u8A9E\u306E\u5207\u308A\u51FA\u3057\u3067\u3059\u3002\u6559\u5E2B\u3068\u5150\u7AE5\u751F\u5F92\u306E\u3069\u3061\u3089\u306B\u504F\u3063\u3066\u4F7F\u308F\u308C\u305F\u8A9E\u304B\u3092\u5BFE\u6570\u5C24\u5EA6\u6BD4\u3067\u6BD4\u3079\u307E\u3059\u3002</p>\n    <div class=\"row\" style=\"gap:24px;align-items:flex-start\">\n      <div style=\"flex:1;min-width:280px\"><h3 style=\"border-color:var(--ai)\">\u6559\u5E2B\u306B\u7279\u5FB4\u7684\u306A\u8A9E</h3>".concat(feat(L.teacher), "</div>\n      <div style=\"flex:1;min-width:280px\"><h3 style=\"border-color:var(--kaki)\">\u5150\u7AE5\u751F\u5F92\u306B\u7279\u5FB4\u7684\u306A\u8A9E</h3>").concat(feat(L.student), "</div>\n    </div>\n    <h3>\u983B\u51FA\u8A9E\uFF08\u5168\u4F53\uFF09</h3>\n    ").concat(tbl(["語", "全体", "教師", "児童生徒", "偏り"], L.top.slice(0, 40).map(function (o) {
+    var r = o.T / (o.T + o.S || 1);
+    return [esc(o.w), {
+      v: o.n,
+      c: "num"
+    }, {
+      v: o.T,
+      c: "num"
+    }, {
+      v: o.S,
+      c: "num"
+    }, "<div style=\"display:flex;height:11px;width:110px\"><div style=\"background:#2A4C7D;width:".concat(r * 100, "%\"></div><div style=\"background:#C8552B;width:").concat((1 - r) * 100, "%\"></div></div>")];
+  })), "\n  </section>\n\n  <section class=\"card\"><h2><span class=\"idx\">07</span>\u5171\u8D77\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF</h2>\n    <p class=\"hint\">\u540C\u3058\u767A\u8A71\u306E\u4E2D\u306B\u4E00\u7DD2\u306B\u51FA\u305F\u8A9E\u3092\u7DDA\u3067\u7D50\u3073\u307E\u3059\uFF08Jaccard\u4FC2\u6570\u306E\u4E0A\u4F4D\uFF09\u3002\u9752\u304C\u6559\u5E2B\u5BC4\u308A\u3001\u8D64\u304C\u5150\u7AE5\u751F\u5F92\u5BC4\u308A\u306E\u8A9E\u3002\u4E38\u306F\u30C9\u30E9\u30C3\u30B0\u3067\u52D5\u304B\u305B\u307E\u3059\u3002</p>\n    <div class=\"svgbox\" id=\"host-cooc\"></div>\n    <div class=\"legend\"><span><i style=\"background:#2A4C7D\"></i>\u6559\u5E2B\u306B\u504F\u308B\u8A9E</span><span><i style=\"background:#C8552B\"></i>\u5150\u7AE5\u751F\u5F92\u306B\u504F\u308B\u8A9E</span><span><i style=\"background:#2F8F6E\"></i>\u5171\u6709\u3055\u308C\u305F\u8A9E</span></div>\n    <div class=\"row\"><button class=\"btn ghost sm\" onclick=\"saveNet('svg-cooc','\u5171\u8D77\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF',true)\">PNG\u3067\u4FDD\u5B58</button>\n      <button class=\"btn ghost sm\" onclick=\"saveNet('svg-cooc','\u5171\u8D77\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF',false)\">SVG\u3067\u4FDD\u5B58</button></div>\n  </section>\n\n  <section class=\"card\"><h2><span class=\"idx\">08</span>\u8A71\u8005\u306E\u76F8\u4E92\u4F5C\u7528\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF</h2>\n    <p class=\"hint\">\u300C\u8AB0\u306E\u767A\u8A71\u306E\u3042\u3068\u306B\u8AB0\u304C\u8A71\u3057\u305F\u304B\u300D\u3092\u7DDA\u3067\u7D50\u3073\u307E\u3059\u3002\u7DDA\u304C\u592A\u3044\u307B\u3069\u305D\u306E\u6D41\u308C\u304C\u591A\u304F\u8D77\u304D\u3066\u3044\u307E\u3059\u3002</p>\n    <div class=\"svgbox\" id=\"host-spk\"></div>\n    <div class=\"row\"><button class=\"btn ghost sm\" onclick=\"saveNet('svg-spk','\u8A71\u8005\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF',true)\">PNG\u3067\u4FDD\u5B58</button></div>\n    <h3>\u767A\u8A71\u306E\u6D41\u308C\uFF08\u4E0A\u4F4D\uFF09</h3>\n    ").concat(tbl(["先行話者", "後続話者", "回数"], sn.edges.slice(0, 25).map(function (e) {
+    return [esc(e.a), esc(e.b), {
+      v: e.n,
+      c: "num"
+    }];
+  })), "\n  </section>");
+  var hc = p.querySelector("#host-cooc"),
+    hs = p.querySelector("#host-spk");
+  if (co.nodes.length > 2) {
+    makeDraggable(mount(hc, netEl("svg-cooc", co.nodes, co.edges, 1120, 600, {
+      rmax: 16,
+      color: function color(n) {
+        var r = n.T / (n.T + n.S || 1);
+        return r > 0.65 ? "#2A4C7D" : r < 0.35 ? "#C8552B" : "#2F8F6E";
+      }
+    })));
+  } else hc.innerHTML = '<p class="empty">共起を描くだけの語が集まりませんでした。逐語録を増やすか、最小文字数を下げてください。</p>';
+  if (sn.nodes.length > 1) {
+    makeDraggable(mount(hs, netEl("svg-spk", sn.nodes, sn.edges, 1120, 520, {
+      rmax: 22,
+      fs: 13,
+      color: function color(n) {
+        return n.g === "T" ? "#2A4C7D" : "#C8552B";
+      }
+    })));
+  } else hs.innerHTML = '<p class="empty">話者が1人しか検出されませんでした。</p>';
+}
+
+/* ── 06 コード修正 ───────────────────────────── */
+function pEdit(p) {
+  p.innerHTML = "\n  <section class=\"card\"><h2><span class=\"idx\">09</span>\u30B3\u30FC\u30C9\u3092\u4EBA\u306E\u76EE\u3067\u76F4\u3059</h2>\n    <p class=\"hint\">\u81EA\u52D5\u5206\u985E\u306F\u898F\u5247\u30D9\u30FC\u30B9\u306E\u63A8\u5B9A\u3067\u3059\u3002\u8AA4\u308A\u3092\u898B\u3064\u3051\u305F\u3089\u30D7\u30EB\u30C0\u30A6\u30F3\u3067\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5909\u66F4\u3059\u308B\u3068\u3059\u3079\u3066\u306E\u6307\u6A19\u30FB\u56F3\u304C\u518D\u8A08\u7B97\u3055\u308C\u307E\u3059\u3002</p>\n    <div class=\"row\"><button class=\"btn ghost sm\" id=\"csv\">\u30B3\u30FC\u30C9\u4ED8\u304D\u9010\u8A9E\u9332\u3092CSV\u3067\u4FDD\u5B58</button>\n      <button class=\"btn ghost sm\" id=\"recalc\">\u3059\u3079\u3066\u518D\u8A08\u7B97</button></div>\n    <div class=\"scroll\" style=\"max-height:640px;margin-top:12px\"><table><thead><tr>\n      <th class=\"num\">\u884C</th><th>\u6642\u523B</th><th>\u8A71\u8005</th><th>\u30AB\u30C6\u30B4\u30EA\u30FC</th><th>\u767A\u8A71</th><th class=\"num\">\u5B57\u6570</th></tr></thead>\n      <tbody>".concat(ST.turns.map(function (t) {
+    return "<tr>\n        <td class=\"num\">".concat(t.line, "</td><td style=\"white-space:nowrap;font-family:var(--mono);font-size:11px\">").concat(fmtT(t.time), "</td>\n        <td><span class=\"pill p-").concat(t.group, "\">").concat(esc(t.speaker), "</span></td>\n        <td><select data-i=\"").concat(t.i, "\" style=\"border:1px solid var(--rule);border-radius:2px;padding:2px 4px;font-size:11.5px;max-width:150px\">\n          ").concat(FIAC.map(function (c) {
+      return "<option value=\"".concat(c.n, "\"").concat(c.n === t.cat ? " selected" : "", ">").concat(c.n, ". ").concat(c.name, "</option>");
+    }).join(""), "</select></td>\n        <td>").concat(esc(t.text), "</td><td class=\"num\">").concat(t.text.length, "</td></tr>");
+  }).join(""), "</tbody></table></div>\n  </section>");
+  p.querySelectorAll("select[data-i]").forEach(function (s) {
+    return s.onchange = function () {
+      ST.turns[+s.dataset.i].cat = +s.value;
+      ST.turns[+s.dataset.i].manual = true;
+    };
+  });
+  p.querySelector("#recalc").onclick = function () {
+    recompute();
+    TABS.forEach(function (_ref19) {
+      var _ref20 = _slicedToArray(_ref19, 1),
+        k = _ref20[0];
+      if (k !== "edit") document.getElementById("pane-" + k).dataset.done = "";
+    });
+    render(document.querySelector(".tab.on").dataset.k);
+    alert("再計算しました。");
+  };
+  p.querySelector("#csv").onclick = function () {
+    return dlText(csvOut(), "utterances.csv");
+  };
+}
+function csvOut() {
+  var q = function q(s) {
+    return '"' + String(s).replace(/"/g, '""') + '"';
+  };
+  return ["turn,line,time_sec,speaker,group,cat,cat_name,chars,manual,text"].concat(_toConsumableArray(ST.turns.map(function (t) {
+    return [t.i + 1, t.line, t.time == null ? "" : t.time, q(t.speaker), t.group, t.cat, q(FC(t.cat).name), t.text.length, t.manual ? 1 : 0, q(t.text)].join(",");
+  }))).join("\n");
+}
+
+/* ── 07 読み取り・記述例 ─────────────────────── */
+function readingText() {
+  var b = ST.b,
+    f = ST.f,
+    qs = ST.qs,
+    ir = ST.ir,
+    L = ST.lex;
+  var open = qs.filter(function (q) {
+      return q.open;
+    }).length,
+    hi = qs.filter(function (q) {
+      return ["分析", "評価", "創造"].includes(q.bloom);
+    }).length;
+  var irf = ir.filter(function (x) {
+    return x.structure === "IRF（発展）";
+  }).length;
+  var P = [];
+  P.push("\u3010\u767A\u8A71\u91CF\u306E\u914D\u5206\u3011\u5168".concat(b.n, "\u30BF\u30FC\u30F3\u306E\u3046\u3061\u6559\u5E2B\u306E\u767A\u8A71\u306F").concat(b.nT, "\u56DE\uFF08").concat(f1(b.nT / b.n * 100), "\uFF05\uFF09\u3001\u5150\u7AE5\u751F\u5F92\u306F").concat(b.nS, "\u56DE\uFF08").concat(f1(b.nS / b.n * 100), "\uFF05\uFF09\u3067\u3057\u305F\u3002\u6587\u5B57\u6570\u3067\u307F\u308B\u3068\u6559\u5E2B\u304C").concat(f1(b.cT / (b.cAll || 1) * 100), "\uFF05\u3092\u5360\u3081\u30011\u767A\u8A71\u3042\u305F\u308A\u306E\u9577\u3055\u306F\u6559\u5E2B").concat(f1(b.avgT), "\u5B57\u306B\u5BFE\u3057\u5150\u7AE5\u751F\u5F92\u306F").concat(f1(b.avgS), "\u5B57\u3067\u3059\u3002").concat(b.avgT > b.avgS * 2.5 ? "教師の発話が児童の2倍以上長く、説明が中心の時間が厚い授業でした。" : "教師と児童の発話長の差は比較的小さく、児童がまとまった量を語る場面がありました。"));
+  P.push("\u3010\u6559\u5E2B\u306E\u50CD\u304D\u304B\u3051\u306E\u8CEA\u3011\u30D5\u30E9\u30F3\u30C0\u30FC\u30B9\u5206\u6790\u306E\u6559\u5E2B\u767A\u8A71\u7387TT%\u306F".concat(f1(f.TT), "\uFF05\u3001\u5150\u7AE5\u767A\u8A71\u7387PT%\u306F").concat(f1(f.PT), "\uFF05\u3001\u6C88\u9ED9\u30FB\u4F5C\u696DSC%\u306F").concat(f1(f.SC), "\uFF05\u3067\u3057\u305F\u3002I/D\u6BD4\u306F").concat(f2(f.ID), "\u3067\u3001").concat(f.ID >= 1 ? "受容・賞賛・考えの利用・発問といった間接的な働きかけが、説明・指示・批判を上回っています。児童の考えを起点に展開する場面が確保されていました。" : "説明・指示・批判といった直接的な働きかけが間接的な働きかけを上回っており、教師主導で内容を伝える構成でした。", "\u6559\u5E2B\u5FDC\u7B54\u6BD4TRR\u306F").concat(f2(f.TRR), "\u3001\u767A\u554F\u7387TQR\u306F").concat(f2(f.TQR), "\u3067\u3059\u3002"));
+  P.push("\u3010\u767A\u554F\u3011\u767A\u554F\u306F".concat(qs.length, "\u56DE\u3067\u3001\u3046\u3061\u958B\u3044\u305F\u767A\u554F\u304C").concat(open, "\u56DE\uFF08").concat(qs.length ? f1(open / qs.length * 100) : "—", "\uFF05\uFF09\u3001\u8A8D\u77E5\u7684\u306B\u9AD8\u6B21\uFF08\u5206\u6790\u30FB\u8A55\u4FA1\u30FB\u5275\u9020\uFF09\u3068\u63A8\u5B9A\u3055\u308C\u305F\u767A\u554F\u306F").concat(hi, "\u56DE\u3067\u3057\u305F\u3002").concat(b.wait != null ? "\u767A\u554F\u304B\u3089\u6B21\u306E\u767A\u8A71\u307E\u3067\u306E\u5E73\u5747\u5F85\u3061\u6642\u9593\u306F".concat(f1(b.wait), "\u79D2\u3067\u3059\u3002") : "").concat(qs.length && open / qs.length < 0.3 ? "事実確認を求める閉じた発問が多く、応答は短くなりがちでした。" : "思考を開く問いが一定の割合で置かれていました。"));
+  P.push("\u3010\u76F8\u4E92\u4F5C\u7528\u306E\u578B\u3011\u767A\u554F\u2014\u5FDC\u7B54\u2014\u8FD4\u3057\u306E\u9023\u9396\u306F".concat(ir.length, "\u4EF6\u691C\u51FA\u3055\u308C\u3001\u3046\u3061\u6559\u5E2B\u304C\u554F\u3044\u76F4\u3057\u3084\u8A00\u3044\u76F4\u3057\u3067\u6B21\u306B\u3064\u306A\u3044\u3060IRF\u578B\u304C").concat(irf, "\u4EF6\uFF08").concat(ir.length ? f1(irf / ir.length * 100) : "—", "\uFF05\uFF09\u3001\u8A55\u4FA1\u3067\u9589\u3058\u305FIRE\u578B\u304C").concat(ir.filter(function (x) {
+    return x.structure === "IRE（評価）";
+  }).length, "\u4EF6\u3067\u3057\u305F\u3002\u5150\u7AE5\u2192\u5150\u7AE5\u306E\u9023\u7D9A\u767A\u8A71\u306F").concat(b.trans.SS, "\u56DE\u3001\u5150\u7AE5\u767A\u8A71\u306E\u6301\u7D9A\u7387SSR\u306F").concat(f1(f.SSR), "\uFF05\u3067\u3059\u3002").concat(b.trans.SS < 3 ? "児童どうしで発言がつながる場面は少なく、教師を経由するやりとりが基本でした。" : "児童どうしで発言がつながる場面がみられ、学習者間の相互作用が生まれていました。"));
+  P.push("\u3010\u53C2\u52A0\u306E\u5E83\u304C\u308A\u3011\u767A\u8A71\u3057\u305F\u5150\u7AE5\u751F\u5F92\u306F".concat(b.nSpk, "\u4EBA\u3001\u767A\u8A71\u56DE\u6570\u306E\u30B8\u30CB\u4FC2\u6570\u306F").concat(f2(b.gini), "\u3067\u3057\u305F\u3002").concat(b.gini > 0.5 ? "特定の児童に発話が集中しており、発言していない児童への働きかけが課題となります。" : "発話が比較的多くの児童に分散していました。"));
+  if (L.teacher.length || L.student.length) P.push("\u3010\u8A9E\u5F59\u3011\u6559\u5E2B\u306B\u504F\u3063\u3066\u73FE\u308C\u305F\u8A9E\u306F".concat(L.teacher.slice(0, 6).map(function (o) {
+    return "「" + o.w + "」";
+  }).join("・") || "—", "\u3001\u5150\u7AE5\u751F\u5F92\u306B\u504F\u3063\u3066\u73FE\u308C\u305F\u8A9E\u306F").concat(L.student.slice(0, 6).map(function (o) {
+    return "「" + o.w + "」";
+  }).join("・") || "—", "\u3067\u3057\u305F\u3002").concat(L.student.length ? "児童の語彙が教師の用いた学習用語をどの程度取り込んでいるかが、共起ネットワークの重なりから読み取れます。" : ""));
+  return P;
+}
+function paperText() {
+  var b = ST.b,
+    f = ST.f,
+    qs = ST.qs,
+    ir = ST.ir;
+  var open = qs.filter(function (q) {
+      return q.open;
+    }).length,
+    irf = ir.filter(function (x) {
+      return x.structure === "IRF（発展）";
+    }).length;
+  return "\u3000\u672C\u7814\u7A76\u3067\u306F\u3001\u7B2C\u25EF\u5B66\u5E74\u25EF\u25EF\u79D1\u300C\u25EF\u25EF\u300D\u306E\u6388\u696D\uFF08".concat(b.minute != null ? f1(b.minute) + "分" : "1単位時間", "\uFF09\u3092\u9332\u753B\u30FB\u6587\u5B57\u8D77\u3053\u3057\u3057\u3001\u767A\u8A71\u30BF\u30FC\u30F3\u3092\u5206\u6790\u5358\u4F4D\u3068\u3057\u3066\u8A08").concat(b.n, "\u30BF\u30FC\u30F3\u3092\u5206\u6790\u5BFE\u8C61\u3068\u3057\u305F\u3002\u5404\u30BF\u30FC\u30F3\u306FFlanders(1970)\u306E\u76F8\u4E92\u4F5C\u7528\u5206\u6790\u30AB\u30C6\u30B4\u30EA\u30FC\uFF0810\u5206\u985E\uFF09\u306B\u57FA\u3065\u304D\u5206\u985E\u3057\u3001\u7B2C\u4E00\u8457\u8005\u306E\u5206\u985E\u306E\u5F8C\u3001\u7B2C\u4E8C\u8457\u8005\u304C\u5168\u30BF\u30FC\u30F3\u306E\u25EF\uFF05\u3092\u72EC\u7ACB\u306B\u5206\u985E\u3057\u3066\u4E00\u81F4\u7387\uFF08\u03BA\uFF1D\u25EF.\u25EF\u25EF\uFF09\u3092\u78BA\u8A8D\u3057\u305F\u3002\n\n\u3000\u5206\u6790\u306E\u7D50\u679C\u3001\u6559\u5E2B\u767A\u8A71\u7387\uFF08TT%\uFF09\u306F").concat(f1(f.TT), "\uFF05\u3001\u5150\u7AE5\u767A\u8A71\u7387\uFF08PT%\uFF09\u306F").concat(f1(f.PT), "\uFF05\u3001\u6C88\u9ED9\u30FB\u4F5C\u696D\uFF08SC%\uFF09\u306F").concat(f1(f.SC), "\uFF05\u3067\u3042\u308A\u3001I/D\u6BD4\u306F").concat(f2(f.ID), "\u3067\u3042\u3063\u305F\u3002\u6559\u5E2B\u306E\u767A\u8A71\u306E\u3046\u3061\u767A\u554F\u306F").concat(qs.length, "\u56DE\uFF08\u6559\u5E2B\u767A\u8A71\u306E").concat(b.nT ? f1(qs.length / b.nT * 100) : "—", "\uFF05\uFF09\u3067\u3042\u308A\u3001\u305D\u306E\u3046\u3061\u958B\u3044\u305F\u767A\u554F\u306F").concat(open, "\u56DE\uFF08").concat(qs.length ? f1(open / qs.length * 100) : "—", "\uFF05\uFF09\u3067\u3042\u3063\u305F\u3002\u767A\u554F\u2014\u5FDC\u7B54\u2014\u8A55\u4FA1\uFF08IRE\uFF09\u9023\u9396\u306F").concat(ir.filter(function (x) {
+    return x.structure === "IRE（評価）";
+  }).length, "\u4EF6\u3001\u6559\u5E2B\u304C\u5150\u7AE5\u306E\u767A\u8A71\u3092\u53D7\u3051\u3066\u554F\u3044\u8FD4\u3057\u30FB\u8A00\u3044\u76F4\u3057\u3092\u884C\u3046IRF\u9023\u9396\u306F").concat(irf, "\u4EF6\u78BA\u8A8D\u3055\u308C\u305F\u3002\n\n\u3000\u307E\u305F\u3001\u5150\u7AE5\u751F\u5F92").concat(b.nSpk, "\u540D\u306E\u767A\u8A71\u56DE\u6570\u306E\u30B8\u30CB\u4FC2\u6570\u306F").concat(f2(b.gini), "\u3067\u3042\u308A\u3001").concat(b.gini > 0.5 ? "発話機会は一部の児童に偏在していた" : "発話機会は比較的広く分散していた", "\u3002\u5150\u7AE5\u304B\u3089\u5150\u7AE5\u3078\u306E\u767A\u8A71\u306E\u9023\u9396\u306F").concat(b.trans.SS, "\u56DE\u3067\u3042\u308A\u3001\u5150\u7AE5\u767A\u8A71\u306E\u6301\u7D9A\u7387\uFF08SSR\uFF09\u306F").concat(f1(f.SSR), "\uFF05\u3067\u3042\u3063\u305F\u3002").concat(b.wait != null ? "\u767A\u554F\u5F8C\u306E\u5F85\u3061\u6642\u9593\u306E\u5E73\u5747\u306F".concat(f1(b.wait), "\u79D2\u3067\u3042\u3063\u305F\u3002") : "", "\n\n\u3000\u4EE5\u4E0A\u3088\u308A\u3001\u672C\u6388\u696D\u306F").concat(f.ID >= 1 ? "児童の考えを取り上げて展開する間接的働きかけを基調とし" : "教師による説明・指示を基調とし", "\u3001").concat(irf > ir.length / 2 ? "児童の発話を次の思考へつなぐIRF型の連鎖が中心であった" : "正誤の確認を伴うIRE型の連鎖が中心であった", "\u3068\u7279\u5FB4\u3065\u3051\u3089\u308C\u308B\u3002\n\n\uFF08\u5F15\u7528\u6587\u732E\u306E\u4F8B\uFF09Flanders, N. A. (1970). Analyzing Teaching Behavior. Addison-Wesley.\uFF0FMehan, H. (1979). Learning Lessons. Harvard University Press.\uFF0FSinclair, J. M., & Coulthard, R. M. (1975). Towards an Analysis of Discourse. Oxford University Press.");
+}
+function pRead(p) {
+  var R = readingText();
+  p.innerHTML = "\n  <section class=\"card\"><h2><span class=\"idx\">10</span>\u7D50\u679C\u306E\u8AAD\u307F\u53D6\u308A</h2>\n    <div class=\"note\">".concat(R.map(function (t) {
+    return "<p>".concat(t, "</p>");
+  }).join(""), "</div>\n    <div class=\"row\"><button class=\"btn ghost sm\" onclick='dlText(document.getElementById(\"paperbox\").innerText,\"\u6388\u696D\u767A\u8A71\u5206\u6790_\u8A18\u8FF0\u4F8B.txt\")'>\u8AAD\u307F\u53D6\u308A\u3068\u8A18\u8FF0\u4F8B\u3092\u30C6\u30AD\u30B9\u30C8\u3067\u4FDD\u5B58</button></div>\n  </section>\n  <section class=\"card\"><h2><span class=\"idx\">11</span>\u8AD6\u6587\u3067\u306E\u8A18\u8FF0\u4F8B</h2>\n    <p class=\"hint\">\u6570\u5024\u306F\u672C\u30C7\u30FC\u30BF\u304B\u3089\u81EA\u52D5\u3067\u5165\u308A\u307E\u3059\u3002\u25EF\u306E\u90E8\u5206\u3068\u8003\u5BDF\u306F\u57F7\u7B46\u8005\u304C\u57CB\u3081\u3066\u304F\u3060\u3055\u3044\u3002</p>\n    <div class=\"quote\" id=\"paperbox\">").concat(esc(paperText()).replace(/\n/g, "<br>"), "</div>\n    <h3>\u65B9\u6CD5\u306E\u8A18\u8FF0\u306B\u5FC5\u8981\u306A\u60C5\u5831</h3>\n    ").concat(tbl(["項目", "本データの値"], [["分析単位", "発話ターン（話者交替を1単位）"], ["分析対象ターン数", ST.b.n + " ターン"], ["総文字数", ST.b.cAll.toLocaleString() + " 字"], ["授業時間", ST.b.minute == null ? "時刻情報なし" : f1(ST.b.minute) + " 分"], ["発話した児童生徒数", ST.b.nSpk + " 名"], ["カテゴリー体系", "Flanders相互作用分析（10カテゴリー）"], ["発問分類", "開／閉 × 認知レベル（Bloom改訂版に基づく推定）"], ["連鎖分析", "IRE／IRF（Mehan 1979；Sinclair & Coulthard 1975）"], ["語の抽出", "文字種にもとづく簡易抽出（除外語・結合語は設定欄に記録）"]]), "\n    <div class=\"note warn\"><p>\u81EA\u52D5\u5206\u985E\u306F\u3042\u304F\u307E\u3067\u4E0B\u66F8\u304D\u3067\u3059\u3002\u8AD6\u6587\u306B\u7528\u3044\u308B\u5834\u5408\u306F\u300C09 \u30B3\u30FC\u30C9\u3092\u4EBA\u306E\u76EE\u3067\u76F4\u3059\u300D\u3067\u5168\u30BF\u30FC\u30F3\u3092\u78BA\u8A8D\u3057\u3001\u8907\u6570\u306E\u30B3\u30FC\u30C0\u30FC\u306B\u3088\u308B\u4E00\u81F4\u7387\u3092\u5831\u544A\u3057\u3066\u304F\u3060\u3055\u3044\u3002</p></div>\n  </section>");
+}
+
+/* ── 08 Rコード ──────────────────────────────── */
+function hlR(code) {
+  var re = /(#[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_.][\w.]*)(?=\s*\()|(<-|\bfunction\b|\bfor\b|\bif\b|\belse\b|\bTRUE\b|\bFALSE\b|\bNA\b)/g;
+  var out = "",
+    last = 0,
+    m;
+  while (m = re.exec(code)) {
+    out += esc(code.slice(last, m.index));
+    var cls = m[1] ? "c" : m[2] ? "s" : m[3] ? "n" : m[4] ? "f" : "k";
+    out += "<span class=\"".concat(cls, "\">").concat(esc(m[0]), "</span>");
+    last = re.lastIndex;
+  }
+  return out + esc(code.slice(last));
+}
+function rCode() {
+  var embed = ST.turns.length <= 250;
+  var data = embed ? "d <- read.csv(text = \"\n".concat(csvOut().replace(/"/g, '\\"'), "\n\", stringsAsFactors = FALSE)") : "# \u300C09 \u30B3\u30FC\u30C9\u3092\u4EBA\u306E\u76EE\u3067\u76F4\u3059\u300D\u30BF\u30D6\u304B\u3089 utterances.csv \u3092\u4FDD\u5B58\u3057\u3066\u8AAD\u307F\u8FBC\u3080\nd <- read.csv(\"utterances.csv\", fileEncoding = \"UTF-8\", stringsAsFactors = FALSE)";
+  return "# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n#  \u6388\u696D\u767A\u8A71\u5206\u6790 \u2014 \u518D\u73FE\u7528\u30B9\u30AF\u30EA\u30D7\u30C8\n#  \u51FA\u529B\u5143\uFF1A\u6388\u696D\u767A\u8A71\u5206\u6790\u30E9\u30DC\n# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n# install.packages(c(\"dplyr\", \"ggplot2\", \"igraph\"))\nlibrary(dplyr); library(ggplot2); library(igraph)\n\n# \u2500\u2500 1. \u30C7\u30FC\u30BF \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n".concat(data, "\n\ncat_names <- c(\"1.\u611F\u60C5\u306E\u53D7\u5BB9\", \"2.\u8CDE\u8CDB\u30FB\u52B1\u307E\u3057\", \"3.\u8003\u3048\u306E\u53D7\u5BB9\u30FB\u5229\u7528\", \"4.\u767A\u554F\",\n               \"5.\u8B1B\u7FA9\u30FB\u8AAC\u660E\", \"6.\u6307\u793A\", \"7.\u6279\u5224\u30FB\u6A29\u5A01\",\n               \"8.\u5FDC\u7B54\u7684\u767A\u8A71\", \"9.\u81EA\u767A\u7684\u767A\u8A71\", \"10.\u6C88\u9ED9\u30FB\u6DF7\u4E71\")\nd$cat_f <- factor(d$cat, levels = 1:10, labels = cat_names)\n\n# \u2500\u2500 2. \u57FA\u672C\u7D71\u8A08 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nd %>% group_by(group) %>%\n  summarise(turns = n(), chars = sum(chars), mean_chars = mean(chars))\n\n# \u8A71\u8005\u4EA4\u66FF\u306E\u56DE\u6570\nsum(head(d$group, -1) != tail(d$group, -1))\n\n# \u5150\u7AE5\u751F\u5F92\u306E\u767A\u8A71\u56DE\u6570\u306E\u504F\u308A\uFF08\u30B8\u30CB\u4FC2\u6570\uFF09\ngini <- function(x) { x <- sort(x); n <- length(x)\n  sum((2 * seq_len(n) - n - 1) * x) / (n * sum(x)) }\ngini(as.numeric(table(d$speaker[d$group == \"S\"])))\n\n# \u2500\u2500 3. \u30D5\u30E9\u30F3\u30C0\u30FC\u30B9\u76F8\u4E92\u4F5C\u7528\u884C\u5217 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nM <- table(factor(head(d$cat, -1), levels = 1:10),\n           factor(tail(d$cat, -1), levels = 1:10))\ndimnames(M) <- list(\u5148\u884C = cat_names, \u5F8C\u7D9A = cat_names)\nprint(M)\n\nn  <- nrow(d); k <- table(factor(d$cat, levels = 1:10))\nTT <- sum(k[1:7]) / n * 100      # \u6559\u5E2B\u767A\u8A71\u7387\nPT <- sum(k[8:9]) / n * 100      # \u5150\u7AE5\u767A\u8A71\u7387\nSC <- k[10] / n * 100            # \u6C88\u9ED9\u30FB\u6DF7\u4E71\nID <- sum(k[1:4]) / sum(k[5:7])  # I/D\u6BD4\uFF08\u9593\u63A5\uFF0F\u76F4\u63A5\uFF09\nrID<- sum(k[1:3]) / sum(k[6:7])  # \u4FEE\u6B63I/D\u6BD4\ndata.frame(TT, PT, SC, ID, rID)\n\n# \u884C\u5217\u306E\u30D2\u30FC\u30C8\u30DE\u30C3\u30D7\nas.data.frame(M) %>%\n  ggplot(aes(\u5F8C\u7D9A, \u5148\u884C, fill = Freq)) +\n  geom_tile(colour = \"white\") +\n  geom_text(aes(label = ifelse(Freq > 0, Freq, \"\")), size = 3, colour = \"grey20\") +\n  scale_fill_gradient(low = \"white\", high = \"#2A4C7D\") +\n  scale_y_discrete(limits = rev(cat_names)) +\n  labs(title = \"\u30D5\u30E9\u30F3\u30C0\u30FC\u30B9\u76F8\u4E92\u4F5C\u7528\u884C\u5217\", x = \"\u5F8C\u7D9A\u306E\u767A\u8A71\", y = \"\u5148\u884C\u306E\u767A\u8A71\") +\n  theme_minimal(base_size = 11) +\n  theme(axis.text.x = element_text(angle = 45, hjust = 1))\n\n# \u2500\u2500 4. \u767A\u8A71\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nd$cum <- cumsum(d$chars) - d$chars\nd$h   <- ifelse(d$group == \"T\", 1, ifelse(d$group == \"S\", -1, 0)) * sqrt(d$chars)\nggplot(d, aes(xmin = cum, xmax = cum + chars, ymin = pmin(0, h), ymax = pmax(0, h),\n              fill = cat_f)) +\n  geom_rect() + geom_hline(yintercept = 0, linewidth = .3) +\n  labs(title = \"\u767A\u8A71\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\uFF08\u4E0A\uFF1D\u6559\u5E2B\uFF0F\u4E0B\uFF1D\u5150\u7AE5\u751F\u5F92\uFF09\", x = \"\u7D2F\u7A4D\u6587\u5B57\u6570\", y = \"\", fill = \"\u30AB\u30C6\u30B4\u30EA\u30FC\") +\n  theme_minimal(base_size = 11)\n\n# \u2500\u2500 5. \u767A\u554F\u306E\u5206\u6790 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nq <- d %>% filter(cat == 4)\nq$open <- grepl(\"\u306A\u305C|\u3069\u3046\u3057\u3066|\u3069\u306E\u3088\u3046|\u3069\u3093\u306A|\u3069\u3046\u601D|\u7406\u7531\", q$text)\ntable(q$open)\nmean(q$open) * 100   # \u958B\u3044\u305F\u767A\u554F\u306E\u5272\u5408\uFF08\uFF05\uFF09\n\n# \u2500\u2500 6. IRF\u9023\u9396\u306E\u62BD\u51FA \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nidx <- which(d$cat == 4 & c(d$group[-1], \"\") == \"S\")\nchain <- data.frame(\n  I = d$text[idx],\n  R = d$text[idx + 1],\n  F = ifelse(idx + 2 <= n, d$text[idx + 2], NA),\n  F_cat = ifelse(idx + 2 <= n, d$cat[idx + 2], NA))\nchain$type <- ifelse(is.na(chain$F_cat), \"IR\",\n               ifelse(chain$F_cat %in% c(3, 4), \"IRF\uFF08\u767A\u5C55\uFF09\", \"IRE\uFF08\u8A55\u4FA1\uFF09\"))\ntable(chain$type)\n\n# \u2500\u2500 7. \u8A71\u8005\u306E\u76F8\u4E92\u4F5C\u7528\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\ne <- data.frame(from = head(d$speaker, -1), to = tail(d$speaker, -1)) %>%\n  filter(from != to) %>% count(from, to, name = \"weight\")\ng <- graph_from_data_frame(e, directed = TRUE)\nV(g)$col <- ifelse(V(g)$name %in% d$speaker[d$group == \"T\"], \"#2A4C7D\", \"#C8552B\")\n\nop <- par(bg = \"black\", mar = c(0, 0, 2, 0))       # \u80CC\u666F\u3092\u9ED2\u306B\nplot(g, layout = layout_with_fr(g),\n     vertex.color = V(g)$col, vertex.frame.color = NA,\n     vertex.size = 6 + 14 * sqrt(strength(g)) / max(sqrt(strength(g))),\n     vertex.label.color = \"white\", vertex.label.family = \"sans\", vertex.label.cex = .9,\n     edge.color = adjustcolor(\"#8B93A0\", .7), edge.width = 1 + 3 * e$weight / max(e$weight),\n     edge.arrow.size = .35,\n     main = \"\u8A71\u8005\u306E\u76F8\u4E92\u4F5C\u7528\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\", col.main = \"white\")\npar(op)\n\n# \u2500\u2500 8. \u5171\u8D77\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\uFF08RMeCab\u304C\u3042\u308B\u5834\u5408\uFF09 \u2500\u2500\u2500\u2500\n# library(RMeCab)\n# docDF() \u3067\u540D\u8A5E\u30FB\u52D5\u8A5E\u30FB\u5F62\u5BB9\u8A5E\u3092\u62BD\u51FA\u3057\u3001\u767A\u8A71\u5358\u4F4D\u306E\u5171\u8D77\u3092 Jaccard \u3067\u7D50\u3076\n# graph_from_data_frame() \u2192 plot() \u3067\u4E0A\u3068\u540C\u3058\u4F53\u88C1\uFF08\u80CC\u666F\u9ED2\uFF09\u3067\u63CF\u753B\u3067\u304D\u308B\n");
+}
+function pR(p) {
+  var code = rCode();
+  p.innerHTML = "\n  <section class=\"card\"><h2><span class=\"idx\">12</span>R\u3067\u518D\u73FE\u3059\u308B</h2>\n    <p class=\"hint\">\u540C\u3058\u5206\u6790\u3092R\u3067\u518D\u5B9F\u884C\u3059\u308B\u305F\u3081\u306E\u30B9\u30AF\u30EA\u30D7\u30C8\u3067\u3059\u3002\u30C7\u30FC\u30BF\u306F".concat(ST.turns.length <= 250 ? "スクリプト内に埋め込んであります" : "CSVを別途保存して読み込みます", "\u3002</p>\n    <div class=\"row\"><button class=\"btn ghost sm\" onclick='dlText(RCODE,\"\u6388\u696D\u767A\u8A71\u5206\u6790.R\")'>R\u30B9\u30AF\u30EA\u30D7\u30C8\u3092\u4FDD\u5B58</button>\n      <button class=\"btn ghost sm\" id=\"csv2\">\u9010\u8A9E\u9332CSV\u3092\u4FDD\u5B58</button></div>\n    <pre style=\"margin-top:12px\">").concat(hlR(code), "</pre>\n  </section>");
+  window.RCODE = code;
+  p.querySelector("#csv2").onclick = function () {
+    return dlText(csvOut(), "utterances.csv");
+  };
+}
+
+/* ══════════════════════════════════════════════════════════
+   11. 入力まわり・初期化
+   ══════════════════════════════════════════════════════════ */
+
+function readFile(file) {
+  var r = new FileReader();
+  r.onload = function () {
+    $("#src").value = String(r.result).replace(/^\uFEFF/, "");
+    analyze();
+  };
+  r.readAsText(file, "UTF-8");
+}
+/* 要素の有無で初期化が止まらないようにする。1つ欠けても他の機能は生かす。 */
+(function wire() {
+  var drop = $("#drop");
+  if (drop) {
+    ["dragenter", "dragover"].forEach(function (ev) {
+      return drop.addEventListener(ev, function (e) {
+        e.preventDefault();
+        drop.classList.add("over");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (ev) {
+      return drop.addEventListener(ev, function (e) {
+        e.preventDefault();
+        drop.classList.remove("over");
+      });
+    });
+    drop.addEventListener("drop", function (e) {
+      var f = e.dataTransfer && e.dataTransfer.files[0];
+      if (f) readFile(f);
+    });
+  }
+  document.addEventListener("dragover", function (e) {
+    return e.preventDefault();
+  });
+  document.addEventListener("drop", function (e) {
+    return e.preventDefault();
+  });
+  var src = $("#src");
+  if (src) src.addEventListener("keydown", function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") analyze();
+  });
+  var need = ["err", "src", "out", "tabs", "panes", "tip", "tpat", "silpat", "minlen", "stop", "force"].filter(function (id) {
+    return !document.getElementById(id);
+  });
+  if (need.length) showErr("画面の部品が見つかりません: #" + need.join(" #") + "\nHTMLが途中で切れているか、書き換えられている可能性があります。");
+})();
+function loadDemo() {
+  $("#src").value = DEMO;
+  analyze();
+}
+function clearAll() {
+  $("#src").value = "";
+  $("#out").style.display = "none";
+  var e = $("#err");
+  if (e) e.hidden = true;
+}
+window.loadDemo = loadDemo;
+window.clearAll = clearAll;
+window.analyze = analyze;
+window.saveTape = saveTape;
+window.saveBalance = saveBalance;
+window.saveNet = saveNet;
+window.dlText = dlText;
+window.__mainDone = true;
+</script>
+</body>
+</html>

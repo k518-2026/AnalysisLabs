@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>データ分析ラボ — ブラウザーだけで動く、統計解析と質的分析のツール集</title>
+<meta name="description" content="教育・心理・社会調査のデータを、インストール不要・データ送信なしで分析できるツール集です。論文の記述例と、同じ計算を再現する R コードも出力します。">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="assets/app-bar.css?v=c019fc8a">
+<link rel="stylesheet" href="assets/site.css?v=b63567b0">
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href=""><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-gap"></span><a class="al-link" href="https://github.com/k518-2026/AnalysisLabs">GitHub</a></div>
+<main>
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Analysis Labs · 33 tools</p>
+      <h1>データ分析ラボ</h1>
+      <p class="tagline">ブラウザーだけで動く、統計解析と質的分析のツール集</p>
+      <p class="desc">教育・心理・社会調査のデータを、インストール不要・データ送信なしで分析できるツール集です。論文の記述例と、同じ計算を再現する R コードも出力します。</p>
+      <ul class="points">
+        <li><b>ブラウザーだけで動く</b><span>インストールもアカウント登録も要りません。入力したデータは端末の外に送られません。</span></li>
+        <li><b>論文にそのまま近づける</b><span>多くのツールが、結果の読み方・論文の記述例・同じ計算を再現する R コードを出します。</span></li>
+        <li><b>同じ手順で使える</b><span>どのツールも「読み込む → 設定する → 実行する → 書き出す」の順に並んでいます。</span></li>
+      </ul>
+    </div>
+  </header>
+  <nav aria-label="カテゴリ">
+    <ul class="catnav wrap">
+      <li><a href="#compare" style="--c:var(--al-c-compare)"><i></i>比べる<small>4</small></a></li>
+      <li><a href="#relation" style="--c:var(--al-c-relation)"><i></i>関係を見る<small>2</small></a></li>
+      <li><a href="#causal" style="--c:var(--al-c-causal)"><i></i>説明・予測する<small>6</small></a></li>
+      <li><a href="#structure" style="--c:var(--al-c-structure)"><i></i>構造と測定<small>6</small></a></li>
+      <li><a href="#text" style="--c:var(--al-c-text)"><i></i>質的・テキスト<small>5</small></a></li>
+      <li><a href="#synthesis" style="--c:var(--al-c-synthesis)"><i></i>推定を統合する<small>2</small></a></li>
+      <li><a href="#prep" style="--c:var(--al-c-prep)"><i></i>データの準備<small>8</small></a></li>
+    </ul>
+  </nav>
+
+  <section class="cat" id="compare" style="--c:var(--al-c-compare)">
+    <div class="wrap">
+      <div class="cat-head">
+        <span class="num">01</span>
+        <h2>比べる<small>Compare</small></h2>
+        <p>群や条件のあいだに差があるかを調べる。</p>
+      </div>
+      <ul class="cards">
+        <li class="card">
+          <h3><a href="tools/data-compare/">データ比較・自動分析</a></h3>
+          <p class="en">Auto Compare</p>
+          <p class="lead">2群以上の比較で、正規性に応じた検定を自動で選び、記述統計・図・APA形式の記述まで出す。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/data-compare/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/categorical/">カテゴリ分析</a></h3>
+          <p class="en">Categorical Analysis</p>
+          <p class="lead">人数・頻度のデータを、頻度論とベイズ統計の両方で読む。二項検定から対数線形モデルまで7種類。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/categorical/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/crosstab-2x2/">カテゴリデータ検定</a></h3>
+          <p class="en">Contingency Tests</p>
+          <p class="lead">分割表を入れるだけで、カイ二乗・Fisher・McNemar・二項検定と、ベイズファクター・記述例を出す。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/crosstab-2x2/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/nonparametric/">ノンパラメトリック検定</a></h3>
+          <p class="en">Nonparametric Tests</p>
+          <p class="lead">順位にもとづく検定を、データ入力から論文の記述例・R コードまでひと続きで。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/nonparametric/app.html">ツールを開く →</a></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="cat" id="relation" style="--c:var(--al-c-relation)">
+    <div class="wrap">
+      <div class="cat-head">
+        <span class="num">02</span>
+        <h2>関係を見る<small>Relate</small></h2>
+        <p>変数どうし、人どうしのつながりを数値と図にする。</p>
+      </div>
+      <ul class="cards">
+        <li class="card">
+          <h3><a href="tools/correlation/">相関分析と散布図</a></h3>
+          <p class="en">Correlation &amp; Scatter</p>
+          <p class="lead">相関行列・散布図・解釈の文章を一度に。正規性に応じて Pearson と Spearman を使い分ける。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/correlation/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/network/">ネットワーク分析ラボ</a></h3>
+          <p class="en">Social Network Analysis</p>
+          <p class="lead">「誰と誰がつながっているか」を貼るだけで、中心性・コミュニティ・構造指標を図と表と解説に。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/network/app.html">ツールを開く →</a></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="cat" id="causal" style="--c:var(--al-c-causal)">
+    <div class="wrap">
+      <div class="cat-head">
+        <span class="num">03</span>
+        <h2>説明・予測する<small>Explain &amp; Predict</small></h2>
+        <p>結果を説明する要因を探し、予測や効果の推定を行う。</p>
+      </div>
+      <ul class="cards">
+        <li class="card">
+          <h3><a href="tools/regression/">回帰分析・自動判定</a></h3>
+          <p class="en">Auto Regression</p>
+          <p class="lead">目的変数と説明変数の型から、重回帰・ロジスティック回帰・数量化I類／II類を自動で判定する。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/regression/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/quantification/">数量化理論</a></h3>
+          <p class="en">Hayashi Quantification</p>
+          <p class="lead">林知己夫の数量化I類〜IV類。カテゴリーデータで回帰・判別・対応分析・多次元尺度構成を行う。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/quantification/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/qca/">質的比較分析（QCA / fsQCA）</a></h3>
+          <p class="en">Qualitative Comparative Analysis</p>
+          <p class="lead">少数事例の「条件の組み合わせ」と結果の関係を、真理表と論理式で示す。crisp・多値・ファジィ集合に対応。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/qca/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/decision-tree/">決定木ラボ</a></h3>
+          <p class="en">Decision Tree (CART)</p>
+          <p class="lead">分類と回帰の決定木を育て、あたり具合・変数の重要度・ルールを確かめる。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/decision-tree/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/mixed-model/">混合モデルラボ</a></h3>
+          <p class="en">Linear Mixed Models</p>
+          <p class="lead">生徒が学級に、測定が個人に入れ子になったデータを、固定効果とランダム効果に分けて推定する。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/mixed-model/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/propensity-score/">傾向スコアマッチング</a></h3>
+          <p class="en">Propensity Score Matching</p>
+          <p class="lead">観察データで、処置を受けやすさが近い者どうしを組にして、処置の効果を推定する。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/propensity-score/app.html">ツールを開く →</a></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="cat" id="structure" style="--c:var(--al-c-structure)">
+    <div class="wrap">
+      <div class="cat-head">
+        <span class="num">04</span>
+        <h2>構造と測定<small>Structure &amp; Measurement</small></h2>
+        <p>多くの変数の背後にあるまとまりや、測定の精度を調べる。</p>
+      </div>
+      <ul class="cards">
+        <li class="card">
+          <h3><a href="tools/cluster/">クラスター分析ラボ</a></h3>
+          <p class="en">Cluster Analysis</p>
+          <p class="lead">階層的クラスター分析と k-means 法で、似たものどうしをまとめる。樹形図の切断線はドラッグで動く。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/cluster/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/pca/">主成分分析ラボ</a></h3>
+          <p class="en">Principal Component Analysis</p>
+          <p class="lead">たくさんの変数を少ない軸にまとめ直す。固有値からバイプロット、記述例まで。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/pca/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/factor/">因子分析ラボ</a></h3>
+          <p class="en">Factor Analysis (EFA &amp; CFA)</p>
+          <p class="lead">前提の確認、因子数の決定、探索的因子分析、確認的因子分析、記述例と R コードまで。</p>
+          <div class="foot"><span class="tag">マニュアルあり</span><a class="open" href="tools/factor/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/sem/">構造方程式モデリング・ラボ</a></h3>
+          <p class="en">Structural Equation Modeling</p>
+          <p class="lead">lavaan と同じ書き方でモデルを組み、推定・パス図・診断・群の比較まで。</p>
+          <div class="foot"><span class="tag">マニュアルあり</span><a class="open" href="tools/sem/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/g-theory/">一般化可能性理論ラボ</a></h3>
+          <p class="en">Generalizability Theory</p>
+          <p class="lead">得点のばらつきを人・条件・誤差に分け（G研究）、項目数や評価者数を変えた信頼性を試算する（D研究）。</p>
+          <div class="foot"><span class="tag">マニュアルあり</span><a class="open" href="tools/g-theory/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/irt/">項目反応理論ラボ</a></h3>
+          <p class="en">Item Response Theory</p>
+          <p class="lead">回答データから、項目の性質と受験者の特性値を同じ物差しで推定する。1PL・2PL・3PL・段階反応モデル。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/irt/app.html">ツールを開く →</a></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="cat" id="text" style="--c:var(--al-c-text)">
+    <div class="wrap">
+      <div class="cat-head">
+        <span class="num">05</span>
+        <h2>質的・テキスト<small>Qualitative &amp; Text</small></h2>
+        <p>自由記述・逐語録・インタビューを整理し、語の関係を見る。</p>
+      </div>
+      <ul class="cards">
+        <li class="card">
+          <h3><a href="tools/cooccurrence/">共起ネットワーク比較ラボ</a></h3>
+          <p class="en">Co-occurrence Network Comparison</p>
+          <p class="lead">2つのテキストの共起ネットワークを描き、共通の語・固有の語を色分けして比べる。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/cooccurrence/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/paired-text/">対応テキストマイニング</a></h3>
+          <p class="en">Paired Text Mining</p>
+          <p class="lead">同じ人の事前・事後の自由記述を ID で突き合わせ、消えた語・現れた語と共起ネットワークを示す。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/paired-text/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/classroom-talk/">授業発話分析ラボ</a></h3>
+          <p class="en">Classroom Discourse Analysis</p>
+          <p class="lead">授業の逐語録から、フランダース相互作用分析・発問の分類・IRF 連鎖・語彙を数えて見せる。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/classroom-talk/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/qda/">QDA ワークベンチ</a></h3>
+          <p class="en">QDA Workbench</p>
+          <p class="lead">インタビューや自由記述のコーディングから、カテゴリー化、行列、図、ストーリーラインまで。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/qda/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/qda-lite/">QDA-Lite</a></h3>
+          <p class="en">QDA Lite</p>
+          <p class="lead">テキストにコードを付けて、対象者ごとに集計する軽量版。感情辞書による抽出も。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/qda-lite/app.html">ツールを開く →</a></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="cat" id="synthesis" style="--c:var(--al-c-synthesis)">
+    <div class="wrap">
+      <div class="cat-head">
+        <span class="num">06</span>
+        <h2>推定を統合する<small>Resample &amp; Synthesize</small></h2>
+        <p>再標本化や複数研究の統合で、推定の確かさを見る。</p>
+      </div>
+      <ul class="cards">
+        <li class="card">
+          <h3><a href="tools/bootstrap/">ブートストラップ解析</a></h3>
+          <p class="en">Bootstrap Resampling</p>
+          <p class="lead">データを復元抽出で繰り返し、平均値・中央値・標準偏差の信頼区間を経験的に求める。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/bootstrap/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/meta-analysis/">メタ分析ラボ</a></h3>
+          <p class="en">Meta-Analysis</p>
+          <p class="lead">複数の研究の効果量をそろえて統合し、森林プロット・異質性・出版バイアスを吟味する。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/meta-analysis/app.html">ツールを開く →</a></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="cat" id="prep" style="--c:var(--al-c-prep)">
+    <div class="wrap">
+      <div class="cat-head">
+        <span class="num">07</span>
+        <h2>データの準備<small>Prepare</small></h2>
+        <p>分析の前後に必要な、整形・前処理・ファイル操作・調査票づくり。</p>
+      </div>
+      <ul class="cards">
+        <li class="card">
+          <h3><a href="tools/form-cleaner/">フォーム回答整形ラボ</a></h3>
+          <p class="en">Form Response Cleaner</p>
+          <p class="lead">Google フォーム・Microsoft Forms の回答 CSV を、分析用の CSV と対応表に整える。</p>
+          <div class="foot"><span class="tag">マニュアルあり</span><a class="open" href="tools/form-cleaner/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/data-cleaning/">データ前処理・クリーニングラボ</a></h3>
+          <p class="en">Data Cleaning</p>
+          <p class="lead">横持ち⇄縦持ち、逆転項目と合成得点、外れ値、再コード、データの結合までを1画面で。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/data-cleaning/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/missing-data/">欠測データラボ</a></h3>
+          <p class="en">Missing Data</p>
+          <p class="lead">欠測の地図とパターン、MCAR の検討、多重代入と Rubin の規則による統合まで。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/missing-data/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/file-merge/">ファイル統合</a></h3>
+          <p class="en">Document Merger</p>
+          <p class="lead">PDF・Excel・Word・テキストを種類ごとに自動で振り分けて、1つのファイルに結合する。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/file-merge/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/file-split/">ファイル分割</a></h3>
+          <p class="en">File Splitter</p>
+          <p class="lead">Excel はシートごと、PDF はページごとに分けて、ZIP でまとめて保存する。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/file-split/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/markdown/">Markdown Studio</a></h3>
+          <p class="en">Markdown Studio</p>
+          <p class="lead">Markdown を書きながらプレビューし、HTML・Word・PDF に書き出す。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/markdown/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/sqs-editor/">SQS ソースエディタ Web</a></h3>
+          <p class="en">SQS Source Editor</p>
+          <p class="lead">マークシート式の調査票を作り、印刷用の PDF を組む。SQS の編集ソフトのブラウザー版。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/sqs-editor/app.html">ツールを開く →</a></div>
+        </li>
+        <li class="card">
+          <h3><a href="tools/sqs-reader/">SQS マーク読み取り</a></h3>
+          <p class="en">SQS Mark Reader</p>
+          <p class="lead">スキャンした調査票の画像からマークを読み取り、集計用の CSV を作る。</p>
+          <div class="foot"><span class="tag">&nbsp;</span><a class="open" href="tools/sqs-reader/app.html">ツールを開く →</a></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <div>
+      <b>データ分析ラボ</b>
+      <p>ブラウザーだけで動く、統計解析と質的分析のツール集。どのツールもインストール不要で、計算はブラウザーの中で完結します。</p>
+      <p><a href="">ツールの一覧へ</a> ・ <a href="https://github.com/k518-2026/AnalysisLabs">ソースコード（GitHub）</a></p>
+    </div>
+    <div>
+      <p>© 2026 K.Yamamoto ・ MIT License</p>
+      <p>「SQS ソースエディタ Web」「SQS マーク読み取り」は、Apache License 2.0 で公開されている SQS（Shared Questionnaire System）をもとに作り直したものです。</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

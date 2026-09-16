@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>混合モデルラボ — データ分析ラボ</title>
+<meta name="description" content="生徒が学級に、測定が個人に入れ子になったデータを、固定効果とランダム効果に分けて推定する。">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<link rel="stylesheet" href="../../assets/site.css?v=b63567b0">
+<style>:root{--al-cat:var(--al-c-causal)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#causal">説明・予測する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>混合モデルラボ</span><span class="al-gap"></span><a class="al-link al-primary" href="app.html">ツールを開く</a></div>
+<main>
+  <header class="tool-hero">
+    <div class="wrap">
+      <a class="chip" href="../../#causal"><i></i>説明・予測する</a>
+      <h1>混合モデルラボ</h1>
+      <p class="en">Linear Mixed Models</p>
+      <p class="lead">生徒が学級に、測定が個人に入れ子になったデータを、固定効果とランダム効果に分けて推定する。</p>
+      <div class="actions">
+        <a class="btn primary" href="app.html">ツールを開く <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        
+      </div>
+    </div>
+  </header>
+  <div class="wrap doc">
+    <article>
+      <section>
+        <h2><span class="n">01</span>概要</h2>
+        <p>観測が群に入れ子になっているデータ（マルチレベルデータ）のための線形混合モデルです。2レベル・3レベル、経時データに対応し、群平均中心化、交互作用、ランダム傾きを指定できます。</p>
+      </section>
+      <section>
+        <h2><span class="n">02</span>できること</h2>
+        <ul><li>2レベル・3レベル（入れ子）のモデル</li><li>連続量の中心化（全体平均・群平均）と交互作用</li><li>ランダム切片・ランダム傾き、切片と傾きの相関</li><li>REML／最尤法による推定</li><li>群ごとの効果、診断、レポート</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">03</span>使い方</h2>
+        <ol class="steps"><li>データを貼り付けるかファイルから読み込む</li><li>目的変数と群変数（Lv.2、必要なら Lv.3）を選ぶ</li><li>固定効果・交互作用・ランダム効果を指定する</li><li>「推定する」を押し、iii〜vi のタブで結果を見る</li></ol><p class="note-box" style="margin-top:14px">「学級に属する生徒」「同じ人を6回測る」「学校→学級→生徒」の例があります。まずはそれで動きを確かめるのがおすすめです。</p>
+      </section>
+      <section>
+        <h2><span class="n">04</span>読み込めるデータ</h2>
+        <p>CSV・タブ区切り（1行＝1観測、1列＝1変数）。群を表す列（学級 ID など）が必要です。</p>
+      </section>
+      <section>
+        <h2><span class="n">05</span>書き出せるもの</h2>
+        <ul><li>固定効果・ランダム効果の推定値</li><li>群ごとの効果</li><li>診断</li><li>レポート</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">06</span>注意</h2>
+        <ul class="notes"><li>計算はブラウザーの中で行われ、入力したデータがサーバーに送られることはありません。</li><li>出力される記述例や R コードは下書きです。数値と解釈は、研究の文脈と照らし合わせて確かめてください。</li></ul>
+      </section>
+    </article>
+    <aside class="side">
+      <div class="box">
+        <h3>このツール</h3>
+        <dl>
+          <dt>カテゴリ</dt><dd>説明・予測する</dd>
+          <dt>入力</dt><dd>CSV・タブ区切り</dd>
+          <dt>マニュアル</dt><dd>この説明ページのみ</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h3>説明・予測するのツール</h3>
+        <ul><li><a href="../regression/">回帰分析・自動判定</a></li><li><a href="../quantification/">数量化理論</a></li><li><a href="../qca/">質的比較分析（QCA / fsQCA）</a></li><li><a href="../decision-tree/">決定木ラボ</a></li><li aria-current="page"><a href="../mixed-model/">混合モデルラボ</a></li><li><a href="../propensity-score/">傾向スコアマッチング</a></li></ul>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <div>
+      <b>データ分析ラボ</b>
+      <p>ブラウザーだけで動く、統計解析と質的分析のツール集。どのツールもインストール不要で、計算はブラウザーの中で完結します。</p>
+      <p><a href="../../">ツールの一覧へ</a> ・ <a href="https://github.com/k518-2026/AnalysisLabs">ソースコード（GitHub）</a></p>
+    </div>
+    <div>
+      <p>© 2026 K.Yamamoto ・ MIT License</p>
+      <p>「SQS ソースエディタ Web」「SQS マーク読み取り」は、Apache License 2.0 で公開されている SQS（Shared Questionnaire System）をもとに作り直したものです。</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,2607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQS マーク読み取り — データ分析ラボ</title>
+<style>
+/* ============================================================
+   MarkReader Web
+   意匠：SQS ソースエディタ Web と同じ「スキャナ操作パネル」の系統
+   ============================================================ */
+:root{
+  --ink:#14161a; --ink2:#3a4048; --ink3:#69737f; --ink4:#9aa4b0;
+  --shell:#e7eaee; --shell2:#f2f4f7; --shell3:#d5dae1; --shell4:#c2c9d2;
+  --line:#c6ccd4; --line2:#dfe4ea;
+  --paper:#fdfcf9; --desk:#9aa3ad;
+  --blue:#1f5fa8; --blue2:#3b82cf; --blue3:#cfe0f2; --blue4:#eaf2fb;
+  --red:#c0392b; --redpale:#fdecea;
+  --amber:#a86a06; --amberpale:#fdf4e3;
+  --green:#1d7a4d; --greenpale:#e8f5ee;
+  --sans:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Yu Gothic","Noto Sans JP","Meiryo",system-ui,sans-serif;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","MS PMincho",serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Roboto Mono","Courier New",monospace;
+  --r:3px;
+  --shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 1px 2px rgba(20,22,26,.08);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font-family:var(--sans); color:var(--ink); background:var(--shell);
+  font-size:13px; line-height:1.6; overflow:hidden; -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue2);outline-offset:1px}
+.plate{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+
+#app{height:100%;display:grid;grid-template-rows:auto auto 1fr auto}
+
+/* ---------- タイトルバー ---------- */
+#titlebar{display:flex;align-items:center;gap:14px;padding:7px 12px;background:var(--ink);color:#eef1f5;border-bottom:1px solid #000}
+#logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#logo .guides{display:grid;grid-template-columns:7px 7px;grid-template-rows:7px 7px;gap:2px}
+#logo .guides i{background:#eef1f5;display:block}
+#logo .guides i:nth-child(3){width:3.5px;justify-self:center}
+#logo b{font-size:13px;letter-spacing:.18em;font-weight:700}
+#logo span{font-size:11px;color:#8c98a6;letter-spacing:.06em}
+#session{
+  font-family:var(--mono);font-size:11.5px;color:#b9c4d0;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;padding:2px 8px;border:1px solid #2c3340;
+  border-radius:var(--r);background:#0c0e12;min-width:0;flex:0 1 420px;
+}
+#titlebar .spacer{flex:1}
+.tbtn{background:#20252e;color:#dbe2ea;border:1px solid #333c49;padding:4px 9px;border-radius:var(--r);cursor:pointer;font-size:11.5px;white-space:nowrap}
+.tbtn:hover{background:#2b323d;border-color:#455060}
+
+/* ---------- ツールバー ---------- */
+#toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px;background:linear-gradient(#f6f8fa,var(--shell2));border-bottom:1px solid var(--line)}
+.tool{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:4px 9px;cursor:pointer;box-shadow:var(--shadow);white-space:nowrap}
+.tool:hover{background:var(--blue4);border-color:var(--blue2);color:var(--blue)}
+.tool:disabled{opacity:.4;cursor:default;background:#fff;border-color:var(--line);color:var(--ink3)}
+.tool .g{font-family:var(--mono);font-weight:700;color:var(--blue);font-size:12px}
+.tool.primary{background:var(--blue);border-color:#164a86;color:#fff}
+.tool.primary .g{color:#fff}
+.tool.primary:hover{background:var(--blue2);color:#fff}
+.tool.primary:disabled{background:var(--shell3);border-color:var(--line);color:var(--ink3)}
+.sep{width:1px;height:20px;background:var(--line);margin:0 3px}
+#progress{flex:0 0 160px;height:6px;border-radius:3px;background:var(--shell3);overflow:hidden;display:none}
+#progress.on{display:block}
+#progress i{display:block;height:100%;width:0;background:var(--blue2);transition:width .18s}
+
+/* ---------- タブ ---------- */
+#tabs{display:flex;gap:2px;padding:0 10px;background:var(--shell2);border-bottom:1px solid var(--line)}
+.tab{padding:6px 14px;border:1px solid transparent;border-bottom:0;border-radius:var(--r) var(--r) 0 0;cursor:pointer;background:none;font-size:12.5px;color:var(--ink2);position:relative;top:1px}
+.tab:hover{color:var(--blue)}
+.tab.on{background:#fff;border-color:var(--line);color:var(--ink);font-weight:600}
+.tab .n{font-family:var(--mono);font-size:10px;color:var(--ink3);margin-left:5px}
+.tab.on .n{color:var(--blue)}
+.tab .warn{color:var(--red);font-weight:700}
+
+/* ---------- ビュー ---------- */
+#views{min-height:0;overflow:hidden;background:#fff}
+.view{display:none;height:100%;min-height:0;overflow:auto}
+.view.on{display:block}
+.view.split{display:none;grid-template-columns:1fr 330px}
+.view.split.on{display:grid}
+.pad{padding:16px 18px 60px}
+
+/* 空状態 */
+.dropbig{
+  margin:26px auto;max-width:660px;border:2px dashed var(--line);border-radius:8px;
+  padding:34px 28px;text-align:center;background:var(--shell2);
+}
+.dropbig.hot{border-color:var(--blue2);background:var(--blue4)}
+.dropbig h2{margin:0 0 6px;font-size:16px}
+.dropbig p{margin:0 0 14px;font-size:12.5px;color:var(--ink2);line-height:1.9}
+.steps{display:grid;gap:10px;max-width:660px;margin:0 auto 22px}
+.step{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.step.done{border-color:#a9d6bd;background:var(--greenpale)}
+.step .k{font-family:var(--mono);font-size:10px;color:var(--blue);flex:0 0 74px;padding-top:2px;letter-spacing:.1em}
+.step.done .k{color:var(--green)}
+.step b{display:block;font-size:13px}
+.step span{font-size:11.5px;color:var(--ink3)}
+.step .act{margin-left:auto;flex:0 0 auto}
+
+/* ---------- ページ一覧 ---------- */
+#pagegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+.pcard{border:1px solid var(--line);border-radius:var(--r);background:#fff;overflow:hidden;cursor:pointer}
+.pcard:hover{border-color:var(--blue2);box-shadow:0 2px 8px rgba(31,95,168,.16)}
+.pcard.sel{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue3)}
+.pcard .thumb{position:relative;background:var(--desk);aspect-ratio:595/842;display:grid;place-items:center}
+.pcard canvas{width:100%;height:100%;object-fit:contain;display:block}
+.pcard .cap{padding:5px 7px;font-size:11px;display:flex;gap:6px;align-items:center}
+.pcard .cap .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:10px;color:var(--ink3)}
+.badge{font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:8px;flex:0 0 auto}
+.badge.ok{background:var(--greenpale);color:var(--green)}
+.badge.err{background:var(--redpale);color:var(--red)}
+.badge.wait{background:var(--shell3);color:var(--ink3)}
+.badge.warn{background:var(--amberpale);color:var(--amber)}
+
+/* ---------- ページ詳細 ---------- */
+#detail{display:grid;grid-template-columns:1fr 300px;height:100%;min-height:0}
+#canvaswrap{position:relative;overflow:auto;background:var(--desk);min-height:0}
+#canvasstage{position:relative;margin:16px auto;box-shadow:0 4px 18px rgba(0,0,0,.35);background:#fff}
+#scan{display:block}
+#overlay{position:absolute;inset:0;pointer-events:none}
+#hit{position:absolute;inset:0}
+#detailside{border-left:1px solid var(--line);background:var(--shell2);overflow:auto;min-height:0}
+
+/* ---------- ヒストグラム ---------- */
+#histwrap{padding:12px 14px;border-bottom:1px solid var(--line2);background:#fff}
+#hist{width:100%;height:110px;display:block;border:1px solid var(--line2);border-radius:var(--r);background:#fff;cursor:ew-resize}
+.slider{margin:10px 0 4px}
+.slider label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink2);margin-bottom:2px}
+.slider label b{font-family:var(--mono);color:var(--blue)}
+.slider input{width:100%}
+.slider .tip{font-size:10.5px;color:var(--ink3);display:flex;justify-content:space-between}
+
+/* ---------- マーク欄ギャラリー ---------- */
+#gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:5px}
+.mcell{border:1px solid var(--line);border-radius:2px;background:#fff;padding:2px;cursor:pointer;position:relative}
+.mcell canvas{width:100%;display:block;image-rendering:pixelated}
+.mcell .d{font-family:var(--mono);font-size:8.5px;text-align:center;color:var(--ink3)}
+.mcell.on{border-color:var(--blue);background:var(--blue4);box-shadow:0 0 0 1px var(--blue)}
+.mcell.on .d{color:var(--blue);font-weight:700}
+.mcell.man::after{content:"手";position:absolute;top:1px;right:1px;font-size:8px;background:var(--amber);color:#fff;border-radius:2px;padding:0 2px}
+
+/* ---------- 表 ---------- */
+.tblwrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff;max-height:calc(100vh - 220px)}
+table.data{border-collapse:separate;border-spacing:0;font-size:12px;width:100%}
+table.data th,table.data td{border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);padding:4px 8px;white-space:nowrap}
+table.data thead th{position:sticky;top:0;background:var(--shell2);z-index:2;font-size:11px;font-weight:600;text-align:left}
+table.data tbody th{position:sticky;left:0;background:#fff;z-index:1;font-family:var(--mono);font-size:11px;font-weight:400;text-align:left}
+table.data tbody tr:hover td{background:var(--blue4)}
+table.data td.num{text-align:right;font-family:var(--mono)}
+table.data td.e{background:var(--redpale);color:var(--red);font-weight:600}
+table.data td.w{background:var(--amberpale);color:var(--amber)}
+table.data td.z{color:var(--ink4)}
+
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.stat{border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:10px 12px}
+.stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--ink3);text-transform:uppercase}
+.stat .v{font-size:22px;font-weight:700;font-family:var(--mono);line-height:1.25}
+.stat .v small{font-size:12px;color:var(--ink3);font-weight:400}
+.stat.err .v{color:var(--red)}
+.stat.warn .v{color:var(--amber)}
+.stat.ok .v{color:var(--green)}
+
+h3.sec{font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin:22px 0 8px;display:flex;align-items:center;gap:8px}
+h3.sec::after{content:"";flex:1;height:1px;background:var(--line2)}
+h3.sec:first-child{margin-top:0}
+
+.note{font-size:11.5px;color:var(--ink3);background:var(--shell2);border-left:2px solid var(--line);padding:7px 10px;border-radius:0 var(--r) var(--r) 0;margin:8px 0}
+.warnbox{font-size:12px;color:var(--red);background:var(--redpale);border:1px solid #f0c6c1;border-radius:var(--r);padding:8px 10px;margin:8px 0}
+.okbox{font-size:12px;color:var(--green);background:var(--greenpale);border:1px solid #a9d6bd;border-radius:var(--r);padding:8px 10px;margin:8px 0}
+.f{margin-bottom:9px}
+.f>label{display:block;font-size:11.5px;color:var(--ink2);margin-bottom:3px;font-weight:600}
+.f input,.f select{width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.chk{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px}
+.chk input{margin:0}
+.pgroup{border-bottom:1px solid var(--line2);padding:12px 14px}
+.pgroup>h3{margin:0 0 9px;font-size:10px;font-family:var(--mono);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);display:flex;align-items:center;gap:6px}
+.pgroup>h3::after{content:"";flex:1;height:1px;background:var(--line2)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11.5px}
+.kv .k{color:var(--ink3);font-family:var(--mono);font-size:10.5px}
+.kv .v{font-family:var(--mono);text-align:right}
+
+/* ---------- ステータスバー ---------- */
+#status{display:flex;align-items:center;gap:14px;padding:4px 12px;background:var(--ink);color:#aab5c2;border-top:1px solid #000;font-family:var(--mono);font-size:10.5px;white-space:nowrap;overflow:hidden}
+#status .k{color:#68727f}
+#status b{color:#e7ecf2;font-weight:600}
+#status .spacer{flex:1}
+#status .err{color:#ff8f80}
+
+/* ---------- ダイアログ ---------- */
+.modal{position:fixed;inset:0;background:rgba(14,17,22,.55);display:none;place-items:center;z-index:60;padding:20px}
+.modal.open{display:grid}
+.dlg{background:#fff;border-radius:5px;box-shadow:0 18px 50px rgba(0,0,0,.4);width:min(600px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.dlg header{padding:10px 14px;background:var(--ink);color:#eef1f5;display:flex;align-items:center;gap:10px}
+.dlg header h2{margin:0;font-size:13px}
+.dlg header .plate{color:#7c8794;margin-left:auto}
+.dlg .body{padding:14px;overflow:auto}
+.dlg footer{padding:10px 14px;border-top:1px solid var(--line2);background:var(--shell2);display:flex;gap:8px;justify-content:flex-end}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+
+#toasts{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);z-index:80;display:grid;gap:6px;justify-items:center}
+.toast{background:var(--ink);color:#eef1f5;padding:7px 14px;border-radius:16px;font-size:12px;box-shadow:0 5px 18px rgba(0,0,0,.3)}
+.toast.err{background:var(--red)}
+.toast.ok{background:#12442c}
+
+/* ============================================================
+   版面（マスタ）の組版 — SQS ソースエディタ Web と同じ寸法規則
+   画面外で組んで、マーク欄の座標を pt 単位で取り出すために使う
+   ============================================================ */
+#master{position:absolute;left:-99999px;top:0;visibility:hidden}
+#measure{position:absolute;left:-99999px;top:0;width:505pt;visibility:hidden;--fs:11pt;color:#000;font-family:var(--sans)}
+.blk{display:flow-root}
+.sheet{--fs:11pt;position:relative;width:595pt;height:842pt;background:#fff;color:#000;font-family:var(--sans);overflow:hidden}
+.sheet-content{position:absolute;left:45pt;top:50pt;width:505pt;height:742pt;overflow:hidden}
+.guide{position:absolute;background:#000}
+.sheet .pagenum{position:absolute;width:47pt;height:40pt;text-align:center;font-size:8pt;line-height:1.1;padding-top:24pt;overflow:hidden}
+.sheet .pagenum .short{font-size:5pt;margin-top:1pt}
+.sheet .mex{position:absolute}
+.b-h{font-size:calc(var(--fs)*1.4);font-weight:700;padding:5pt 0 2pt;margin-top:6pt}
+.b-p{font-size:var(--fs);padding-bottom:2pt;white-space:pre-wrap}
+.b-warning{border:.8pt solid #000;padding:5pt 7pt;margin:4pt 0}
+.b-warning .b-p{font-size:calc(var(--fs)*.92);padding-bottom:1pt}
+.q{padding-top:4pt;margin-bottom:2pt}
+.q-hint{font-size:var(--fs);display:flex;gap:4pt;align-items:flex-start}
+.q-no{font-weight:700;white-space:nowrap;flex:0 0 auto}
+.q-hint-t{white-space:pre-wrap}
+.itemset{width:100%;border-collapse:collapse;margin-top:2pt;table-layout:fixed}
+.itemset td{vertical-align:top;padding:1.5pt 0}
+.item{display:flex;align-items:flex-start;gap:3pt}
+.item .lbl{font-size:calc(var(--fs)*.9);line-height:1.35;padding-top:1pt}
+.mark{flex:0 0 auto;display:block}
+.imark{display:inline-block;vertical-align:-.25em;margin:0 1pt}
+.b-textarea{margin:3pt 0 5pt 6pt}
+.ta-box{border:.9pt solid #000;border-radius:5pt;background:#fff}
+.mx{width:100%;border-collapse:collapse;border:.5pt solid #7a7a7a;table-layout:fixed;margin-top:3pt}
+.mx th,.mx td{border:.5pt solid #7a7a7a;padding:2.5pt 3pt;vertical-align:middle}
+.mx thead th{font-size:calc(var(--fs)*.6);font-weight:400;text-align:center;line-height:1.15}
+.mx .rowlab{font-size:calc(var(--fs)*.9);text-align:left;font-weight:400}
+.mx .cell{text-align:center}
+.mx .grouphdr{font-size:calc(var(--fs)*.68);text-align:center}
+
+/* ---------- 集計チャート ---------- */
+.qblock{border:1px solid var(--line);border-radius:var(--r);background:#fff;margin-bottom:14px;overflow:hidden}
+.qblock>header{padding:8px 12px;background:var(--shell2);border-bottom:1px solid var(--line2);display:flex;gap:10px;align-items:baseline}
+.qblock>header .qid{font-family:var(--mono);font-size:10.5px;color:var(--blue);flex:0 0 auto}
+.qblock>header b{font-size:12.5px;font-weight:600;flex:1;min-width:0}
+.qblock>header .kind{font-size:10.5px;color:var(--ink3);flex:0 0 auto}
+.bars{padding:9px 12px 11px}
+.bar{display:grid;grid-template-columns:minmax(90px,26%) 1fr 96px;gap:9px;align-items:center;padding:2px 0;font-size:12px}
+.bar .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .tr{background:var(--shell2);border-radius:2px;height:15px;position:relative;overflow:hidden}
+.bar .fi{position:absolute;left:0;top:0;bottom:0;background:var(--blue2);border-radius:2px}
+.bar .nm{font-family:var(--mono);font-size:11px;text-align:right;color:var(--ink2)}
+.bar.na .fi{background:var(--amber)} .bar.na .lb{color:var(--amber)}
+.bar.me .fi{background:var(--red)}   .bar.me .lb{color:var(--red)}
+.bar.tot{border-top:1px solid var(--line2);margin-top:4px;padding-top:5px;font-weight:600}
+.bar.tot .tr{background:none}
+
+/* ---------- 自由記述欄 ---------- */
+.freegrid{display:grid;gap:8px}
+.freerow{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line2);border-radius:var(--r);padding:6px 8px;background:#fff}
+.freerow .id{font-family:var(--mono);font-size:11px;color:var(--ink3);flex:0 0 44px;padding-top:3px}
+.freerow canvas{border:1px solid var(--line);border-radius:2px;background:#fff;max-width:100%;height:auto;display:block}
+
+@media (max-width:900px){
+  #detail{grid-template-columns:1fr}
+  #detailside{border-left:0;border-top:1px solid var(--line)}
+  .view.split{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){#progress i{transition:none}}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-prep);--ink:var(--al-ink);--ink2:var(--al-ink-2);--ink3:var(--al-ink-3);--shell:var(--al-bg);--shell2:var(--al-surface-2);--line:var(--al-line);--line2:var(--al-line-2);--blue:var(--al-cat);--blue2:var(--al-cat);--blue3:var(--al-cat-mid);--blue4:var(--al-cat-soft);--sans:var(--al-sans);--mincho:var(--al-serif);--mono:var(--al-mono);}html{box-sizing:border-box}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#prep">データの準備</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>SQS マーク読み取り</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div id="app">
+
+  <div id="titlebar">
+    <div id="logo">
+      <div class="guides" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div><b>SQS</b> <span>マーク読み取り</span></div>
+    </div>
+    <div id="session">セッションなし</div>
+    <div class="spacer"></div>
+    <button class="tbtn" id="btn-help">使い方</button>
+    <button class="tbtn" id="btn-about">このソフトについて</button>
+  </div>
+
+  <div id="toolbar">
+    <button class="tool" id="t-master"><span class="g">▤</span>調査票を開く</button>
+    <button class="tool" id="t-scans"><span class="g">▧</span>スキャン画像を追加</button>
+    <span class="sep"></span>
+    <button class="tool primary" id="t-run" disabled><span class="g">▶</span>読み取り開始</button>
+    <button class="tool" id="t-config"><span class="g">⚙</span>認識の設定</button>
+    <span class="sep"></span>
+    <button class="tool" id="t-csv" disabled><span class="g">☰</span>表データCSV</button>
+    <button class="tool" id="t-long" disabled><span class="g">▤</span>縦持ちCSV</button>
+    <span class="sep"></span>
+    <button class="tool" id="t-mout"><span class="g">◎</span>マスタを保存</button>
+    <button class="tool" id="t-demo"><span class="g">✎</span>テスト画像を作る</button>
+    <button class="tool" id="t-reset"><span class="g">×</span>やり直す</button>
+    <div id="progress"><i></i></div>
+    <input type="file" id="f-master" accept=".sqs,.xml,.json" style="display:none">
+    <input type="file" id="f-scans" accept="image/*" multiple style="display:none">
+  </div>
+
+  <div id="tabs">
+    <button class="tab on" data-view="v-start">はじめに</button>
+    <button class="tab" data-view="v-pages">ページ <span class="n" id="n-pages">0</span></button>
+    <button class="tab" data-view="v-detail">ページの確認</button>
+    <button class="tab" data-view="v-table">表データ <span class="n" id="n-rows">0</span></button>
+    <button class="tab" data-view="v-chart">集計結果</button>
+    <button class="tab" data-view="v-free">自由記述欄</button>
+    <button class="tab" data-view="v-errors">要確認 <span class="n" id="n-errs">0</span></button>
+  </div>
+
+  <div id="views">
+    <div class="view on" id="v-start"><div class="pad" id="startbody"></div></div>
+    <div class="view" id="v-pages"><div class="pad"><div id="pagegrid"></div></div></div>
+    <div class="view" id="v-detail">
+      <div id="detail">
+        <div id="canvaswrap">
+          <div id="canvasstage">
+            <canvas id="scan"></canvas>
+            <svg id="overlay" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div id="hit"></div>
+          </div>
+        </div>
+        <div id="detailside"></div>
+      </div>
+    </div>
+    <div class="view" id="v-table"><div class="pad" id="tablebody"></div></div>
+    <div class="view" id="v-chart"><div class="pad" id="chartbody"></div></div>
+    <div class="view" id="v-free"><div class="pad" id="freebody"></div></div>
+    <div class="view" id="v-errors"><div class="pad" id="errorbody"></div></div>
+  </div>
+
+  <div id="status">
+    <span><span class="k">調査票</span> <b id="st-master">未読込</b></span>
+    <span><span class="k">画像</span> <b id="st-imgs">0</b></span>
+    <span><span class="k">マーク欄</span> <b id="st-marks">0</b></span>
+    <span class="spacer"></span>
+    <span id="st-msg"></span>
+    <span><span class="k">閾値</span> <b id="st-th">0.90</b></span>
+  </div>
+</div>
+
+<div id="master"></div>
+<div id="measure"></div>
+
+<div class="modal" id="m-config">
+  <div class="dlg">
+    <header><h2>マーク認識の設定</h2><span class="plate">config.xml</span></header>
+    <div class="body" id="configbody"></div>
+    <footer>
+      <button class="tool" id="cfg-reset">初期値に戻す</button>
+      <button class="tool primary" data-close>閉じる</button>
+    </footer>
+  </div>
+</div>
+
+<div class="modal" id="m-info">
+  <div class="dlg">
+    <header><h2 id="info-title">情報</h2><span class="plate">info</span></header>
+    <div class="body" id="info-body"></div>
+    <footer><button class="tool primary" data-close>閉じる</button></footer>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script>
+"use strict";
+/* ==========================================================================
+   MarkReader Web
+   MarkReader-2.1（net.sqs2.omr.ui.MarkReader）の処理系を
+   HTML / CSS / JavaScript で再実装したもの。
+
+   処理の流れ（元アプリと同じ）
+     1. 調査票からマスタ（マーク欄の版面座標）を得る
+     2. スキャン画像の上下端から■ブロック（傾き補正指標）を4つ見つける
+     3. 版面座標 → 画像座標 のホモグラフィを求める
+     4. 各マーク欄で 5×3 畳み込みによる平均濃度を測る
+     5. 設問ごとに、濃度から回答を決める（多重回答／無回答の抑制つき）
+   ========================================================================== */
+
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const el = (t,c,x)=>{const e=document.createElement(t); if(c)e.className=c; if(x!=null)e.textContent=x; return e;};
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt = (v,n)=>Number(v).toFixed(n==null?3:n);
+
+function toast(msg,kind){
+  const t=el('div','toast'+(kind?' '+kind:''),msg);
+  $('#toasts').appendChild(t);
+  setTimeout(()=>{t.style.transition='opacity .3s';t.style.opacity='0';setTimeout(()=>t.remove(),320);},2400);
+}
+function openModal(id){$(id).classList.add('open');}
+function closeModals(){$$('.modal').forEach(m=>m.classList.remove('open'));}
+
+/* --------------------------------------------------------------------------
+   1. 設定（jar 内 config.xml の既定値をそのまま採用）
+   -------------------------------------------------------------------------- */
+const CFG_DEFAULT = {
+  /* deskewGuideArea */
+  density:0.5, height:0.12, horizontalMargin:0.05,
+  headerVerticalMargin:-0.01, footerVerticalMargin:0.0,
+  /* validation */
+  checkUpsideDown:true, checkEvenOdd:true, checkDistortion:true,
+  horizontalDistortion:0.03, verticalDistortion:0.03,
+  /* markRecognition */
+  markRecognitionDensityThreshold:0.9,
+  doubleMarkErrorSuppressionThreshold:0.0313,
+  noMarkErrorSuppressionThreshold:0.319,
+  resolutionScale:2.0,
+  horizontalTrim:0.5, verticalTrim:0,
+  markHorizontalMargin:0.5, markVerticalMargin:-2,
+  /* セッション */
+  pagesPerSheet:0            // 0 = マスタのページ数を使う
+};
+let CFG = Object.assign({}, CFG_DEFAULT);
+
+/* 版面（マスタ）の寸法 — SourceEditor の param.xsl と同じ */
+const MASTER = {
+  W:595, H:842,
+  guide:18, markW:5, markH:16,
+  /* ■ブロックの中心：[ヘッダ左, ヘッダ右, フッタ左, フッタ右] */
+  guideCenters:[[89,39],[546,39],[89,803],[546,803]],
+  /* ページの表裏を見るための領域。
+     元実装は (31,788,24,11) / (554,788,24,11) を見ていたが、
+     これはページ番号が刷られる位置を拾うためのもの。
+     この再実装の版面ではページ番号は左面 515〜562pt / 右面 15〜62pt に来るので、
+     同じ狙い（番号がどちら側にあるか）でその位置を見る。 */
+  footerLeftRect:[15,818,47,20],
+  footerRightRect:[515,818,47,20]
+};
+
+/* --------------------------------------------------------------------------
+   2. .sqs の読み込み（SQS ソースエディタ Web と同じ解釈）
+   -------------------------------------------------------------------------- */
+const NS = {x2:'http://www.w3.org/2002/06/xhtml2', xf:'http://www.w3.org/2002/xforms',
+            sqs:'http://sqs.cmr.sfc.keio.ac.jp/2004/sqs'};
+const MARK_GLYPH='\u25D6';
+let uid=0; const nid=()=>'n'+(++uid);
+const mk=(t,a,c)=>({id:nid(), t, a:a||{}, c:c||[]});
+
+function textOfEl(e){
+  let out='';
+  Array.from(e.childNodes).forEach(ch=>{
+    if(ch.nodeType===3) out+=ch.nodeValue;
+    else if(ch.nodeType===1){
+      const ln=ch.localName;
+      if(ln==='br') out+='\n';
+      else if(ln==='mark') out+=MARK_GLYPH;
+      else out+=textOfEl(ch);
+    }
+  });
+  return out.replace(/[ \t]*\n[ \t]*/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+const kids = e => Array.from(e.children||[]);
+const firstLocal = (e,l) => kids(e).find(c=>c.localName===l);
+const sqsAttr = (e,n) => e.getAttributeNS(NS.sqs,n)||e.getAttribute('sqs:'+n)||e.getAttribute(n)||'';
+const hintOf = e => { const h=kids(e).find(c=>c.localName==='hint'); return h?textOfEl(h):''; };
+function parseItems(e){
+  return kids(e).filter(c=>c.localName==='item').map(it=>{
+    const l=firstLocal(it,'label'), v=firstLocal(it,'value');
+    return mk('item',{label:l?textOfEl(l):'', value:v?textOfEl(v):'', cls:sqsAttr(it,'class')});
+  });
+}
+function parseSQS(text){
+  const doc=new DOMParser().parseFromString(text,'application/xml');
+  if(doc.querySelector('parsererror')) throw new Error('ファイル形式が正しくないため、読み込むことができません');
+  const root=doc.documentElement;
+  if(!root||root.localName!=='html') throw new Error('SQS Source ファイルではありません');
+  const headEl=firstLocal(root,'head'), bodyEl=firstLocal(root,'body');
+  const metas={};
+  if(headEl) kids(headEl).filter(c=>c.localName==='meta').forEach(m=>{metas[m.getAttribute('name')||'']=m.getAttribute('content')||'';});
+  const titleEl=headEl&&firstLocal(headEl,'title');
+  const head=mk('head',{
+    title:titleEl?textOfEl(titleEl):'',
+    'DC.Title.Short':metas['DC.Title.Short']||'',
+    'DC.Creator':metas['DC.Creator']||'', lang:(headEl&&headEl.getAttribute('lang'))||'ja'
+  });
+  function blocks(container){
+    const out=[];
+    kids(container).forEach(e=>{
+      const ln=e.localName;
+      if(ln==='h') out.push(mk('h',{text:textOfEl(e)}));
+      else if(ln==='p') out.push(mk('p',{text:textOfEl(e)||'　'}));
+      else if(ln==='section') out.push(...blocks(e));
+      else if(ln==='warning'){
+        const c=[];
+        kids(e).forEach(w=>{
+          if(w.localName==='p') c.push(mk('p',{text:textOfEl(w)}));
+          else if(w.localName==='marking-example') c.push(mk('marking-example',{}));
+          else if(w.localName==='mark') c.push(mk('mark',{}));
+        });
+        out.push(mk('warning',{}, c.length?c:[mk('p',{text:textOfEl(e)})]));
+      }
+      else if(ln==='select1'||ln==='select')
+        out.push(mk(ln,{hint:hintOf(e), cols:parseInt(sqsAttr(e,'cols'),10)||0, cls:sqsAttr(e,'class')}, parseItems(e)));
+      else if(ln==='textarea')
+        out.push(mk('textarea',{hint:hintOf(e), width:parseInt(sqsAttr(e,'width'),10)||450, height:parseInt(sqsAttr(e,'height'),10)||120}));
+      else if(ln==='input')
+        out.push(mk('textarea',{hint:hintOf(e), width:parseInt(sqsAttr(e,'width'),10)||300, height:26}));
+      else if(ln==='matrix-forms'){
+        const ra=firstLocal(e,'row-array'), ca=firstLocal(e,'column-array'), c=[];
+        c.push(mk('row-array',{}, ra?kids(ra).filter(g=>g.localName==='group').map(g=>mk('row',{hint:hintOf(g)})):[]));
+        const cols=[];
+        if(ca) kids(ca).forEach(x=>{
+          if(x.localName==='select1') cols.push(mk('m-select1',{hint:hintOf(x)}, parseItems(x)));
+          else if(x.localName==='select') cols.push(mk('m-select',{hint:hintOf(x)}, parseItems(x)));
+          else if(x.localName==='textarea') cols.push(mk('m-textarea',{hint:hintOf(x), width:parseInt(sqsAttr(x,'width'),10)||90, height:parseInt(sqsAttr(x,'height'),10)||18}));
+        });
+        c.push(mk('column-array',{}, cols));
+        out.push(mk('matrix-forms',{hint:hintOf(e), ratio:parseFloat(sqsAttr(e,'form-width-ratio'))||0.5}, c));
+      }
+    });
+    return out;
+  }
+  return mk('html',{},[head, mk('body',{}, bodyEl?blocks(bodyEl):[])]);
+}
+
+/* --------------------------------------------------------------------------
+   3. 版面の組版（画面外）— マーク欄の pt 座標を復元する
+       SQS ソースエディタ Web と同じ寸法規則でページを組み、
+       出来上がった DOM から各マーク欄の位置を読み出す。
+   -------------------------------------------------------------------------- */
+const PT = 96/72;
+let pxPerPt = PT;
+function calibrate(){
+  const M=$('#measure'), p=el('div'); p.style.height='100pt';
+  M.appendChild(p); const h=p.offsetHeight; p.remove();
+  if(h>0) pxPerPt=h/100;
+}
+function measureEl(node){
+  const M=$('#measure'), w=el('div','blk');
+  w.appendChild(node); M.appendChild(w);
+  const h=w.offsetHeight; M.removeChild(w); return h;
+}
+function svgMark(w,h){
+  const s=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  s.setAttribute('width',w+'pt'); s.setAttribute('height',h+'pt');
+  s.setAttribute('viewBox',`0 0 ${w} ${h}`); s.setAttribute('class','mark');
+  const e=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+  e.setAttribute('cx',w/2); e.setAttribute('cy',h/2);
+  e.setAttribute('rx',w/2.1); e.setAttribute('ry',h/2.4);
+  e.setAttribute('fill','#fff'); e.setAttribute('stroke','#000');
+  e.setAttribute('stroke-width','0.5'); e.setAttribute('stroke-dasharray','0.5,1.0');
+  s.appendChild(e); return s;
+}
+function setRich(host,text){
+  String(text==null?'':text).split(MARK_GLYPH).forEach((s,i)=>{
+    if(i>0){const w=el('span','imark'); w.appendChild(svgMark(MASTER.markW,MASTER.markH)); host.appendChild(w);}
+    if(s) host.appendChild(document.createTextNode(s));
+  });
+}
+function hintEl(text,qno){
+  const d=el('div','q-hint');
+  if(qno) d.appendChild(el('span','q-no','問'+qno+'.'));
+  const t=el('span','q-hint-t'); setRich(t,text); d.appendChild(t); return d;
+}
+/* マーク欄に貼る素性 */
+function tagItem(d, o){
+  d.dataset.qid=o.qid; d.dataset.qtype=o.qtype; d.dataset.qno=o.qno;
+  d.dataset.qhint=o.qhint||''; d.dataset.ii=o.itemIndex;
+  d.dataset.val=o.value==null?'':o.value; d.dataset.lbl=o.label||'';
+  if(o.rowIndex!=null){d.dataset.ri=o.rowIndex; d.dataset.rhint=o.rowHint||'';}
+  if(o.colHint!=null) d.dataset.chint=o.colHint;
+}
+
+function buildBlocks(doc){
+  const out=[];
+  let qno=0;
+  const body=doc.c.find(n=>n.t==='body');
+  const walkB=list=>list.forEach(node=>{
+    switch(node.t){
+      case 'h':{const e=el('div','b-h'); setRich(e,node.a.text); out.push({el:e}); break;}
+      case 'p':{const e=el('div','b-p'); setRich(e,node.a.text); out.push({el:e}); break;}
+      case 'warning':{
+        const e=el('div','b-warning');
+        node.c.forEach(k=>{
+          if(k.t==='p'){const p=el('div','b-p'); setRich(p,k.a.text); e.appendChild(p);}
+          else if(k.t==='mark'){const p=el('span','imark'); p.appendChild(svgMark(MASTER.markW,MASTER.markH)); e.appendChild(p);}
+          else if(k.t==='marking-example'){const w=el('div'); w.style.height='30pt'; e.appendChild(w);}
+        });
+        out.push({el:e}); break;
+      }
+      case 'select1': case 'select': out.push(selectBlock(node,++qno)); break;
+      case 'textarea': out.push(textareaBlock(node,++qno)); break;
+      case 'matrix-forms': out.push(matrixBlock(node,++qno)); break;
+    }
+  });
+  walkB(body.c);
+  return out;
+}
+function selectBlock(node,qno){
+  const its=node.c.filter(k=>k.t==='item');
+  const cols=Math.max(1, node.a.cols>0?node.a.cols:(its.length||1));
+  const rows=[]; for(let i=0;i<its.length;i+=cols) rows.push(its.slice(i,i+cols));
+  const qid='a'+qno;
+  const build=(from,to,cont)=>{
+    const q=el('div','q');
+    q.appendChild(hintEl(node.a.hint+(cont?'（つづき）':''), cont?null:qno));
+    const tb=el('table','itemset'), cg=el('colgroup');
+    for(let i=0;i<cols;i++){const c=el('col'); c.style.width=(100/cols)+'%'; cg.appendChild(c);}
+    tb.appendChild(cg);
+    const tbody=el('tbody');
+    rows.slice(from,to).forEach(rw=>{
+      const tr=el('tr');
+      for(let i=0;i<cols;i++){
+        const td=el('td'), it=rw[i];
+        if(it){
+          const d=el('div','item');
+          tagItem(d,{qid, qtype:node.t, qno, qhint:node.a.hint, itemIndex:its.indexOf(it),
+                     value:it.a.value, label:it.a.label});
+          d.appendChild(svgMark(MASTER.markW,MASTER.markH));
+          const l=el('span','lbl'); l.textContent=it.a.label||''; d.appendChild(l);
+          td.appendChild(d);
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    });
+    tb.appendChild(tbody); q.appendChild(tb); return q;
+  };
+  return {rowCount:rows.length, build, el:build(0,rows.length,false)};
+}
+function textareaBlock(node,qno){
+  const q=el('div','q');
+  q.appendChild(hintEl(node.a.hint,qno));
+  const w=el('div','b-textarea'), box=el('div','ta-box');
+  box.style.width=(node.a.width||450)+'pt'; box.style.height=(node.a.height||120)+'pt';
+  box.dataset.free='1'; box.dataset.qid='a'+qno; box.dataset.qno=qno; box.dataset.qhint=node.a.hint||'';
+  w.appendChild(box); q.appendChild(w);
+  return {el:q};
+}
+function matrixBlock(node,qno){
+  const ra=node.c.find(k=>k.t==='row-array')||{c:[]};
+  const ca=node.c.find(k=>k.t==='column-array')||{c:[]};
+  const ratio=clamp(node.a.ratio||0.5,0.2,1);
+  const groups=ca.c, flat=[];
+  groups.forEach((g,gi)=>{
+    if(g.t==='m-textarea') flat.push({g,gi,it:null});
+    else g.c.filter(k=>k.t==='item').forEach((it,ii)=>flat.push({g,gi,it,ii}));
+  });
+  const nC=Math.max(1,flat.length);
+  const qid='a'+qno;
+  const build=(from,to,cont)=>{
+    const q=el('div','q');
+    q.appendChild(hintEl(node.a.hint+(cont?'（つづき）':''), cont?null:qno));
+    const t=el('table','mx'), cg=el('colgroup');
+    const c0=el('col'); c0.style.width=((1-ratio)*100)+'%'; cg.appendChild(c0);
+    flat.forEach(()=>{const c=el('col'); c.style.width=(ratio*100/nC)+'%'; cg.appendChild(c);});
+    t.appendChild(cg);
+    const thead=el('thead'), r1=el('tr');
+    const corner=el('th','rowlab'); corner.rowSpan=2; corner.style.fontSize='7pt';
+    corner.textContent=cont?'（前ページのつづき）':''; r1.appendChild(corner);
+    groups.forEach(g=>{
+      const th=el('th','grouphdr');
+      th.colSpan=g.t==='m-textarea'?1:(g.c.filter(k=>k.t==='item').length||1);
+      th.textContent=g.a.hint||''; r1.appendChild(th);
+    });
+    const r2=el('tr');
+    flat.forEach(f=>{const th=el('th'); th.textContent=f.it?(f.it.a.label||''):''; r2.appendChild(th);});
+    thead.append(r1,r2); t.appendChild(thead);
+    const tb=el('tbody');
+    ra.c.slice(from,to).forEach((r,k)=>{
+      const rowIndex=from+k, tr=el('tr');
+      const lab=el('td','rowlab'); lab.textContent=r.a.hint||''; tr.appendChild(lab);
+      flat.forEach(f=>{
+        const td=el('td','cell');
+        if(f.it){
+          const d=el('div','item'); d.style.justifyContent='center';
+          tagItem(d,{qid:qid+'-'+(rowIndex+1)+'-'+(f.gi+1), qtype:f.g.t==='m-select'?'select':'select1',
+                     qno, qhint:node.a.hint, itemIndex:f.ii, value:f.it.a.value, label:f.it.a.label,
+                     rowIndex, rowHint:r.a.hint, colHint:f.g.a.hint});
+          d.appendChild(svgMark(MASTER.markW,MASTER.markH));
+          td.appendChild(d);
+        }else{
+          const b=el('div','ta-box'); b.style.height=(f.g.a.height||16)+'pt';
+          b.dataset.free='1'; b.dataset.qid=qid+'-'+(rowIndex+1)+'-'+(f.gi+1);
+          b.dataset.qno=qno; b.dataset.qhint=(node.a.hint||'')+' / '+(r.a.hint||'');
+          td.appendChild(b);
+        }
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); q.appendChild(t); return q;
+  };
+  return {rowCount:ra.c.length, build, el:build(0,ra.c.length,false)};
+}
+function fitRows(b,from,avail,cont){
+  let lo=0, hi=b.rowCount-from, best={n:0,h:0};
+  while(lo<=hi){
+    const mid=Math.floor((lo+hi)/2);
+    if(mid===0){lo=1;continue;}
+    const h=measureEl(b.build(from,from+mid,cont));
+    if(h<=avail){best={n:mid,h};lo=mid+1;} else hi=mid-1;
+  }
+  return best;
+}
+function makeSheet(idx,total,shortTitle){
+  const sh=el('div','sheet');
+  const side=(idx%2===0)?'left':'right';
+  const G=MASTER.guide;
+  const g=css=>{const d=el('div','guide'); d.style.cssText=css; sh.appendChild(d);};
+  g(`left:80pt;top:30pt;width:${G}pt;height:${G}pt`);
+  g(`right:40pt;top:30pt;width:${G}pt;height:${G}pt`);
+  const blw=side==='left'?G/2:G, brw=side==='left'?G:G/2;
+  g(`left:${80+(G-blw)/2}pt;bottom:30pt;width:${blw}pt;height:${G}pt`);
+  g(`right:${40+(G-brw)/2}pt;bottom:30pt;width:${brw}pt;height:${G}pt`);
+  const m=el('div','mex'); m.style.cssText='top:18pt;right:193pt;width:95pt;height:38pt'; sh.appendChild(m);
+  const pn=el('div','pagenum');
+  pn.style.left=(side==='left'?(MASTER.W-80):15)+'pt';
+  pn.style.top=(MASTER.H-50+5)+'pt';
+  pn.appendChild(el('div',null,(idx+1)+' / '+total));
+  pn.appendChild(el('div','short',shortTitle||''));
+  sh.appendChild(pn);
+  const c=el('div','sheet-content'); sh.appendChild(c);
+  sh._content=c; sh._side=side;
+  return sh;
+}
+
+/* .sqs → FormMaster（ページごとのマーク欄一覧） */
+function buildFormMaster(doc){
+  calibrate();
+  const host=$('#master'); host.innerHTML='';
+  const contentPx=(MASTER.H-100)*pxPerPt;
+  const blocks=buildBlocks(doc);
+  const pages=[[]]; let used=0;
+  const newPage=()=>{pages.push([]);used=0;};
+  const place=(n,h)=>{pages[pages.length-1].push(n);used+=h;};
+  blocks.forEach(b=>{
+    const whole=b.build?b.build(0,b.rowCount,false):b.el;
+    const hw=measureEl(whole);
+    if(hw<=contentPx-used){place(whole,hw);return;}
+    if(!b.build||b.rowCount<=1){ if(used>0)newPage(); place(whole,hw); return; }
+    let from=0, cont=false;
+    while(from<b.rowCount){
+      const fit=fitRows(b,from,contentPx-used,cont);
+      if(fit.n===0){
+        if(used===0){const p=b.build(from,from+1,cont); place(p,measureEl(p)); from++; cont=true; continue;}
+        newPage(); continue;
+      }
+      const part=b.build(from,from+fit.n,cont);
+      place(part,fit.h); from+=fit.n; cont=true;
+      if(from<b.rowCount) newPage();
+    }
+  });
+  const short=doc.c.find(n=>n.t==='head').a['DC.Title.Short']||doc.c.find(n=>n.t==='head').a.title||'';
+  const sheets=[];
+  pages.forEach((list,i)=>{
+    const sh=makeSheet(i,pages.length,short);
+    list.forEach(n=>sh._content.appendChild(n));
+    host.appendChild(sh); sheets.push(sh);
+  });
+  /* DOM からマーク欄と自由記述欄の座標を pt で取り出す */
+  const master={numPages:pages.length, pages:[], questions:new Map(),
+                title:doc.c.find(n=>n.t==='head').a.title||''};
+  sheets.forEach((sh,pi)=>{
+    const sr=sh.getBoundingClientRect();
+    const marks=[], frees=[];
+    sh.querySelectorAll('.item .mark').forEach(mel=>{
+      const host=mel.parentElement, r=mel.getBoundingClientRect(), d=host.dataset;
+      marks.push({
+        id:`p${pi}:${d.qid}:${d.ii}`,
+        page:pi, qid:d.qid, qtype:d.qtype, qno:+d.qno, qhint:d.qhint,
+        itemIndex:+d.ii, value:d.val, label:d.lbl,
+        rowIndex:d.ri!=null?+d.ri:null, rowHint:d.rhint||'', colHint:d.chint||'',
+        x:(r.left-sr.left)/PT, y:(r.top-sr.top)/PT, w:r.width/PT, h:r.height/PT
+      });
+    });
+    sh.querySelectorAll('[data-free]').forEach(fel=>{
+      const r=fel.getBoundingClientRect(), d=fel.dataset;
+      frees.push({id:`p${pi}:${d.qid}:free`, page:pi, qid:d.qid, qno:+d.qno, qhint:d.qhint,
+        x:(r.left-sr.left)/PT, y:(r.top-sr.top)/PT, w:r.width/PT, h:r.height/PT});
+    });
+    master.pages.push({index:pi, side:sh._side, marks, frees});
+  });
+  /* 設問（qid）ごとにまとめる */
+  master.pages.forEach(p=>p.marks.forEach(m=>{
+    if(!master.questions.has(m.qid))
+      master.questions.set(m.qid,{qid:m.qid, qtype:m.qtype, qno:m.qno, qhint:m.qhint,
+        rowHint:m.rowHint, colHint:m.colHint, page:m.page, items:[]});
+    master.questions.get(m.qid).items.push(m);
+  }));
+  master.questions.forEach(q=>q.items.sort((a,b)=>a.itemIndex-b.itemIndex));
+  master.numMarks=master.pages.reduce((s,p)=>s+p.marks.length,0);
+  host.innerHTML='';
+  return master;
+}
+</script>
+<script>
+"use strict";
+/* ==========================================================================
+   4. 画像処理の中核（net.sqs2.omr.* の移植）
+   ========================================================================== */
+
+/* net.sqs2.image.ImageUtil#rgb2gray と同じ重み */
+const rgb2gray = (r,g,b) => ((r*3 + g*6 + b) / 10) | 0;
+
+/* 画像 → グレースケール配列 */
+function toGray(imageData){
+  const {width:W, height:H, data:d} = imageData;
+  const g = new Uint8ClampedArray(W*H);
+  for(let i=0,p=0;i<g.length;i++,p+=4) g[i] = rgb2gray(d[p],d[p+1],d[p+2]);
+  return {g, W, H};
+}
+
+/* ------------------------------------------------------------------
+   4-1. ■ブロック領域のビットマップ化
+        DeskewGuideAreaBitmap と同じ：上端／下端の帯を 300×30 に縮約する
+   ------------------------------------------------------------------ */
+const BM_W = 300, BM_H = 30;
+function guideAreaBitmap(gray, headerOrFooter, cfg){
+  const {g, W, H} = gray;
+  const hMargin = (W * cfg.horizontalMargin) | 0;
+  const areaH   = (H * cfg.height) | 0;
+  const headerVM = (H * cfg.headerVerticalMargin) | 0;
+  const footerVM = (H * cfg.footerVerticalMargin) | 0;
+  const vMargin = headerOrFooter === 0 ? headerVM : footerVM;
+  const base = headerOrFooter === 0 ? vMargin : (H - vMargin - 1);
+  const dir  = headerOrFooter === 0 ? 1 : -1;
+
+  const sum = new Float64Array(BM_W*BM_H);
+  const cnt = new Int32Array(BM_W*BM_H);
+  const innerW = W - hMargin*2;
+  for(let y=0; y<areaH; y++){
+    const by = (y * BM_H / areaH) | 0;
+    const sy = base + dir*y;
+    const rowOK = (sy >= 0 && sy < H);
+    for(let x=hMargin; x<W-hMargin; x++){
+      const bx = ((x - hMargin) * BM_W / innerW) | 0;
+      const i = bx + by*BM_W;
+      sum[i] += rowOK ? g[sy*W + x] : 255;   // 範囲外は白として扱う
+      cnt[i] += 1;
+    }
+  }
+  const th = cfg.density * 255;
+  const bm = new Uint8Array(BM_W*BM_H);
+  for(let i=0;i<bm.length;i++){
+    if(cnt[i] === 0) continue;
+    if((sum[i]/cnt[i]|0) < th) bm[i] = 1;
+  }
+  return {bm, hMargin, areaH, headerVM, footerVM, headerOrFooter, W, H};
+}
+/* ビットマップ座標 → 画像座標 */
+function bmTranslateX(a, x){ return a.hMargin + x*(a.W - a.hMargin*2)/BM_W; }
+function bmTranslateY(a, y){
+  return a.headerOrFooter === 0
+    ? a.headerVM + y*a.areaH/BM_H
+    : a.H - (a.footerVM + y*a.areaH/BM_H);
+}
+
+/* ------------------------------------------------------------------
+   4-2. 連結成分のラベリング（ImageSilhouetteExtract 相当・8近傍）
+   ------------------------------------------------------------------ */
+function connectedComponents(bm, W, H){
+  const label = new Int32Array(W*H);
+  const parent = [0];
+  const find = x => { while(parent[x]!==x) x = parent[x] = parent[parent[x]]; return x; };
+  const union = (a,b) => { a=find(a); b=find(b); if(a!==b) parent[b]=a; };
+  let next = 0;
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const i = x + y*W;
+      if(!bm[i]) continue;
+      let best = 0;
+      const nb = [];
+      if(x>0 && bm[i-1]) nb.push(label[i-1]);
+      if(y>0){
+        if(bm[i-W]) nb.push(label[i-W]);
+        if(x>0 && bm[i-W-1]) nb.push(label[i-W-1]);
+        if(x<W-1 && bm[i-W+1]) nb.push(label[i-W+1]);
+      }
+      if(nb.length===0){ parent.push(++next); label[i]=next; }
+      else{
+        best = nb.reduce((a,b)=>Math.min(a,b));
+        label[i] = best;
+        nb.forEach(n=>union(best,n));
+      }
+    }
+  }
+  /* 統合してから統計を取る */
+  const stats = new Map();
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const i = x + y*W;
+      if(!label[i]) continue;
+      const r = find(label[i]);
+      label[i] = r;
+      let s = stats.get(r);
+      if(!s){ s = {n:0, sx:0, sy:0, minX:1e9, maxX:-1e9, minY:1e9, maxY:-1e9}; stats.set(r,s); }
+      s.n++; s.sx+=x; s.sy+=y;
+      if(x<s.minX)s.minX=x; if(x>s.maxX)s.maxX=x;
+      if(y<s.minY)s.minY=y; if(y>s.maxY)s.maxY=y;
+    }
+  }
+  return stats;
+}
+
+/* ------------------------------------------------------------------
+   4-3. ■ブロック候補の抽出（DeskewGuideCandidateFinder と同じ判定式）
+   ------------------------------------------------------------------ */
+function findGuideCandidates(area, cfg){
+  const stats = connectedComponents(area.bm, BM_W, BM_H);
+  const guideSize = 21.0;
+  const gw = BM_W * guideSize / (595.0 - (1.0 - 2.0*cfg.horizontalMargin));
+  const gh = BM_H * guideSize / (842.0 * cfg.height);
+  const out = [];
+  stats.forEach(s=>{
+    if(s.n <= 1) return;
+    const bw = s.maxX - s.minX + 1, bh = s.maxY - s.minY + 1;
+    const bbArea = bw*bh;
+    const ok = (bbArea*0.6 <= s.n && s.n <= gw*gh*1.4)
+            && (gw*0.35 <= bw && bw <= gw*1.3)
+            && (gh*0.7  <= bh && bh <= gh*1.3);
+    if(!ok) return;
+    const gx = s.sx/s.n, gy = s.sy/s.n;
+    out.push({
+      x: bmTranslateX(area, gx), y: bmTranslateY(area, gy),
+      areaSize: s.n, bw, bh
+    });
+  });
+  return {list: out, gw, gh};
+}
+/* マスタの■位置にいちばん近いものを左右それぞれ選ぶ */
+function pickGuidePair(cands, headerOrFooter, W, H){
+  const picked = [null,null], min = [Infinity,Infinity];
+  cands.forEach(c=>{
+    for(let lr=0; lr<2; lr++){
+      const m = MASTER.guideCenters[headerOrFooter*2 + lr];
+      const dx = c.x - m[0]*W/MASTER.W;
+      const dy = c.y - m[1]*H/MASTER.H;
+      const d2 = dx*dx + dy*dy;
+      if(d2 < min[lr]){ min[lr] = d2; picked[lr] = c; }
+    }
+  });
+  if(picked[0] && picked[0] === picked[1]) return [picked[0], null];
+  return picked;
+}
+
+/* ------------------------------------------------------------------
+   4-4. ホモグラフィ（ProjectionMatrix と同じ同次連立方程式）
+        版面座標 (595×842) → 画像座標
+   ------------------------------------------------------------------ */
+function solveHomography(src, dst){
+  /* 8元1次連立：a0..c2（c2 を 1 に正規化） */
+  const A = [], b = [];
+  for(let i=0;i<4;i++){
+    const [x,y] = src[i], [u,v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -x*u, -y*u]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -x*v, -y*v]); b.push(v);
+  }
+  const n = 8;
+  const M = A.map((r,i)=>r.concat([b[i]]));
+  for(let col=0; col<n; col++){
+    let piv = col;
+    for(let r=col+1; r<n; r++) if(Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+    if(Math.abs(M[piv][col]) < 1e-12) return null;
+    [M[col], M[piv]] = [M[piv], M[col]];
+    const p = M[col][col];
+    for(let c=col; c<=n; c++) M[col][c] /= p;
+    for(let r=0; r<n; r++){
+      if(r===col) continue;
+      const f = M[r][col];
+      if(!f) continue;
+      for(let c=col; c<=n; c++) M[r][c] -= f*M[col][c];
+    }
+  }
+  const h = M.map(r=>r[n]);
+  return [h[0],h[1],h[2], h[3],h[4],h[5], h[6],h[7], 1];
+}
+function project(H, x, y){
+  const d = H[6]*x + H[7]*y + H[8];
+  return [(H[0]*x + H[1]*y + H[2])/d, (H[3]*x + H[4]*y + H[5])/d];
+}
+
+/* ------------------------------------------------------------------
+   4-5. 濃度の測定
+   ------------------------------------------------------------------ */
+function sampleGray(gray, H, mx, my){
+  const [ix, iy] = project(H, mx, my);
+  const x = ix|0, y = iy|0;
+  if(x < 0 || y < 0 || x >= gray.W || y >= gray.H) return 255;
+  return gray.g[y*gray.W + x];
+}
+/* 版面上の矩形の平均濃度（calcMarkAreaDensity 相当・0〜255） */
+function rectGrayDensity(gray, H, rect){
+  const [rx, ry, rw, rh] = rect;
+  let total = 0, n = 0;
+  for(let j=0; j<rh; j++)
+    for(let i=0; i<rw; i++){ total += sampleGray(gray, H, rx+i, ry+j); n++; }
+  return n ? (total/n)|0 : 255;
+}
+/* マーク欄の矩形（createFormAraeRectangleWithMargin と同じ） */
+function markAreaRect(m, cfg){
+  const s = cfg.resolutionScale;
+  return [
+    m.x + (cfg.horizontalTrim - cfg.markHorizontalMargin)*s,
+    m.y + (cfg.verticalTrim   - cfg.markVerticalMargin)*s,
+    m.w + (cfg.horizontalTrim + cfg.markHorizontalMargin*2)*s,
+    m.h + (cfg.verticalTrim   + cfg.markVerticalMargin*2)*s
+  ];
+}
+/* 5×3 畳み込みによる平均濃度（calcConvolution5x3AverageMarkAreaDensity）
+   戻り値は 0〜1。1 に近いほど白（無記入）、0 に近いほど黒（塗られている）。*/
+function convolution5x3Density(gray, H, rect, cfg){
+  const [rx, ry, rw, rh] = rect;
+  const w = (rw * cfg.resolutionScale)|0;
+  const h = (rh * cfg.resolutionScale)|0;
+  if(w < 5 || h < 3) return 1;
+  const src = new Float32Array(w*h);
+  for(let y=0; y<h; y++){
+    const yy = ry + rh*y/h;
+    for(let x=0; x<w; x++) src[y*w+x] = sampleGray(gray, H, rx + rw*x/w, yy);
+  }
+  const th = cfg.noMarkErrorSuppressionThreshold; // 元コードは densityThreshold 引数にこの値を渡す
+  const limit = th * 255 * 15;
+  let whitePixels = 0;
+  for(let y=1; y<h-1; y++){
+    for(let x=2; x<w-2; x++){
+      const c = x + y*w, nn = c - w, ss = c + w;
+      const s =
+        src[nn-2]+src[nn-1]+src[nn]+src[nn+1]+src[nn+2]+
+        src[c-2] +src[c-1] +src[c] +src[c+1] +src[c+2] +
+        src[ss-2]+src[ss-1]+src[ss]+src[ss+1]+src[ss+2];
+      if(s >= limit) whitePixels++;
+    }
+  }
+  const cells = (w-4)*(h-2);
+  return cells > 0 ? (whitePixels*255/cells)/255 : 1;
+}
+
+/* ------------------------------------------------------------------
+   4-6. 1ページの処理（OMRProcessor#process 相当）
+   ------------------------------------------------------------------ */
+const ERR = {
+  guideMissing:'ページ四隅の■ブロックの発見に失敗',
+  distortion:'ページ四隅の■ブロック認識が不正確（汚れ？歪み？）',
+  upsideDown:'ページが上下逆になっている（スキャン原稿の上下間違い？）',
+  sequence:'ページ順序がおかしい（スキャン原稿の裏表間違い？）'
+};
+function processPage(gray, masterPage, cfg, numPages){
+  const res = {errors:[], warnings:[], guides:null, H:null, densities:new Map(), info:{}};
+  const headerArea = guideAreaBitmap(gray, 0, cfg);
+  const footerArea = guideAreaBitmap(gray, 1, cfg);
+  const hc = findGuideCandidates(headerArea, cfg);
+  const fc = findGuideCandidates(footerArea, cfg);
+  res.info.candidates = {header:hc.list.length, footer:fc.list.length, gw:hc.gw, gh:hc.gh};
+
+  const hp = pickGuidePair(hc.list, 0, gray.W, gray.H);
+  const fp = pickGuidePair(fc.list, 1, gray.W, gray.H);
+  if(fp[0]) fp[0] = Object.assign({}, fp[0], {y: fp[0].y - 3});
+  if(fp[1]) fp[1] = Object.assign({}, fp[1], {y: fp[1].y - 3});
+
+  const pts = [hp[0], hp[1], fp[0], fp[1]];
+  if(pts.some(p=>!p)){ res.errors.push(ERR.guideMissing); return res; }
+  res.guides = pts;
+
+  /* 歪み検査（DeskewGuideValidator） */
+  const dist = (a,b)=>Math.hypot(a.x-b.x, a.y-b.y);
+  const h1 = dist(pts[0],pts[1]), h2 = dist(pts[2],pts[3]);
+  const v1 = dist(pts[0],pts[2]), v2 = dist(pts[1],pts[3]);
+  const dh = Math.min(h1,h2)/Math.max(h1,h2), dv = Math.min(v1,v2)/Math.max(v1,v2);
+  res.info.distortion = {dh, dv};
+  if(cfg.checkDistortion){
+    if(dh < 1 - cfg.horizontalDistortion) res.errors.push(ERR.distortion+'（横 '+fmt(dh)+'）');
+    else if(dv < 1 - cfg.verticalDistortion) res.errors.push(ERR.distortion+'（縦 '+fmt(dv)+'）');
+  }
+  if(res.errors.length) return res;
+
+  /* ホモグラフィ：版面 → 画像 */
+  const H = solveHomography(MASTER.guideCenters, pts.map(p=>[p.x,p.y]));
+  if(!H){ res.errors.push(ERR.guideMissing); return res; }
+  res.H = H;
+
+  /* 上下逆の検査：ヘッダ側の■の面積合計がフッタ側より大きいはず */
+  const areaSizes = pts.map(p=>p.areaSize);
+  res.info.areaSizes = areaSizes;
+  if(cfg.checkUpsideDown && !(areaSizes[0]+areaSizes[1] > areaSizes[2]+areaSizes[3]))
+    res.errors.push(ERR.upsideDown);
+
+  /* 表裏の検査：ページ番号がどちら側に刷られているかを濃度で見る */
+  const dl = rectGrayDensity(gray, H, MASTER.footerLeftRect);
+  const dr = rectGrayDensity(gray, H, MASTER.footerRightRect);
+  res.info.footer = {left:dl, right:dr};
+  if(cfg.checkEvenOdd && numPages > 1){
+    const pi = masterPage.index;
+    const ok = (pi % 2 === 1) ? (dl < dr) : (dl > dr);
+    if(!ok) res.warnings.push(ERR.sequence);
+  }
+  if(res.errors.length) return res;
+
+  /* 各マーク欄の濃度 */
+  masterPage.marks.forEach(m=>{
+    res.densities.set(m.id, convolution5x3Density(gray, H, markAreaRect(m, cfg), cfg));
+  });
+  return res;
+}
+
+/* 濃度分布の谷を探す（大津の判別分析法）*/
+function otsuThreshold(values, bins){
+  bins = bins || 100;
+  const hist = new Array(bins).fill(0);
+  values.forEach(v=>hist[clamp(Math.floor(v*bins),0,bins-1)]++);
+  const total = values.length;
+  if(!total) return 0.9;
+  let sum = 0;
+  for(let i=0;i<bins;i++) sum += i*hist[i];
+  let sumB=0, wB=0, best=-1, bestT=Math.round(0.9*bins);
+  for(let t=0;t<bins;t++){
+    wB += hist[t];
+    if(!wB) continue;
+    const wF = total - wB;
+    if(!wF) break;
+    sumB += t*hist[t];
+    const mB = sumB/wB, mF = (sum-sumB)/wF;
+    const v = wB*wF*(mB-mF)*(mB-mF);
+    if(v > best){ best = v; bestT = t; }
+  }
+  return clamp((bestT+1)/bins, 0.05, 0.99);
+}
+
+/* ------------------------------------------------------------------
+   4-7. 回答の決定（MarkAreaAnswerItemSet と同じ規則）
+        density が小さいほど濃い（塗られている）
+   ------------------------------------------------------------------ */
+function decideQuestion(question, densities, cfg, manual){
+  const items = question.items.map(m=>({
+    m, d: densities.has(m.id) ? densities.get(m.id) : 1,
+    man: manual && manual.has(m.id) ? manual.get(m.id) : null
+  }));
+  const th = cfg.markRecognitionDensityThreshold;
+  const dbl = cfg.doubleMarkErrorSuppressionThreshold;
+  const nom = cfg.noMarkErrorSuppressionThreshold;
+  const sorted = items.slice().sort((a,b)=>a.d-b.d);   // 濃い順
+  const darkest = sorted[0], second = sorted[1];
+
+  items.forEach(it=>{
+    if(it.man !== null){ it.sel = it.man; it.why = 'manual'; return; }
+    if(question.qtype === 'select'){ it.sel = it.d < th; it.why = it.sel?'dark':'light'; return; }
+    /* 択一選択 */
+    if(it.d < th){
+      if(it === darkest){ it.sel = true; it.why = 'darkest'; }
+      else { it.sel = it.d <= dbl; it.why = it.sel ? 'double' : 'suppressed'; }
+    }else{
+      if(it === darkest && second && (second.d - it.d) >= nom){ it.sel = true; it.why = 'rescued'; }
+      else { it.sel = false; it.why = 'light'; }
+    }
+  });
+  const n = items.filter(i=>i.sel).length;
+  const suppressed = items.filter(i=>i.why === 'suppressed').length;
+  let state = 'ok';
+  if(question.qtype === 'select1'){
+    if(n === 0) state = 'nomark';
+    else if(n > 1) state = 'double';
+  }
+  return {items, n, state, suppressed};
+}
+</script>
+<script>
+"use strict";
+/* ==========================================================================
+   5. セッションと画面
+   ========================================================================== */
+const S = {
+  master:null, masterName:'', docTitle:'',
+  images:[],            // {name, bitmap, W, H}
+  results:[],           // 画像ごとの処理結果
+  manual:new Map(),     // 手動修正 "imgIndex|markId" -> true/false
+  truth:null,           // テスト画像を作ったときの正解
+  cur:0,                // 表示中の画像
+  curQid:null,
+  view:'v-start',
+  busy:false
+};
+const numPages = () => CFG.pagesPerSheet > 0 ? CFG.pagesPerSheet : (S.master ? S.master.numPages : 1);
+const numRespondents = () => S.images.length ? Math.ceil(S.images.length / numPages()) : 0;
+/* 設問がページをまたぐことがあるので、手動修正は回答者単位で持つ */
+const manKey = (img,id) => Math.floor(img/numPages()) + '|' + id;
+/* その回答者の全ページの濃度をまとめる */
+function respondentDensities(imgIndex){
+  const np = numPages(), base = Math.floor(imgIndex/np)*np;
+  const map = new Map();
+  for(let p=0; p<np; p++){
+    const r = S.results[base+p];
+    if(r) r.densities.forEach((v,k)=>map.set(k,v));
+  }
+  return map;
+}
+
+/* ------------------------------- 画面切替 ------------------------------- */
+function showView(id){
+  S.view = id;
+  $$('.view').forEach(v=>v.classList.toggle('on', v.id===id));
+  $$('.tab').forEach(t=>t.classList.toggle('on', t.dataset.view===id));
+  if(id==='v-pages') renderPages();
+  if(id==='v-detail') renderDetail();
+  if(id==='v-table') renderTable();
+  if(id==='v-errors') renderErrors();
+}
+function updateStatus(){
+  $('#st-master').textContent = S.master ? (S.masterName + '（' + S.master.numPages + '頁）') : '未読込';
+  $('#st-imgs').textContent = S.images.length;
+  $('#st-marks').textContent = S.master ? S.master.numMarks : 0;
+  $('#st-th').textContent = fmt(CFG.markRecognitionDensityThreshold, 2);
+  $('#n-pages').textContent = S.images.length;
+  $('#n-rows').textContent = S.results.length ? numRespondents() : 0;
+  const errs = countIssues();
+  const n = $('#n-errs');
+  n.textContent = errs.total;
+  n.className = 'n' + (errs.total ? ' warn' : '');
+  $('#t-run').disabled = !(S.master && S.images.length) || S.busy;
+  $('#t-csv').disabled = !S.results.length;
+  $('#t-long').disabled = !S.results.length;
+  $('#session').textContent = S.master
+    ? `${S.docTitle || S.masterName} — 画像${S.images.length}枚 / 回答者${numRespondents()}人`
+    : 'セッションなし';
+}
+
+/* ------------------------------- はじめに ------------------------------- */
+function renderStart(){
+  const b = $('#startbody');
+  b.innerHTML = '';
+  const drop = el('div','dropbig');
+  drop.id = 'dropzone';
+  drop.innerHTML = `
+    <h2>スキャンした調査票からデータを起こします</h2>
+    <p>調査票の定義ファイル（.sqs）と、スキャンした画像をこの画面に落としてください。<br>
+       四隅の■ブロックを手がかりに傾きを補正し、マーク欄の濃さを測って回答を判定します。</p>`;
+  const row = el('div'); row.style.cssText='display:flex;gap:8px;justify-content:center;flex-wrap:wrap';
+  const b1 = el('button','tool','調査票（.sqs）を選ぶ'); b1.onclick=()=>$('#f-master').click();
+  const b2 = el('button','tool','スキャン画像を選ぶ'); b2.onclick=()=>$('#f-scans').click();
+  const b3 = el('button','tool','テスト画像を作って試す'); b3.onclick=makeTestScans;
+  row.append(b1,b2,b3); drop.appendChild(row);
+  b.appendChild(drop);
+
+  const steps = el('div','steps');
+  const step = (k,t,d,done,act)=>{
+    const s = el('div','step'+(done?' done':''));
+    s.innerHTML = `<span class="k">${k}</span><span><b>${esc(t)}</b><span>${d}</span></span>`;
+    if(act) s.appendChild(act);
+    return s;
+  };
+  steps.appendChild(step('MASTER','調査票を読み込む',
+    S.master ? `${esc(S.masterName)} ／ ${S.master.numPages}ページ ／ マーク欄 ${S.master.numMarks} 個`
+             : 'SourceEditor で作った .sqs を読み込むと、版面上のマーク欄の位置を組み直します',
+    !!S.master));
+  steps.appendChild(step('SCAN','スキャン画像を並べる',
+    S.images.length ? `${S.images.length}枚 ／ 1人あたり${numPages()}ページ ／ 回答者${numRespondents()}人`
+                    : 'ファイル名の順に、1人分ずつ連続して並ぶようにしてください',
+    S.images.length>0));
+  steps.appendChild(step('READ','読み取る',
+    S.results.length ? `${S.results.length}ページ処理済み`
+                     : '四隅の■ブロック検出 → 傾き補正 → マーク欄の濃度測定 → 回答判定',
+    S.results.length>0));
+  steps.appendChild(step('EXPORT','書き出す',
+    S.results.length ? '表データCSV（1行1人）と縦持ちCSV（1行1マーク）が書き出せます'
+                     : '読み取りが終わると書き出せます',
+    false));
+  b.appendChild(steps);
+
+  if(S.truth && S.results.length){
+    const acc = checkAgainstTruth();
+    if(acc) b.appendChild(el('div', acc.wrong===0?'okbox':'note',
+      `テスト画像との照合：${acc.total}個のマーク欄のうち ${acc.total-acc.wrong} 個が正解（${fmt(100*(acc.total-acc.wrong)/acc.total,1)}%）`));
+  }
+
+  const g = el('div');
+  g.innerHTML = `<h3 class="sec">読み取りのしくみ</h3>
+  <div class="note" style="line-height:2">
+    <b>1. ■ブロックを探す</b>　ページの上端12%と下端12%の帯を 300×30 に縮約し、平均輝度が 50% 未満の画素を黒として連結成分に分けます。
+    そのうち大きさが 21pt 角の想定に合うものだけを残し、マスタ上の位置にいちばん近い2つを左右の■として採用します。<br>
+    <b>2. 傾きを補正する</b>　四隅4点の対応から射影変換（ホモグラフィ）を解き、版面座標 595×842pt から画像座標への写像を作ります。
+    上下左右の辺の長さの比が3%以上崩れていれば「歪み」として弾きます。<br>
+    <b>3. 濃さを測る</b>　各マーク欄を 5pt×16pt の枠から上下に絞った 8pt×8pt の窓として取り、2倍の解像度で標本化して 5×3 の畳み込み平均を求めます。
+    白と判定された画素の割合がそのマーク欄の濃度（1.0 = 真っ白、0.0 = 真っ黒）です。<br>
+    <b>4. 回答を決める</b>　択一選択では、いちばん濃いマークが閾値より濃ければ採用します。2番目以降は「多重回答の抑制度」より濃いときだけ拾い、
+    いちばん濃いマークが閾値に届かなくても2番目との差が「無回答の抑制」以上あれば拾います。
+  </div>`;
+  b.appendChild(g);
+}
+
+/* ------------------------------- ページ一覧 ------------------------------- */
+function renderPages(){
+  const host = $('#pagegrid'); host.innerHTML='';
+  if(!S.images.length){
+    host.innerHTML = '<div class="note">スキャン画像がまだありません。</div>'; return;
+  }
+  const np = numPages();
+  S.images.forEach((im,i)=>{
+    const card = el('div','pcard'+(i===S.cur?' sel':''));
+    const th = el('div','thumb');
+    const cv = el('canvas'); cv.width=Math.round(180*im.W/im.H*0.72)||128; cv.height=180;
+    const cx = cv.getContext('2d');
+    cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
+    cx.drawImage(im.bitmap,0,0,cv.width,cv.height);
+    th.appendChild(cv);
+    card.appendChild(th);
+    const cap = el('div','cap');
+    cap.appendChild(el('span','nm', im.name));
+    const r = S.results[i];
+    const bd = el('span','badge ' + (!r?'wait':(r.errors.length?'err':(r.warnings.length?'warn':'ok'))));
+    bd.textContent = !r ? '未処理' : (r.errors.length?'エラー':(r.warnings.length?'注意':'OK'));
+    cap.appendChild(bd);
+    card.appendChild(cap);
+    const sub = el('div','cap');
+    sub.style.paddingTop='0';
+    sub.innerHTML = `<span class="nm">回答者 ${Math.floor(i/np)+1} ／ ${ (i%np)+1 }ページ目</span>`;
+    card.appendChild(sub);
+    card.onclick=()=>{ S.cur=i; showView('v-detail'); };
+    host.appendChild(card);
+  });
+}
+
+/* ------------------------------- ページの確認 ------------------------------- */
+let srcCanvas=null, srcIndex=-1;
+function sourceCanvas(i){
+  if(srcIndex===i && srcCanvas) return srcCanvas;
+  const im = S.images[i];
+  const c = document.createElement('canvas');
+  c.width=im.W; c.height=im.H;
+  c.getContext('2d').drawImage(im.bitmap,0,0);
+  srcCanvas=c; srcIndex=i; return c;
+}
+function renderDetail(){
+  const side = $('#detailside'); side.innerHTML='';
+  if(!S.images.length){
+    side.innerHTML='<div class="pgroup"><div class="note">スキャン画像がまだありません。</div></div>';
+    $('#scan').width=10; $('#scan').height=10; $('#overlay').innerHTML=''; return;
+  }
+  const i = clamp(S.cur,0,S.images.length-1);
+  const im = S.images[i], r = S.results[i];
+  const np = numPages(), pageIndex = i % np, respondent = Math.floor(i/np)+1;
+  const mp = S.master && S.master.pages[pageIndex];
+
+  /* 画像を描く */
+  const maxW = Math.max(360, Math.min(940, ($('#canvaswrap').clientWidth||900) - 40));
+  const scale = Math.min(1, maxW/im.W);
+  const cv = $('#scan');
+  cv.width = Math.round(im.W*scale); cv.height = Math.round(im.H*scale);
+  const cx = cv.getContext('2d');
+  cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
+  cx.drawImage(im.bitmap,0,0,cv.width,cv.height);
+  $('#canvasstage').style.width = cv.width+'px';
+  $('#canvasstage').style.height = cv.height+'px';
+
+  /* 重ね描き */
+  const sv = $('#overlay');
+  sv.setAttribute('viewBox',`0 0 ${im.W} ${im.H}`);
+  sv.setAttribute('width',cv.width); sv.setAttribute('height',cv.height);
+  sv.innerHTML='';
+  const svgEl=(t,at)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',t);
+    for(const k in at) e.setAttribute(k,at[k]); return e;};
+  const sw = im.W/cv.width;   // 線幅を画面上で一定に見せる係数
+
+  if(r && r.guides){
+    r.guides.forEach((g,k)=>{
+      sv.appendChild(svgEl('circle',{cx:g.x, cy:g.y, r:9*sw, fill:'none',
+        stroke:'#3b82cf', 'stroke-width':2*sw}));
+      sv.appendChild(svgEl('circle',{cx:g.x, cy:g.y, r:2*sw, fill:'#1f5fa8'}));
+    });
+  }
+  if(r && r.H && mp){
+    /* 版面の外枠 */
+    const corners=[[0,0],[MASTER.W,0],[MASTER.W,MASTER.H],[0,MASTER.H]]
+      .map(p=>project(r.H,p[0],p[1]));
+    sv.appendChild(svgEl('polygon',{points:corners.map(p=>p.join(',')).join(' '),
+      fill:'none', stroke:'#3b82cf', 'stroke-width':1.2*sw, 'stroke-dasharray':`${6*sw},${5*sw}`, opacity:.65}));
+    /* 自由記述欄 */
+    mp.frees.forEach(f=>{
+      const q=[[f.x,f.y],[f.x+f.w,f.y],[f.x+f.w,f.y+f.h],[f.x,f.y+f.h]].map(p=>project(r.H,p[0],p[1]));
+      sv.appendChild(svgEl('polygon',{points:q.map(p=>p.join(',')).join(' '),
+        fill:'rgba(29,122,77,.05)', stroke:'#1d7a4d','stroke-width':1*sw, opacity:.7}));
+    });
+    /* マーク欄 */
+    const dec = decideAllOnPage(i, pageIndex);
+    mp.marks.forEach(m=>{
+      const st = dec.byMark.get(m.id) || {};
+      const rc = markAreaRect(m, CFG);
+      const q=[[rc[0],rc[1]],[rc[0]+rc[2],rc[1]],[rc[0]+rc[2],rc[1]+rc[3]],[rc[0],rc[1]+rc[3]]]
+        .map(p=>project(r.H,p[0],p[1]));
+      const color = st.sel ? (st.why==='double' ? '#c0392b' : (st.why==='rescued' ? '#a86a06' : '#1f5fa8'))
+                           : '#9aa4b0';
+      const poly = svgEl('polygon',{points:q.map(p=>p.join(',')).join(' '),
+        fill: st.sel ? (st.why==='double'?'rgba(192,57,43,.22)':(st.why==='rescued'?'rgba(168,106,6,.22)':'rgba(31,95,168,.22)')) : 'rgba(154,164,176,.06)',
+        stroke:color, 'stroke-width':(st.sel?1.8:0.9)*sw});
+      poly.style.pointerEvents='auto'; poly.style.cursor='pointer';
+      poly.addEventListener('click',()=>toggleManual(i,m));
+      const t = document.createElementNS('http://www.w3.org/2000/svg','title');
+      t.textContent = `${m.qid} #${m.itemIndex+1} ${m.label}\n濃度 ${fmt(r.densities.get(m.id))}` +
+        (S.manual.has(manKey(i,m.id)) ? '\n（手動修正）' : '');
+      poly.appendChild(t);
+      sv.appendChild(poly);
+      if(S.manual.has(manKey(i,m.id)))
+        sv.appendChild(svgEl('circle',{cx:q[1][0], cy:q[1][1], r:3*sw, fill:'#a86a06'}));
+    });
+  }
+
+  /* 右側 */
+  const g1 = el('div','pgroup');
+  g1.appendChild(el('h3',null,'このページ'));
+  const kv = el('div','kv');
+  const add=(k,v)=>{kv.appendChild(el('div','k',k)); kv.appendChild(el('div','v',v));};
+  add('画像', im.name);
+  add('寸法', im.W+'×'+im.H+'px');
+  add('回答者', String(respondent));
+  add('マスタ頁', (pageIndex+1)+' / '+np);
+  if(r && r.info.candidates) add('■候補', r.info.candidates.header+' / '+r.info.candidates.footer);
+  if(r && r.info.distortion) add('歪み', fmt(r.info.distortion.dh,3)+' / '+fmt(r.info.distortion.dv,3));
+  if(r && r.info.footer) add('下端濃度', r.info.footer.left+' / '+r.info.footer.right);
+  g1.appendChild(kv);
+  if(r){
+    r.errors.forEach(e=>g1.appendChild(el('div','warnbox',e)));
+    r.warnings.forEach(e=>g1.appendChild(el('div','note','注意：'+e)));
+    if(!r.errors.length && !r.warnings.length) g1.appendChild(el('div','okbox','正常に読み取れています'));
+  }else{
+    g1.appendChild(el('div','note','まだ処理していません。「読み取り開始」を押してください。'));
+  }
+  const nav = el('div'); nav.style.cssText='display:flex;gap:6px;margin-top:10px';
+  const prev=el('button','tool','← 前'); prev.onclick=()=>{S.cur=Math.max(0,S.cur-1);renderDetail();};
+  const next=el('button','tool','次 →'); next.onclick=()=>{S.cur=Math.min(S.images.length-1,S.cur+1);renderDetail();};
+  prev.disabled=S.cur===0; next.disabled=S.cur===S.images.length-1;
+  nav.append(prev,next); g1.appendChild(nav);
+  side.appendChild(g1);
+
+  side.appendChild(thresholdPanel());
+  side.appendChild(histogramPanel());
+  if(r && r.H && mp) side.appendChild(questionPanel(i, pageIndex));
+}
+function toggleManual(imgIndex, m){
+  const dec = decideAllOnPage(imgIndex, imgIndex % numPages());
+  const st = dec.byMark.get(m.id);
+  const k = manKey(imgIndex, m.id);
+  if(S.manual.has(k)) S.manual.delete(k);
+  else S.manual.set(k, !(st && st.sel));
+  renderDetail(); updateStatus();
+}
+
+/* しきい値パネル */
+function thresholdPanel(){
+  const g = el('div','pgroup');
+  g.appendChild(el('h3',null,'マーク認識の設定'));
+  const sl = (label, key, min, max, step, left, right)=>{
+    const w = el('div','slider');
+    const lab = el('label'); lab.innerHTML = `<span>${label}</span><b>${fmt(CFG[key],3)}</b>`;
+    const inp = el('input'); inp.type='range'; inp.min=min; inp.max=max; inp.step=step; inp.value=CFG[key];
+    inp.oninput = ()=>{
+      CFG[key] = parseFloat(inp.value);
+      lab.querySelector('b').textContent = fmt(CFG[key],3);
+      updateStatus();
+      clearTimeout(inp._t);
+      inp._t = setTimeout(()=>{ renderDetail(); }, 120);
+    };
+    const tip = el('div','tip');
+    tip.innerHTML = `<span>${left}</span><span>${right}</span>`;
+    w.append(lab, inp, tip);
+    return w;
+  };
+  g.appendChild(sl('塗られたマークと区別する濃度','markRecognitionDensityThreshold',0.5,1,0.005,
+    '← 無回答を減らす','多重回答を減らす →'));
+  g.appendChild(sl('多重回答エラーの抑制度','doubleMarkErrorSuppressionThreshold',0,0.5,0.005,
+    '← 多重回答を減らす',''));
+  g.appendChild(sl('無回答エラーの抑制','noMarkErrorSuppressionThreshold',0,0.8,0.005,
+    '← 無回答を減らす',''));
+  return g;
+}
+
+/* 濃度ヒストグラム */
+function histogramPanel(){
+  const g = el('div'); g.id='histwrap';
+  g.appendChild(Object.assign(el('div','plate'),{textContent:'マーク欄の濃度分布'}));
+  const cv = el('canvas'); cv.id='hist'; cv.width=600; cv.height=220;
+  g.appendChild(cv);
+  const row = el('div');
+  row.style.cssText='display:flex;gap:6px;align-items:center;margin-top:7px';
+  const auto = el('button','tool','分布から自動で決める');
+  auto.onclick = autoTune;
+  row.appendChild(auto);
+  g.appendChild(row);
+  g.appendChild(Object.assign(el('div','tip'),{
+    textContent:'左が濃い（塗られている）／右が薄い。縦線が判定の境目です。ドラッグで動かせます。',
+    style:'font-size:10.5px;color:var(--ink3);margin-top:5px'}));
+  setTimeout(()=>drawHistogram(cv),0);
+  let dragging=false;
+  const setFromX = ev=>{
+    const r = cv.getBoundingClientRect();
+    const v = clamp((ev.clientX - r.left)/r.width, 0, 1);
+    CFG.markRecognitionDensityThreshold = Math.round(v*200)/200;
+    drawHistogram(cv); updateStatus();
+    clearTimeout(cv._t); cv._t=setTimeout(renderDetail,140);
+  };
+  cv.addEventListener('pointerdown',e=>{dragging=true;cv.setPointerCapture(e.pointerId);setFromX(e);});
+  cv.addEventListener('pointermove',e=>{if(dragging)setFromX(e);});
+  cv.addEventListener('pointerup',e=>{dragging=false;cv.releasePointerCapture(e.pointerId);});
+  return g;
+}
+function allDensities(){
+  const out=[];
+  S.results.forEach(r=>{ if(r) r.densities.forEach(v=>out.push(v)); });
+  return out;
+}
+function drawHistogram(cv){
+  const cx = cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+  cx.clearRect(0,0,W,H);
+  const vals = allDensities();
+  const bins = new Array(100).fill(0);
+  vals.forEach(v=>bins[clamp(Math.floor(v*100),0,99)]++);
+  const max = Math.max(1,...bins);
+  /* 目盛り */
+  cx.strokeStyle='#eef1f4'; cx.lineWidth=1;
+  for(let i=1;i<10;i++){const x=W*i/10; cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
+  /* 度数 */
+  const th = CFG.markRecognitionDensityThreshold;
+  bins.forEach((n,i)=>{
+    if(!n) return;
+    const h = Math.round(Math.sqrt(n/max)*(H-24));
+    cx.fillStyle = (i/100 < th) ? '#1f5fa8' : '#b9c2cc';
+    cx.fillRect(Math.round(i*W/100), H-16-h, Math.ceil(W/100)-1, h);
+  });
+  /* 閾値 */
+  const x = th*W;
+  cx.strokeStyle='#c0392b'; cx.lineWidth=2;
+  cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x,H-16); cx.stroke();
+  cx.fillStyle='#c0392b';
+  cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x-5,9); cx.lineTo(x+5,9); cx.fill();
+  /* 目盛りラベル */
+  cx.fillStyle='#69737f'; cx.font='11px ui-monospace,monospace'; cx.textAlign='left';
+  cx.fillText('0.0 濃い', 3, H-3);
+  cx.textAlign='right'; cx.fillText('薄い 1.0', W-3, H-3);
+  cx.textAlign='center'; cx.fillText(fmt(th,2), clamp(x,18,W-18), H-3);
+}
+
+/* 濃度の分布から境目を決める */
+function autoTune(){
+  const vals = allDensities();
+  if(vals.length < 8){ toast('先に読み取りを行ってください','err'); return; }
+  const t = otsuThreshold(vals, 100);
+  CFG.markRecognitionDensityThreshold = Math.round(t*200)/200;
+  /* 2つ目の濃いマークも「多重回答」として拾えるようにそろえる */
+  CFG.doubleMarkErrorSuppressionThreshold = CFG.markRecognitionDensityThreshold;
+  updateStatus(); renderDetail();
+  toast('判定の境目を '+fmt(CFG.markRecognitionDensityThreshold,3)+' にしました','ok');
+}
+function countSuppressed(){
+  const np=numPages(); let n=0;
+  S.results.forEach((r,i)=>{
+    if(!r||r.errors.length) return;
+    decideAllOnPage(i,i%np).questions.forEach(({d})=>{ n += d.suppressed||0; });
+  });
+  return n;
+}
+
+/* このページの設問一覧 */
+function questionPanel(imgIndex, pageIndex){
+  const g = el('div','pgroup');
+  g.appendChild(el('h3',null,'このページの設問'));
+  const dec = decideAllOnPage(imgIndex, pageIndex);
+  const list = el('div');
+  dec.questions.forEach(q=>{
+    const row = el('div');
+    row.style.cssText='display:flex;gap:6px;align-items:center;padding:3px 4px;border-radius:3px;cursor:pointer;font-size:11.5px';
+    row.onmouseenter=()=>row.style.background='var(--blue4)';
+    row.onmouseleave=()=>row.style.background = (S.curQid===q.q.qid?'var(--blue4)':'');
+    if(S.curQid===q.q.qid) row.style.background='var(--blue4)';
+    const st = el('span','badge ' + (q.d.state==='ok'?'ok':(q.d.state==='double'?'err':'warn')));
+    st.textContent = q.d.state==='ok'?'OK':(q.d.state==='double'?'多重':'無');
+    row.appendChild(st);
+    const lab = el('span'); lab.style.cssText='flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    lab.textContent = q.q.qid + ' ' + (q.q.rowHint || q.q.qhint || '');
+    row.appendChild(lab);
+    const vals = el('span'); vals.style.cssText='font-family:var(--mono);font-size:10.5px;color:var(--blue)';
+    vals.textContent = q.d.items.filter(x=>x.sel).map(x=>x.m.value).join(',') || '—';
+    row.appendChild(vals);
+    row.onclick=()=>{ S.curQid = (S.curQid===q.q.qid?null:q.q.qid); renderDetail(); };
+    list.appendChild(row);
+  });
+  g.appendChild(list);
+  if(S.curQid){
+    const q = dec.questions.find(x=>x.q.qid===S.curQid);
+    if(q){
+      const h = el('div','plate'); h.textContent='マーク欄'; h.style.margin='10px 0 5px';
+      g.appendChild(h);
+      g.appendChild(markGallery(imgIndex, q));
+      g.appendChild(Object.assign(el('div','tip'),{
+        textContent:'クリックで選択／非選択を手で切り替えます。',
+        style:'font-size:10.5px;color:var(--ink3);margin-top:5px'}));
+    }
+  }
+  return g;
+}
+function markGallery(imgIndex, q){
+  const wrap = el('div'); wrap.id='gallery';
+  const r = S.results[imgIndex];
+  const src = sourceCanvas(imgIndex);
+  q.d.items.forEach(it=>{
+    const m = it.m;
+    const cell = el('div','mcell'+(it.sel?' on':'')+(S.manual.has(manKey(imgIndex,m.id))?' man':''));
+    const cv = el('canvas'); cv.width=40; cv.height=40;
+    const cx = cv.getContext('2d');
+    const rc = markAreaRect(m, CFG);
+    const pts=[[rc[0],rc[1]],[rc[0]+rc[2],rc[1]],[rc[0]+rc[2],rc[1]+rc[3]],[rc[0],rc[1]+rc[3]]]
+      .map(p=>project(r.H,p[0],p[1]));
+    const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+    const x0=Math.floor(Math.min(...xs))-2, y0=Math.floor(Math.min(...ys))-2;
+    const w=Math.ceil(Math.max(...xs))-x0+2, h=Math.ceil(Math.max(...ys))-y0+2;
+    cx.imageSmoothingEnabled=false;
+    cx.fillStyle='#fff'; cx.fillRect(0,0,40,40);
+    try{ cx.drawImage(src, x0,y0,w,h, 0,0,40,40); }catch(e){}
+    cell.appendChild(cv);
+    cell.appendChild(Object.assign(el('div','d'),{textContent:fmt(it.d,2)}));
+    cell.title = `${m.label}（値 ${m.value}）\n濃度 ${fmt(it.d)}`;
+    cell.onclick = ()=>toggleManual(imgIndex, m);
+    wrap.appendChild(cell);
+  });
+  return wrap;
+}
+
+/* ------------------------------- 判定のとりまとめ ------------------------------- */
+function decideAllOnPage(imgIndex, pageIndex){
+  const out = {questions:[], byMark:new Map()};
+  const r = S.results[imgIndex];
+  if(!r || !S.master) return out;
+  const mp = S.master.pages[pageIndex];
+  if(!mp) return out;
+  const dens = respondentDensities(imgIndex);
+  const seen = new Set();
+  mp.marks.forEach(m=>{
+    if(seen.has(m.qid)) return;
+    seen.add(m.qid);
+    const q = S.master.questions.get(m.qid);
+    const man = new Map();
+    q.items.forEach(it=>{
+      const k = manKey(imgIndex, it.id);
+      if(S.manual.has(k)) man.set(it.id, S.manual.get(k));
+    });
+    const d = decideQuestion(q, dens, CFG, man);
+    /* 設問がページをまたぐ場合、集計は先頭のページで一度だけ行う */
+    if(q.page === pageIndex) out.questions.push({q, d});
+    d.items.forEach(it=>out.byMark.set(it.m.id, it));
+  });
+  return out;
+}
+function countIssues(){
+  let pageErr=0, double=0, nomark=0;
+  S.results.forEach((r,i)=>{
+    if(!r) return;
+    if(r.errors.length){ pageErr++; return; }
+    const dec = decideAllOnPage(i, i % numPages());
+    dec.questions.forEach(q=>{
+      if(q.d.state==='double') double++;
+      else if(q.d.state==='nomark') nomark++;
+    });
+  });
+  return {pageErr, double, nomark, total:pageErr+double+nomark};
+}
+
+/* ------------------------------- 表データ ------------------------------- */
+function questionColumns(){
+  if(!S.master) return [];
+  const cols=[];
+  const qs=[...S.master.questions.values()].sort((a,b)=>a.page-b.page || a.qno-b.qno ||
+    a.qid.localeCompare(b.qid,'en',{numeric:true}));
+  qs.forEach(q=>{
+    if(q.qtype==='select') q.items.forEach(it=>cols.push({q, item:it, key:q.qid+'/v'+it.value, multi:true}));
+    else cols.push({q, key:q.qid, multi:false});
+  });
+  return cols;
+}
+function buildRows(){
+  const np=numPages(), cols=questionColumns(), rows=[];
+  for(let rIdx=0; rIdx<numRespondents(); rIdx++){
+    const row={id:rIdx+1, cells:{}, err:0, images:[]};
+    for(let p=0;p<np;p++){
+      const ii = rIdx*np + p;
+      row.images.push(ii);
+      if(ii>=S.images.length || !S.results[ii]) continue;
+      if(S.results[ii].errors.length){ row.err++; continue; }
+      const dec = decideAllOnPage(ii, p);
+      dec.questions.forEach(({q,d})=>{
+        if(q.qtype==='select'){
+          d.items.forEach(it=>{ row.cells[q.qid+'/v'+it.m.value] = {v:it.sel?1:0, st:'ok'}; });
+        }else{
+          const sel = d.items.filter(x=>x.sel);
+          row.cells[q.qid] = {
+            v: sel.map(x=>x.m.value).join('/'),
+            st: d.state
+          };
+        }
+      });
+    }
+    rows.push(row);
+  }
+  return {cols, rows};
+}
+function renderTable(){
+  const b=$('#tablebody'); b.innerHTML='';
+  if(!S.results.length){ b.innerHTML='<div class="note">まだ読み取っていません。</div>'; return; }
+  const iss=countIssues();
+  const {cols,rows}=buildRows();
+  const stat=(k,v,cls)=>{
+    const s=el('div','stat'+(cls?' '+cls:''));
+    s.innerHTML=`<div class="k">${k}</div><div class="v">${v}</div>`; return s;
+  };
+  const sg=el('div','statgrid');
+  sg.append(
+    stat('回答者', rows.length, 'ok'),
+    stat('処理ページ', S.results.filter(Boolean).length),
+    stat('マーク欄', S.master.numMarks*numRespondents()),
+    stat('ページエラー', iss.pageErr, iss.pageErr?'err':''),
+    stat('多重回答', iss.double, iss.double?'err':''),
+    stat('無回答', iss.nomark, iss.nomark?'warn':'')
+  );
+  b.appendChild(sg);
+
+  b.appendChild(Object.assign(el('h3','sec'),{textContent:'表データ（1行＝回答者1人）'}));
+  const wrap=el('div','tblwrap');
+  const t=el('table','data');
+  const thead=el('thead'), hr=el('tr');
+  hr.appendChild(el('th',null,'ID'));
+  cols.forEach(c=>{
+    const th=el('th',null,c.key);
+    th.title=(c.q.rowHint? c.q.rowHint+' / ':'')+(c.q.colHint? c.q.colHint+' / ':'')+(c.q.qhint||'')+
+             (c.item? '\n選択肢: '+c.item.label : '');
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr); t.appendChild(thead);
+  const tb=el('tbody');
+  rows.forEach(r=>{
+    const tr=el('tr');
+    const th=el('th',null,String(r.id)); tr.appendChild(th);
+    cols.forEach(c=>{
+      const cell=r.cells[c.key];
+      const td=el('td','num');
+      if(!cell){ td.textContent=r.err?'—':''; td.className='num z'; }
+      else{
+        td.textContent = cell.v===''? '' : cell.v;
+        if(cell.st==='double') td.className='num e';
+        else if(cell.st==='nomark') td.className='num w';
+        else if(cell.v===0||cell.v==='') td.className='num z';
+      }
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); wrap.appendChild(t); b.appendChild(wrap);
+  b.appendChild(Object.assign(el('div','note'),{
+    textContent:'赤＝多重回答、橙＝無回答。複数選択の設問は選択肢ごとに 1 / 0 の列になります。'}));
+}
+
+/* ------------------------------- 要確認 ------------------------------- */
+function renderErrors(){
+  const b=$('#errorbody'); b.innerHTML='';
+  if(!S.results.length){ b.innerHTML='<div class="note">まだ読み取っていません。</div>'; return; }
+  const np=numPages();
+  b.appendChild(Object.assign(el('h3','sec'),{textContent:'ページの読み取りエラー'}));
+  const pe=[];
+  S.results.forEach((r,i)=>{ if(r&&r.errors.length) pe.push({i,r}); });
+  if(!pe.length) b.appendChild(el('div','okbox','ページの読み取りエラーはありません'));
+  else{
+    const t=el('table','data'), tb=el('tbody');
+    const hr=el('tr'); ['画像','回答者','頁','状況',''].forEach(h=>hr.appendChild(el('th',null,h)));
+    t.appendChild(el('thead')).appendChild(hr);
+    pe.forEach(({i,r})=>{
+      const tr=el('tr');
+      tr.appendChild(el('td',null,S.images[i].name));
+      tr.appendChild(el('td','num',String(Math.floor(i/np)+1)));
+      tr.appendChild(el('td','num',String(i%np+1)));
+      tr.appendChild(el('td','e',r.errors.join(' / ')));
+      const td=el('td'); const bt=el('button','tool','確認');
+      bt.onclick=()=>{S.cur=i;showView('v-detail');};
+      td.appendChild(bt); tr.appendChild(td);
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    const w=el('div','tblwrap'); w.appendChild(t); b.appendChild(w);
+  }
+
+  const sup = countSuppressed();
+  if(sup){
+    b.appendChild(Object.assign(el('h3','sec'),{textContent:'抑制された2つ目のマーク'}));
+    const box = el('div','note');
+    box.style.lineHeight='1.9';
+    box.innerHTML = `択一選択の設問で、いちばん濃いマークのほかに<b>${sup}個</b>の濃いマークが見つかりましたが、
+      「多重回答エラーの抑制度」が <b>${fmt(CFG.doubleMarkErrorSuppressionThreshold,3)}</b> のため、
+      回答としては数えていません。2つ目のマークを多重回答として扱いたい場合は、抑制度を判定の境目
+      （${fmt(CFG.markRecognitionDensityThreshold,3)}）まで上げてください。`;
+    const bt = el('button','tool','多重回答として扱う');
+    bt.style.marginTop='8px';
+    bt.onclick=()=>{
+      CFG.doubleMarkErrorSuppressionThreshold = CFG.markRecognitionDensityThreshold;
+      updateStatus(); renderErrors();
+      toast('抑制度を '+fmt(CFG.doubleMarkErrorSuppressionThreshold,3)+' にしました');
+    };
+    box.appendChild(bt);
+    b.appendChild(box);
+  }
+  b.appendChild(Object.assign(el('h3','sec'),{textContent:'マークの要確認（多重回答・無回答）'}));
+  const list=[];
+  S.results.forEach((r,i)=>{
+    if(!r||r.errors.length) return;
+    decideAllOnPage(i, i%np).questions.forEach(({q,d})=>{
+      if(d.state!=='ok') list.push({i,q,d});
+    });
+  });
+  if(!list.length){ b.appendChild(el('div','okbox','多重回答・無回答はありません')); return; }
+  const t=el('table','data'), tb=el('tbody');
+  const hr=el('tr'); ['回答者','頁','問','設問','状況','濃度',''].forEach(h=>hr.appendChild(el('th',null,h)));
+  t.appendChild(el('thead')).appendChild(hr);
+  list.slice(0,400).forEach(({i,q,d})=>{
+    const tr=el('tr');
+    tr.appendChild(el('td','num',String(Math.floor(i/np)+1)));
+    tr.appendChild(el('td','num',String(i%np+1)));
+    tr.appendChild(el('td',null,q.qid));
+    const qt=el('td'); qt.style.maxWidth='320px'; qt.style.overflow='hidden'; qt.style.textOverflow='ellipsis';
+    qt.textContent=(q.rowHint||q.qhint||''); qt.title=q.qhint||''; tr.appendChild(qt);
+    tr.appendChild(el('td', d.state==='double'?'e':'w', d.state==='double'?'多重回答':'無回答'));
+    tr.appendChild(el('td','num', d.items.map(x=>fmt(x.d,2)).join(' ')));
+    const td=el('td'); const bt=el('button','tool','直す');
+    bt.onclick=()=>{S.cur=i;S.curQid=q.qid;showView('v-detail');};
+    td.appendChild(bt); tr.appendChild(td);
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  const w=el('div','tblwrap'); w.appendChild(t); b.appendChild(w);
+  if(list.length>400) b.appendChild(el('div','note','先頭400件のみ表示しています（全'+list.length+'件）'));
+}
+
+/* ------------------------------- 書き出し ------------------------------- */
+const WHY_JA={darkest:'最も濃い', double:'2つ目の濃いマーク', suppressed:'抑制された',
+  rescued:'差が大きいので採用', dark:'閾値より濃い', light:'閾値より薄い', manual:'手動修正'};
+function download(name,text,mime){
+  const blob=new Blob([text],{type:(mime||'text/plain')+';charset=utf-8'});
+  const url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+const csvCell = c => '"'+String(c==null?'':c).replace(/"/g,'""')+'"';
+const toCSV = rows => rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+function baseName(){ return (S.docTitle||S.masterName||'集計結果').replace(/\.[^.]+$/,''); }
+
+function exportWideCSV(){
+  const {cols,rows}=buildRows();
+  const out=[];
+  out.push(['ID', ...cols.map(c=>c.key)]);
+  out.push(['設問', ...cols.map(c=>(c.q.qhint||'').replace(/\n/g,' '))]);
+  out.push(['行', ...cols.map(c=>(c.q.rowHint||'').replace(/\n/g,' '))]);
+  out.push(['選択肢', ...cols.map(c=>c.item?c.item.label:'')]);
+  rows.forEach(r=>{
+    out.push([r.id, ...cols.map(c=>{
+      const cell=r.cells[c.key];
+      if(!cell) return '';
+      if(cell.st==='double') return '#'+cell.v;
+      return cell.v;
+    })]);
+  });
+  download(baseName()+'-表データ.csv','\ufeff'+toCSV(out),'text/csv');
+  toast('表データを書き出しました','ok');
+}
+function exportLongCSV(){
+  const np=numPages();
+  const out=[['回答者','画像','マスタ頁','qid','問番号','設問文','行','列','選択肢番号','選択肢の値','選択肢ラベル','濃度','選択','判定理由']];
+  S.results.forEach((r,i)=>{
+    if(!r||r.errors.length) return;
+    const dec=decideAllOnPage(i, i%np);
+    dec.questions.forEach(({q,d})=>{
+      d.items.forEach(it=>{
+        out.push([Math.floor(i/np)+1, S.images[i].name, i%np+1, q.qid, q.qno,
+          (q.qhint||'').replace(/\n/g,' '), q.rowHint||'', q.colHint||'',
+          it.m.itemIndex+1, it.m.value, it.m.label, fmt(it.d,4), it.sel?1:0, WHY_JA[it.why]||it.why]);
+      });
+    });
+  });
+  download(baseName()+'-縦持ち.csv','\ufeff'+toCSV(out),'text/csv');
+  toast('縦持ちCSVを書き出しました','ok');
+}
+
+/* ==========================================================================
+   6. 読み取りの実行
+   ========================================================================== */
+async function runSession(){
+  if(!S.master || !S.images.length || S.busy) return;
+  S.busy=true; updateStatus();
+  const bar=$('#progress'); bar.classList.add('on');
+  const fill=bar.querySelector('i');
+  S.results=[]; S.manual.clear();
+  const np=numPages();
+  const scratch=document.createElement('canvas');
+  const sx=scratch.getContext('2d',{willReadFrequently:true});
+  for(let i=0;i<S.images.length;i++){
+    const im=S.images[i];
+    scratch.width=im.W; scratch.height=im.H;
+    sx.drawImage(im.bitmap,0,0);
+    const gray=toGray(sx.getImageData(0,0,im.W,im.H));
+    const mp=S.master.pages[i%np] || S.master.pages[0];
+    let res;
+    try{ res=processPage(gray, mp, CFG, np); }
+    catch(e){ res={errors:['処理中にエラーが発生しました：'+e.message],warnings:[],densities:new Map(),info:{}}; }
+    S.results[i]=res;
+    fill.style.width=Math.round((i+1)/S.images.length*100)+'%';
+    $('#st-msg').textContent=`読み取り中 ${i+1}/${S.images.length}`;
+    await new Promise(r=>setTimeout(r,0));
+  }
+  scratch.width=scratch.height=0;
+  bar.classList.remove('on'); fill.style.width='0';
+  $('#st-msg').textContent='';
+  S.busy=false;
+  const iss=countIssues();
+  updateStatus();
+  showView(iss.pageErr?'v-errors':'v-table');
+  const auto=otsuThreshold(allDensities(),100);
+  if(Math.abs(auto-CFG.markRecognitionDensityThreshold)>0.08)
+    $('#st-msg').innerHTML='<span class="err">濃度分布からは境目 '+fmt(auto,2)+' が適切です（ページの確認で調整できます）</span>';
+  toast(iss.total ? `読み取り完了：要確認 ${iss.total} 件` : '読み取り完了：エラーなし',
+        iss.pageErr?'err':'ok');
+  if(S.truth){
+    const acc=checkAgainstTruth();
+    if(acc) toast(`テスト画像との照合：${acc.total-acc.wrong}/${acc.total} 一致`, acc.wrong?'':'ok');
+  }
+}
+
+/* ==========================================================================
+   7. テスト画像の生成（動作確認用）
+   ========================================================================== */
+const DPI=200, PXPT=DPI/72;
+function makeTestScans(){
+  if(!S.master){ toast('先に調査票（.sqs）を読み込んでください','err'); return; }
+  const people=3, np=S.master.numPages;
+  const truth=new Map();
+  const bitmaps=[];
+  for(let r=0;r<people;r++){
+    for(let p=0;p<np;p++){
+      const {canvas, answers} = drawTestSheet(S.master.pages[p], p, np, r);
+      answers.forEach((v,k)=>truth.set((r*np+p)+'|'+k, v));
+      bitmaps.push({canvas, name:`test_${String(r+1).padStart(2,'0')}_${p+1}.png`});
+    }
+  }
+  Promise.all(bitmaps.map(b=>createImageBitmap(b.canvas))).then(bms=>{
+    S.images = bms.map((bm,i)=>({name:bitmaps[i].name, bitmap:bm, W:bm.width, H:bm.height}));
+    S.truth = truth;
+    S.results=[]; S.manual.clear(); srcIndex=-1;
+    updateStatus(); renderStart(); showView('v-pages');
+    toast(`テスト画像を ${S.images.length} 枚作りました。「読み取り開始」を押してください。`,'ok');
+  });
+}
+function drawTestSheet(mp, pageIndex, np, respondent){
+  const W=Math.round(MASTER.W*PXPT), H=Math.round(MASTER.H*PXPT);
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const cx=cv.getContext('2d');
+  cx.fillStyle='#fff'; cx.fillRect(0,0,W,H);
+  /* スキャナらしい微小な回転・平行移動 */
+  const ang=(Math.random()-0.5)*0.014, dx=(Math.random()-0.5)*10, dy=(Math.random()-0.5)*10;
+  cx.save();
+  cx.translate(W/2+dx, H/2+dy); cx.rotate(ang); cx.scale(PXPT,PXPT);
+  cx.translate(-MASTER.W/2, -MASTER.H/2);
+  cx.fillStyle='#000';
+  /* ■ブロック */
+  const G=MASTER.guide, side=mp.side;
+  cx.fillRect(80,30,G,G);
+  cx.fillRect(MASTER.W-40-G,30,G,G);
+  const blw=side==='left'?G/2:G, brw=side==='left'?G:G/2;
+  cx.fillRect(80+(G-blw)/2, MASTER.H-30-G, blw, G);
+  cx.fillRect(MASTER.W-40-G+(G-brw)/2, MASTER.H-30-G, brw, G);
+  /* ページ番号（表裏の判定に使われる） */
+  cx.font='8px sans-serif'; cx.textAlign='center'; cx.fillStyle='#000';
+  const pnx=(side==='left'?(MASTER.W-80):15)+23.5;
+  cx.fillText((pageIndex+1)+' / '+np, pnx, MASTER.H-50+32);
+  cx.font='5px sans-serif';
+  cx.fillText(String(S.docTitle||'').slice(0,16), pnx, MASTER.H-50+39);
+  /* 見出し */
+  cx.textAlign='left'; cx.font='bold 15px sans-serif';
+  if(pageIndex===0) cx.fillText(S.docTitle||'調査票', 45, 78);
+  /* マーク欄と選択肢 */
+  const answers=new Map();
+  const byQ=new Map();
+  mp.marks.forEach(m=>{ if(!byQ.has(m.qid)) byQ.set(m.qid,[]); byQ.get(m.qid).push(m); });
+  byQ.forEach((items,qid)=>{
+    const q=S.master.questions.get(qid);
+    let picks=[];
+    const roll=Math.random();
+    if(q.qtype==='select1'){
+      if(roll<0.06) picks=[];
+      else if(roll<0.12) picks=[0,1].map(k=>(Math.floor(Math.random()*items.length)+k)%items.length);
+      else picks=[Math.floor(Math.random()*items.length)];
+    }else{
+      items.forEach((_,k)=>{ if(Math.random()<0.3) picks.push(k); });
+    }
+    picks=[...new Set(picks)];
+    items.forEach((m,k)=>{
+      const filled=picks.includes(k);
+      answers.set(m.id, filled);
+      cx.save();
+      cx.beginPath();
+      cx.ellipse(m.x+m.w/2, m.y+m.h/2, m.w/2.1, m.h/2.4, 0, 0, Math.PI*2);
+      if(filled){
+        cx.fillStyle='#1a1a1a'; cx.fill();
+      }else{
+        cx.strokeStyle='#555'; cx.lineWidth=0.4; cx.setLineDash([0.5,1]); cx.stroke();
+      }
+      cx.restore();
+      if(m.label){
+        cx.font='9px sans-serif'; cx.fillStyle='#111'; cx.textAlign='left';
+        cx.fillText(String(m.label).slice(0,14), m.x+m.w+3, m.y+m.h/2+3);
+      }
+    });
+  });
+  /* 行見出し（設問グループ用） */
+  const rows=new Map();
+  mp.marks.forEach(m=>{ if(m.rowHint && !rows.has(m.rowHint)) rows.set(m.rowHint, m); });
+  cx.font='9px sans-serif'; cx.fillStyle='#111'; cx.textAlign='left';
+  rows.forEach((m,hint)=>{ cx.fillText(String(hint).slice(0,26), 48, m.y+m.h/2+3); });
+  /* 自由記述欄 */
+  cx.strokeStyle='#333'; cx.lineWidth=0.9; cx.setLineDash([]);
+  mp.frees.forEach(f=>cx.strokeRect(f.x,f.y,f.w,f.h));
+  cx.restore();
+  /* スキャンらしいノイズ */
+  const id=cx.getImageData(0,0,W,H), d=id.data;
+  for(let i=0;i<d.length;i+=4){
+    const n=(Math.random()*22-11)|0;
+    d[i]=clamp(d[i]+n,0,255); d[i+1]=clamp(d[i+1]+n,0,255); d[i+2]=clamp(d[i+2]+n,0,255);
+  }
+  cx.putImageData(id,0,0);
+  return {canvas:cv, answers};
+}
+function checkAgainstTruth(){
+  if(!S.truth || !S.results.length) return null;
+  const np=numPages();
+  let total=0, wrong=0;
+  S.results.forEach((r,i)=>{
+    if(!r||r.errors.length) return;
+    const dec=decideAllOnPage(i,i%np);
+    dec.byMark.forEach((it,id)=>{
+      const t=S.truth.get(i+'|'+id);
+      if(t===undefined) return;
+      total++; if(!!it.sel !== !!t) wrong++;
+    });
+  });
+  return total?{total,wrong}:null;
+}
+
+/* ==========================================================================
+   8. ファイルの受け取り
+   ========================================================================== */
+function loadMasterFile(file){
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const doc=parseSQS(String(rd.result));
+      S.master=buildFormMaster(doc);
+      S.masterName=file.name;
+      S.docTitle=S.master.title;
+      S.results=[]; S.manual.clear(); S.truth=null;
+      updateStatus(); renderStart();
+      toast(`調査票を読み込みました（${S.master.numPages}ページ・マーク欄${S.master.numMarks}個）`,'ok');
+    }catch(e){ toast(e.message||'読み込みに失敗しました','err'); }
+  };
+  rd.readAsText(file,'UTF-8');
+}
+async function loadScanFiles(files){
+  const list=Array.from(files).filter(f=>/^image\//.test(f.type));
+  if(!list.length){ toast('画像ファイルが見つかりません','err'); return; }
+  list.sort((a,b)=>a.name.localeCompare(b.name,'ja',{numeric:true}));
+  for(const f of list){
+    try{
+      const bm=await createImageBitmap(f);
+      S.images.push({name:f.name, bitmap:bm, W:bm.width, H:bm.height});
+    }catch(e){ toast(f.name+' を読み込めませんでした','err'); }
+  }
+  S.results=[]; S.manual.clear(); S.truth=null; srcIndex=-1;
+  updateStatus(); renderStart();
+  toast(`スキャン画像を ${list.length} 枚追加しました`,'ok');
+  if(S.view==='v-start' && S.master) showView('v-pages');
+}
+
+/* ==========================================================================
+   9. 設定ダイアログ・説明
+   ========================================================================== */
+function renderConfig(){
+  const b=$('#configbody'); b.innerHTML='';
+  const num=(label,key,step,hint,min,max)=>{
+    const f=el('div','f');
+    const l=el('label'); l.textContent=label; f.appendChild(l);
+    const i=el('input'); i.type='number'; i.value=CFG[key]; i.step=step;
+    if(min!=null)i.min=min; if(max!=null)i.max=max;
+    i.oninput=()=>{ CFG[key]=parseFloat(i.value); updateStatus(); };
+    f.appendChild(i);
+    if(hint) f.appendChild(Object.assign(el('div','tip'),{textContent:hint,style:'font-size:10.5px;color:var(--ink3)'}));
+    return f;
+  };
+  const chk=(label,key)=>{
+    const w=el('label','chk'); const i=el('input'); i.type='checkbox'; i.checked=!!CFG[key];
+    i.onchange=()=>CFG[key]=i.checked; w.append(i,el('span',null,label)); return w;
+  };
+  const g1=el('div'); g1.appendChild(Object.assign(el('h3','sec'),{textContent:'■ブロックの探索'}));
+  const c1=el('div','cols2');
+  c1.append(
+    num('黒とみなす明るさ（0〜1）','density',0.05,'既定 0.5',0,1),
+    num('探索する帯の高さ（ページ高に対する比）','height',0.01,'既定 0.12',0.02,0.5),
+    num('左右の除外幅（ページ幅に対する比）','horizontalMargin',0.01,'既定 0.05',0,0.4),
+    num('上端の除外（ページ高に対する比）','headerVerticalMargin',0.005,'既定 -0.01',-0.1,0.2),
+    num('下端の除外（ページ高に対する比）','footerVerticalMargin',0.005,'既定 0.0',-0.1,0.2)
+  );
+  g1.appendChild(c1); b.appendChild(g1);
+
+  const g2=el('div'); g2.appendChild(Object.assign(el('h3','sec'),{textContent:'ページの検査'}));
+  g2.append(chk('上下逆さまを検査する','checkUpsideDown'),
+            chk('表裏（ページ順序）を検査する','checkEvenOdd'),
+            chk('ページの歪みを検査する','checkDistortion'));
+  const c2=el('div','cols2');
+  c2.append(num('横方向に許す歪み','horizontalDistortion',0.005,'既定 0.03',0,0.5),
+            num('縦方向に許す歪み','verticalDistortion',0.005,'既定 0.03',0,0.5));
+  g2.appendChild(c2); b.appendChild(g2);
+
+  const g3=el('div'); g3.appendChild(Object.assign(el('h3','sec'),{textContent:'マーク欄の測り方'}));
+  const c3=el('div','cols2');
+  c3.append(
+    num('標本化の倍率','resolutionScale',0.5,'既定 2.0',0.5,6),
+    num('横のずらし量（pt）','horizontalTrim',0.5,'既定 0.5'),
+    num('縦のずらし量（pt）','verticalTrim',0.5,'既定 0'),
+    num('横の余白（pt）','markHorizontalMargin',0.5,'既定 0.5'),
+    num('縦の余白（pt・負で内側に絞る）','markVerticalMargin',0.5,'既定 -2')
+  );
+  g3.appendChild(c3);
+  g3.appendChild(Object.assign(el('div','note'),{
+    textContent:'マーク欄は 5×16pt の枠です。縦の余白を -2 にすると上下が絞られ、実質 8×8pt の窓で濃度を測ります。'}));
+  b.appendChild(g3);
+
+  const g4=el('div'); g4.appendChild(Object.assign(el('h3','sec'),{textContent:'セッション'}));
+  g4.appendChild(num('1人あたりのページ数（0でマスタのページ数）','pagesPerSheet',1,
+    S.master?`いまのマスタは ${S.master.numPages} ページです`:'',0,50));
+  b.appendChild(g4);
+}
+const HELP_HTML=`
+<div class="note" style="margin-bottom:12px;line-height:1.9">
+ 用意するものは2つだけです。<b>調査票の定義ファイル（.sqs）</b>と、<b>スキャンした画像</b>。
+ 画像はファイル名順に、1人分のページが連続して並ぶようにしてください。
+</div>
+<h3 class="sec">手順</h3>
+<ol style="margin:0;padding-left:20px;font-size:12.5px;line-height:1.95">
+ <li>「調査票を開く」で .sqs を読み込みます。版面が組み直され、マーク欄の位置が復元されます。</li>
+ <li>「スキャン画像を追加」で画像を選ぶか、画面に直接ドラッグ＆ドロップします。</li>
+ <li>「読み取り開始」を押します。1枚ずつ、■ブロックの検出から回答判定まで行います。</li>
+ <li>「要確認」タブで多重回答・無回答を見直します。マーク欄をクリックすると手で直せます。</li>
+ <li>「表データCSV」で書き出します。「集計結果」タブからは単純集計の表も出せます。</li>
+</ol>
+<h3 class="sec">タブの中身</h3>
+<ul style="margin:0;padding-left:20px;font-size:12.5px;line-height:1.95">
+ <li><b>ページ</b>：読み込んだ画像の一覧。処理の成否が色でわかります。</li>
+ <li><b>ページの確認</b>：検出した■ブロックとマーク欄を画像に重ねて表示します。濃度ヒストグラムで判定の境目を調整できます。</li>
+ <li><b>表データ</b>：1行が回答者1人。複数選択の設問は選択肢ごとに 1／0 の列になります。</li>
+ <li><b>集計結果</b>：設問ごとの単純集計。択一選択は「無回答」「多重回答エラー」を除いた回答を100%としています。</li>
+ <li><b>自由記述欄</b>：手書きの回答欄だけを傾き補正して切り出します。設問ごとに一覧画像として保存できます。</li>
+ <li><b>要確認</b>：ページの読み取りエラーと、多重回答・無回答の一覧。</li>
+</ul>
+<h3 class="sec">同じ調査票を何度も使うとき</h3>
+<p style="margin:0;font-size:12.5px;line-height:1.9">
+ 「マスタを保存」でマーク欄の座標をJSONに書き出せます。次回はその JSON を「調査票を開く」から読み込めば、
+ 版面を組み直さずに同じ座標で読み取れます。</p>
+<h3 class="sec">うまく読めないとき</h3>
+<ul style="margin:0;padding-left:20px;font-size:12.5px;line-height:1.95">
+ <li><b>■ブロックが見つからない</b>：スキャン時に用紙が傾きすぎている、余白が切れている、解像度が低すぎる（200dpi以上を推奨）、
+   または「用紙に合わせて縮小」して印刷したために四隅の■が内側に寄っている可能性があります。</li>
+ <li><b>ページ順序がおかしい</b>：両面スキャンの表裏が入れ替わっています。ページ番号の刷られる側で判定しているため、
+   印刷時にページ番号を消していると検査できません。</li>
+ <li><b>無回答が多い</b>：ヒストグラムの縦線（判定の境目）を右へ動かしてください。逆に多重回答が多いときは左へ。</li>
+ <li><b>ページごとに濃さが違う</b>：ヒストグラムに山が2つ見えるはずです。谷の位置に境目を置くのが目安です。</li>
+</ul>
+<h3 class="sec">キー操作</h3>
+<div style="font-family:var(--mono);font-size:11.5px;line-height:1.9;color:var(--ink2)">
+ ← → ページを移動　Esc ダイアログを閉じる
+</div>`;
+const ABOUT_HTML=`
+<p style="margin:0 0 12px;font-size:12.5px">
+ スキャンしたマークシート式調査票から集計データを起こすツールです。
+ Keio SFC / Community Management Research Project の
+ <b>SQS MarkReader 2.1</b>（<code>net.sqs2.omr.ui.MarkReader</code>、Java Swing）の処理系を読み解き、
+ HTML・CSS・JavaScript だけで作り直したものです。
+</p>
+<h3 class="sec">元のアプリから移植したもの</h3>
+<ul style="margin:0;padding-left:20px;font-size:12px;line-height:1.85">
+ <li>■ブロックの探索：上下端の帯を 300×30 に縮約 → 連結成分ラベリング → 大きさによる絞り込み
+   （<code>DeskewGuideAreaBitmap</code> / <code>ImageSilhouetteExtract</code> / <code>DeskewGuideCandidateFinder</code>）</li>
+ <li>マスタ位置に最も近い■を左右それぞれ選ぶ規則、下端■の −3px 補正（<code>DeskewGuideFilterNearByMasterGuide</code>）</li>
+ <li>四隅4点からの射影変換（<code>HomographyProjectionTranslator</code> / <code>ProjectionMatrix</code>）</li>
+ <li>歪み・上下逆・表裏の検査（<code>DeskewGuideValidator</code> / <code>PageUpsideDownValidator</code> / <code>PageSequenceValidator</code>）</li>
+ <li>5×3 畳み込みによる平均濃度（<code>DeskewedImageSource#calcConvolution5x3AverageMarkAreaDensity</code>）</li>
+ <li>択一選択の判定規則と、多重回答・無回答の抑制（<code>MarkAreaAnswerItemSet</code>）</li>
+ <li><code>config.xml</code> の既定値、グレースケール変換の重み（R3:G6:B1）、マーク欄の余白計算</li>
+</ul>
+<h3 class="sec">置き換えたもの</h3>
+<ul style="margin:0;padding-left:20px;font-size:12px;line-height:1.85">
+ <li>PDFのしおりから読み取っていたマーク欄座標 → .sqs から版面を組み直して復元</li>
+ <li>スレッドプール／グリッド分散処理 → ブラウザ上での逐次処理</li>
+ <li>Excel・HTML・チャート画像の書き出し → CSV（横持ち・縦持ち・集計表）と画面上の確認</li>
+ <li>自由記述欄の画像書き出し → 画面上の一覧と、設問ごとの一覧画像（PNG）</li>
+ <li>集計マスタ（.sqm、PDF添付のXML）→ マスタJSON（保存して次回そのまま読み込める）</li>
+ <li>標本化：元実装は座標を整数に丸めていましたが、ここでは小数のまま標本化しています</li>
+</ul>
+<h3 class="sec">含まれないもの</h3>
+<p style="margin:0;font-size:12px;line-height:1.85">
+ バーコード読み取り、分散並列処理、元形式の .sqm 生成、Excel 形式の書き出し。
+ また、元のJava版で印刷したPDFと、この再実装で組んだ版面は、フォント寸法の違いで行送りがずれることがあります。
+ 読み取りには <b>SQS ソースエディタ Web で印刷した調査票</b>を使ってください。
+</p>
+<p style="margin:14px 0 0;font-size:11.5px;color:var(--ink3)">
+ 元のソフトウェアは Apache License 2.0 で公開されています。
+</p>`;
+
+/* ==========================================================================
+   10. 起動
+   ========================================================================== */
+function bindUI(){
+  $$('.tab').forEach(t=>t.onclick=()=>showView(t.dataset.view));
+  $('#t-master').onclick=()=>$('#f-master').click();
+  $('#t-scans').onclick=()=>$('#f-scans').click();
+  $('#f-master').onchange=e=>{ if(e.target.files[0]) loadMasterFile(e.target.files[0]); e.target.value=''; };
+  $('#f-scans').onchange=e=>{ if(e.target.files.length) loadScanFiles(e.target.files); e.target.value=''; };
+  $('#t-run').onclick=runSession;
+  $('#t-config').onclick=()=>{ renderConfig(); openModal('#m-config'); };
+  $('#t-csv').onclick=exportWideCSV;
+  $('#t-long').onclick=exportLongCSV;
+  $('#t-demo').onclick=makeTestScans;
+  $('#t-reset').onclick=()=>{
+    if(!confirm('読み込んだ画像と処理結果をすべて破棄しますか?')) return;
+    S.images=[]; S.results=[]; S.manual.clear(); S.truth=null; srcIndex=-1; S.cur=0;
+    updateStatus(); renderStart(); showView('v-start');
+  };
+  $('#cfg-reset').onclick=()=>{ CFG=Object.assign({},CFG_DEFAULT); renderConfig(); updateStatus(); toast('初期値に戻しました'); };
+  $('#btn-help').onclick=()=>{ $('#info-title').textContent='使い方'; $('#info-body').innerHTML=HELP_HTML; openModal('#m-info'); };
+  $('#btn-about').onclick=()=>{ $('#info-title').textContent='このソフトについて'; $('#info-body').innerHTML=ABOUT_HTML; openModal('#m-info'); };
+  $$('[data-close]').forEach(b=>b.onclick=closeModals);
+  $$('.modal').forEach(m=>m.addEventListener('click',ev=>{ if(ev.target===m) closeModals(); }));
+
+  /* ドラッグ＆ドロップ */
+  document.addEventListener('dragover',ev=>{
+    if(!ev.dataTransfer.types.includes('Files')) return;
+    ev.preventDefault();
+    const dz=$('#dropzone'); if(dz) dz.classList.add('hot');
+  });
+  document.addEventListener('dragleave',()=>{ const dz=$('#dropzone'); if(dz) dz.classList.remove('hot'); });
+  document.addEventListener('drop',ev=>{
+    if(!ev.dataTransfer.files.length) return;
+    ev.preventDefault();
+    const dz=$('#dropzone'); if(dz) dz.classList.remove('hot');
+    const files=Array.from(ev.dataTransfer.files);
+    const sqs=files.find(f=>/\.(sqs|xml)$/i.test(f.name));
+    if(sqs) loadMasterFile(sqs);
+    const imgs=files.filter(f=>/^image\//.test(f.type));
+    if(imgs.length) loadScanFiles(imgs);
+    if(!sqs && !imgs.length) toast('.sqs か画像ファイルを落としてください','err');
+  });
+
+  document.addEventListener('keydown',ev=>{
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+    if(ev.key==='Escape') closeModals();
+    if(S.view==='v-detail' && S.images.length){
+      if(ev.key==='ArrowLeft'){ S.cur=Math.max(0,S.cur-1); renderDetail(); }
+      if(ev.key==='ArrowRight'){ S.cur=Math.min(S.images.length-1,S.cur+1); renderDetail(); }
+    }
+  });
+  window.addEventListener('resize',()=>{ if(S.view==='v-detail') clearTimeout(window._rz),
+    window._rz=setTimeout(renderDetail,200); });
+}
+function boot(){
+  bindUI();
+  renderStart();
+  updateStatus();
+}
+/* 起動はこのあとの追補側（boot2）で行う */
+</script>
+<script>
+"use strict";
+/* ==========================================================================
+   11. 集計結果一覧（元アプリの「チャート一覧」に相当）
+   ========================================================================== */
+function aggregate(){
+  if(!S.master || !S.results.length) return [];
+  const np = numPages(), N = numRespondents();
+  const acc = new Map();   // qid -> {q, counts:Map(itemId->n), noAnswer, multi, answered}
+  for(let r=0; r<N; r++){
+    for(let p=0; p<np; p++){
+      const ii = r*np + p;
+      const rr = S.results[ii];
+      if(!rr || rr.errors.length) continue;
+      decideAllOnPage(ii, p).questions.forEach(({q,d})=>{
+        let a = acc.get(q.qid);
+        if(!a){ a = {q, counts:new Map(), noAnswer:0, multi:0, answered:0, total:0}; acc.set(q.qid, a); }
+        a.total++;
+        const sel = d.items.filter(x=>x.sel);
+        if(q.qtype === 'select1'){
+          if(d.state === 'nomark') a.noAnswer++;
+          else if(d.state === 'double') a.multi++;
+          else { a.answered++; a.counts.set(sel[0].m.id, (a.counts.get(sel[0].m.id)||0)+1); }
+        }else{
+          if(sel.length) a.answered++; else a.noAnswer++;
+          sel.forEach(x=>a.counts.set(x.m.id, (a.counts.get(x.m.id)||0)+1));
+        }
+      });
+    }
+  }
+  return [...acc.values()].sort((a,b)=>a.q.page-b.q.page || a.q.qno-b.q.qno ||
+    a.q.qid.localeCompare(b.q.qid,'en',{numeric:true}));
+}
+function renderChart(){
+  const b = $('#chartbody'); b.innerHTML='';
+  if(!S.results.length){ b.innerHTML='<div class="note">まだ読み取っていません。</div>'; return; }
+  const list = aggregate();
+  if(!list.length){ b.innerHTML='<div class="note">集計できる設問がありません。</div>'; return; }
+
+  const head = el('div');
+  head.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap';
+  head.appendChild(Object.assign(el('div','note'),{
+    textContent:`回答者 ${numRespondents()} 人 ／ 設問 ${list.length} 件。択一選択は「無回答」「多重回答エラー」を除いた回答を100%としています。`,
+    style:'flex:1;min-width:220px;margin:0'}));
+  const bt = el('button','tool','集計表をCSVで保存'); bt.onclick=exportAggCSV;
+  head.appendChild(bt);
+  b.appendChild(head);
+
+  list.forEach(a=>{
+    const q = a.q;
+    const box = el('div','qblock');
+    const hd = el('header');
+    hd.appendChild(Object.assign(el('span','qid'),{textContent:q.qid}));
+    const title = el('b');
+    title.textContent = [q.rowHint, q.colHint].filter(Boolean).join(' ／ ') || (q.qhint||'').split('\n')[0];
+    title.title = q.qhint||'';
+    hd.appendChild(title);
+    hd.appendChild(Object.assign(el('span','kind'),{
+      textContent: q.qtype==='select1' ? '択一選択設問' : '複数選択設問'}));
+    box.appendChild(hd);
+
+    const bars = el('div','bars');
+    const denom = q.qtype==='select1' ? Math.max(1,a.answered) : Math.max(1,a.total);
+    const max = Math.max(1, ...q.items.map(it=>a.counts.get(it.id)||0));
+    const bar = (label, n, cls)=>{
+      const w = el('div','bar'+(cls?' '+cls:''));
+      w.appendChild(Object.assign(el('div','lb'),{textContent:label, title:label}));
+      const tr = el('div','tr'), fi = el('div','fi');
+      fi.style.width = Math.round(n/Math.max(max, n||1)*100)+'%';
+      tr.appendChild(fi); w.appendChild(tr);
+      w.appendChild(Object.assign(el('div','nm'),{
+        textContent: n+'人 ('+(denom?(n/denom*100).toFixed(1):'0.0')+'%)'}));
+      bars.appendChild(w);
+    };
+    q.items.forEach(it=>bar((it.value?it.value+' ':'')+(it.label||'（無題）'), a.counts.get(it.id)||0));
+    if(a.noAnswer) bar('無回答', a.noAnswer, 'na');
+    if(a.multi)    bar('多重回答エラー', a.multi, 'me');
+    const tw = el('div','bar tot');
+    tw.appendChild(Object.assign(el('div','lb'),{textContent:'計'}));
+    tw.appendChild(el('div','tr'));
+    tw.appendChild(Object.assign(el('div','nm'),{
+      textContent: (q.qtype==='select1' ? a.total : a.total)+'人'}));
+    bars.appendChild(tw);
+    box.appendChild(bars);
+    b.appendChild(box);
+  });
+}
+function exportAggCSV(){
+  const out=[['qid','種別','設問文','行','列','選択肢の値','選択肢ラベル','人数','割合(%)']];
+  aggregate().forEach(a=>{
+    const q=a.q, denom = q.qtype==='select1' ? Math.max(1,a.answered) : Math.max(1,a.total);
+    const flat = s => (s||'').replace(/\n/g,' ');
+    q.items.forEach(it=>{
+      const n=a.counts.get(it.id)||0;
+      out.push([q.qid, q.qtype==='select1'?'択一選択':'複数選択', flat(q.qhint), flat(q.rowHint), flat(q.colHint),
+        it.value, flat(it.label), n, (n/denom*100).toFixed(1)]);
+    });
+    if(a.noAnswer) out.push([q.qid,'','','','','','無回答',a.noAnswer,(a.noAnswer/Math.max(1,a.total)*100).toFixed(1)]);
+    if(a.multi)    out.push([q.qid,'','','','','','多重回答エラー',a.multi,(a.multi/Math.max(1,a.total)*100).toFixed(1)]);
+    out.push([q.qid,'','','','','','計',a.total,'']);
+  });
+  download(baseName()+'-集計表.csv','\ufeff'+toCSV(out),'text/csv');
+  toast('集計表を書き出しました','ok');
+}
+
+/* ==========================================================================
+   12. 自由記述欄一覧
+   ========================================================================== */
+let idCache={i:-1, data:null};
+function sourceImageData(i){
+  if(idCache.i===i && idCache.data) return idCache.data;
+  const c = sourceCanvas(i);
+  const d = c.getContext('2d',{willReadFrequently:true}).getImageData(0,0,c.width,c.height);
+  idCache = {i, data:d};
+  return d;
+}
+/* 版面上の矩形を、傾きを戻した画像として切り出す（cropImage 相当） */
+function cropArea(imgIndex, H, rect, scale){
+  const s = scale || 2;
+  const [rx,ry,rw,rh] = rect;
+  const W = Math.max(1, Math.round(rw*s)), Ht = Math.max(1, Math.round(rh*s));
+  const src = sourceImageData(imgIndex);
+  const cv = document.createElement('canvas'); cv.width=W; cv.height=Ht;
+  const ctx = cv.getContext('2d');
+  const out = ctx.createImageData(W,Ht);
+  const sd = src.data, sw = src.width, sh = src.height;
+  for(let j=0;j<Ht;j++){
+    for(let i=0;i<W;i++){
+      const [px,py] = project(H, rx + i/s, ry + j/s);
+      const x = px|0, y = py|0;
+      const o = (j*W+i)*4;
+      if(x<0||y<0||x>=sw||y>=sh){ out.data[o]=out.data[o+1]=out.data[o+2]=255; out.data[o+3]=255; continue; }
+      const q = (y*sw+x)*4;
+      out.data[o]=sd[q]; out.data[o+1]=sd[q+1]; out.data[o+2]=sd[q+2]; out.data[o+3]=255;
+    }
+  }
+  ctx.putImageData(out,0,0);
+  return cv;
+}
+function freeAreaList(){
+  if(!S.master) return [];
+  const out=[];
+  S.master.pages.forEach(p=>p.frees.forEach(f=>out.push(f)));
+  return out.sort((a,b)=>a.page-b.page || a.qno-b.qno || a.qid.localeCompare(b.qid,'en',{numeric:true}));
+}
+function renderFree(){
+  const b=$('#freebody'); b.innerHTML='';
+  if(!S.results.length){ b.innerHTML='<div class="note">まだ読み取っていません。</div>'; return; }
+  const areas=freeAreaList();
+  if(!areas.length){ b.innerHTML='<div class="note">この調査票に自由記述欄はありません。</div>'; return; }
+  b.appendChild(Object.assign(el('div','note'),{
+    textContent:'スキャン画像から自由記述欄だけを切り出して並べています。傾きは補正済みです。'}));
+
+  const np=numPages(), N=numRespondents();
+  areas.forEach(f=>{
+    const box=el('div','qblock');
+    const hd=el('header');
+    hd.appendChild(Object.assign(el('span','qid'),{textContent:f.qid}));
+    const t=el('b'); t.textContent=(f.qhint||'').split('\n')[0]||'自由記述欄'; t.title=f.qhint||'';
+    hd.appendChild(t);
+    const sheet=el('button','tool','一覧を画像で保存');
+    sheet.onclick=()=>exportContactSheet(f);
+    hd.appendChild(sheet);
+    box.appendChild(hd);
+
+    const grid=el('div','freegrid'); grid.style.padding='9px 12px 11px';
+    let shown=0;
+    for(let r=0;r<N;r++){
+      const ii=r*np+f.page, rr=S.results[ii];
+      const row=el('div','freerow');
+      row.appendChild(Object.assign(el('div','id'),{textContent:'#'+(r+1)}));
+      if(!rr || rr.errors.length || !rr.H){
+        row.appendChild(Object.assign(el('div','note'),{
+          textContent: rr && rr.errors.length ? '読み取りエラーのため切り出せません' : '未処理',
+          style:'margin:0;flex:1'}));
+      }else{
+        const holder=el('div'); holder.style.cssText='flex:1;min-width:0';
+        row.appendChild(holder);
+        /* 大量にあると重いので、順に描く */
+        const draw=()=>{
+          try{
+            const cv=cropArea(ii, rr.H, [f.x,f.y,f.w,f.h], 2);
+            cv.style.width=Math.min(760, f.w*1.6)+'px';
+            holder.appendChild(cv);
+          }catch(e){ holder.appendChild(Object.assign(el('div','note'),{textContent:'切り出しに失敗しました',style:'margin:0'})); }
+        };
+        if(shown<6) draw(); else setTimeout(draw, (shown-5)*12);
+        shown++;
+      }
+      grid.appendChild(row);
+    }
+    box.appendChild(grid);
+    b.appendChild(box);
+  });
+}
+function exportContactSheet(f){
+  const np=numPages(), N=numRespondents();
+  const s=2, cw=Math.round(f.w*s), ch=Math.round(f.h*s), gap=6, lab=34;
+  const rows=[];
+  for(let r=0;r<N;r++){
+    const ii=r*np+f.page, rr=S.results[ii];
+    if(!rr || rr.errors.length || !rr.H) continue;
+    rows.push({r, cv:cropArea(ii, rr.H, [f.x,f.y,f.w,f.h], s)});
+  }
+  if(!rows.length){ toast('切り出せる画像がありません','err'); return; }
+  const W=lab+cw+gap*2, H=28+rows.length*(ch+gap)+gap;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const cx=cv.getContext('2d');
+  cx.fillStyle='#fff'; cx.fillRect(0,0,W,H);
+  cx.fillStyle='#14161a'; cx.font='bold 13px sans-serif';
+  cx.fillText((f.qhint||'自由記述欄').split('\n')[0].slice(0,60), gap, 19);
+  rows.forEach((it,k)=>{
+    const y=28+k*(ch+gap);
+    cx.fillStyle='#69737f'; cx.font='11px ui-monospace,monospace';
+    cx.fillText('#'+(it.r+1), gap, y+14);
+    cx.drawImage(it.cv, lab, y);
+    cx.strokeStyle='#c6ccd4'; cx.lineWidth=1;
+    cx.strokeRect(lab+0.5, y+0.5, cw, ch);
+  });
+  cv.toBlob(bl=>{
+    const url=URL.createObjectURL(bl), a=document.createElement('a');
+    a.href=url; a.download=baseName()+'-'+f.qid+'-自由記述欄.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    toast('自由記述欄の一覧を保存しました','ok');
+  },'image/png');
+}
+
+/* ==========================================================================
+   13. マスタの保存と読み込み（元アプリの .sqm に相当するもの）
+   ========================================================================== */
+function exportMaster(){
+  if(!S.master){ toast('先に調査票を読み込んでください','err'); return; }
+  const m=S.master;
+  const obj={
+    format:'sqs-markreader-master', version:1,
+    title:m.title, source:S.masterName, numPages:m.numPages,
+    page:{width:MASTER.W, height:MASTER.H},
+    guideCenters:MASTER.guideCenters,
+    footerLeftRect:MASTER.footerLeftRect, footerRightRect:MASTER.footerRightRect,
+    pages:m.pages.map(p=>({
+      index:p.index, side:p.side,
+      marks:p.marks.map(k=>({id:k.id,page:k.page,qid:k.qid,qtype:k.qtype,qno:k.qno,qhint:k.qhint,
+        itemIndex:k.itemIndex,value:k.value,label:k.label,
+        rowIndex:k.rowIndex,rowHint:k.rowHint,colHint:k.colHint,
+        x:+k.x.toFixed(3),y:+k.y.toFixed(3),w:+k.w.toFixed(3),h:+k.h.toFixed(3)})),
+      frees:p.frees.map(k=>({id:k.id,page:k.page,qid:k.qid,qno:k.qno,qhint:k.qhint,
+        x:+k.x.toFixed(3),y:+k.y.toFixed(3),w:+k.w.toFixed(3),h:+k.h.toFixed(3)}))
+    }))
+  };
+  download((m.title||'調査票').replace(/\.[^.]+$/,'')+'-マスタ.json',
+    JSON.stringify(obj,null,1),'application/json');
+  toast('マスタを保存しました','ok');
+}
+function loadMasterJSON(text, name){
+  const o=JSON.parse(text);
+  if(o.format!=='sqs-markreader-master') throw new Error('マスタファイルの形式が違います');
+  const master={numPages:o.numPages, pages:o.pages, questions:new Map(), title:o.title||''};
+  master.pages.forEach(p=>{
+    p.marks=p.marks||[]; p.frees=p.frees||[];
+    p.marks.forEach(m=>{ if(m.page==null) m.page=p.index; });
+    p.frees.forEach(f=>{ if(f.page==null) f.page=p.index; });
+  });
+  master.pages.forEach(p=>p.marks.forEach(m=>{
+    if(!master.questions.has(m.qid))
+      master.questions.set(m.qid,{qid:m.qid,qtype:m.qtype,qno:m.qno,qhint:m.qhint,
+        rowHint:m.rowHint,colHint:m.colHint,page:m.page!=null?m.page:p.index,items:[]});
+    master.questions.get(m.qid).items.push(m);
+    if(m.page==null) m.page=p.index;
+  }));
+  master.questions.forEach(q=>q.items.sort((a,b)=>a.itemIndex-b.itemIndex));
+  master.numMarks=master.pages.reduce((s,p)=>s+p.marks.length,0);
+  if(o.guideCenters) MASTER.guideCenters=o.guideCenters;
+  if(o.footerLeftRect) MASTER.footerLeftRect=o.footerLeftRect;
+  if(o.footerRightRect) MASTER.footerRightRect=o.footerRightRect;
+  if(o.page){ MASTER.W=o.page.width; MASTER.H=o.page.height; }
+  S.master=master; S.masterName=name; S.docTitle=master.title;
+  S.results=[]; S.manual.clear(); S.truth=null;
+  updateStatus(); renderStart();
+  toast(`マスタを読み込みました（${master.numPages}ページ・マーク欄${master.numMarks}個）`,'ok');
+}
+
+/* ==========================================================================
+   14. 追加ぶんの結線と起動
+   ========================================================================== */
+(function(){
+  /* showView を拡張 */
+  const base = showView;
+  showView = function(id){
+    base(id);
+    if(id==='v-chart') renderChart();
+    if(id==='v-free')  renderFree();
+  };
+  /* ファイル読み込みを .json 対応に */
+  const baseLoad = loadMasterFile;
+  loadMasterFile = function(file){
+    if(/\.json$/i.test(file.name)){
+      const rd=new FileReader();
+      rd.onload=()=>{ try{ loadMasterJSON(String(rd.result), file.name); }
+                      catch(e){ toast(e.message||'読み込みに失敗しました','err'); } };
+      rd.readAsText(file,'UTF-8');
+      return;
+    }
+    baseLoad(file);
+  };
+  /* 画像を差し替えたら切り出しのキャッシュも捨てる */
+  const baseRun = runSession;
+  runSession = function(){ idCache={i:-1,data:null}; return baseRun(); };
+})();
+
+function boot2(){
+  bindUI();
+  $('#t-mout').onclick = exportMaster;
+  $$('.tab').forEach(t=>t.onclick=()=>showView(t.dataset.view));
+  renderStart();
+  updateStatus();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot2);
+else boot2();
+</script>
+</body>
+</html>

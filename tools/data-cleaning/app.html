@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>データ前処理・クリーニングラボ — データ分析ラボ</title>
+<style>
+:root{
+  --bg:#EEF1EF; --paper:#FCFDFC; --ink:#17211F; --ink-2:#4A5A56;
+  --accent:#0B6157; --accent-soft:#DCE9E6; --alert:#A8412A; --alert-soft:#F6E4DE;
+  --line:#D3DBD8; --line-2:#B9C6C2; --muted:#7C918C; --gold:#8A6A1F;
+  --mincho: Georgia,"Hiragino Mincho ProN","Yu Mincho",YuMincho,"MS PMincho",serif;
+  --gothic:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--gothic);font-size:14px;line-height:1.7;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:28px 28px;background-position:-1px -1px}
+h1,h2,h3{font-family:var(--mincho);font-weight:600;letter-spacing:.02em;margin:0}
+button,input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px 80px}
+
+/* ヘッダー */
+header{padding:26px 0 14px;border-bottom:2px solid var(--ink);margin-bottom:0}
+.brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.brand h1{font-size:27px}
+.brand .sub{font-size:12px;color:var(--ink-2);letter-spacing:.14em}
+.stamp{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--accent);border:1px solid var(--accent);
+  border-radius:2px;padding:3px 8px;letter-spacing:.08em}
+
+/* 工程ナビ */
+nav.steps{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--line-2);background:var(--paper);
+  position:sticky;top:0;z-index:20;box-shadow:0 1px 0 var(--line)}
+nav.steps button{background:none;border:none;border-bottom:3px solid transparent;padding:11px 15px;cursor:pointer;
+  white-space:nowrap;color:var(--ink-2);font-size:13px;display:flex;gap:7px;align-items:center}
+nav.steps button .no{font-family:var(--mono);font-size:11px;color:var(--muted)}
+nav.steps button:hover{background:var(--accent-soft)}
+nav.steps button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+nav.steps button.on .no{color:var(--accent)}
+nav.steps button:disabled{opacity:.4;cursor:not-allowed}
+
+/* レイアウト */
+.cols{display:grid;grid-template-columns:1fr 292px;gap:20px;margin-top:20px;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+.panel{background:var(--paper);border:1px solid var(--line-2);border-radius:3px;padding:20px;margin-bottom:18px;
+  box-shadow:0 1px 2px rgba(23,33,31,.05)}
+.panel > h2{font-size:18px;padding-bottom:9px;border-bottom:1px solid var(--line);margin-bottom:14px;
+  display:flex;align-items:baseline;gap:10px}
+.panel > h2 small{font-family:var(--gothic);font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.06em}
+.hide{display:none !important}
+.lead{color:var(--ink-2);font-size:13px;margin:0 0 14px}
+
+/* 部品 */
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:11px;color:var(--ink-2);letter-spacing:.06em}
+input[type=text],input[type=number],select,textarea{border:1px solid var(--line-2);border-radius:2px;padding:6px 8px;
+  background:#fff;min-width:0}
+input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0}
+textarea{width:100%;font-family:var(--mono);font-size:12px;line-height:1.55;resize:vertical}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:2px;padding:8px 16px;cursor:pointer;font-weight:700;
+  letter-spacing:.04em}
+.btn:hover{background:#08483F}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.ghost:hover{background:var(--accent-soft)}
+.btn.warn{background:var(--alert)}.btn.warn:hover{background:#8A3520}
+.btn.sm{padding:5px 10px;font-size:12px;font-weight:400}
+.btn:disabled{background:var(--muted);cursor:not-allowed}
+.chip{display:inline-block;border:1px solid var(--line-2);border-radius:2px;padding:2px 7px;margin:0 4px 4px 0;
+  font-size:12px;background:#fff;cursor:pointer;user-select:none}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chip.num::before{content:"#";color:var(--muted);margin-right:3px;font-family:var(--mono)}
+.chip.on.num::before{color:#BFE0DA}
+.chip.cat::before{content:"A";color:var(--muted);margin-right:3px;font-family:var(--mono);font-size:10px}
+.chip.on.cat::before{color:#BFE0DA}
+.picker{border:1px solid var(--line);background:#F7F9F8;border-radius:2px;padding:8px;max-height:150px;overflow:auto}
+.note{font-size:12px;color:var(--muted);margin:6px 0 0}
+.warnbox{background:var(--alert-soft);border-left:3px solid var(--alert);padding:9px 12px;font-size:13px;margin:12px 0}
+.okbox{background:var(--accent-soft);border-left:3px solid var(--accent);padding:9px 12px;font-size:13px;margin:12px 0}
+
+/* 表 */
+.tblwrap{overflow:auto;max-height:420px;border:1px solid var(--line-2);border-radius:2px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{border-bottom:1px solid var(--line);padding:5px 9px;text-align:left;white-space:nowrap}
+thead th{position:sticky;top:0;background:#E7EDEB;border-bottom:1px solid var(--line-2);font-weight:700;font-size:11.5px;
+  letter-spacing:.04em;z-index:2}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+tbody tr:hover{background:#F2F6F5}
+td.na{color:var(--alert);font-family:var(--mono);background:repeating-linear-gradient(45deg,#FBEEEA,#FBEEEA 4px,#fff 4px,#fff 8px)}
+td.flag{background:#FCF3D8}
+.rownum{color:var(--muted);font-family:var(--mono);font-size:11px;background:#F7F9F8}
+
+/* レシピ・レール（署名要素） */
+aside.recipe{position:sticky;top:60px;background:var(--paper);border:1px solid var(--line-2);border-radius:3px;
+  padding:0;overflow:hidden}
+aside.recipe .hd{background:var(--ink);color:#F2F5F4;padding:10px 14px;display:flex;align-items:center;gap:8px}
+aside.recipe .hd h3{font-size:14px;color:#fff}
+aside.recipe .hd .cnt{margin-left:auto;font-family:var(--mono);font-size:12px;color:#9FB6B1}
+.slips{max-height:52vh;overflow:auto;padding:10px 12px}
+.slip{position:relative;background:#fff;border:1px solid var(--line-2);border-left:4px solid var(--accent);
+  padding:8px 10px;margin-bottom:8px;font-size:12px}
+.slip:last-child{animation:slipin .28s ease-out}
+@keyframes slipin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.slip:last-child{animation:none}}
+.slip b{display:block;font-size:12.5px}
+.slip span{color:var(--ink-2);font-size:11.5px;display:block;margin-top:2px;word-break:break-all}
+.slip i{position:absolute;right:8px;top:7px;font-family:var(--mono);font-size:10px;color:var(--muted);font-style:normal}
+.slips .empty{color:var(--muted);font-size:12px;text-align:center;padding:22px 6px;line-height:1.9}
+aside.recipe .ft{border-top:1px solid var(--line);padding:10px 12px;display:flex;gap:8px;flex-wrap:wrap;background:#F7F9F8}
+.dims{font-family:var(--mono);font-size:12px;padding:8px 12px;border-top:1px solid var(--line);color:var(--ink-2);
+  background:#F7F9F8;display:flex;gap:12px}
+.dims b{color:var(--accent)}
+
+/* 変数カード */
+.vargrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
+.varcard{border:1px solid var(--line-2);border-radius:2px;padding:9px 11px;background:#fff}
+.varcard .nm{font-weight:700;font-size:13px;word-break:break-all}
+.varcard .ty{font-family:var(--mono);font-size:10.5px;color:#fff;background:var(--accent);padding:1px 5px;border-radius:2px}
+.varcard .ty.cat{background:var(--gold)}
+.varcard .st{font-family:var(--mono);font-size:11px;color:var(--ink-2);margin-top:5px}
+.bar{height:5px;background:#E7EDEB;margin-top:6px;border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--alert)}
+.spark{margin-top:6px}
+pre{background:#1C2624;color:#DCE7E4;padding:14px;border-radius:2px;overflow:auto;font-family:var(--mono);
+  font-size:11.5px;line-height:1.6;max-height:440px}
+pre b{color:#8FD4C6;font-weight:400}
+.doc{font-size:13.5px;line-height:1.95}
+.doc h4{font-family:var(--mincho);font-size:15px;margin:18px 0 6px;color:var(--accent)}
+.doc p{margin:0 0 10px}
+.quote{border-left:3px solid var(--line-2);padding:2px 0 2px 14px;color:var(--ink-2);font-family:var(--mincho);
+  font-size:13.5px;line-height:2}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button{background:#fff;border:1px solid var(--line-2);border-radius:2px;padding:6px 13px;cursor:pointer;font-size:13px}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-prep);--bg:var(--al-bg);--paper:var(--al-surface);--ink:var(--al-ink);--ink-2:var(--al-ink-2);--muted:var(--al-ink-3);--accent:var(--al-cat);--accent-soft:var(--al-cat-soft);--line:var(--al-line-2);--line-2:var(--al-line);--mincho:var(--al-serif);--gothic:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#prep">データの準備</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>データ前処理・クリーニングラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="wrap">
+<header>
+  <div class="brand">
+    <h1>データ前処理・クリーニングラボ</h1>
+    <span class="sub">SHAPE / RECODE / CLEAN / MERGE</span>
+    <span class="stamp">v1.0 &nbsp;ブラウザー内で完結</span>
+  </div>
+</header>
+
+<nav class="steps" id="nav">
+  <button data-t="load" class="on"><span class="no">i</span>データを読む</button>
+  <button data-t="check" disabled><span class="no">ii</span>変数を見る</button>
+  <button data-t="shape" disabled><span class="no">iii</span>形を変える</button>
+  <button data-t="scale" disabled><span class="no">iv</span>逆転・合成</button>
+  <button data-t="out" disabled><span class="no">v</span>外れ値</button>
+  <button data-t="recode" disabled><span class="no">vi</span>値を変える</button>
+  <button data-t="join" disabled><span class="no">vii</span>データを結ぶ</button>
+  <button data-t="export" disabled><span class="no">viii</span>書き出す</button>
+</nav>
+
+<div class="cols">
+<main>
+
+<!-- i データを読む -->
+<section class="panel" id="p-load">
+  <h2>データを読む <small>CSV / TSV / 表計算ソフトからの貼り付け</small></h2>
+  <p class="lead">1行目を変数名として読み込みます。区切り文字は自動で判定します。表計算ソフトの範囲をコピーしてそのまま貼り付けられます。</p>
+  <textarea id="raw" rows="9" placeholder="ID,pre_A,pre_B,post_A,post_B,群&#10;1,3,5,4,6,実験&#10;2,4,2,5,3,統制"></textarea>
+  <div class="row" style="margin-top:10px">
+    <div class="fld"><label>ファイルから</label><input type="file" id="file" accept=".csv,.tsv,.txt"></div>
+    <div class="fld"><label>欠測とみなす値（カンマ区切り）</label><input type="text" id="natok" value="NA,na,N/A,.,-,999,9999" style="width:190px"></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn" id="btnLoad">読み込む</button></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn ghost" id="btnSample">サンプルデータを入れる</button></div>
+  </div>
+  <div id="loadMsg"></div>
+</section>
+
+<!-- ii 変数を見る -->
+<section class="panel hide" id="p-check">
+  <h2>変数を見る <small>型・欠測・分布のひと目確認</small></h2>
+  <div class="tabs" id="checkTabs">
+    <button data-v="cards" class="on">変数カード</button>
+    <button data-v="table">データ表</button>
+    <button data-v="edit">名前と型を直す</button>
+  </div>
+  <div id="varCards" class="vargrid"></div>
+  <div id="varTable" class="hide"></div>
+  <div id="varEdit" class="hide"></div>
+</section>
+
+<!-- iii 形を変える -->
+<section class="panel hide" id="p-shape">
+  <h2>形を変える <small>横持ち ⇄ 縦持ち</small></h2>
+  <div class="tabs" id="shapeTabs">
+    <button data-v="w2l" class="on">横持ち → 縦持ち</button>
+    <button data-v="l2w">縦持ち → 横持ち</button>
+  </div>
+
+  <div id="sh-w2l">
+    <p class="lead">1人1行のデータを、1人×1測定＝1行の形に伸ばします。反復測定の分析や項目ごとの集計に使います。</p>
+    <div class="fld"><label>そのまま残す列（識別子）</label><div class="picker" id="w2lId"></div></div>
+    <div class="fld" style="margin-top:10px"><label>縦に積む列（値をもつ列）</label><div class="picker" id="w2lVal"></div></div>
+    <div class="row" style="margin-top:12px">
+      <div class="fld"><label>変数名を入れる列の名前</label><input type="text" id="w2lName" value="項目" style="width:120px"></div>
+      <div class="fld"><label>値を入れる列の名前</label><input type="text" id="w2lValue" value="値" style="width:120px"></div>
+      <div class="fld"><label><input type="checkbox" id="w2lDrop"> 欠測の行は落とす</label></div>
+    </div>
+    <div class="row">
+      <div class="fld"><label><input type="checkbox" id="w2lSplit"> 変数名を区切って2列に分ける</label></div>
+      <div class="fld"><label>区切り文字</label><input type="text" id="w2lSep" value="_" style="width:60px"></div>
+      <div class="fld"><label>前半の列名</label><input type="text" id="w2lN1" value="時点" style="width:100px"></div>
+      <div class="fld"><label>後半の列名</label><input type="text" id="w2lN2" value="項目" style="width:100px"></div>
+    </div>
+    <button class="btn" id="btnW2L">縦持ちにする</button>
+  </div>
+
+  <div id="sh-l2w" class="hide">
+    <p class="lead">縦に積まれたデータを1人1行に戻します。同じ組み合わせが複数ある場合は集約方法で処理します。</p>
+    <div class="fld"><label>行を決める列（キー）</label><div class="picker" id="l2wId"></div></div>
+    <div class="row" style="margin-top:10px">
+      <div class="fld"><label>新しい列名になる列</label><select id="l2wName"></select></div>
+      <div class="fld"><label>値が入っている列</label><select id="l2wValue"></select></div>
+      <div class="fld"><label>重複したとき</label><select id="l2wAgg">
+        <option value="first">最初の値</option><option value="mean">平均</option>
+        <option value="sum">合計</option><option value="count">件数</option><option value="last">最後の値</option></select></div>
+      <div class="fld"><label>列名の接頭辞</label><input type="text" id="l2wPre" value="" style="width:90px"></div>
+    </div>
+    <button class="btn" id="btnL2W">横持ちにする</button>
+  </div>
+  <div id="shapeMsg"></div>
+</section>
+
+<!-- iv 逆転・合成 -->
+<section class="panel hide" id="p-scale">
+  <h2>逆転・合成 <small>逆転項目の処理と尺度得点づくり</small></h2>
+  <p class="lead">逆転項目は「最小値＋最大値−回答」に置き換えます。合成得点をつくるときは α 係数も一緒に確認できます。</p>
+  <div class="fld"><label>逆転する項目</label><div class="picker" id="revPick"></div></div>
+  <div class="row" style="margin-top:10px">
+    <div class="fld"><label>尺度の最小値</label><input type="number" id="revMin" value="1" style="width:80px"></div>
+    <div class="fld"><label>尺度の最大値</label><input type="number" id="revMax" value="5" style="width:80px"></div>
+    <div class="fld"><label>結果の入れ方</label><select id="revMode">
+      <option value="over">元の列を書き換える</option><option value="new">新しい列を作る（末尾に _r）</option></select></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn" id="btnRev">逆転する</button></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn ghost sm" id="btnRevGuess">逆転候補を推定</button></div>
+  </div>
+  <div id="revMsg"></div>
+  <hr style="border:none;border-top:1px solid var(--line);margin:20px 0">
+  <div class="fld"><label>合成得点にまとめる項目</label><div class="picker" id="cmpPick"></div></div>
+  <div class="row" style="margin-top:10px">
+    <div class="fld"><label>新しい変数名</label><input type="text" id="cmpName" value="尺度得点" style="width:140px"></div>
+    <div class="fld"><label>まとめ方</label><select id="cmpAgg"><option value="mean">平均</option><option value="sum">合計</option></select></div>
+    <div class="fld"><label>許す欠測数</label><input type="number" id="cmpMiss" value="0" min="0" style="width:70px"></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn" id="btnCmp">合成得点を作る</button></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn ghost" id="btnAlpha">α係数だけ確認</button></div>
+  </div>
+  <div id="cmpMsg"></div>
+</section>
+
+<!-- v 外れ値 -->
+<section class="panel hide" id="p-out">
+  <h2>外れ値 <small>検出してから、残すか直すかを決める</small></h2>
+  <p class="lead">検出しただけでは何も変わりません。中身を確認してから処理を選んでください。入力ミスと真の極端値は区別して扱います。</p>
+  <div class="fld"><label>調べる変数（数値）</label><div class="picker" id="outPick"></div></div>
+  <div class="row" style="margin-top:10px">
+    <div class="fld"><label>検出の方法</label><select id="outMethod">
+      <option value="z">標準得点 |z|</option>
+      <option value="mad">ロバスト標準得点（中央値・MAD）</option>
+      <option value="iqr">四分位範囲（箱ひげ図の外）</option>
+      <option value="maha">マハラノビス距離（複数変数まとめて）</option>
+    </select></div>
+    <div class="fld"><label>基準値</label><input type="number" id="outThr" value="3" step="0.1" style="width:80px"></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn" id="btnDetect">検出する</button></div>
+  </div>
+  <div id="outResult"></div>
+</section>
+
+<!-- vi 値を変える -->
+<section class="panel hide" id="p-recode">
+  <h2>値を変える <small>再コード・カテゴリ化・ダミー・文字の整形</small></h2>
+  <div class="tabs" id="recTabs">
+    <button data-v="map" class="on">値の置き換え</button>
+    <button data-v="bin">数値をカテゴリに</button>
+    <button data-v="dum">ダミー変数</button>
+    <button data-v="str">文字の整形</button>
+    <button data-v="filt">行を絞る</button>
+  </div>
+
+  <div id="rc-map">
+    <p class="lead">「元の値 = 新しい値」を1行ずつ書きます。書かれていない値はそのまま残ります。<code>*</code> はその他すべて、<code>NA</code> は欠測を表します。</p>
+    <div class="fld"><label>対象の変数</label><div class="picker" id="mapPick"></div></div>
+    <div class="row" style="margin-top:10px">
+      <div class="fld" style="flex:1;min-width:240px"><label>置き換えの規則</label>
+        <textarea id="mapRules" rows="5" placeholder="1 = そう思わない&#10;5 = そう思う&#10;9 = NA"></textarea></div>
+      <div class="fld"><label>結果の入れ方</label><select id="mapMode">
+        <option value="over">元の列を書き換える</option><option value="new">新しい列を作る（末尾に _c）</option></select></div>
+    </div>
+    <button class="btn" id="btnMap">置き換える</button>
+  </div>
+
+  <div id="rc-bin" class="hide">
+    <p class="lead">連続量を段階に切ります。分位で切ると各群の人数がそろい、等間隔で切ると幅がそろいます。</p>
+    <div class="row">
+      <div class="fld"><label>対象の変数</label><select id="binVar"></select></div>
+      <div class="fld"><label>切り方</label><select id="binType">
+        <option value="q">分位（人数をそろえる）</option><option value="w">等間隔（幅をそろえる）</option>
+        <option value="c">区切り値を指定</option><option value="med">中央値で2分割</option></select></div>
+      <div class="fld"><label>段階数</label><input type="number" id="binK" value="3" min="2" max="10" style="width:70px"></div>
+      <div class="fld"><label>区切り値（カンマ区切り）</label><input type="text" id="binCuts" placeholder="例 2.5,3.5" style="width:150px"></div>
+    </div>
+    <div class="row">
+      <div class="fld" style="flex:1;min-width:220px"><label>段階の名前（カンマ区切り・空欄なら自動）</label><input type="text" id="binLab" placeholder="低群,中群,高群" style="width:100%"></div>
+      <div class="fld"><label>新しい変数名</label><input type="text" id="binName" style="width:140px"></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnBin">カテゴリにする</button></div>
+    </div>
+    <div id="binMsg"></div>
+  </div>
+
+  <div id="rc-dum" class="hide">
+    <p class="lead">カテゴリ変数を 0/1 の列に展開します。基準にした水準の列は作りません（回帰分析の基準カテゴリになります）。</p>
+    <div class="row">
+      <div class="fld"><label>対象の変数</label><select id="dumVar"></select></div>
+      <div class="fld"><label>基準にする水準</label><select id="dumRef"></select></div>
+      <div class="fld"><label>列名の接頭辞</label><input type="text" id="dumPre" style="width:120px"></div>
+      <div class="fld"><label><input type="checkbox" id="dumKeep" checked> 元の列を残す</label></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnDum">ダミーを作る</button></div>
+    </div>
+    <div id="dumMsg"></div>
+  </div>
+
+  <div id="rc-str" class="hide">
+    <p class="lead">自由記述や貼り付けデータにまぎれた空白や全角数字を揃えます。集計前に効きます。</p>
+    <div class="fld"><label>対象の変数</label><div class="picker" id="strPick"></div></div>
+    <div class="row" style="margin-top:10px">
+      <div class="fld"><label>処理</label><select id="strOp">
+        <option value="trim">前後の空白を取る</option>
+        <option value="all">空白をすべて取る</option>
+        <option value="z2h">全角の英数字・記号を半角に</option>
+        <option value="lower">英字を小文字に</option>
+        <option value="upper">英字を大文字に</option>
+        <option value="num">数値として読み直す</option>
+      </select></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnStr">整える</button></div>
+    </div>
+    <div id="strMsg"></div>
+  </div>
+
+  <div id="rc-filt" class="hide">
+    <p class="lead">条件に合う行だけを残します（または落とします）。除外した人数は必ず記録に残ります。</p>
+    <div class="row">
+      <div class="fld"><label>変数</label><select id="fVar"></select></div>
+      <div class="fld"><label>条件</label><select id="fOp">
+        <option value="==">＝ に等しい</option><option value="!=">≠ でない</option>
+        <option value=">">＞ より大きい</option><option value=">=">≧ 以上</option>
+        <option value="<">＜ より小さい</option><option value="<=">≦ 以下</option>
+        <option value="isna">欠測である</option><option value="notna">欠測でない</option>
+        <option value="has">を含む（文字）</option></select></div>
+      <div class="fld"><label>値</label><input type="text" id="fVal" style="width:120px"></div>
+      <div class="fld"><label>動作</label><select id="fAct"><option value="keep">合う行を残す</option><option value="drop">合う行を落とす</option></select></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnFilt">実行する</button></div>
+    </div>
+    <div id="filtMsg"></div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+    <div class="row">
+      <div class="fld"><label>そのほか</label>
+        <div>
+          <button class="btn ghost sm" id="btnDedup">重複行を1つにまとめる</button>
+          <button class="btn ghost sm" id="btnDropAllNA">すべて欠測の行を落とす</button>
+          <button class="btn ghost sm" id="btnListwise">欠測のある行を落とす（リストワイズ）</button>
+        </div></div>
+    </div>
+    <div id="miscMsg"></div>
+  </div>
+</section>
+
+<!-- vii 結ぶ -->
+<section class="panel hide" id="p-join">
+  <h2>データを結ぶ <small>横に足す（結合）／縦に足す（追加）</small></h2>
+  <p class="lead">もう一方のデータを貼り付けてから、結び方を選びます。結合後は必ず行数の変化を確認してください。</p>
+  <textarea id="joinRaw" rows="6" placeholder="ID,学年,担任&#10;1,3,A&#10;2,3,B"></textarea>
+  <div class="row" style="margin-top:10px">
+    <div class="fld"><label>&nbsp;</label><button class="btn ghost" id="btnJoinRead">2つ目のデータを読む</button></div>
+    <div class="fld"><label>読み込み状況</label><div id="joinInfo" class="note">まだ読み込まれていません</div></div>
+  </div>
+  <div id="joinCfg" class="hide">
+    <div class="row">
+      <div class="fld"><label>結び方</label><select id="joinType">
+        <option value="left">左結合（今のデータの行を保つ）</option>
+        <option value="inner">内部結合（両方にある行だけ）</option>
+        <option value="full">完全結合（どちらの行も残す）</option>
+        <option value="anti">反結合（相手にない行だけ）</option>
+        <option value="bind">縦に足す（行を追加）</option>
+      </select></div>
+      <div class="fld"><label>今のデータのキー</label><select id="joinK1"></select></div>
+      <div class="fld"><label>2つ目のデータのキー</label><select id="joinK2"></select></div>
+      <div class="fld"><label>重なる列名の接尾辞</label><input type="text" id="joinSuf" value="_2" style="width:70px"></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnJoin">結ぶ</button></div>
+    </div>
+  </div>
+  <div id="joinMsg"></div>
+</section>
+
+<!-- viii 書き出す -->
+<section class="panel hide" id="p-export">
+  <h2>書き出す <small>データ・Rコード・作業の記録</small></h2>
+  <div class="tabs" id="expTabs">
+    <button data-v="csv" class="on">整えたデータ</button>
+    <button data-v="r">Rコード</button>
+    <button data-v="log">作業の記録</button>
+    <button data-v="doc">解説と記述例</button>
+  </div>
+  <div id="ex-csv">
+    <div class="row">
+      <div class="fld"><label>欠測の書き方</label><select id="expNA"><option value="">空欄</option><option value="NA">NA</option><option value=".">.</option></select></div>
+      <div class="fld"><label>区切り</label><select id="expSep"><option value=",">カンマ (CSV)</option><option value="&#9;">タブ (TSV)</option></select></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnDl">ファイルに保存</button></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn ghost" id="btnCopy">クリップボードにコピー</button></div>
+    </div>
+    <textarea id="expText" rows="14"></textarea>
+  </div>
+  <div id="ex-r" class="hide">
+    <p class="lead">JASP の R コンソールにそのまま貼り付けて実行できるよう、データを埋め込んだ形で出力します。同じ処理を R 側で再現できます。</p>
+    <div class="row"><div class="fld"><label>&nbsp;</label><button class="btn ghost sm" id="btnCopyR">Rコードをコピー</button></div></div>
+    <pre id="rcode"></pre>
+  </div>
+  <div id="ex-log" class="hide"><div id="logBox"></div></div>
+  <div id="ex-doc" class="hide"><div id="docBox" class="doc"></div></div>
+</section>
+
+</main>
+
+<!-- 署名要素：処理レシピ -->
+<aside class="recipe">
+  <div class="hd"><h3>処理レシピ</h3><span class="cnt" id="rcnt">0</span></div>
+  <div class="slips" id="slips">
+    <div class="empty">まだ何もしていません。<br>ここに手順が1枚ずつ<br>積み上がっていきます。</div>
+  </div>
+  <div class="dims"><span>行 <b id="dimN">0</b></span><span>列 <b id="dimP">0</b></span><span>欠測 <b id="dimNA">0</b></span></div>
+  <div class="ft">
+    <button class="btn ghost sm" id="btnUndo" disabled>一つ戻す</button>
+    <button class="btn ghost sm" id="btnReset">最初に戻す</button>
+  </div>
+</aside>
+</div>
+</div>
+
+<script>
+/* ===== 統計計算コア（外部ライブラリなし） ===== */
+var ST = (function () {
+  'use strict';
+
+  /* ---- 乱数（種つき） ---- */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function RNG(seed) {
+    var u = mulberry32(seed >>> 0), spare = null;
+    return {
+      unif: u,
+      norm: function () {
+        if (spare !== null) { var s = spare; spare = null; return s; }
+        var a = 0, b = 0;
+        while (a === 0) a = u();
+        b = u();
+        var r = Math.sqrt(-2 * Math.log(a));
+        spare = r * Math.sin(2 * Math.PI * b);
+        return r * Math.cos(2 * Math.PI * b);
+      },
+      int: function (n) { return Math.floor(u() * n) % n; },
+      gamma: function (shape) {           // Marsaglia–Tsang
+        if (shape < 1) { var g = this.gamma(shape + 1); return g * Math.pow(u(), 1 / shape); }
+        var d = shape - 1 / 3, c = 1 / Math.sqrt(9 * d);
+        for (;;) {
+          var x = this.norm(), v = 1 + c * x;
+          if (v <= 0) continue;
+          v = v * v * v;
+          var uu = u();
+          if (uu < 1 - 0.0331 * x * x * x * x) return d * v;
+          if (Math.log(uu) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+        }
+      },
+      chisq: function (df) { return 2 * this.gamma(df / 2); }
+    };
+  }
+
+  /* ---- 分布関数 ---- */
+  function lgamma(x) {
+    var c = [76.18009172947146, -86.50532032941677, 24.01409824083091,
+      -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    var y = x, tmp = x + 5.5;
+    tmp -= (x + 0.5) * Math.log(tmp);
+    var ser = 1.000000000190015;
+    for (var j = 0; j < 6; j++) ser += c[j] / ++y;
+    return -tmp + Math.log(2.5066282746310005 * ser / x);
+  }
+  function gammaP(a, x) {                 // 正則化不完全ガンマ（下側）
+    if (x <= 0) return 0;
+    if (x < a + 1) {
+      var ap = a, sum = 1 / a, del = sum;
+      for (var n = 0; n < 500; n++) {
+        ap++; del *= x / ap; sum += del;
+        if (Math.abs(del) < Math.abs(sum) * 1e-14) break;
+      }
+      return sum * Math.exp(-x + a * Math.log(x) - lgamma(a));
+    }
+    var b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+    for (var i = 1; i <= 500; i++) {
+      var an = -i * (i - a);
+      b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300;
+      c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+      d = 1 / d; var de = d * c; h *= de;
+      if (Math.abs(de - 1) < 1e-14) break;
+    }
+    return 1 - Math.exp(-x + a * Math.log(x) - lgamma(a)) * h;
+  }
+  function chisqCDF(x, df) { return df <= 0 ? NaN : gammaP(df / 2, x / 2); }
+  function chisqP(x, df) { return 1 - chisqCDF(x, df); }
+
+  function betacf(a, b, x) {
+    var qab = a + b, qap = a + 1, qam = a - 1;
+    var c = 1, d = 1 - qab * x / qap;
+    if (Math.abs(d) < 1e-300) d = 1e-300;
+    d = 1 / d; var h = d;
+    for (var m = 1; m <= 300; m++) {
+      var m2 = 2 * m;
+      var aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+      d = 1 + aa * d; if (Math.abs(d) < 1e-300) d = 1e-300;
+      c = 1 + aa / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+      d = 1 / d; h *= d * c;
+      aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+      d = 1 + aa * d; if (Math.abs(d) < 1e-300) d = 1e-300;
+      c = 1 + aa / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+      d = 1 / d; var del = d * c; h *= del;
+      if (Math.abs(del - 1) < 1e-14) break;
+    }
+    return h;
+  }
+  function ibeta(a, b, x) {
+    if (x <= 0) return 0; if (x >= 1) return 1;
+    var bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+    return x < (a + 1) / (a + b + 2) ? bt * betacf(a, b, x) / a : 1 - bt * betacf(b, a, 1 - x) / b;
+  }
+  function tP(t, df) {                     // 両側 p
+    if (!isFinite(t) || df <= 0) return NaN;
+    return ibeta(df / 2, 0.5, df / (df + t * t));
+  }
+  function fP(f, d1, d2) {                 // 上側 p
+    if (f <= 0) return 1;
+    return ibeta(d2 / 2, d1 / 2, d2 / (d2 + d1 * f));
+  }
+  function normCDF(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
+  function erf(x) {
+    var s = x < 0 ? -1 : 1; x = Math.abs(x);
+    var t = 1 / (1 + 0.3275911 * x);
+    var y = 1 - ((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t * t
+      - 0; // placeholder replaced below
+    y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return s * y;
+  }
+  function normQ(p) {                       // 逆正規（Acklam）
+    if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
+    var a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    var b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    var c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    var d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    var pl = 0.02425, q, r;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    if (p > 1 - pl) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    q = p - 0.5; r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
+  function tQ(p, df) {                       // 両側 1-p 点（|t|）を二分法で
+    if (df <= 0) return NaN;
+    var lo = 0, hi = 1000;
+    for (var i = 0; i < 200; i++) {
+      var mid = (lo + hi) / 2;
+      if (tP(mid, df) > p) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  /* ---- 行列 ---- */
+  function zeros(n, m) { var A = [], i, j; for (i = 0; i < n; i++) { A.push([]); for (j = 0; j < m; j++) A[i].push(0); } return A; }
+  function eye(n) { var A = zeros(n, n); for (var i = 0; i < n; i++) A[i][i] = 1; return A; }
+  function tr(A) { var n = A.length, m = A[0].length, B = zeros(m, n); for (var i = 0; i < n; i++) for (var j = 0; j < m; j++) B[j][i] = A[i][j]; return B; }
+  function mm(A, B) {
+    var n = A.length, k = B.length, m = B[0].length, C = zeros(n, m);
+    for (var i = 0; i < n; i++) for (var t = 0; t < k; t++) { var a = A[i][t]; if (a === 0) continue; for (var j = 0; j < m; j++) C[i][j] += a * B[t][j]; }
+    return C;
+  }
+  function mv(A, v) { var n = A.length, m = v.length, r = []; for (var i = 0; i < n; i++) { var s = 0; for (var j = 0; j < m; j++) s += A[i][j] * v[j]; r.push(s); } return r; }
+  function inv(A) {
+    var n = A.length, M = [], i, j, k;
+    for (i = 0; i < n; i++) M.push(A[i].slice().concat(eye(n)[i]));
+    for (i = 0; i < n; i++) {
+      var piv = i;
+      for (k = i + 1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[piv][i])) piv = k;
+      if (Math.abs(M[piv][i]) < 1e-12) return null;
+      var t = M[i]; M[i] = M[piv]; M[piv] = t;
+      var d = M[i][i];
+      for (j = 0; j < 2 * n; j++) M[i][j] /= d;
+      for (k = 0; k < n; k++) {
+        if (k === i) continue;
+        var f = M[k][i]; if (f === 0) continue;
+        for (j = 0; j < 2 * n; j++) M[k][j] -= f * M[i][j];
+      }
+    }
+    var R = zeros(n, n);
+    for (i = 0; i < n; i++) for (j = 0; j < n; j++) R[i][j] = M[i][j + n];
+    return R;
+  }
+  function chol(A) {                       // 下三角 L, A = L L'
+    var n = A.length, L = zeros(n, n), i, j, k;
+    for (i = 0; i < n; i++) for (j = 0; j <= i; j++) {
+      var s = 0;
+      for (k = 0; k < j; k++) s += L[i][k] * L[j][k];
+      if (i === j) { var v = A[i][i] - s; if (v <= 0) v = 1e-10; L[i][j] = Math.sqrt(v); }
+      else L[i][j] = (A[i][j] - s) / L[j][j];
+    }
+    return L;
+  }
+  function sub(A, ri, ci) { var B = [], i, j; for (i = 0; i < ri.length; i++) { var r = []; for (j = 0; j < ci.length; j++) r.push(A[ri[i]][ci[j]]); B.push(r); } return B; }
+  function ridge(A, eps) { var n = A.length, B = A.map(function (r) { return r.slice(); }); for (var i = 0; i < n; i++) B[i][i] += eps; return B; }
+
+  /* ---- 記述統計 ---- */
+  function mean(a) { var s = 0, n = 0; for (var i = 0; i < a.length; i++) if (a[i] !== null && isFinite(a[i])) { s += a[i]; n++; } return n ? s / n : NaN; }
+  function sd(a) { var m = mean(a), s = 0, n = 0; for (var i = 0; i < a.length; i++) if (a[i] !== null && isFinite(a[i])) { s += (a[i] - m) * (a[i] - m); n++; } return n > 1 ? Math.sqrt(s / (n - 1)) : NaN; }
+  function quantile(sorted, p) {
+    var n = sorted.length; if (!n) return NaN;
+    var h = (n - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
+    return sorted[lo] + (h - lo) * (sorted[hi] - sorted[lo]);
+  }
+  function median(a) { var s = a.filter(function (x) { return x !== null && isFinite(x); }).sort(function (x, y) { return x - y; }); return quantile(s, 0.5); }
+  function mad(a) {
+    var med = median(a);
+    var dev = a.filter(function (x) { return x !== null && isFinite(x); }).map(function (x) { return Math.abs(x - med); });
+    return 1.4826 * median(dev);
+  }
+  function alphaCoef(mat) {                 // mat: n × k（欠測なし）
+    var n = mat.length, k = mat[0].length, j, i;
+    if (n < 2 || k < 2) return NaN;
+    var vs = 0;
+    for (j = 0; j < k; j++) { var col = []; for (i = 0; i < n; i++) col.push(mat[i][j]); vs += Math.pow(sd(col), 2); }
+    var tot = []; for (i = 0; i < n; i++) { var s = 0; for (j = 0; j < k; j++) s += mat[i][j]; tot.push(s); }
+    var vt = Math.pow(sd(tot), 2);
+    return (k / (k - 1)) * (1 - vs / vt);
+  }
+
+  /* ---- 回帰（OLS） ---- */
+  function ols(X, y) {                      // X は切片列を含む
+    var n = X.length, p = X[0].length;
+    var Xt = tr(X), XtX = mm(Xt, X), XtXi = inv(ridge(XtX, 1e-10));
+    if (!XtXi) return null;
+    var b = mv(mm(XtXi, Xt), y);
+    var fit = mv(X, b), res = [], ss = 0, i;
+    for (i = 0; i < n; i++) { res.push(y[i] - fit[i]); ss += res[i] * res[i]; }
+    var df = n - p, s2 = ss / df;
+    var se = []; for (i = 0; i < p; i++) se.push(Math.sqrt(s2 * XtXi[i][i]));
+    var my = mean(y), tss = 0; for (i = 0; i < n; i++) tss += (y[i] - my) * (y[i] - my);
+    return { beta: b, se: se, df: df, sigma2: s2, XtXi: XtXi, r2: 1 - ss / tss, n: n, p: p, resid: res, fitted: fit, ssr: ss };
+  }
+
+  /* ---- ロジスティック回帰（IRLS） ---- */
+  function logit(X, y) {
+    var n = X.length, p = X[0].length, b = new Array(p).fill(0), it, i, j;
+    var XtXi = null;
+    for (it = 0; it < 40; it++) {
+      var eta = mv(X, b), w = [], z = [];
+      for (i = 0; i < n; i++) {
+        var mu = 1 / (1 + Math.exp(-eta[i]));
+        mu = Math.min(Math.max(mu, 1e-8), 1 - 1e-8);
+        var wi = mu * (1 - mu);
+        w.push(wi); z.push(eta[i] + (y[i] - mu) / wi);
+      }
+      var Xw = X.map(function (r, k) { return r.map(function (v) { return v * w[k]; }); });
+      var XtWX = mm(tr(Xw), X), XtWz = mv(tr(Xw), z);
+      XtXi = inv(ridge(XtWX, 1e-8));
+      if (!XtXi) return null;
+      var nb = mv(XtXi, XtWz), diff = 0;
+      for (j = 0; j < p; j++) diff += Math.abs(nb[j] - b[j]);
+      b = nb;
+      if (diff < 1e-8) break;
+    }
+    return { beta: b, cov: XtXi };
+  }
+
+  /* ---- 欠測パターン ---- */
+  function missPatterns(data) {             // data: n×p（null=欠測）
+    var n = data.length, p = data[0].length, map = {}, i, j;
+    for (i = 0; i < n; i++) {
+      var key = '';
+      for (j = 0; j < p; j++) key += (data[i][j] === null ? '0' : '1');
+      if (!map[key]) map[key] = { key: key, n: 0, rows: [] };
+      map[key].n++; map[key].rows.push(i);
+    }
+    var arr = Object.keys(map).map(function (k) { return map[k]; });
+    arr.sort(function (a, b) { return b.n - a.n; });
+    return arr;
+  }
+
+  /* ---- EM（多変量正規：平均・共分散） ---- */
+  function emMVN(data, maxit, tol) {
+    maxit = maxit || 500; tol = tol || 1e-7;
+    var n = data.length, p = data[0].length, i, j, k;
+    var mu = [], S = zeros(p, p);
+    for (j = 0; j < p; j++) { var col = []; for (i = 0; i < n; i++) col.push(data[i][j]); mu.push(mean(col)); }
+    for (j = 0; j < p; j++) for (k = 0; k < p; k++) {
+      var s = 0, c = 0;
+      for (i = 0; i < n; i++) if (data[i][j] !== null && data[i][k] !== null) { s += (data[i][j] - mu[j]) * (data[i][k] - mu[k]); c++; }
+      S[j][k] = c > 1 ? s / (c - 1) : (j === k ? 1 : 0);
+    }
+    S = ridge(S, 1e-8);
+    var it, conv = false;
+    for (it = 0; it < maxit; it++) {
+      var T1 = new Array(p).fill(0), T2 = zeros(p, p);
+      for (i = 0; i < n; i++) {
+        var O = [], M = [];
+        for (j = 0; j < p; j++) (data[i][j] === null ? M : O).push(j);
+        var y = new Array(p).fill(0), C = zeros(p, p);
+        for (j = 0; j < O.length; j++) y[O[j]] = data[i][O[j]];
+        if (M.length) {
+          if (O.length === 0) { for (j = 0; j < M.length; j++) { y[M[j]] = mu[M[j]]; } for (j = 0; j < M.length; j++) for (k = 0; k < M.length; k++) C[M[j]][M[k]] = S[M[j]][M[k]]; }
+          else {
+            var Soo = sub(S, O, O), Sooi = inv(ridge(Soo, 1e-10));
+            var Smo = sub(S, M, O), Smm = sub(S, M, M);
+            var d = O.map(function (o) { return data[i][o] - mu[o]; });
+            var adj = mv(mm(Smo, Sooi), d);
+            for (j = 0; j < M.length; j++) y[M[j]] = mu[M[j]] + adj[j];
+            var Cm = mm(mm(Smo, Sooi), tr(Smo));
+            for (j = 0; j < M.length; j++) for (k = 0; k < M.length; k++) C[M[j]][M[k]] = Smm[j][k] - Cm[j][k];
+          }
+        }
+        for (j = 0; j < p; j++) { T1[j] += y[j]; for (k = 0; k < p; k++) T2[j][k] += y[j] * y[k] + C[j][k]; }
+      }
+      var nmu = T1.map(function (v) { return v / n; });
+      var nS = zeros(p, p);
+      for (j = 0; j < p; j++) for (k = 0; k < p; k++) nS[j][k] = T2[j][k] / n - nmu[j] * nmu[k];
+      var diff = 0;
+      for (j = 0; j < p; j++) { diff = Math.max(diff, Math.abs(nmu[j] - mu[j])); for (k = 0; k < p; k++) diff = Math.max(diff, Math.abs(nS[j][k] - S[j][k])); }
+      mu = nmu; S = ridge(nS, 1e-10);
+      if (diff < tol) { conv = true; break; }
+    }
+    return { mu: mu, sigma: S, iter: it + 1, converged: conv };
+  }
+
+  /* ---- Little の MCAR 検定 ---- */
+  function littleMCAR(data) {
+    var em = emMVN(data), p = data[0].length;
+    var pats = missPatterns(data), d2 = 0, df = 0, used = 0;
+    for (var t = 0; t < pats.length; t++) {
+      var pat = pats[t], O = [];
+      for (var j = 0; j < p; j++) if (pat.key[j] === '1') O.push(j);
+      if (!O.length) continue;
+      var nj = pat.rows.length;
+      var mb = O.map(function (o) { var s = 0; for (var i = 0; i < pat.rows.length; i++) s += data[pat.rows[i]][o]; return s / nj; });
+      var dvec = O.map(function (o, idx) { return mb[idx] - em.mu[o]; });
+      var Soo = inv(ridge(sub(em.sigma, O, O), 1e-10));
+      if (!Soo) continue;
+      var q = 0, a = mv(Soo, dvec);
+      for (var i2 = 0; i2 < O.length; i2++) q += dvec[i2] * a[i2];
+      d2 += nj * q; df += O.length; used++;
+    }
+    df -= p;
+    return { chi2: d2, df: df, p: df > 0 ? chisqP(d2, df) : NaN, patterns: used, em: em };
+  }
+
+  /* ---- ベイズ線形回帰からの抽出（norm/pmm 用） ---- */
+  function drawBeta(X, y, rng) {
+    var n = X.length, p = X[0].length;
+    var Xt = tr(X), XtX = ridge(mm(Xt, X), 1e-6), XtXi = inv(XtX);
+    if (!XtXi) return null;
+    var bhat = mv(mm(XtXi, Xt), y);
+    var fit = mv(X, bhat), ss = 0;
+    for (var i = 0; i < n; i++) ss += (y[i] - fit[i]) * (y[i] - fit[i]);
+    var df = Math.max(n - p, 1);
+    var g = rng.chisq(df); if (g <= 0) g = 1e-6;
+    var sigma = Math.sqrt(ss / g);
+    var L = chol(XtXi), z = [], j;
+    for (j = 0; j < p; j++) z.push(rng.norm());
+    var bstar = bhat.slice();
+    for (j = 0; j < p; j++) { var s = 0; for (var k2 = 0; k2 <= j; k2++) s += L[j][k2] * z[k2]; bstar[j] += sigma * s; }
+    return { bhat: bhat, bstar: bstar, sigma: sigma };
+  }
+
+  /* ---- MICE（連鎖方程式による多重代入） ---- */
+  function mice(data, opts) {
+    opts = opts || {};
+    var m = opts.m || 5, maxit = opts.maxit || 10, seed = opts.seed || 12345;
+    var methods = opts.methods;             // 列ごとの 'pmm'|'norm'|'logreg'|'sample'|''
+    var predictors = opts.predictors;       // 二値行列（p×p）省略時は全変数
+    var donors = opts.donors || 5;
+    var n = data.length, p = data[0].length, i, j, k;
+    var rng = RNG(seed);
+    var isMiss = [], obsIdx = [], misIdx = [];
+    for (j = 0; j < p; j++) { obsIdx.push([]); misIdx.push([]); }
+    for (i = 0; i < n; i++) { isMiss.push([]); for (j = 0; j < p; j++) { var mflag = data[i][j] === null; isMiss[i].push(mflag); (mflag ? misIdx[j] : obsIdx[j]).push(i); } }
+    if (!predictors) { predictors = zeros(p, p); for (j = 0; j < p; j++) for (k = 0; k < p; k++) predictors[j][k] = (j === k ? 0 : 1); }
+
+    var imps = [], trace = [];
+    for (var rep = 0; rep < m; rep++) {
+      // 初期値：観測値からの無作為抽出
+      var cur = [];
+      for (i = 0; i < n; i++) cur.push(data[i].slice());
+      for (j = 0; j < p; j++) {
+        if (!misIdx[j].length) continue;
+        if (!obsIdx[j].length) { for (i = 0; i < n; i++) cur[i][j] = 0; continue; }
+        for (k = 0; k < misIdx[j].length; k++) cur[misIdx[j][k]][j] = data[obsIdx[j][rng.int(obsIdx[j].length)]][j];
+      }
+      var tr1 = [];
+      for (var it = 0; it < maxit; it++) {
+        for (j = 0; j < p; j++) {
+          if (!misIdx[j].length) continue;
+          var meth = methods ? methods[j] : 'pmm';
+          if (!meth || meth === 'none') continue;
+          var preds = [];
+          for (k = 0; k < p; k++) if (predictors[j][k] && k !== j) preds.push(k);
+          if (meth === 'sample' || !preds.length) {
+            for (k = 0; k < misIdx[j].length; k++) cur[misIdx[j][k]][j] = data[obsIdx[j][rng.int(obsIdx[j].length)]][j];
+            continue;
+          }
+          var Xo = [], yo = [], Xm = [];
+          for (k = 0; k < obsIdx[j].length; k++) { var r = obsIdx[j][k], row = [1]; for (var q = 0; q < preds.length; q++) row.push(cur[r][preds[q]]); Xo.push(row); yo.push(data[r][j]); }
+          for (k = 0; k < misIdx[j].length; k++) { var r2 = misIdx[j][k], row2 = [1]; for (var q2 = 0; q2 < preds.length; q2++) row2.push(cur[r2][preds[q2]]); Xm.push(row2); }
+          if (meth === 'logreg') {
+            var lv = {}, levels = [];
+            for (k = 0; k < yo.length; k++) if (!(yo[k] in lv)) { lv[yo[k]] = 1; levels.push(yo[k]); }
+            levels.sort(function (a, b) { return a - b; });
+            if (levels.length !== 2) meth = 'pmm';
+            else {
+              var y01 = yo.map(function (v) { return v === levels[1] ? 1 : 0; });
+              var fit = logit(Xo, y01);
+              if (!fit) { meth = 'pmm'; }
+              else {
+                var L2 = chol(ridge(fit.cov, 1e-10)), bs = fit.beta.slice(), zz = [];
+                for (k = 0; k < bs.length; k++) zz.push(rng.norm());
+                for (k = 0; k < bs.length; k++) { var s2 = 0; for (var k3 = 0; k3 <= k; k3++) s2 += L2[k][k3] * zz[k3]; bs[k] += s2; }
+                for (k = 0; k < Xm.length; k++) {
+                  var eta = 0; for (var q3 = 0; q3 < bs.length; q3++) eta += bs[q3] * Xm[k][q3];
+                  var pr = 1 / (1 + Math.exp(-eta));
+                  cur[misIdx[j][k]][j] = rng.unif() < pr ? levels[1] : levels[0];
+                }
+                continue;
+              }
+            }
+          }
+          var dr = drawBeta(Xo, yo, rng);
+          if (!dr) { for (k = 0; k < misIdx[j].length; k++) cur[misIdx[j][k]][j] = data[obsIdx[j][rng.int(obsIdx[j].length)]][j]; continue; }
+          if (meth === 'norm') {
+            for (k = 0; k < Xm.length; k++) {
+              var yh = 0; for (var q4 = 0; q4 < dr.bstar.length; q4++) yh += dr.bstar[q4] * Xm[k][q4];
+              cur[misIdx[j][k]][j] = yh + dr.sigma * rng.norm();
+            }
+          } else { // pmm
+            var yhObs = [];
+            for (k = 0; k < Xo.length; k++) { var v1 = 0; for (var q5 = 0; q5 < dr.bhat.length; q5++) v1 += dr.bhat[q5] * Xo[k][q5]; yhObs.push(v1); }
+            for (k = 0; k < Xm.length; k++) {
+              var v2 = 0; for (var q6 = 0; q6 < dr.bstar.length; q6++) v2 += dr.bstar[q6] * Xm[k][q6];
+              var cand = [];
+              for (var t2 = 0; t2 < yhObs.length; t2++) cand.push({ i: t2, d: Math.abs(yhObs[t2] - v2) });
+              cand.sort(function (a, b) { return a.d - b.d; });
+              var dn = Math.min(donors, cand.length);
+              cur[misIdx[j][k]][j] = yo[cand[rng.int(dn)].i];
+            }
+          }
+        }
+        // トレース（各変数の代入値の平均・SD）
+        var tstat = [];
+        for (j = 0; j < p; j++) {
+          if (!misIdx[j].length) { tstat.push({ mean: NaN, sd: NaN }); continue; }
+          var vals = misIdx[j].map(function (r) { return cur[r][j]; });
+          tstat.push({ mean: mean(vals), sd: sd(vals) });
+        }
+        tr1.push(tstat);
+      }
+      imps.push(cur); trace.push(tr1);
+    }
+    return { imps: imps, trace: trace, m: m, maxit: maxit, misIdx: misIdx, obsIdx: obsIdx };
+  }
+
+  /* ---- Rubin の統合規則 ---- */
+  function pool(Q, U, dfCom) {
+    var m = Q.length, i;
+    var qb = mean(Q), ub = mean(U), b = 0;
+    for (i = 0; i < m; i++) b += (Q[i] - qb) * (Q[i] - qb);
+    b = m > 1 ? b / (m - 1) : 0;
+    var T = ub + (1 + 1 / m) * b;
+    var lambda = T > 0 ? ((1 + 1 / m) * b) / T : 0;
+    var r = ub > 0 ? ((1 + 1 / m) * b) / ub : 0;
+    var dfOld = m > 1 ? (m - 1) * Math.pow(1 + 1 / (r || 1e-12), 2) : 1e6;
+    var df;
+    if (dfCom && isFinite(dfCom)) {
+      var dfObs = ((dfCom + 1) / (dfCom + 3)) * dfCom * (1 - lambda);
+      df = 1 / (1 / dfOld + 1 / (dfObs || 1e-12));
+    } else df = dfOld;
+    if (!isFinite(df) || df <= 0) df = 1e6;
+    var se = Math.sqrt(T), t = qb / se;
+    var crit = tQ(0.05, df);
+    var fmi = (r + 2 / (df + 3)) / (r + 1);
+    return { est: qb, se: se, t: t, df: df, p: tP(t, df), lo: qb - crit * se, hi: qb + crit * se, fmi: fmi, lambda: lambda, riv: r, re: 1 / (1 + fmi / m), b: b, ub: ub, T: T };
+  }
+
+  return {
+    RNG: RNG, lgamma: lgamma, chisqP: chisqP, chisqCDF: chisqCDF, tP: tP, tQ: tQ, fP: fP,
+    normCDF: normCDF, normQ: normQ, zeros: zeros, eye: eye, tr: tr, mm: mm, mv: mv, inv: inv,
+    chol: chol, sub: sub, ridge: ridge, mean: mean, sd: sd, median: median, mad: mad,
+    quantile: quantile, alphaCoef: alphaCoef, ols: ols, logit: logit, missPatterns: missPatterns,
+    emMVN: emMVN, littleMCAR: littleMCAR, mice: mice, pool: pool
+  };
+})();
+
+</script>
+<script>
+'use strict';
+/* ============ 状態 ============ */
+var S = { cols: [], types: [], rows: [], recipe: [], undo: [], orig: null, second: null, flagged: null };
+var $ = function (id) { return document.getElementById(id); };
+var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+var fmt = function (v, d) { if (v === null || v === undefined || (typeof v === 'number' && !isFinite(v))) return '–'; return typeof v === 'number' ? (Math.abs(v) >= 1e5 || (Math.abs(v) < 1e-4 && v !== 0) ? v.toExponential(2) : (+v.toFixed(d === undefined ? 3 : d)).toString()) : String(v); };
+
+/* ============ 読み込み ============ */
+function detectSep(txt) {
+  var line = txt.split(/\r?\n/)[0] || '';
+  var cand = ['\t', ',', ';', '|'], best = ',', bn = 0;
+  cand.forEach(function (c) { var n = line.split(c).length; if (n > bn) { bn = n; best = c; } });
+  return best;
+}
+function parseCSV(txt, sep) {
+  var rows = [], row = [], cur = '', q = false, i;
+  txt = txt.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (i = 0; i < txt.length; i++) {
+    var c = txt[i];
+    if (q) {
+      if (c === '"') { if (txt[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === sep) { row.push(cur); cur = ''; }
+    else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(function (r) { return r.length > 1 || (r.length === 1 && r[0].trim() !== ''); });
+}
+function isNum(s) { return s !== '' && isFinite(Number(s)); }
+function loadData(txt) {
+  txt = txt.replace(/^\uFEFF/, '').trim();
+  if (!txt) { msg('loadMsg', 'データが空です。表を貼り付けるか、ファイルを選んでください。', 1); return; }
+  var sep = detectSep(txt);
+  var g = parseCSV(txt, sep);
+  if (g.length < 2) { msg('loadMsg', '2行以上（変数名の行＋データ行）が必要です。', 1); return; }
+  var natoks = $('natok').value.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s !== ''; });
+  var cols = g[0].map(function (c, i) { c = c.trim(); return c === '' ? 'V' + (i + 1) : c; });
+  var seen = {};
+  cols = cols.map(function (c) { if (seen[c]) { var k = 2; while (seen[c + '_' + k]) k++; c = c + '_' + k; } seen[c] = 1; return c; });
+  var body = g.slice(1).map(function (r) { var o = []; for (var j = 0; j < cols.length; j++) { var v = (r[j] === undefined ? '' : String(r[j]).trim()); o.push(natoks.indexOf(v) >= 0 || v === '' ? null : v); } return o; });
+  var types = cols.map(function (c, j) {
+    var n = 0, num = 0;
+    for (var i = 0; i < body.length; i++) if (body[i][j] !== null) { n++; if (isNum(body[i][j])) num++; }
+    return (n > 0 && num === n) ? 'num' : 'cat';
+  });
+  for (var j = 0; j < cols.length; j++) if (types[j] === 'num') for (var i = 0; i < body.length; i++) if (body[i][j] !== null) body[i][j] = Number(body[i][j]);
+  S.cols = cols; S.types = types; S.rows = body; S.recipe = []; S.undo = []; S.flagged = null;
+  S.orig = { cols: cols.slice(), types: types.slice(), rows: body.map(function (r) { return r.slice(); }) };
+  msg('loadMsg', body.length + ' 行 × ' + cols.length + ' 列を読み込みました。欠測は ' + countNA() + ' セルです。', 0);
+  enableAll(); refreshAll(); go('check');
+}
+function countNA() { var c = 0; for (var i = 0; i < S.rows.length; i++) for (var j = 0; j < S.cols.length; j++) if (S.rows[i][j] === null) c++; return c; }
+function msg(id, t, err) { $(id).innerHTML = '<div class="' + (err ? 'warnbox' : 'okbox') + '">' + esc(t) + '</div>'; }
+
+/* ============ レシピ ============ */
+function snapshot() { S.undo.push({ cols: S.cols.slice(), types: S.types.slice(), rows: S.rows.map(function (r) { return r.slice(); }), recipe: S.recipe.slice() }); if (S.undo.length > 30) S.undo.shift(); }
+function record(label, detail, rcode) { S.recipe.push({ label: label, detail: detail, r: rcode || '' }); drawRecipe(); }
+function drawRecipe() {
+  var box = $('slips');
+  if (!S.recipe.length) { box.innerHTML = '<div class="empty">まだ何もしていません。<br>ここに手順が1枚ずつ<br>積み上がっていきます。</div>'; }
+  else box.innerHTML = S.recipe.map(function (s, i) {
+    return '<div class="slip"><i>' + (i + 1) + '</i><b>' + esc(s.label) + '</b><span>' + esc(s.detail) + '</span></div>';
+  }).join('');
+  $('rcnt').textContent = S.recipe.length;
+  $('btnUndo').disabled = !S.undo.length;
+  $('dimN').textContent = S.rows.length; $('dimP').textContent = S.cols.length; $('dimNA').textContent = countNA();
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ============ 画面遷移 ============ */
+var TABS = ['load', 'check', 'shape', 'scale', 'out', 'recode', 'join', 'export'];
+function go(t) {
+  TABS.forEach(function (x) { $('p-' + x).classList.toggle('hide', x !== t); });
+  [].forEach.call($('nav').children, function (b) { b.classList.toggle('on', b.dataset.t === t); });
+  if (t === 'check') drawCheck();
+  if (t === 'export') drawExport();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+[].forEach.call($('nav').children, function (b) { b.onclick = function () { go(b.dataset.t); }; });
+function enableAll() { [].forEach.call($('nav').children, function (b) { b.disabled = false; }); }
+
+/* ============ 変数を見る ============ */
+function colVals(j, numeric) {
+  var a = [];
+  for (var i = 0; i < S.rows.length; i++) { var v = S.rows[i][j]; if (v !== null) a.push(numeric ? Number(v) : v); }
+  return a;
+}
+function drawCheck() {
+  var box = $('varCards'), h = '';
+  for (var j = 0; j < S.cols.length; j++) {
+    var vals = colVals(j, S.types[j] === 'num');
+    var nna = S.rows.length - vals.length, pna = S.rows.length ? nna / S.rows.length * 100 : 0;
+    var uniq = {}; vals.forEach(function (v) { uniq[v] = 1; });
+    var nu = Object.keys(uniq).length, st;
+    if (S.types[j] === 'num') {
+      var srt = vals.slice().sort(function (a, b) { return a - b; });
+      st = 'M=' + fmt(ST.mean(vals), 2) + ' SD=' + fmt(ST.sd(vals), 2) + '<br>範囲 ' + fmt(srt[0], 2) + ' – ' + fmt(srt[srt.length - 1], 2);
+    } else {
+      var top = Object.keys(uniq).slice(0, 3).join(' / ');
+      st = '水準 ' + nu + '：' + esc(top) + (nu > 3 ? ' …' : '');
+    }
+    h += '<div class="varcard"><div class="nm">' + esc(S.cols[j]) + ' <span class="ty' + (S.types[j] === 'cat' ? ' cat' : '') + '">' + (S.types[j] === 'num' ? '数値' : '分類') + '</span></div>' +
+      '<div class="st">' + st + '</div>' +
+      (S.types[j] === 'num' ? '<div class="spark">' + spark(vals) + '</div>' : '') +
+      '<div class="bar"><i style="width:' + pna.toFixed(1) + '%"></i></div>' +
+      '<div class="st">欠測 ' + nna + ' (' + pna.toFixed(1) + '%)・異なる値 ' + nu + '</div></div>';
+  }
+  box.innerHTML = h;
+  $('varTable').innerHTML = dataTable(60);
+  drawEdit();
+}
+function spark(vals) {
+  if (vals.length < 3) return '';
+  var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), k = 14, b = new Array(k).fill(0);
+  if (mx === mn) return '';
+  vals.forEach(function (v) { var i = Math.min(k - 1, Math.floor((v - mn) / (mx - mn) * k)); b[i]++; });
+  var m = Math.max.apply(null, b), w = 190 / k, h = '';
+  for (var i = 0; i < k; i++) { var hh = b[i] / m * 26; h += '<rect x="' + (i * w + .6) + '" y="' + (28 - hh) + '" width="' + (w - 1.2) + '" height="' + hh + '" fill="#0B6157" opacity=".78"/>'; }
+  return '<svg viewBox="0 0 190 30" width="100%" height="30">' + h + '</svg>';
+}
+function dataTable(limit) {
+  var n = Math.min(limit, S.rows.length), h = '<div class="tblwrap"><table><thead><tr><th class="rownum">#</th>';
+  S.cols.forEach(function (c, j) { h += '<th class="' + (S.types[j] === 'num' ? 'n' : '') + '">' + esc(c) + '</th>'; });
+  h += '</tr></thead><tbody>';
+  for (var i = 0; i < n; i++) {
+    h += '<tr><td class="rownum">' + (i + 1) + '</td>';
+    for (var j = 0; j < S.cols.length; j++) {
+      var v = S.rows[i][j];
+      var fl = S.flagged && S.flagged[i] && S.flagged[i][j];
+      h += '<td class="' + (v === null ? 'na' : (S.types[j] === 'num' ? 'n' : '')) + (fl ? ' flag' : '') + '">' + (v === null ? '欠測' : esc(v)) + '</td>';
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>' + (S.rows.length > n ? '<p class="note">先頭 ' + n + ' 行を表示しています（全 ' + S.rows.length + ' 行）。</p>' : '');
+  return h;
+}
+function drawEdit() {
+  var h = '<div class="tblwrap"><table><thead><tr><th>変数名</th><th>型</th><th>操作</th></tr></thead><tbody>';
+  S.cols.forEach(function (c, j) {
+    h += '<tr><td><input type="text" value="' + esc(c) + '" data-j="' + j + '" class="renm" style="width:170px"></td>' +
+      '<td><select data-j="' + j + '" class="rety"><option value="num"' + (S.types[j] === 'num' ? ' selected' : '') + '>数値</option><option value="cat"' + (S.types[j] === 'cat' ? ' selected' : '') + '>分類</option></select></td>' +
+      '<td><button class="btn ghost sm delc" data-j="' + j + '">この列を削除</button></td></tr>';
+  });
+  h += '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn" id="btnApplyEdit">名前と型を反映する</button></div><div id="editMsg"></div>';
+  $('varEdit').innerHTML = h;
+  $('btnApplyEdit').onclick = function () {
+    snapshot();
+    var chg = [];
+    [].forEach.call(document.querySelectorAll('.renm'), function (el) { var j = +el.dataset.j; if (el.value.trim() && el.value !== S.cols[j]) { chg.push(S.cols[j] + '→' + el.value.trim()); S.cols[j] = el.value.trim(); } });
+    [].forEach.call(document.querySelectorAll('.rety'), function (el) {
+      var j = +el.dataset.j;
+      if (el.value !== S.types[j]) {
+        S.types[j] = el.value;
+        for (var i = 0; i < S.rows.length; i++) if (S.rows[i][j] !== null) S.rows[i][j] = el.value === 'num' ? (isNum(S.rows[i][j]) ? Number(S.rows[i][j]) : null) : String(S.rows[i][j]);
+        chg.push(S.cols[j] + 'の型');
+      }
+    });
+    record('変数の整理', chg.length ? chg.join('、') : '変更なし', '');
+    refreshAll(); drawCheck(); msg('editMsg', '反映しました。', 0);
+  };
+  [].forEach.call(document.querySelectorAll('.delc'), function (el) {
+    el.onclick = function () {
+      var j = +el.dataset.j, nm = S.cols[j];
+      snapshot(); S.cols.splice(j, 1); S.types.splice(j, 1); S.rows.forEach(function (r) { r.splice(j, 1); });
+      record('列の削除', nm, 'dat <- dat %>% select(-`' + nm + '`)');
+      refreshAll(); drawCheck();
+    };
+  });
+}
+[].forEach.call($('checkTabs').children, function (b) {
+  b.onclick = function () {
+    [].forEach.call($('checkTabs').children, function (x) { x.classList.remove('on'); }); b.classList.add('on');
+    $('varCards').classList.toggle('hide', b.dataset.v !== 'cards');
+    $('varTable').classList.toggle('hide', b.dataset.v !== 'table');
+    $('varEdit').classList.toggle('hide', b.dataset.v !== 'edit');
+  };
+});
+
+/* ============ 変数ピッカー ============ */
+function picker(id, filter, multi) {
+  var el = $(id); if (!el) return;
+  var h = '';
+  S.cols.forEach(function (c, j) {
+    if (filter === 'num' && S.types[j] !== 'num') return;
+    if (filter === 'cat' && S.types[j] !== 'cat') return;
+    h += '<span class="chip ' + S.types[j] + '" data-j="' + j + '">' + esc(c) + '</span>';
+  });
+  el.innerHTML = h || '<span class="note">該当する変数がありません</span>';
+  [].forEach.call(el.querySelectorAll('.chip'), function (c) { c.onclick = function () { c.classList.toggle('on'); }; });
+}
+function picked(id) { return [].map.call($(id).querySelectorAll('.chip.on'), function (c) { return +c.dataset.j; }); }
+function fillSel(id, filter, empty) {
+  var el = $(id); if (!el) return;
+  var h = empty ? '<option value="-1">（なし）</option>' : '';
+  S.cols.forEach(function (c, j) {
+    if (filter === 'num' && S.types[j] !== 'num') return;
+    if (filter === 'cat' && S.types[j] !== 'cat') return;
+    h += '<option value="' + j + '">' + esc(c) + '</option>';
+  });
+  el.innerHTML = h;
+}
+function refreshAll() {
+  ['w2lId', 'w2lVal', 'l2wId', 'outPick', 'mapPick', 'strPick'].forEach(function (id) { picker(id); });
+  picker('revPick', 'num'); picker('cmpPick', 'num');
+  fillSel('l2wName'); fillSel('l2wValue'); fillSel('binVar', 'num'); fillSel('dumVar', 'cat');
+  fillSel('fVar'); fillSel('joinK1');
+  refDum(); drawRecipe();
+}
+
+/* ============ iii 形を変える ============ */
+[].forEach.call($('shapeTabs').children, function (b) {
+  b.onclick = function () {
+    [].forEach.call($('shapeTabs').children, function (x) { x.classList.remove('on'); }); b.classList.add('on');
+    $('sh-w2l').classList.toggle('hide', b.dataset.v !== 'w2l');
+    $('sh-l2w').classList.toggle('hide', b.dataset.v !== 'l2w');
+  };
+});
+$('btnW2L').onclick = function () {
+  var ids = picked('w2lId'), vals = picked('w2lVal');
+  if (!vals.length) { msg('shapeMsg', '縦に積む列を1つ以上選んでください。', 1); return; }
+  var nmCol = $('w2lName').value.trim() || '項目', vlCol = $('w2lValue').value.trim() || '値';
+  var valNames = vals.map(function (j) { return S.cols[j]; });
+  var split = $('w2lSplit').checked, sep = $('w2lSep').value || '_';
+  snapshot();
+  var ncols = ids.map(function (j) { return S.cols[j]; });
+  var ntypes = ids.map(function (j) { return S.types[j]; });
+  if (split) { ncols.push($('w2lN1').value.trim() || '要因1', $('w2lN2').value.trim() || '要因2'); ntypes.push('cat', 'cat'); }
+  else { ncols.push(nmCol); ntypes.push('cat'); }
+  ncols.push(vlCol); ntypes.push('num');
+  var out = [], drop = $('w2lDrop').checked, numAll = true;
+  for (var i = 0; i < S.rows.length; i++) {
+    for (var k = 0; k < vals.length; k++) {
+      var v = S.rows[i][vals[k]];
+      if (drop && v === null) continue;
+      var r = ids.map(function (j) { return S.rows[i][j]; });
+      var nm = S.cols[vals[k]];
+      if (split) { var p = nm.split(sep); r.push(p[0], p.slice(1).join(sep) || p[0]); }
+      else r.push(nm);
+      if (v !== null && typeof v !== 'number') numAll = false;
+      r.push(v); out.push(r);
+    }
+  }
+  if (!numAll) ntypes[ntypes.length - 1] = 'cat';
+  S.cols = ncols; S.types = ntypes; S.rows = out; S.flagged = null;
+  record('縦持ちに変換', vals.length + '列を積んで ' + out.length + '行に',
+    'dat <- dat %>% tidyr::pivot_longer(cols = c(' + valNames.map(function (n) { return '`' + n + '`'; }).join(', ') + '), names_to = "' + nmCol + '", values_to = "' + vlCol + '"' + (drop ? ', values_drop_na = TRUE' : '') + ')');
+  msg('shapeMsg', out.length + ' 行 × ' + ncols.length + ' 列になりました。', 0);
+  refreshAll();
+};
+$('btnL2W').onclick = function () {
+  var ids = picked('l2wId'), nj = +$('l2wName').value, vj = +$('l2wValue').value, agg = $('l2wAgg').value, pre = $('l2wPre').value;
+  if (!ids.length) { msg('shapeMsg', '行を決めるキー列を選んでください。', 1); return; }
+  if (ids.indexOf(nj) >= 0 || ids.indexOf(vj) >= 0) { msg('shapeMsg', 'キー列と名前・値の列は分けてください。', 1); return; }
+  snapshot();
+  var names = [], nseen = {}, keys = [], kseen = {}, i;
+  for (i = 0; i < S.rows.length; i++) {
+    var nv = S.rows[i][nj]; if (nv !== null && !nseen[nv]) { nseen[nv] = 1; names.push(nv); }
+    var kk = ids.map(function (j) { return S.rows[i][j]; }).join('\u0001');
+    if (!kseen[kk]) { kseen[kk] = { key: ids.map(function (j) { return S.rows[i][j]; }), cells: {} }; keys.push(kk); }
+  }
+  for (i = 0; i < S.rows.length; i++) {
+    var kk2 = ids.map(function (j) { return S.rows[i][j]; }).join('\u0001'), nv2 = S.rows[i][nj], val = S.rows[i][vj];
+    if (nv2 === null) continue;
+    var cell = kseen[kk2].cells; if (!cell[nv2]) cell[nv2] = [];
+    cell[nv2].push(val);
+  }
+  var ncols = ids.map(function (j) { return S.cols[j]; }).concat(names.map(function (n) { return pre + n; }));
+  var ntypes = ids.map(function (j) { return S.types[j]; });
+  var out = keys.map(function (kk) {
+    var o = kseen[kk].key.slice();
+    names.forEach(function (n) {
+      var a = kseen[kk].cells[n];
+      if (!a || !a.length) { o.push(null); return; }
+      var nums = a.filter(function (x) { return x !== null; });
+      if (agg === 'first') o.push(a[0]);
+      else if (agg === 'last') o.push(a[a.length - 1]);
+      else if (agg === 'count') o.push(nums.length);
+      else if (agg === 'sum') o.push(nums.length ? nums.reduce(function (x, y) { return x + Number(y); }, 0) : null);
+      else o.push(nums.length ? nums.reduce(function (x, y) { return x + Number(y); }, 0) / nums.length : null);
+    });
+    return o;
+  });
+  names.forEach(function (n, k) {
+    var allnum = true;
+    for (var i2 = 0; i2 < out.length; i2++) { var v = out[i2][ids.length + k]; if (v !== null && !isNum(v)) allnum = false; }
+    ntypes.push(allnum ? 'num' : 'cat');
+    if (allnum) for (var i3 = 0; i3 < out.length; i3++) if (out[i3][ids.length + k] !== null) out[i3][ids.length + k] = Number(out[i3][ids.length + k]);
+  });
+  var vnm = S.cols[vj], nnm = S.cols[nj];
+  S.cols = ncols; S.types = ntypes; S.rows = out; S.flagged = null;
+  record('横持ちに変換', nnm + ' を列に展開（' + names.length + '列・' + out.length + '行）',
+    'dat <- dat %>% tidyr::pivot_wider(names_from = `' + nnm + '`, values_from = `' + vnm + '`' + (agg === 'first' ? '' : ', values_fn = ' + (agg === 'mean' ? 'mean' : agg === 'sum' ? 'sum' : 'length')) + ')');
+  msg('shapeMsg', out.length + ' 行 × ' + ncols.length + ' 列になりました。', 0);
+  refreshAll();
+};
+
+/* ============ iv 逆転・合成 ============ */
+$('btnRevGuess').onclick = function () {
+  var js = picked('revPick');
+  if (js.length < 3) {
+    js = [];
+    for (var j = 0; j < S.cols.length; j++) {
+      if (S.types[j] !== 'num') continue;
+      var u = {}, nu = 0, allint = true;
+      for (var i = 0; i < S.rows.length; i++) { var v = S.rows[i][j]; if (v === null) continue; if (v !== Math.round(v)) allint = false; if (!u[v]) { u[v] = 1; nu++; } }
+      if (allint && nu >= 2 && nu <= 11) js.push(j);   // 評定尺度らしい列だけを対象にする
+    }
+  }
+  if (js.length < 3) { msg('revMsg', '評定尺度らしい数値変数が3つ以上見つかりません。項目を自分で選んでから実行してください。', 1); return; }
+  var rows = S.rows.filter(function (r) { return js.every(function (j) { return r[j] !== null; }); });
+  if (rows.length < 5) { msg('revMsg', '完全な回答が5行以上必要です。', 1); return; }
+  var tot = rows.map(function (r) { return js.reduce(function (s, j) { return s + r[j]; }, 0); });
+  var neg = [];
+  js.forEach(function (j) {
+    var col = rows.map(function (r) { return r[j]; });
+    var rest = rows.map(function (r, i) { return tot[i] - r[j]; });
+    var mc = ST.mean(col), mr = ST.mean(rest), sc = ST.sd(col), sr = ST.sd(rest), s = 0;
+    for (var i = 0; i < col.length; i++) s += (col[i] - mc) * (rest[i] - mr);
+    var r0 = s / (col.length - 1) / (sc * sr);
+    if (r0 < 0) neg.push({ j: j, r: r0 });
+  });
+  if (!neg.length) { msg('revMsg', '他の項目と負に相関する項目は見つかりませんでした（' + js.length + '項目を検討）。逆転項目はないかもしれません。', 0); return; }
+  [].forEach.call($('revPick').querySelectorAll('.chip'), function (c) { if (neg.some(function (x) { return x.j === +c.dataset.j; })) c.classList.add('on'); });
+  msg('revMsg', '他項目合計と負に相関する項目を選びました：' + neg.map(function (x) { return S.cols[x.j] + '（r=' + fmt(x.r, 2) + '）'; }).join('、') + '。内容を確認してから逆転してください。', 0);
+};
+$('btnRev').onclick = function () {
+  var js = picked('revPick'); if (!js.length) { msg('revMsg', '逆転する項目を選んでください。', 1); return; }
+  var mn = Number($('revMin').value), mx = Number($('revMax').value), mode = $('revMode').value;
+  if (!isFinite(mn) || !isFinite(mx) || mx <= mn) { msg('revMsg', '尺度の最小値・最大値を正しく入れてください。', 1); return; }
+  var bad = [];
+  js.forEach(function (j) { for (var i = 0; i < S.rows.length; i++) { var v = S.rows[i][j]; if (v !== null && (v < mn || v > mx)) { bad.push(S.cols[j]); break; } } });
+  snapshot();
+  js.forEach(function (j) {
+    if (mode === 'new') {
+      S.cols.push(S.cols[j] + '_r'); S.types.push('num');
+      for (var i = 0; i < S.rows.length; i++) S.rows[i].push(S.rows[i][j] === null ? null : mn + mx - S.rows[i][j]);
+    } else for (var i2 = 0; i2 < S.rows.length; i2++) if (S.rows[i2][j] !== null) S.rows[i2][j] = mn + mx - S.rows[i2][j];
+  });
+  var nms = js.map(function (j) { return S.cols[j]; });
+  record('逆転項目の処理', nms.join('、') + '（' + mn + '+' + mx + '−x）',
+    'rev <- c(' + nms.map(function (n) { return '"' + n + '"'; }).join(', ') + ')\ndat[rev] <- ' + (mn + mx) + ' - dat[rev]');
+  msg('revMsg', js.length + ' 項目を逆転しました。' + (bad.length ? '【注意】' + bad.join('、') + ' に尺度の範囲外の値があります。' : ''), bad.length ? 1 : 0);
+  refreshAll();
+};
+function alphaOf(js) {
+  var mat = [];
+  for (var i = 0; i < S.rows.length; i++) { var ok = true, r = []; for (var k = 0; k < js.length; k++) { var v = S.rows[i][js[k]]; if (v === null) { ok = false; break; } r.push(Number(v)); } if (ok) mat.push(r); }
+  return { a: mat.length > 2 ? ST.alphaCoef(mat) : NaN, n: mat.length, mat: mat };
+}
+$('btnAlpha').onclick = function () {
+  var js = picked('cmpPick'); if (js.length < 2) { msg('cmpMsg', '2項目以上を選んでください。', 1); return; }
+  var r = alphaOf(js);
+  var h = '<div class="okbox">α = <b>' + fmt(r.a, 3) + '</b>（' + js.length + '項目・完全回答 ' + r.n + '名）</div>';
+  if (js.length > 2) {
+    h += '<div class="tblwrap"><table><thead><tr><th>除いた項目</th><th class="n">残りのα</th><th class="n">I-T相関</th></tr></thead><tbody>';
+    var tot = r.mat.map(function (row) { return row.reduce(function (a, b) { return a + b; }, 0); });
+    js.forEach(function (j, k) {
+      var sub = r.mat.map(function (row) { return row.filter(function (_, q) { return q !== k; }); });
+      var col = r.mat.map(function (row) { return row[k]; }), rest = r.mat.map(function (row, i) { return tot[i] - row[k]; });
+      var mc = ST.mean(col), mr = ST.mean(rest), s = 0;
+      for (var i = 0; i < col.length; i++) s += (col[i] - mc) * (rest[i] - mr);
+      var rit = s / (col.length - 1) / (ST.sd(col) * ST.sd(rest));
+      h += '<tr><td>' + esc(S.cols[j]) + '</td><td class="n">' + fmt(ST.alphaCoef(sub), 3) + '</td><td class="n">' + fmt(rit, 3) + '</td></tr>';
+    });
+    h += '</tbody></table></div><p class="note">「残りのα」が元のαより大きい項目は、内容を見直す候補です。</p>';
+  }
+  $('cmpMsg').innerHTML = h;
+};
+$('btnCmp').onclick = function () {
+  var js = picked('cmpPick'); if (js.length < 2) { msg('cmpMsg', '2項目以上を選んでください。', 1); return; }
+  var nm = $('cmpName').value.trim() || '合成得点', agg = $('cmpAgg').value, allow = Math.max(0, +$('cmpMiss').value || 0);
+  if (S.cols.indexOf(nm) >= 0) { msg('cmpMsg', '同じ名前の変数がすでにあります。別の名前にしてください。', 1); return; }
+  var r = alphaOf(js);
+  snapshot();
+  S.cols.push(nm); S.types.push('num');
+  var made = 0;
+  for (var i = 0; i < S.rows.length; i++) {
+    var vs = [], nna = 0;
+    js.forEach(function (j) { var v = S.rows[i][j]; if (v === null) nna++; else vs.push(Number(v)); });
+    if (nna > allow || !vs.length) { S.rows[i].push(null); continue; }
+    var s = vs.reduce(function (a, b) { return a + b; }, 0);
+    S.rows[i].push(agg === 'mean' ? s / vs.length : s * (nna ? js.length / vs.length : 1));
+    made++;
+  }
+  var nms = js.map(function (j) { return S.cols[j]; });
+  record('合成得点の作成', nm + '＝' + nms.length + '項目の' + (agg === 'mean' ? '平均' : '合計') + '（α=' + fmt(r.a, 3) + '）',
+    'items <- c(' + nms.map(function (n) { return '"' + n + '"'; }).join(', ') + ')\n' +
+    'dat$`' + nm + '` <- ' + (agg === 'mean' ? 'rowMeans' : 'rowSums') + '(dat[items], na.rm = ' + (allow > 0) + ')\n' +
+    'psych::alpha(dat[items])');
+  msg('cmpMsg', nm + ' を作りました（' + made + ' 名に得点が入りました）。α = ' + fmt(r.a, 3) + '。', 0);
+  refreshAll();
+};
+
+/* ============ v 外れ値 ============ */
+$('btnDetect').onclick = function () {
+  var js = picked('outPick').filter(function (j) { return S.types[j] === 'num'; });
+  if (!js.length) { msg('outResult', '数値変数を1つ以上選んでください。', 1); return; }
+  var method = $('outMethod').value, thr = Number($('outThr').value);
+  var flags = S.rows.map(function () { return {}; }), list = [], bounds = {};
+  if (method === 'maha') {
+    if (js.length < 2) { msg('outResult', 'マハラノビス距離には2変数以上が必要です。', 1); return; }
+    var comp = [], idx = [];
+    for (var i = 0; i < S.rows.length; i++) { var ok = true, r = []; js.forEach(function (j) { if (S.rows[i][j] === null) ok = false; else r.push(Number(S.rows[i][j])); }); if (ok) { comp.push(r); idx.push(i); } }
+    if (comp.length < js.length + 2) { msg('outResult', '完全な行が足りません。', 1); return; }
+    var p = js.length, mu = [], Sg = ST.zeros(p, p), a, b2;
+    for (a = 0; a < p; a++) mu.push(ST.mean(comp.map(function (r) { return r[a]; })));
+    for (a = 0; a < p; a++) for (b2 = 0; b2 < p; b2++) { var s = 0; for (var i2 = 0; i2 < comp.length; i2++) s += (comp[i2][a] - mu[a]) * (comp[i2][b2] - mu[b2]); Sg[a][b2] = s / (comp.length - 1); }
+    var Si = ST.inv(ST.ridge(Sg, 1e-10));
+    var crit = chiCrit(p, 0.001);
+    comp.forEach(function (r, k) {
+      var d = r.map(function (v, a2) { return v - mu[a2]; }), z = ST.mv(Si, d), d2 = 0;
+      for (var a3 = 0; a3 < p; a3++) d2 += d[a3] * z[a3];
+      if (d2 > crit) { js.forEach(function (j) { flags[idx[k]][j] = 1; }); list.push({ i: idx[k], j: -1, v: d2 }); }
+    });
+    bounds.txt = 'χ²(' + p + ') の上側0.1%点 = ' + fmt(crit, 2) + ' を超える行';
+  } else {
+    js.forEach(function (j) {
+      var v = colVals(j, true), lo, hi;
+      if (method === 'z') { var m = ST.mean(v), s = ST.sd(v); lo = m - thr * s; hi = m + thr * s; }
+      else if (method === 'mad') { var md = ST.median(v), mm2 = ST.mad(v); if (!mm2) { mm2 = 1e-9; } lo = md - thr * mm2; hi = md + thr * mm2; }
+      else { var srt = v.slice().sort(function (x, y) { return x - y; }), q1 = ST.quantile(srt, .25), q3 = ST.quantile(srt, .75), iq = q3 - q1; lo = q1 - thr * iq; hi = q3 + thr * iq; }
+      bounds[j] = [lo, hi];
+      for (var i = 0; i < S.rows.length; i++) { var x = S.rows[i][j]; if (x !== null && (x < lo || x > hi)) { flags[i][j] = 1; list.push({ i: i, j: j, v: x }); } }
+    });
+  }
+  S.flagged = flags; S.outCtx = { js: js, method: method, thr: thr, bounds: bounds, list: list };
+  var h = '';
+  if (!list.length) h += '<div class="okbox">この基準では外れ値は見つかりませんでした。</div>';
+  else {
+    h += '<div class="warnbox">' + list.length + ' 件を検出しました' + (method === 'maha' ? '（' + bounds.txt + '）' : '') + '。次の処理を選べます。</div>';
+    h += '<div class="tblwrap"><table><thead><tr><th class="n">行</th><th>変数</th><th class="n">値</th><th>基準の範囲</th></tr></thead><tbody>';
+    list.slice(0, 200).forEach(function (o) {
+      h += '<tr><td class="n">' + (o.i + 1) + '</td><td>' + (o.j < 0 ? '（複数変数）' : esc(S.cols[o.j])) + '</td><td class="n">' + fmt(o.v, 3) + '</td><td>' +
+        (o.j < 0 ? bounds.txt : fmt(bounds[o.j][0], 2) + ' 〜 ' + fmt(bounds[o.j][1], 2)) + '</td></tr>';
+    });
+    h += '</tbody></table></div>' + (list.length > 200 ? '<p class="note">先頭200件を表示しています。</p>' : '');
+    h += '<div class="row" style="margin-top:12px"><div class="fld"><label>処理</label><select id="outAct">' +
+      '<option value="na">欠測にする（あとで代入できる）</option>' +
+      '<option value="win">境界の値に置き換える（ウィンザー化）</option>' +
+      '<option value="row">その行をデータから外す</option></select></div>' +
+      '<div class="fld"><label>&nbsp;</label><button class="btn warn" id="btnApplyOut">この処理を適用する</button></div>' +
+      '<div class="fld"><label>&nbsp;</label><button class="btn ghost" id="btnClearFlag">印だけ消す</button></div></div>';
+  }
+  $('outResult').innerHTML = h;
+  if (list.length) {
+    $('btnApplyOut').onclick = applyOut;
+    $('btnClearFlag').onclick = function () { S.flagged = null; $('outResult').innerHTML = '<div class="okbox">印を消しました。データは変えていません。</div>'; };
+  }
+};
+function chiCrit(df, alpha) { var lo = 0, hi = 200; for (var i = 0; i < 200; i++) { var m = (lo + hi) / 2; if (ST.chisqP(m, df) > alpha) lo = m; else hi = m; } return (lo + hi) / 2; }
+function applyOut() {
+  var act = $('outAct').value, ctx = S.outCtx, n0 = S.rows.length, cnt = 0;
+  snapshot();
+  if (act === 'row') {
+    var drop = {}; ctx.list.forEach(function (o) { drop[o.i] = 1; });
+    S.rows = S.rows.filter(function (_, i) { return !drop[i]; });
+    cnt = n0 - S.rows.length;
+  } else {
+    ctx.list.forEach(function (o) {
+      if (o.j < 0) { ctx.js.forEach(function (j) { S.rows[o.i][j] = null; cnt++; }); return; }
+      if (act === 'na') { S.rows[o.i][o.j] = null; cnt++; }
+      else { var b = ctx.bounds[o.j]; S.rows[o.i][o.j] = S.rows[o.i][o.j] < b[0] ? b[0] : b[1]; cnt++; }
+    });
+  }
+  var mn = { z: '標準得点', mad: 'ロバスト標準得点', iqr: '四分位範囲', maha: 'マハラノビス距離' }[ctx.method];
+  var an = { na: '欠測化', win: 'ウィンザー化', row: '行の除外' }[act];
+  S.flagged = null;
+  record('外れ値の処理', mn + '（基準 ' + ctx.thr + '）で検出 → ' + an + '：' + cnt + (act === 'row' ? ' 行' : ' セル'),
+    ctx.method === 'iqr' ? '# 四分位範囲による外れ値処理\nfor (v in c(' + ctx.js.map(function (j) { return '"' + S.cols[j] + '"'; }).join(', ') + ')) {\n  q <- quantile(dat[[v]], c(.25,.75), na.rm = TRUE); iq <- q[2]-q[1]\n  lo <- q[1]-' + ctx.thr + '*iq; hi <- q[2]+' + ctx.thr + '*iq\n  dat[[v]][dat[[v]] < lo | dat[[v]] > hi] <- ' + (act === 'na' ? 'NA' : 'pmin(pmax(dat[[v]], lo), hi)') + '\n}'
+      : '# ' + mn + 'による外れ値処理（基準 ' + ctx.thr + '）');
+  msg('outResult', an + 'を適用しました（' + cnt + (act === 'row' ? ' 行を除外' : ' セル') + '）。', 0);
+  refreshAll();
+}
+
+/* ============ vi 値を変える ============ */
+[].forEach.call($('recTabs').children, function (b) {
+  b.onclick = function () {
+    [].forEach.call($('recTabs').children, function (x) { x.classList.remove('on'); }); b.classList.add('on');
+    ['map', 'bin', 'dum', 'str', 'filt'].forEach(function (v) { $('rc-' + v).classList.toggle('hide', v !== b.dataset.v); });
+  };
+});
+$('btnMap').onclick = function () {
+  var js = picked('mapPick'); if (!js.length) { alert('対象の変数を選んでください。'); return; }
+  var rules = [], other = null;
+  $('mapRules').value.split(/\n/).forEach(function (ln) {
+    ln = ln.trim(); if (!ln) return;
+    var m = ln.split(/\s*(?:=|=>|->|→)\s*/);
+    if (m.length < 2) return;
+    var from = m[0].trim(), to = m.slice(1).join('=').trim();
+    var tv = to === 'NA' ? null : (isNum(to) ? Number(to) : to);
+    if (from === '*') other = { to: tv }; else rules.push({ from: from, to: tv });
+  });
+  if (!rules.length && !other) { alert('置き換えの規則を1行以上書いてください。'); return; }
+  snapshot();
+  var mode = $('mapMode').value, nchg = 0;
+  js.forEach(function (j) {
+    var tgt = j;
+    if (mode === 'new') { S.cols.push(S.cols[j] + '_c'); S.types.push(S.types[j]); tgt = S.cols.length - 1; for (var i = 0; i < S.rows.length; i++) S.rows[i].push(S.rows[i][j]); }
+    for (var i2 = 0; i2 < S.rows.length; i2++) {
+      var v = S.rows[i2][j], sv = v === null ? 'NA' : String(v), hit = false;
+      for (var k = 0; k < rules.length; k++) if (String(rules[k].from) === sv) { S.rows[i2][tgt] = rules[k].to; nchg++; hit = true; break; }
+      if (!hit && other) { S.rows[i2][tgt] = other.to; nchg++; }
+    }
+    var allnum = true;
+    for (var i3 = 0; i3 < S.rows.length; i3++) { var x = S.rows[i3][tgt]; if (x !== null && !isNum(x)) allnum = false; }
+    S.types[tgt] = allnum ? 'num' : 'cat';
+    if (allnum) for (var i4 = 0; i4 < S.rows.length; i4++) if (S.rows[i4][tgt] !== null) S.rows[i4][tgt] = Number(S.rows[i4][tgt]);
+  });
+  record('値の置き換え', js.map(function (j) { return S.cols[j]; }).join('、') + '：' + rules.map(function (r) { return r.from + '→' + (r.to === null ? 'NA' : r.to); }).join('、') + '（' + nchg + 'セル）',
+    'dat <- dat %>% mutate(across(c(' + js.map(function (j) { return '`' + S.cols[j] + '`'; }).join(', ') + '), ~ dplyr::recode(., ' + rules.map(function (r) { return '`' + r.from + '` = ' + (r.to === null ? 'NA' : (typeof r.to === 'number' ? r.to : '"' + r.to + '"')); }).join(', ') + ')))');
+  alert(nchg + ' セルを置き換えました。');
+  refreshAll(); 
+};
+$('binVar').onchange = function () { $('binName').value = (S.cols[+this.value] || '') + '_群'; };
+$('btnBin').onclick = function () {
+  var j = +$('binVar').value; if (!(j >= 0)) { msg('binMsg', '対象の変数を選んでください。', 1); return; }
+  var type = $('binType').value, k = Math.max(2, +$('binK').value || 3);
+  var v = colVals(j, true).sort(function (a, b) { return a - b; });
+  if (v.length < 4) { msg('binMsg', 'データが足りません。', 1); return; }
+  var cuts = [];
+  if (type === 'q') { for (var q = 1; q < k; q++) cuts.push(ST.quantile(v, q / k)); }
+  else if (type === 'w') { var mn = v[0], mx = v[v.length - 1]; for (var q2 = 1; q2 < k; q2++) cuts.push(mn + (mx - mn) * q2 / k); }
+  else if (type === 'med') { cuts = [ST.median(v)]; k = 2; }
+  else { cuts = $('binCuts').value.split(',').map(function (s) { return Number(s.trim()); }).filter(function (x) { return isFinite(x); }); k = cuts.length + 1; }
+  if (!cuts.length) { msg('binMsg', '区切り値を決められませんでした。', 1); return; }
+  cuts.sort(function (a, b) { return a - b; });
+  var labs = $('binLab').value.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; });
+  if (labs.length !== k) { labs = []; for (var q3 = 0; q3 < k; q3++) labs.push(k === 2 ? ['低群', '高群'][q3] : k === 3 ? ['低群', '中群', '高群'][q3] : '第' + (q3 + 1) + '群'); }
+  var nm = $('binName').value.trim() || (S.cols[j] + '_群');
+  snapshot();
+  S.cols.push(nm); S.types.push('cat');
+  var cnt = new Array(k).fill(0);
+  for (var i = 0; i < S.rows.length; i++) {
+    var x = S.rows[i][j];
+    if (x === null) { S.rows[i].push(null); continue; }
+    var g = 0; while (g < cuts.length && x > cuts[g]) g++;
+    S.rows[i].push(labs[g]); cnt[g]++;
+  }
+  record('数値をカテゴリに', S.cols[j] + ' → ' + nm + '（' + labs.join('/') + '・' + cnt.join('/') + '名）',
+    'dat$`' + nm + '` <- cut(dat$`' + S.cols[j] + '`, breaks = c(-Inf, ' + cuts.map(function (c) { return fmt(c, 4); }).join(', ') + ', Inf), labels = c(' + labs.map(function (l) { return '"' + l + '"'; }).join(', ') + '))');
+  msg('binMsg', nm + ' を作りました。区切り値 ' + cuts.map(function (c) { return fmt(c, 3); }).join(' / ') + '、人数 ' + cnt.join(' / ') + '。', 0);
+  refreshAll();
+};
+function refDum() {
+  var j = +($('dumVar').value); var el = $('dumRef'); if (!el) return;
+  if (!(j >= 0)) { el.innerHTML = ''; return; }
+  var u = {}, lv = [];
+  S.rows.forEach(function (r) { if (r[j] !== null && !u[r[j]]) { u[r[j]] = 1; lv.push(r[j]); } });
+  lv.sort();
+  el.innerHTML = lv.map(function (l) { return '<option value="' + esc(l) + '">' + esc(l) + '</option>'; }).join('');
+  $('dumPre').value = (S.cols[j] || '') + '_';
+}
+$('dumVar').onchange = refDum;
+$('btnDum').onclick = function () {
+  var j = +$('dumVar').value; if (!(j >= 0)) { msg('dumMsg', '対象の変数を選んでください。', 1); return; }
+  var ref = $('dumRef').value, pre = $('dumPre').value;
+  var u = {}, lv = [];
+  S.rows.forEach(function (r) { if (r[j] !== null && !u[r[j]]) { u[r[j]] = 1; lv.push(r[j]); } });
+  lv.sort();
+  if (lv.length > 20) { msg('dumMsg', '水準が20を超えています。カテゴリをまとめてから実行してください。', 1); return; }
+  snapshot();
+  var made = [];
+  lv.forEach(function (l) {
+    if (String(l) === String(ref)) return;
+    var nm = pre + l; S.cols.push(nm); S.types.push('num'); made.push(nm);
+    for (var i = 0; i < S.rows.length; i++) S.rows[i].push(S.rows[i][j] === null ? null : (String(S.rows[i][j]) === String(l) ? 1 : 0));
+  });
+  var src = S.cols[j];
+  if (!$('dumKeep').checked) { S.cols.splice(j, 1); S.types.splice(j, 1); S.rows.forEach(function (r) { r.splice(j, 1); }); }
+  record('ダミー変数の作成', src + ' → ' + made.join('、') + '（基準：' + ref + '）',
+    'dat$`' + src + '` <- relevel(factor(dat$`' + src + '`), ref = "' + ref + '")\n# 回帰分析では factor のまま投入すれば自動でダミー化されます');
+  msg('dumMsg', made.length + ' 本のダミー変数を作りました。基準は「' + ref + '」です。', 0);
+  refreshAll();
+};
+$('btnStr').onclick = function () {
+  var js = picked('strPick'); if (!js.length) { msg('strMsg', '対象の変数を選んでください。', 1); return; }
+  var op = $('strOp').value; snapshot();
+  var n = 0;
+  js.forEach(function (j) {
+    for (var i = 0; i < S.rows.length; i++) {
+      var v = S.rows[i][j]; if (v === null) continue;
+      var s = String(v), o = s;
+      if (op === 'trim') o = s.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '');
+      else if (op === 'all') o = s.replace(/[\s\u3000]/g, '');
+      else if (op === 'z2h') o = s.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/\u3000/g, ' ');
+      else if (op === 'lower') o = s.toLowerCase();
+      else if (op === 'upper') o = s.toUpperCase();
+      else if (op === 'num') { var t = s.replace(/[０-９．－]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[,\s]/g, ''); o = isNum(t) ? Number(t) : null; }
+      if (String(o) !== s) n++;
+      S.rows[i][j] = o;
+    }
+    if (op === 'num') { var allnum = true; for (var i2 = 0; i2 < S.rows.length; i2++) { var x = S.rows[i2][j]; if (x !== null && typeof x !== 'number') allnum = false; } S.types[j] = allnum ? 'num' : 'cat'; }
+  });
+  var lbl = { trim: '前後の空白を除去', all: '空白をすべて除去', z2h: '全角→半角', lower: '小文字化', upper: '大文字化', num: '数値へ変換' }[op];
+  record('文字の整形', js.map(function (j) { return S.cols[j]; }).join('、') + '：' + lbl + '（' + n + 'セル）', '');
+  msg('strMsg', lbl + 'を適用しました（変化 ' + n + ' セル）。', 0);
+  refreshAll();
+};
+$('btnFilt').onclick = function () {
+  var j = +$('fVar').value, op = $('fOp').value, val = $('fVal').value.trim(), act = $('fAct').value;
+  if (!(j >= 0)) { msg('filtMsg', '変数を選んでください。', 1); return; }
+  var num = S.types[j] === 'num', vv = num ? Number(val) : val;
+  var test = function (x) {
+    if (op === 'isna') return x === null;
+    if (op === 'notna') return x !== null;
+    if (x === null) return false;
+    if (op === 'has') return String(x).indexOf(val) >= 0;
+    if (num) { var y = Number(x); return op === '==' ? y === vv : op === '!=' ? y !== vv : op === '>' ? y > vv : op === '>=' ? y >= vv : op === '<' ? y < vv : y <= vv; }
+    return op === '==' ? String(x) === val : op === '!=' ? String(x) !== val : String(x).localeCompare(val) * (op === '>' || op === '>=' ? 1 : -1) > 0;
+  };
+  snapshot();
+  var n0 = S.rows.length;
+  S.rows = S.rows.filter(function (r) { var t = test(r[j]); return act === 'keep' ? t : !t; });
+  var lbl = { '==': '＝', '!=': '≠', '>': '＞', '>=': '≧', '<': '＜', '<=': '≦', isna: 'が欠測', notna: 'が欠測でない', has: 'を含む' }[op];
+  record('行の絞り込み', S.cols[j] + ' ' + lbl + ' ' + (op === 'isna' || op === 'notna' ? '' : val) + ' を' + (act === 'keep' ? '残す' : '落とす') + '（' + n0 + '→' + S.rows.length + '行）',
+    'dat <- dat %>% filter(' + (act === 'keep' ? '' : '!(') +
+    (op === 'isna' ? 'is.na(`' + S.cols[j] + '`)' :
+      op === 'notna' ? '!is.na(`' + S.cols[j] + '`)' :
+        op === 'has' ? 'grepl("' + val + '", `' + S.cols[j] + '`)' :
+          '`' + S.cols[j] + '` ' + op + ' ' + (num ? val : '"' + val + '"')) +
+    (act === 'keep' ? '' : ')') + ')');
+  msg('filtMsg', n0 + ' 行 → ' + S.rows.length + ' 行になりました（' + (n0 - S.rows.length) + ' 行を除外）。', 0);
+  refreshAll();
+};
+$('btnDedup').onclick = function () {
+  snapshot(); var seen = {}, n0 = S.rows.length;
+  S.rows = S.rows.filter(function (r) { var k = r.map(function (v) { return v === null ? '\u0000' : v; }).join('\u0001'); if (seen[k]) return false; seen[k] = 1; return true; });
+  record('重複行の削除', n0 + '→' + S.rows.length + '行', 'dat <- dplyr::distinct(dat)');
+  msg('miscMsg', (n0 - S.rows.length) + ' 行の重複を取り除きました。', 0); refreshAll();
+};
+$('btnDropAllNA').onclick = function () {
+  snapshot(); var n0 = S.rows.length;
+  S.rows = S.rows.filter(function (r) { return r.some(function (v) { return v !== null; }); });
+  record('空行の削除', n0 + '→' + S.rows.length + '行', 'dat <- dat[rowSums(!is.na(dat)) > 0, ]');
+  msg('miscMsg', (n0 - S.rows.length) + ' 行を取り除きました。', 0); refreshAll();
+};
+$('btnListwise').onclick = function () {
+  snapshot(); var n0 = S.rows.length;
+  S.rows = S.rows.filter(function (r) { return r.every(function (v) { return v !== null; }); });
+  record('リストワイズ除去', n0 + '→' + S.rows.length + '行（' + (n0 - S.rows.length) + '行を除外）', 'dat <- na.omit(dat)');
+  msg('miscMsg', (n0 - S.rows.length) + ' 行を取り除きました。欠測の理由によっては偏りが生じます。「欠測データラボ」での代入も検討してください。', 0);
+  refreshAll();
+};
+
+/* ============ vii 結ぶ ============ */
+$('btnJoinRead').onclick = function () {
+  var txt = $('joinRaw').value.trim();
+  if (!txt) { msg('joinMsg', '2つ目のデータを貼り付けてください。', 1); return; }
+  var sep = detectSep(txt), g = parseCSV(txt, sep);
+  if (g.length < 2) { msg('joinMsg', '2行以上必要です。', 1); return; }
+  var natoks = $('natok').value.split(',').map(function (s) { return s.trim(); });
+  var cols = g[0].map(function (c, i) { return c.trim() || 'W' + (i + 1); });
+  var rows = g.slice(1).map(function (r) { return cols.map(function (_, j) { var v = (r[j] === undefined ? '' : String(r[j]).trim()); return (v === '' || natoks.indexOf(v) >= 0) ? null : (isNum(v) ? Number(v) : v); }); });
+  S.second = { cols: cols, rows: rows };
+  $('joinInfo').textContent = rows.length + ' 行 × ' + cols.length + ' 列';
+  $('joinCfg').classList.remove('hide');
+  $('joinK2').innerHTML = cols.map(function (c, j) { return '<option value="' + j + '">' + esc(c) + '</option>'; }).join('');
+  var k = cols.findIndex(function (c) { return S.cols.indexOf(c) >= 0; });
+  if (k >= 0) { $('joinK2').value = k; $('joinK1').value = S.cols.indexOf(cols[k]); }
+  msg('joinMsg', '2つ目のデータを読み込みました。共通の列は ' + (S.cols.filter(function (c) { return cols.indexOf(c) >= 0; }).join('、') || 'ありません') + '。', 0);
+};
+$('btnJoin').onclick = function () {
+  if (!S.second) { msg('joinMsg', '先に2つ目のデータを読み込んでください。', 1); return; }
+  var type = $('joinType').value, k1 = +$('joinK1').value, k2 = +$('joinK2').value, suf = $('joinSuf').value || '_2';
+  var B = S.second, n0 = S.rows.length;
+  snapshot();
+  if (type === 'bind') {
+    var all = S.cols.slice();
+    B.cols.forEach(function (c) { if (all.indexOf(c) < 0) all.push(c); });
+    var out = S.rows.map(function (r) { return all.map(function (c) { var j = S.cols.indexOf(c); return j < 0 ? null : r[j]; }); });
+    B.rows.forEach(function (r) { out.push(all.map(function (c) { var j = B.cols.indexOf(c); return j < 0 ? null : r[j]; })); });
+    var types = all.map(function (c, j) { var allnum = true; for (var i = 0; i < out.length; i++) { var v = out[i][j]; if (v !== null && !isNum(v)) allnum = false; } return allnum ? 'num' : 'cat'; });
+    S.cols = all; S.types = types; S.rows = out;
+    record('縦に結合', n0 + ' 行 ＋ ' + B.rows.length + ' 行 = ' + out.length + ' 行', 'dat <- dplyr::bind_rows(dat, dat2)');
+    msg('joinMsg', out.length + ' 行になりました。', 0); refreshAll(); return;
+  }
+  var idx = {}, dup = 0;
+  B.rows.forEach(function (r) { var k = String(r[k2]); if (idx[k]) dup++; else idx[k] = r; });
+  var addCols = [], addIdx = [];
+  B.cols.forEach(function (c, j) {
+    if (j === k2) return;
+    var nm = S.cols.indexOf(c) >= 0 ? c + suf : c;
+    addCols.push(nm); addIdx.push(j);
+  });
+  var out2 = [], matched = 0;
+  S.rows.forEach(function (r) {
+    var m = idx[String(r[k1])];
+    if (type === 'inner' && !m) return;
+    if (type === 'anti') { if (!m) out2.push(r.slice().concat(addIdx.map(function () { return null; }))); return; }
+    if (m) matched++;
+    out2.push(r.slice().concat(addIdx.map(function (j) { return m ? m[j] : null; })));
+  });
+  if (type === 'full') {
+    var used = {}; S.rows.forEach(function (r) { used[String(r[k1])] = 1; });
+    B.rows.forEach(function (r) {
+      if (used[String(r[k2])]) return;
+      var o = S.cols.map(function (_, j) { return j === k1 ? r[k2] : null; });
+      out2.push(o.concat(addIdx.map(function (j) { return r[j]; })));
+    });
+  }
+  var ncols = S.cols.concat(addCols);
+  var ntypes = S.types.concat(addCols.map(function (_, q) {
+    var j = S.cols.length + q, allnum = true;
+    for (var i = 0; i < out2.length; i++) { var v = out2[i][j]; if (v !== null && !isNum(v)) allnum = false; }
+    return allnum ? 'num' : 'cat';
+  }));
+  var tn = { left: '左結合', inner: '内部結合', full: '完全結合', anti: '反結合' }[type];
+  S.cols = ncols; S.types = ntypes; S.rows = out2; S.flagged = null;
+  record('データの結合', tn + '（キー：' + S.cols[k1] + ' = ' + B.cols[k2] + '）' + n0 + '→' + out2.length + '行・' + addCols.length + '列追加',
+    'dat <- dplyr::' + { left: 'left_join', inner: 'inner_join', full: 'full_join', anti: 'anti_join' }[type] + '(dat, dat2, by = c("' + S.cols[k1] + '" = "' + B.cols[k2] + '"))');
+  msg('joinMsg', tn + 'しました。' + out2.length + ' 行 × ' + ncols.length + ' 列。' + matched + ' 行が相手と一致しました。' +
+    (dup ? '【注意】2つ目のデータにキーの重複が ' + dup + ' 件あり、最初の行を使いました。' : ''), dup ? 1 : 0);
+  refreshAll();
+};
+
+/* ============ 元に戻す ============ */
+$('btnUndo').onclick = function () {
+  if (!S.undo.length) return;
+  var s = S.undo.pop();
+  S.cols = s.cols; S.types = s.types; S.rows = s.rows; S.recipe = s.recipe; S.flagged = null;
+  refreshAll(); drawCheck();
+};
+$('btnReset').onclick = function () {
+  if (!S.orig) return;
+  if (!confirm('読み込んだ直後の状態に戻します。よろしいですか。')) return;
+  S.cols = S.orig.cols.slice(); S.types = S.orig.types.slice();
+  S.rows = S.orig.rows.map(function (r) { return r.slice(); });
+  S.recipe = []; S.undo = []; S.flagged = null;
+  refreshAll(); drawCheck();
+};
+
+/* ============ viii 書き出す ============ */
+[].forEach.call($('expTabs').children, function (b) {
+  b.onclick = function () {
+    [].forEach.call($('expTabs').children, function (x) { x.classList.remove('on'); }); b.classList.add('on');
+    ['csv', 'r', 'log', 'doc'].forEach(function (v) { $('ex-' + v).classList.toggle('hide', v !== b.dataset.v); });
+  };
+});
+function toCSV(sep, na) {
+  var q = function (v) { if (v === null) return na; var s = String(v); return /["\n,\t]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  var out = [S.cols.map(q).join(sep)];
+  S.rows.forEach(function (r) { out.push(r.map(q).join(sep)); });
+  return out.join('\n');
+}
+function drawExport() {
+  $('expText').value = toCSV($('expSep').value, $('expNA').value);
+  $('rcode').innerHTML = esc(buildR());
+  $('logBox').innerHTML = buildLog();
+  $('docBox').innerHTML = buildDoc();
+}
+$('expSep').onchange = $('expNA').onchange = drawExport;
+$('btnDl').onclick = function () { download(toCSV($('expSep').value, $('expNA').value), 'cleaned_data.csv'); };
+$('btnCopy').onclick = function () { copyText($('expText').value); };
+$('btnCopyR').onclick = function () { copyText(buildR()); };
+function download(text, name) {
+  try {
+    var b = new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  } catch (e) { alert('保存できませんでした。下の枠の内容をコピーして保存してください。'); }
+}
+function copyText(t) {
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(function () { alert('コピーしました。'); }, function () { fallbackCopy(t); });
+  else fallbackCopy(t);
+}
+function fallbackCopy(t) {
+  var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); alert('コピーしました。'); } catch (e) { alert('コピーできませんでした。'); }
+  ta.remove();
+}
+function buildR() {
+  var raw = (S.orig ? origCSV() : ''), L = [];
+  L.push('# ============================================================');
+  L.push('# データ前処理・クリーニングラボ が生成した R コード');
+  L.push('# 読み込んだ生データを埋め込んであります。そのまま実行できます。');
+  L.push('# ============================================================');
+  L.push('library(dplyr); library(tidyr)');
+  L.push('');
+  L.push('raw_text <- "');
+  L.push(raw.replace(/"/g, '""'));
+  L.push('"');
+  L.push('dat <- read.csv(text = raw_text, na.strings = c("", "NA", ' + $('natok').value.split(',').map(function (s) { return '"' + s.trim() + '"'; }).join(', ') + '), check.names = FALSE, stringsAsFactors = FALSE)');
+  L.push('');
+  L.push('cat("読み込み:", nrow(dat), "行 ×", ncol(dat), "列\\n")');
+  L.push('');
+  if (!S.recipe.length) L.push('# （まだ処理を適用していません）');
+  S.recipe.forEach(function (s, i) {
+    L.push('# --- 手順 ' + (i + 1) + '：' + s.label + ' ---');
+    L.push('# ' + s.detail);
+    if (s.r) L.push(s.r); else L.push('# （この処理は R では手作業に相当します。上の説明を参照してください）');
+    L.push('');
+  });
+  L.push('# 整えたデータの確認');
+  L.push('str(dat); summary(dat)');
+  L.push('colSums(is.na(dat))');
+  L.push('');
+  L.push('# 保存先（環境に応じて自動判定）');
+  L.push('out_dir <- Sys.getenv("USERPROFILE"); if (out_dir == "") out_dir <- Sys.getenv("HOME")');
+  L.push('cand <- file.path(out_dir, "Downloads"); if (!dir.exists(cand)) cand <- getwd()');
+  L.push('write.csv(dat, file.path(cand, "cleaned_data.csv"), row.names = FALSE, fileEncoding = "UTF-8")');
+  L.push('cat("保存しました:", file.path(cand, "cleaned_data.csv"), "\\n")');
+  return L.join('\n');
+}
+function origCSV() {
+  var q = function (v) { if (v === null) return 'NA'; var s = String(v); return /["\n,]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  var o = S.orig, out = [o.cols.map(q).join(',')];
+  var lim = Math.min(o.rows.length, 3000);
+  for (var i = 0; i < lim; i++) out.push(o.rows[i].map(q).join(','));
+  if (o.rows.length > lim) out.push('# 以下省略（' + (o.rows.length - lim) + '行）');
+  return out.join('\n');
+}
+function buildLog() {
+  if (!S.recipe.length) return '<p class="lead">まだ処理を適用していません。</p>';
+  var h = '<div class="tblwrap"><table><thead><tr><th class="n">順</th><th>処理</th><th>内容</th></tr></thead><tbody>';
+  S.recipe.forEach(function (s, i) { h += '<tr><td class="n">' + (i + 1) + '</td><td>' + esc(s.label) + '</td><td style="white-space:normal">' + esc(s.detail) + '</td></tr>'; });
+  h += '</tbody></table></div><div class="row" style="margin-top:12px"><button class="btn ghost sm" id="btnCopyLog">記録をコピー</button></div>';
+  setTimeout(function () { var b = $('btnCopyLog'); if (b) b.onclick = function () { copyText(S.recipe.map(function (s, i) { return (i + 1) + '. ' + s.label + '：' + s.detail; }).join('\n')); }; }, 0);
+  return h;
+}
+function buildDoc() {
+  var nna = countNA(), tot = S.rows.length * S.cols.length;
+  var h = '<h4>いま、データはこうなっています</h4><p>' + S.rows.length + ' 行 × ' + S.cols.length + ' 列。欠測は ' + nna + ' セル（全体の ' + (tot ? (nna / tot * 100).toFixed(1) : 0) + '％）です。' +
+    (S.orig ? '読み込み時は ' + S.orig.rows.length + ' 行 × ' + S.orig.cols.length + ' 列でした。' : '') + '</p>';
+  h += '<h4>前処理の考え方</h4>' +
+    '<p><b>横持ちと縦持ち。</b>1人1行の横持ちは記述統計や相関に向き、1人×1測定＝1行の縦持ちは反復測定分散分析やマルチレベル分析に向きます。分析手法が求める形に合わせて変換します。</p>' +
+    '<p><b>逆転項目。</b>「最小値＋最大値−回答」で向きをそろえます。逆転を忘れると α 係数が下がり、因子構造も歪みます。他項目合計との相関が負になっていないかで確認できます。</p>' +
+    '<p><b>外れ値。</b>まず入力ミスかどうかを確かめます。ミスなら修正か欠測化、真の極端値なら安易に削除せず、含めた場合と除いた場合の両方を報告する（感度分析）のが誠実です。平均と標準偏差そのものが外れ値に引きずられるため、中央値と MAD を使うロバストな基準のほうが検出力は安定します。</p>' +
+    '<p><b>欠測。</b>欠測のある行を落とすリストワイズ除去は、欠測が完全にランダム（MCAR）でなければ推定を歪めます。欠測が多い場合は多重代入を検討してください。</p>';
+  var used = {};
+  S.recipe.forEach(function (s) { used[s.label] = 1; });
+  h += '<h4>論文での記述例</h4><div class="quote">';
+  var sents = [];
+  sents.push('分析に先立ち、データの前処理を行った。');
+  if (used['縦持ちに変換'] || used['横持ちに変換']) sents.push('分析手法に合わせてデータを' + (used['縦持ちに変換'] ? '長形式' : '広形式') + 'に再構成した。');
+  if (used['逆転項目の処理']) sents.push('逆転項目は「最小値＋最大値−回答値」により得点の方向を統一した。');
+  if (used['合成得点の作成']) {
+    var a = S.recipe.filter(function (s) { return s.label === '合成得点の作成'; }).map(function (s) { return s.detail; }).join('／');
+    sents.push('尺度得点は該当項目の平均値として算出した（' + a.replace(/[（）]/g, '') + '）。');
+  }
+  if (used['外れ値の処理']) {
+    var o = S.recipe.filter(function (s) { return s.label === '外れ値の処理'; })[0];
+    sents.push('外れ値は' + o.detail.split('で検出')[0] + 'により検出し、該当値を処理した。');
+  }
+  if (used['行の絞り込み'] || used['重複行の削除'] || used['リストワイズ除去']) sents.push('不備のある回答を除外した結果、最終的な分析対象は ' + S.rows.length + ' 名（ケース）となった。');
+  if (used['データの結合']) sents.push('別に収集した情報を ID をキーとして結合した。');
+  sents.push('以上の処理はすべて記録し、再現可能な手順として保存した。');
+  h += sents.join('') + '</div>';
+  h += '<p class="note">上の文はレシピから自動生成しています。実際の数値や対象に合わせて必ず書き換えてください。</p>';
+  return h;
+}
+
+/* ============ 入口 ============ */
+$('btnLoad').onclick = function () { loadData($('raw').value); };
+$('file').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function () { $('raw').value = r.result; loadData(r.result); };
+  r.readAsText(f, 'UTF-8');
+};
+$('btnSample').onclick = function () {
+  var rng = ST.RNG(20260822), lines = ['ID,群,pre_項目1,pre_項目2,pre_項目3,post_項目1,post_項目2,post_項目3,学年'];
+  for (var i = 1; i <= 60; i++) {
+    var g = i % 2 === 0 ? '実験' : '統制';
+    var base = 3 + rng.norm() * 0.8, gain = (g === '実験' ? 0.9 : 0.15);
+    var v = function (m) { var x = Math.round(m + rng.norm() * 0.7); return Math.min(5, Math.max(1, x)); };
+    var p1 = v(base), p2 = v(base), p3 = 6 - v(base);
+    var q1 = v(base + gain), q2 = v(base + gain), q3 = 6 - v(base + gain);
+    var cells = [i, g, p1, p2, p3, q1, q2, q3, (i % 3) + 1];
+    if (i === 7) cells[5] = '';
+    if (i === 23) cells[3] = 55;
+    if (i === 41) cells[6] = 'NA';
+    lines.push(cells.join(','));
+  }
+  $('raw').value = lines.join('\n');
+  msg('loadMsg', 'サンプルを入れました。「読み込む」を押してください。逆転項目（項目3）と外れ値・欠測が仕込んであります。', 0);
+};
+drawRecipe();
+</script>
+</body>
+</html>

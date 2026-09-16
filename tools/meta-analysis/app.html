@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>メタ分析ラボ — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#F1F3EC; --card:#FBFCF8; --ink:#20242A; --ink2:#5C646B; --ink3:#8B929A;
+  --rule:#D6DACD; --rule2:#E7EADF;
+  --green:#1E4A3D; --green-l:#2F6B58; --green-w:#E3EDE6;
+  --gold:#A2711A; --gold-w:#F4EBD8;
+  --indigo:#28486E; --crimson:#8C2F38;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","Songti SC",serif;
+  --gothic:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular","Menlo","Roboto Mono","Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--gothic);
+  font-size:15px; line-height:1.8; letter-spacing:.02em;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px 96px}
+
+/* ── 見出し ───────────────────────────── */
+.head{padding:34px 0 18px;border-bottom:1px solid var(--rule)}
+.head .mark{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.head h1{
+  font-family:var(--mincho); font-size:31px; font-weight:600; margin:0;
+  letter-spacing:.16em; color:var(--green);
+}
+.head .en{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--ink3);text-transform:uppercase}
+.head p{margin:8px 0 0;color:var(--ink2);font-size:13.5px;letter-spacing:.06em}
+
+/* ── 手順ナビ ─────────────────────────── */
+.nav{position:sticky;top:0;z-index:40;background:var(--paper);
+  border-bottom:1px solid var(--rule);margin-bottom:0;padding:8px 0 0}
+.nav .row{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin}
+.nav button{
+  flex:0 0 auto;background:none;border:none;border-bottom:2px solid transparent;
+  font-family:var(--gothic);font-size:13px;color:var(--ink2);
+  padding:8px 13px 9px;cursor:pointer;letter-spacing:.06em;white-space:nowrap;
+}
+.nav button .rn{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-right:7px;letter-spacing:.1em}
+.nav button:hover{color:var(--green)}
+.nav button[aria-current="true"]{color:var(--green);border-bottom-color:var(--gold);font-weight:700}
+.nav button[aria-current="true"] .rn{color:var(--gold)}
+.nav button:focus-visible{outline:2px solid var(--indigo);outline-offset:-2px}
+
+/* ── 統合バー ─────────────────────────── */
+.bar{position:sticky;top:43px;z-index:39;background:var(--green);color:#EFF3EE;
+  display:flex;gap:0;align-items:stretch;flex-wrap:wrap;
+  border-radius:2px;margin:0 0 26px;overflow:hidden}
+.bar .cell{padding:9px 16px;border-right:1px solid rgba(255,255,255,.16);min-width:0}
+.bar .cell:last-child{border-right:none}
+.bar .k{display:block;font-size:10px;letter-spacing:.18em;color:#A9C3B5;font-family:var(--mono)}
+.bar .v{display:block;font-family:var(--mono);font-size:14.5px;letter-spacing:.02em;white-space:nowrap}
+.bar .v em{font-style:normal;color:#F0D9A8}
+.bar.empty{background:#8B928C}
+
+/* ── セクション ───────────────────────── */
+section{display:none;animation:fade .28s ease both}
+section.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+h2{font-family:var(--mincho);font-size:22px;font-weight:600;letter-spacing:.1em;
+  margin:6px 0 4px;color:var(--ink)}
+h2 .rn{font-family:var(--mono);font-size:12px;color:var(--gold);letter-spacing:.14em;margin-right:12px}
+.lead{color:var(--ink2);font-size:13.5px;margin:0 0 22px;max-width:64ch}
+h3{font-family:var(--mincho);font-size:16.5px;font-weight:600;letter-spacing:.08em;
+  margin:0 0 12px;padding-bottom:7px;border-bottom:1px solid var(--rule)}
+h4{font-size:13px;letter-spacing:.1em;color:var(--ink2);margin:20px 0 8px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:3px;
+  padding:20px 22px;margin:0 0 20px}
+.card.tight{padding:14px 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* ── 部品 ─────────────────────────────── */
+label.f{display:block;font-size:12px;letter-spacing:.08em;color:var(--ink2);margin:0 0 5px}
+input[type=text],input[type=number],select,textarea{
+  font-family:var(--gothic);font-size:14px;color:var(--ink);background:#fff;
+  border:1px solid var(--rule);border-radius:2px;padding:7px 9px;width:100%;
+}
+input[type=number],table input{font-family:var(--mono);font-size:13px}
+textarea{font-family:var(--mono);font-size:12.5px;line-height:1.65;resize:vertical}
+select{cursor:pointer}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--green-l);outline-offset:-1px;border-color:var(--green-l)}
+.btn{
+  font-family:var(--gothic);font-size:13.5px;letter-spacing:.08em;
+  background:var(--green);color:#F4F7F2;border:1px solid var(--green);
+  border-radius:2px;padding:9px 20px;cursor:pointer;transition:background .15s
+}
+.btn:hover{background:var(--green-l)}
+.btn:disabled{background:#A8AFA6;border-color:#A8AFA6;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--green);border-color:var(--rule)}
+.btn.ghost:hover{background:var(--green-w);border-color:var(--green-l)}
+.btn.sm{padding:5px 12px;font-size:12px}
+.btn:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.note{font-size:12.5px;color:var(--ink2);line-height:1.75}
+.hint{font-size:12px;color:var(--ink3)}
+.warn{background:#FBF3E6;border-left:3px solid var(--gold);padding:11px 14px;font-size:12.5px;color:#6B5220;border-radius:0 2px 2px 0}
+.err{background:#FAEDEE;border-left:3px solid var(--crimson);padding:11px 14px;font-size:12.5px;color:#6E262E;border-radius:0 2px 2px 0}
+.chip{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  padding:2px 7px;border:1px solid var(--rule);border-radius:2px;color:var(--ink2);background:#fff}
+.chip.hi{border-color:var(--green-l);color:var(--green);background:var(--green-w)}
+.chip.mid{border-color:var(--gold);color:var(--gold);background:var(--gold-w)}
+.chip.low{border-color:var(--crimson);color:var(--crimson);background:#FAEDEE}
+
+/* ── 表 ───────────────────────────────── */
+.tw{overflow-x:auto;margin:0 -4px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--rule2);padding:6px 8px;text-align:right;vertical-align:middle}
+th{font-size:11px;letter-spacing:.08em;color:var(--ink2);font-weight:700;
+  border-bottom:1px solid var(--rule);white-space:nowrap;text-align:right}
+th:first-child,td:first-child,th.l,td.l{text-align:left}
+td.num,th.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+tbody tr:hover{background:#F6F8F3}
+tr.off{opacity:.42}
+table input[type=text],table input[type=number]{padding:4px 6px;min-width:62px}
+table input.lab{min-width:150px}
+td.act{white-space:nowrap}
+.mini{width:auto;font-size:12.5px}
+.mini th,.mini td{padding:5px 10px 5px 0;border-bottom:1px dotted var(--rule)}
+
+/* ── 取り込み ─────────────────────────── */
+.drop{border:1.5px dashed var(--rule);border-radius:3px;background:#fff;
+  padding:34px 20px;text-align:center;cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--green-l);background:var(--green-w)}
+.drop .big{font-family:var(--mincho);font-size:17px;letter-spacing:.1em;color:var(--green)}
+.drop .sub{font-size:12px;color:var(--ink3);margin-top:6px}
+.filelist{margin:14px 0 0;padding:0;list-style:none}
+.filelist li{display:flex;gap:10px;align-items:center;justify-content:space-between;
+  border-bottom:1px dotted var(--rule);padding:7px 2px;font-size:12.5px}
+.filelist .nm{font-family:var(--mono);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st{font-size:11px;letter-spacing:.08em;white-space:nowrap}
+.st.run{color:var(--gold)}.st.ok{color:var(--green-l)}.st.ng{color:var(--crimson)}
+.spin{display:inline-block;width:9px;height:9px;border:1.5px solid var(--gold);
+  border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── 図 ───────────────────────────────── */
+.fig{background:#fff;border:1px solid var(--rule);border-radius:3px;padding:14px;margin:0 0 8px;overflow-x:auto}
+.fig svg{display:block;min-width:600px;width:100%;height:auto}
+.figcap{font-size:12px;color:var(--ink2);margin:0 0 20px;padding-left:2px}
+.figcap b{font-weight:700;color:var(--ink)}
+svg text{font-family:var(--gothic)}
+svg .mono{font-family:var(--mono)}
+.stagger{opacity:0;animation:rowin .42s ease forwards}
+@keyframes rowin{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.dia{transform-origin:center;animation:pop .5s .55s ease both}
+@keyframes pop{from{opacity:0;transform:scaleX(.15)}to{opacity:1;transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .stagger{opacity:1}
+}
+
+/* ── 結果の数値 ───────────────────────── */
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;font-size:13px;align-items:baseline}
+.kv dt{color:var(--ink2);font-size:12px;letter-spacing:.06em}
+.kv dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.big-est{font-family:var(--mono);font-size:26px;letter-spacing:-.01em;color:var(--green);line-height:1.35}
+.big-est span{font-size:14px;color:var(--ink2)}
+.pill{display:flex;gap:0;border:1px solid var(--rule);border-radius:2px;overflow:hidden;width:fit-content}
+.pill button{background:#fff;border:none;border-right:1px solid var(--rule);
+  font-family:var(--gothic);font-size:12.5px;padding:6px 13px;cursor:pointer;color:var(--ink2)}
+.pill button:last-child{border-right:none}
+.pill button[aria-pressed="true"]{background:var(--green);color:#fff}
+.pill button:focus-visible{outline:2px solid var(--indigo);outline-offset:-2px}
+details{border-top:1px solid var(--rule2);padding:8px 0}
+summary{cursor:pointer;font-size:12.5px;color:var(--green);letter-spacing:.06em}
+summary:focus-visible{outline:2px solid var(--indigo)}
+pre{background:#20242A;color:#DFE6DC;font-family:var(--mono);font-size:11.8px;line-height:1.65;
+  padding:16px;border-radius:3px;overflow-x:auto;margin:0}
+.report{background:#fff;border:1px solid var(--rule);border-radius:3px;padding:20px 24px;
+  font-size:13.5px;line-height:2}
+.report p{margin:0 0 14px}
+.report .sig{font-family:var(--mono);font-size:12.5px;background:#F4F6F0;padding:2px 5px;border-radius:2px}
+footer{border-top:1px solid var(--rule);margin-top:40px;padding:16px 0 0;
+  font-size:11.5px;color:var(--ink3);letter-spacing:.06em}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(18px);
+  background:var(--ink);color:#F2F3EE;font-size:12.5px;letter-spacing:.06em;padding:10px 18px;
+  border-radius:3px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80;max-width:88vw}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-synthesis);--paper:var(--al-bg);--card:var(--al-surface);--ink:var(--al-ink);--ink2:var(--al-ink-2);--ink3:var(--al-ink-3);--rule:var(--al-line);--rule2:var(--al-line-2);--green:var(--al-cat-deep);--green-l:var(--al-cat);--green-w:var(--al-cat-soft);--mincho:var(--al-serif);--gothic:var(--al-sans);--mono:var(--al-mono);}.card:has(#drop){display:none} div:has(> #outcome){display:none}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#synthesis">推定を統合する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>メタ分析ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="wrap">
+<header class="head">
+  <div class="mark">
+    <h1>メタ分析ラボ</h1>
+    <span class="en">Meta-Analysis Lab</span>
+  </div>
+  <p>複数の論文のPDFから効果量を集め、ひとつの推定に束ねる。ブラウザーだけで完結します。</p>
+</header>
+
+<nav class="nav" aria-label="手順">
+  <div class="row" id="nav"></div>
+</nav>
+
+<div class="bar empty" id="bar" aria-live="polite">
+  <div class="cell"><span class="k">STATUS</span><span class="v">まだ研究が入っていません</span></div>
+</div>
+
+<!-- ══ i 論文を取り込む ══ -->
+<section id="s1">
+  <h2><span class="rn">i</span>論文を取り込む</h2>
+  <p class="lead">PDFを置くと、各論文から効果量の計算に必要な数値を読み取ります。読み取りは下書きです。次の手順で必ず原典と照らし合わせてください。</p>
+
+  <div class="card">
+    <h3>統合する指標を決める</h3>
+    <div class="grid2">
+      <div>
+        <label class="f" for="metric">効果量の種類</label>
+        <select id="metric">
+          <option value="SMD">標準化平均差（Hedges の g）— 2群の平均を比べる</option>
+          <option value="MD">平均差（生の単位）— 同じ尺度の2群を比べる</option>
+          <option value="COR">相関係数 r — 2変数の関係の強さ</option>
+          <option value="OR">オッズ比 — 2値のアウトカム</option>
+          <option value="RR">リスク比 — 2値のアウトカム</option>
+          <option value="RD">リスク差 — 2値のアウトカム</option>
+          <option value="GEN">効果量を直接入力 — 種類は自分で決める</option>
+        </select>
+        <p class="hint" id="metricHint" style="margin:7px 0 0"></p>
+      </div>
+      <div>
+        <label class="f" for="outcome">読み取ってほしいアウトカム（PDF抽出の手がかり）</label>
+        <input type="text" id="outcome" placeholder="例：介入群と対照群の、介入後の不安尺度得点">
+        <p class="hint" style="margin:7px 0 0">論文に複数の結果があるときは、どれを拾うかをここで指定します。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>PDFから読み取る</h3>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="PDFを選ぶ">
+      <div class="big">PDFをここに置く</div>
+      <div class="sub">クリックして選ぶこともできます／複数まとめて可</div>
+      <div class="sub">読み取りは Claude 上でこのページを開いているときに動きます</div>
+    </div>
+    <input type="file" id="picker" accept="application/pdf" multiple class="sr">
+    <ul class="filelist" id="files"></ul>
+    <div class="btnrow">
+      <button class="btn" id="runExtract" disabled>読み取りを始める</button>
+      <button class="btn ghost sm" id="clearFiles">一覧を空にする</button>
+      <span class="hint" id="extractMsg"></span>
+    </div>
+    <div class="warn" style="margin-top:16px">
+      読み取りは Claude が本文と表を解釈した下書きです。数値の取り違え、群の入れ替わり、標準誤差と標準偏差の混同が起こりえます。<b>手順 ii で一件ずつ原典と照合してください。</b>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>手で入れる・貼り付ける</h3>
+    <p class="note">PDFがないときや、抽出結果を補うときに使います。表計算ソフトからそのままコピーして貼り付けられます（カンマ・タブ区切り、1行目は見出し）。</p>
+    <textarea id="paste" rows="6" placeholder="ここに貼り付け"></textarea>
+    <div class="btnrow">
+      <button class="btn" id="doPaste">貼り付けた表を読み込む</button>
+      <button class="btn ghost sm" id="tmpl">この指標の見出し行を入れる</button>
+      <button class="btn ghost sm" id="sample">例のデータを読み込む</button>
+      <button class="btn ghost sm" id="addRow">空の行を1つ足す</button>
+    </div>
+    <p class="hint" id="pasteMsg" style="margin-top:10px"></p>
+  </div>
+</section>
+
+<!-- ══ ii データを確かめる ══ -->
+<section id="s2">
+  <h2><span class="rn">ii</span>データを確かめる</h2>
+  <p class="lead">読み取った数値を原典と照合し、必要なら直します。チェックを外した研究は統合から除かれます。</p>
+  <div class="card">
+    <h3>研究の一覧</h3>
+    <div class="tw" id="dataTable"></div>
+    <div class="btnrow">
+      <button class="btn ghost sm" id="addRow2">行を足す</button>
+      <button class="btn ghost sm" id="allOn">すべて含める</button>
+      <button class="btn ghost sm" id="delAll">すべて消す</button>
+      <span class="hint" id="dataMsg"></span>
+    </div>
+  </div>
+  <div class="card tight" id="modeHelp"></div>
+</section>
+
+<!-- ══ iii 効果量をそろえる ══ -->
+<section id="s3">
+  <h2><span class="rn">iii</span>効果量をそろえる</h2>
+  <p class="lead">それぞれの研究の数値を、共通のものさし（効果量とその分散）に直します。ここが揃って初めて足し合わせられます。</p>
+  <div class="card"><h3>研究ごとの効果量</h3><div class="tw" id="esTable"></div>
+    <p class="hint" id="esMsg" style="margin-top:12px"></p>
+  </div>
+  <div class="card"><h3>どう計算したか</h3><div id="esFormula" class="note"></div></div>
+</section>
+
+<!-- ══ iv 統合する ══ -->
+<section id="s4">
+  <h2><span class="rn">iv</span>統合する</h2>
+  <p class="lead">重みづけて一本の推定にまとめます。森林プロットは、各研究の位置と幅、そして統合結果のひし形を一望する図です。</p>
+
+  <div class="card">
+    <h3>モデルを選ぶ</h3>
+    <div class="grid3">
+      <div>
+        <label class="f">効果のモデル</label>
+        <div class="pill" id="mdlPill">
+          <button data-v="random" aria-pressed="true">変量効果</button>
+          <button data-v="fixed" aria-pressed="false">固定効果</button>
+        </div>
+        <p class="hint" style="margin-top:7px">研究ごとに真の効果が違うと考えるなら変量効果。</p>
+      </div>
+      <div>
+        <label class="f" for="tauMethod">τ²（研究間分散）の推定法</label>
+        <select id="tauMethod">
+          <option value="REML">REML（制限付き最尤）</option>
+          <option value="DL">DerSimonian–Laird</option>
+          <option value="PM">Paule–Mandel</option>
+        </select>
+      </div>
+      <div>
+        <label class="f">信頼区間</label>
+        <div class="pill" id="hkPill">
+          <button data-v="0" aria-pressed="true">通常（z）</button>
+          <button data-v="1" aria-pressed="false">Hartung–Knapp（t）</button>
+        </div>
+        <p class="hint" style="margin-top:7px">研究数が少ないときは Hartung–Knapp が安全側です。</p>
+      </div>
+    </div>
+    <div class="btnrow">
+      <label class="f" style="margin:0 8px 0 0">サブグループで分ける</label>
+      <select id="sgSel" style="width:auto;min-width:180px"><option value="">分けない</option></select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink2)">
+        <input type="checkbox" id="sortBy" style="width:auto"> 効果量の大きさで並べる
+      </label>
+    </div>
+  </div>
+
+  <div id="pooledBox"></div>
+  <h3 style="margin-top:26px">森林プロット</h3>
+  <div class="fig" id="forest"></div>
+  <p class="figcap"><b>図1</b>　各行は1つの研究。四角の大きさは重み、横線は95%信頼区間。ひし形が統合結果、その下の破線は予測区間（次の研究がどのあたりに来るかの見当）。<button class="btn ghost sm" id="dlForest" style="margin-left:8px">SVGで保存</button></p>
+  <div class="card" id="hetBox"></div>
+</section>
+
+<!-- ══ v 吟味する ══ -->
+<section id="s5">
+  <h2><span class="rn">v</span>吟味する</h2>
+  <p class="lead">ひとつの数字にまとめた後が本番です。ばらつきの出どころ、一件の影響、出版バイアスの兆しを順に見ます。</p>
+  <div class="card"><h3>サブグループの比較</h3><div id="sgBox"></div></div>
+  <div class="card"><h3>メタ回帰（連続した調整変数）</h3><div id="mrBox"></div></div>
+  <div class="card"><h3>一件ずつ抜いてみる</h3><div id="looBox"></div></div>
+  <div class="card"><h3>出版バイアスの検討</h3><div id="pbBox"></div></div>
+  <div class="card"><h3>年次の累積</h3><div id="cumBox"></div></div>
+</section>
+
+<!-- ══ vi 報告する ══ -->
+<section id="s6">
+  <h2><span class="rn">vi</span>報告する</h2>
+  <p class="lead">結果の読み方、論文に書くときの文例、追試のためのRコード、そして書き出し。</p>
+  <div class="card"><h3>結果の解説</h3><div class="report" id="explain"></div></div>
+  <div class="card"><h3>論文での記述例</h3><div class="report" id="writeup"></div>
+    <div class="btnrow"><button class="btn ghost sm" id="cpWrite">記述例をコピー</button></div>
+  </div>
+  <div class="card"><h3>Rコード（metafor・データ埋め込み）</h3>
+    <pre id="rcode"></pre>
+    <div class="btnrow">
+      <button class="btn ghost sm" id="cpR">コピー</button>
+      <button class="btn ghost sm" id="dlR">Rファイルで保存</button>
+    </div>
+  </div>
+  <div class="card"><h3>データの書き出し</h3>
+    <p class="note">効果量、分散、重み、信頼区間まで含めた一覧をCSVで保存します。</p>
+    <div class="btnrow">
+      <button class="btn" id="dlCsv">CSVで保存</button>
+      <button class="btn ghost sm" id="dlJson">作業中のデータをJSONで保存</button>
+      <button class="btn ghost sm" id="upJson">JSONを読み込む</button>
+      <input type="file" id="jsonPick" accept="application/json" class="sr">
+    </div>
+    <div id="outArea" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<footer>メタ分析ラボ　外部ライブラリなしの単一ファイル。統計計算はすべてブラウザー内で行われます。PDFの読み取りにのみ Claude を呼び出します。</footer>
+</div>
+<script>
+/* ══════════════════════════════════════════════════
+   1. 数値関数
+   ══════════════════════════════════════════════════ */
+function erf(x){
+  var s = x<0?-1:1; x = Math.abs(x);
+  var t = 1/(1+0.5*x);
+  var y = t*Math.exp(-x*x -1.26551223 + t*(1.00002368 + t*(0.37409196 + t*(0.09678418 +
+        t*(-0.18628806 + t*(0.27886807 + t*(-1.13520398 + t*(1.48851587 +
+        t*(-0.82215223 + t*0.17087277)))))))));
+  return s*(1-y);
+}
+function pnorm(z){ return 0.5*(1+erf(z/Math.SQRT2)); }
+function qnorm(p){
+  if(p<=0) return -Infinity; if(p>=1) return Infinity;
+  var a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00],
+      b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01],
+      c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00],
+      d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  var pl=0.02425,q,r;
+  if(p<pl){ q=Math.sqrt(-2*Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p>1-pl){ q=Math.sqrt(-2*Math.log(1-p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  q=p-0.5; r=q*q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+function logGamma(x){
+  var g=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,
+         0.1208650973866179e-2,-0.5395239384953e-5];
+  var y=x, tmp=x+5.5; tmp-=(x+0.5)*Math.log(tmp);
+  var ser=1.000000000190015;
+  for(var j=0;j<6;j++) ser+=g[j]/++y;
+  return -tmp+Math.log(2.5066282746310005*ser/x);
+}
+function gammaP(a,x){                       // 下側不完全ガンマ関数の正規化
+  if(x<0||a<=0) return NaN;
+  if(x===0) return 0;
+  if(x < a+1){
+    var ap=a, sum=1/a, del=sum;
+    for(var n=0;n<500;n++){ ap++; del*=x/ap; sum+=del; if(Math.abs(del)<Math.abs(sum)*1e-14) break; }
+    return sum*Math.exp(-x+a*Math.log(x)-logGamma(a));
+  } else {
+    var b=x+1-a, c=1e300, d=1/b, h=d, an, i;
+    for(i=1;i<500;i++){
+      an=-i*(i-a); b+=2; d=an*d+b; if(Math.abs(d)<1e-300) d=1e-300;
+      c=b+an/c; if(Math.abs(c)<1e-300) c=1e-300;
+      d=1/d; var de=d*c; h*=de; if(Math.abs(de-1)<1e-14) break;
+    }
+    return 1-Math.exp(-x+a*Math.log(x)-logGamma(a))*h;
+  }
+}
+function pchisqUpper(x,df){ if(x<=0) return 1; return 1-gammaP(df/2,x/2); }
+function betacf(a,b,x){
+  var qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;
+  if(Math.abs(d)<1e-300)d=1e-300; d=1/d; var h=d,m,m2,aa,del;
+  for(m=1;m<=300;m++){
+    m2=2*m;
+    aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d; if(Math.abs(d)<1e-300)d=1e-300;
+    c=1+aa/c; if(Math.abs(c)<1e-300)c=1e-300;
+    d=1/d; h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d=1+aa*d; if(Math.abs(d)<1e-300)d=1e-300;
+    c=1+aa/c; if(Math.abs(c)<1e-300)c=1e-300;
+    d=1/d; del=d*c; h*=del;
+    if(Math.abs(del-1)<1e-13) break;
+  }
+  return h;
+}
+function ibeta(a,b,x){
+  if(x<=0) return 0; if(x>=1) return 1;
+  var bt=Math.exp(logGamma(a+b)-logGamma(a)-logGamma(b)+a*Math.log(x)+b*Math.log(1-x));
+  return x < (a+1)/(a+b+2) ? bt*betacf(a,b,x)/a : 1-bt*betacf(b,a,1-x)/b;
+}
+function ptTwo(t,df){                        // t分布の両側p値
+  t=Math.abs(t); if(!isFinite(t)) return 0;
+  return ibeta(df/2,0.5,df/(df+t*t));
+}
+function qt(p,df){                           // 下側確率pに対応するt値
+  if(df>3000) return qnorm(p);
+  var lo=-100,hi=100,mid,cdf;
+  for(var i=0;i<200;i++){
+    mid=(lo+hi)/2;
+    cdf = mid>=0 ? 1-ptTwo(mid,df)/2 : ptTwo(mid,df)/2;
+    if(cdf<p) lo=mid; else hi=mid;
+  }
+  return (lo+hi)/2;
+}
+function num(v){ var x=parseFloat(v); return isFinite(x)?x:NaN; }
+
+/* ══════════════════════════════════════════════════
+   2. 効果量の計算
+   ══════════════════════════════════════════════════ */
+var METRICS = {
+  SMD:{name:'Hedges の g', short:'g', log:false, null0:0, dir:'正の値は群1（介入・処置）の平均が大きい'},
+  MD :{name:'平均差', short:'MD', log:false, null0:0, dir:'正の値は群1の平均が大きい'},
+  COR:{name:'相関係数 r', short:'r', log:false, null0:0, fisher:true, dir:'統合は Fisher の z 変換上で行い、表示時に r へ戻す'},
+  OR :{name:'オッズ比', short:'OR', log:true, null0:1, dir:'1より大きいと群1で事象が起きやすい'},
+  RR :{name:'リスク比', short:'RR', log:true, null0:1, dir:'1より大きいと群1で事象が起きやすい'},
+  RD :{name:'リスク差', short:'RD', log:false, null0:0, dir:'正の値は群1で事象が多い'},
+  GEN:{name:'効果量', short:'ES', log:false, null0:0, dir:'正の値の意味は指標の定義による'}
+};
+// 指標ごとに使える入力形式
+var MODES = {
+  SMD:['two','prepost','direct'], MD:['two','direct'], COR:['cor','direct'],
+  OR:['twobytwo','direct'], RR:['twobytwo','direct'], RD:['twobytwo','direct'], GEN:['direct']
+};
+var MODE_NAME = {two:'2群の平均・SD', prepost:'1群の前後', direct:'効果量を直接', cor:'相関 r と n', twobytwo:'事象数と人数'};
+
+function computeES(st, metric){
+  var m=metric, r={yi:NaN, vi:NaN, why:'', warn:''};
+  var mode=st.mode;
+  if(mode==='direct'){
+    var est=num(st.est), lo=num(st.lo), hi=num(st.hi), se=num(st.se);
+    var y, v;
+    if(METRICS[m].log){
+      if(!(est>0)){ r.why='比は正の値で入れてください'; return r; }
+      y=Math.log(est);
+      if(isFinite(se)) v=se*se;
+      else if(isFinite(lo)&&isFinite(hi)&&lo>0&&hi>0) v=Math.pow((Math.log(hi)-Math.log(lo))/(2*1.959964),2);
+      r.why='比の対数に直し、信頼区間の幅から標準誤差を求めた';
+    } else if(m==='COR'){
+      y=Math.atanh(Math.max(-0.999,Math.min(0.999,est)));
+      var n=num(st.n);
+      if(isFinite(n)&&n>3) v=1/(n-3);
+      else if(isFinite(se)) v=se*se;
+      else if(isFinite(lo)&&isFinite(hi)) v=Math.pow((Math.atanh(hi)-Math.atanh(lo))/(2*1.959964),2);
+      r.why='r を Fisher の z に変換した';
+    } else {
+      y=est;
+      if(isFinite(se)) v=se*se;
+      else if(isFinite(lo)&&isFinite(hi)) v=Math.pow((hi-lo)/(2*1.959964),2);
+      r.why='入力された効果量と、その信頼区間の幅から分散を求めた';
+    }
+    if(!isFinite(y)||!isFinite(v)||v<=0){ r.why='効果量と、標準誤差または95%信頼区間が要ります'; return r; }
+    r.yi=y; r.vi=v; return r;
+  }
+  if(mode==='two'){
+    var n1=num(st.n1),m1=num(st.m1),s1=num(st.s1),n2=num(st.n2),m2=num(st.m2),s2=num(st.s2);
+    if(!(n1>1&&n2>1)||!isFinite(m1)||!isFinite(m2)||!(s1>=0)||!(s2>=0)){ r.why='2群の n・平均・SD が要ります'; return r; }
+    if(m==='MD'){ r.yi=m1-m2; r.vi=s1*s1/n1+s2*s2/n2; r.why='平均の差と、その分散 s₁²/n₁+s₂²/n₂'; return r; }
+    var df=n1+n2-2;
+    var sp=Math.sqrt(((n1-1)*s1*s1+(n2-1)*s2*s2)/df);
+    if(!(sp>0)){ r.why='併合SDが0になりました'; return r; }
+    var d=(m1-m2)/sp;
+    var J=1-3/(4*df-1);
+    var vd=(n1+n2)/(n1*n2)+d*d/(2*df);
+    r.yi=J*d; r.vi=J*J*vd;
+    r.why='併合SDで割って d を求め、小標本の偏りを補正して g にした（補正係数 J='+J.toFixed(4)+'）';
+    return r;
+  }
+  if(mode==='prepost'){
+    var n=num(st.n), mp=num(st.m1), sp1=num(st.s1), mo=num(st.m2), so=num(st.s2), rr=num(st.rpre);
+    if(!isFinite(rr)) rr=0.5;
+    if(!(n>1)||!isFinite(mp)||!isFinite(mo)||!(sp1>0)){ r.why='n・前後の平均・前のSD が要ります'; return r; }
+    var d2=(mo-mp)/sp1, J2=1-3/(4*(n-1)-1);
+    var v2=2*(1-rr)/n + d2*d2/(2*n);
+    r.yi=J2*d2; r.vi=J2*J2*v2;
+    r.why='前のSDで標準化し、前後の相関 r='+rr.toFixed(2)+' を仮定して分散を求めた';
+    r.warn='前後の相関は論文に載らないことが多く、仮定値です';
+    return r;
+  }
+  if(mode==='cor'){
+    var rv=num(st.r), nn=num(st.n);
+    if(!isFinite(rv)||!(nn>3)||Math.abs(rv)>=1){ r.why='r（−1〜1）と n（4以上）が要ります'; return r; }
+    r.yi=Math.atanh(rv); r.vi=1/(nn-3);
+    r.why='Fisher の z 変換 z=atanh(r)、分散は 1/(n−3)';
+    return r;
+  }
+  if(mode==='twobytwo'){
+    var a=num(st.a), N1=num(st.n1), c=num(st.c), N2=num(st.n2);
+    if(!(N1>0&&N2>0)||!isFinite(a)||!isFinite(c)||a<0||c<0||a>N1||c>N2){ r.why='事象数と人数（事象数≦人数）が要ります'; return r; }
+    var b=N1-a, dd=N2-c, cont=false;
+    if(m==='RD'){
+      var p1=a/N1, p2=c/N2;
+      r.yi=p1-p2; r.vi=p1*(1-p1)/N1+p2*(1-p2)/N2;
+      r.why='割合の差と、その分散';
+      if(r.vi<=0) r.vi=1e-8;
+      return r;
+    }
+    if(a===0||b===0||c===0||dd===0){ a+=0.5;b+=0.5;c+=0.5;dd+=0.5;N1+=1;N2+=1;cont=true; }
+    if(m==='OR'){ r.yi=Math.log(a*dd/(b*c)); r.vi=1/a+1/b+1/c+1/dd;
+      r.why='オッズ比の対数と、その分散 1/a+1/b+1/c+1/d'; }
+    else { r.yi=Math.log((a/N1)/(c/N2)); r.vi=1/a-1/N1+1/c-1/N2;
+      r.why='リスク比の対数と、その分散'; }
+    if(cont) r.warn='0のセルがあったため全セルに0.5を足しました';
+    return r;
+  }
+  r.why='入力形式が未設定です';
+  return r;
+}
+
+/* ══════════════════════════════════════════════════
+   3. 統合（固定効果・変量効果）
+   ══════════════════════════════════════════════════ */
+function wmean(y,v,tau2){
+  var sw=0,swy=0;
+  for(var i=0;i<y.length;i++){ var w=1/(v[i]+tau2); sw+=w; swy+=w*y[i]; }
+  return {mu:swy/sw, sw:sw};
+}
+function Qstat(y,v){
+  var sw=0,swy=0,swy2=0;
+  for(var i=0;i<y.length;i++){ var w=1/v[i]; sw+=w; swy+=w*y[i]; swy2+=w*y[i]*y[i]; }
+  return swy2 - swy*swy/sw;
+}
+function tau2DL(y,v){
+  var k=y.length; if(k<2) return 0;
+  var sw=0,sw2=0;
+  for(var i=0;i<k;i++){ var w=1/v[i]; sw+=w; sw2+=w*w; }
+  var C=sw-sw2/sw, Q=Qstat(y,v);
+  return Math.max(0,(Q-(k-1))/C);
+}
+function tau2REML(y,v){
+  var k=y.length; if(k<2) return 0;
+  var t2=tau2DL(y,v), prev;
+  for(var it=0; it<300; it++){
+    var sw=0,swy=0,sw2=0;
+    var i,w;
+    for(i=0;i<k;i++){ w=1/(v[i]+t2); sw+=w; swy+=w*y[i]; }
+    var mu=swy/sw, numr=0;
+    for(i=0;i<k;i++){ w=1/(v[i]+t2); sw2+=w*w; numr += w*w*((y[i]-mu)*(y[i]-mu) + 1/sw - v[i]); }
+    prev=t2; t2=Math.max(0, numr/sw2);
+    if(Math.abs(t2-prev)<1e-10) break;
+  }
+  return t2;
+}
+function tau2PM(y,v){
+  var k=y.length; if(k<2) return 0;
+  var f=function(t2){
+    var sw=0,swy=0,i,w;
+    for(i=0;i<k;i++){ w=1/(v[i]+t2); sw+=w; swy+=w*y[i]; }
+    var mu=swy/sw, s=0;
+    for(i=0;i<k;i++){ w=1/(v[i]+t2); s+=w*(y[i]-mu)*(y[i]-mu); }
+    return s-(k-1);
+  };
+  if(f(0)<=0) return 0;
+  var lo=0, hi=1;
+  while(f(hi)>0 && hi<1e6) hi*=2;
+  for(var i=0;i<200;i++){ var mid=(lo+hi)/2; if(f(mid)>0) lo=mid; else hi=mid; }
+  return (lo+hi)/2;
+}
+function metaFit(studies, opt){
+  // studies: [{yi,vi,...}]  opt:{model:'random'|'fixed', tau:'REML'|'DL'|'PM', hk:bool, level:0.95}
+  var y=[],v=[],i;
+  for(i=0;i<studies.length;i++){ y.push(studies[i].yi); v.push(studies[i].vi); }
+  var k=y.length, out={k:k};
+  if(k===0) return out;
+  var t2=0;
+  if(opt.model==='random' && k>1){
+    t2 = opt.tau==='DL'? tau2DL(y,v) : opt.tau==='PM'? tau2PM(y,v) : tau2REML(y,v);
+  }
+  out.tau2=t2; out.tau=Math.sqrt(t2);
+  var wm=wmean(y,v,t2);
+  out.mu=wm.mu; out.sw=wm.sw;
+  var se=Math.sqrt(1/wm.sw), df=k-1, useT=false;
+  if(opt.hk && k>1 && opt.model==='random'){
+    var s=0;
+    for(i=0;i<k;i++){ var w=1/(v[i]+t2); s+=w*(y[i]-out.mu)*(y[i]-out.mu); }
+    var seHK=Math.sqrt(s/((k-1)*wm.sw));
+    if(isFinite(seHK)&&seHK>0){ se=Math.max(seHK, 1e-12); useT=true; }
+  }
+  var lev=opt.level||0.95, alpha=1-lev;
+  var crit = useT ? Math.abs(qt(alpha/2,df)) : Math.abs(qnorm(alpha/2));
+  out.se=se; out.useT=useT; out.df=df;
+  out.lo=out.mu-crit*se; out.hi=out.mu+crit*se;
+  out.stat=out.mu/se;
+  out.p = useT ? ptTwo(out.stat,df) : 2*(1-pnorm(Math.abs(out.stat)));
+  // 異質性
+  var Q=Qstat(y,v), dfQ=k-1;
+  out.Q=Q; out.dfQ=dfQ; out.pQ=k>1?pchisqUpper(Q,dfQ):NaN;
+  out.I2 = k>1 ? Math.max(0,(Q-dfQ)/Q)*100 : 0;
+  out.H2 = k>1 ? Q/dfQ : 1;
+  // 変量効果での重み
+  out.weights=[];
+  for(i=0;i<k;i++) out.weights.push((1/(v[i]+t2))/wm.sw*100);
+  // 予測区間
+  if(opt.model==='random' && k>2 && t2>0){
+    var tc=Math.abs(qt(alpha/2,k-2)), sd=Math.sqrt(t2+se*se);
+    out.piLo=out.mu-tc*sd; out.piHi=out.mu+tc*sd;
+  }
+  return out;
+}
+
+/* ══════════════════════════════════════════════════
+   4. 部分集団・メタ回帰・診断
+   ══════════════════════════════════════════════════ */
+function subgroupAnalysis(studies, key, opt){
+  var groups={}, order=[];
+  studies.forEach(function(s){
+    var g=(s[key]||'（未分類）').toString().trim()||'（未分類）';
+    if(!groups[g]){ groups[g]=[]; order.push(g); }
+    groups[g].push(s);
+  });
+  var res=order.map(function(g){
+    var f=metaFit(groups[g],opt); f.name=g; f.n=groups[g].length; return f;
+  });
+  var valid=res.filter(function(r){ return r.k>0 && isFinite(r.mu) && isFinite(r.se) && r.se>0; });
+  var Qb=NaN, dfb=NaN, pb=NaN;
+  if(valid.length>1){
+    var sw=0,swy=0;
+    valid.forEach(function(r){ var w=1/(r.se*r.se); sw+=w; swy+=w*r.mu; });
+    var mu=swy/sw; Qb=0;
+    valid.forEach(function(r){ var w=1/(r.se*r.se); Qb+=w*(r.mu-mu)*(r.mu-mu); });
+    dfb=valid.length-1; pb=pchisqUpper(Qb,dfb);
+  }
+  return {groups:res, Qb:Qb, dfb:dfb, pb:pb};
+}
+function metaRegression(studies, opt){
+  var d=studies.filter(function(s){ return isFinite(num(s.mod)); });
+  var k=d.length;
+  if(k<4) return {ok:false, msg:'調整変数が数値で入っている研究が4件以上必要です（現在 '+k+' 件）'};
+  var y=d.map(function(s){return s.yi;}), v=d.map(function(s){return s.vi;}),
+      x=d.map(function(s){return num(s.mod);});
+  var t2=0;
+  if(opt.model==='random'){
+    // 残差のDL推定
+    var fitW=function(t2v){
+      var Sw=0,Swx=0,Swx2=0,Swy=0,Swxy=0,i,w;
+      for(i=0;i<k;i++){ w=1/(v[i]+t2v); Sw+=w; Swx+=w*x[i]; Swx2+=w*x[i]*x[i]; Swy+=w*y[i]; Swxy+=w*x[i]*y[i]; }
+      var det=Sw*Swx2-Swx*Swx;
+      if(Math.abs(det)<1e-14) return null;
+      var b1=(Sw*Swxy-Swx*Swy)/det, b0=(Swy-b1*Swx)/Sw;
+      var vb1=Sw/det, vb0=Swx2/det;
+      var Qr=0;
+      for(i=0;i<k;i++){ w=1/(v[i]+t2v); Qr+=w*Math.pow(y[i]-b0-b1*x[i],2); }
+      return {b0:b0,b1:b1,vb0:vb0,vb1:vb1,Qr:Qr,Sw:Sw,Swx:Swx,Swx2:Swx2,det:det};
+    };
+    var f0=fitW(0);
+    if(!f0) return {ok:false,msg:'調整変数の値がすべて同じで、傾きを推定できません'};
+    // trace 項
+    var Sw=f0.Sw,Swx=f0.Swx,Swx2=f0.Swx2,det=f0.det, Sw2=0,Sw2x=0,Sw2x2=0,i,w;
+    for(i=0;i<k;i++){ w=1/v[i]; Sw2+=w*w; Sw2x+=w*w*x[i]; Sw2x2+=w*w*x[i]*x[i]; }
+    var tr=(Swx2*Sw2 - 2*Swx*Sw2x + Sw*Sw2x2)/det;
+    var C=Sw-tr;
+    t2=Math.max(0,(f0.Qr-(k-2))/C);
+  }
+  var f=(function(t2v){
+    var Sw=0,Swx=0,Swx2=0,Swy=0,Swxy=0,i,w;
+    for(i=0;i<k;i++){ w=1/(v[i]+t2v); Sw+=w; Swx+=w*x[i]; Swx2+=w*x[i]*x[i]; Swy+=w*y[i]; Swxy+=w*x[i]*y[i]; }
+    var det=Sw*Swx2-Swx*Swx;
+    if(Math.abs(det)<1e-14) return null;
+    var b1=(Sw*Swxy-Swx*Swy)/det, b0=(Swy-b1*Swx)/Sw;
+    var Qr=0;
+    for(i=0;i<k;i++){ w=1/(v[i]+t2v); Qr+=w*Math.pow(y[i]-b0-b1*x[i],2); }
+    return {b0:b0,b1:b1,se0:Math.sqrt(Swx2/det),se1:Math.sqrt(Sw/det),Qr:Qr};
+  })(t2);
+  if(!f) return {ok:false,msg:'調整変数の値がすべて同じで、傾きを推定できません'};
+  var z=f.b1/f.se1, p=2*(1-pnorm(Math.abs(z)));
+  var t2tot = opt.model==='random' ? tau2DL(y,v) : 0;
+  var R2 = t2tot>0 ? Math.max(0,(t2tot-t2)/t2tot)*100 : NaN;
+  return {ok:true,k:k,b0:f.b0,b1:f.b1,se1:f.se1,z:z,p:p,lo:f.b1-1.959964*f.se1,hi:f.b1+1.959964*f.se1,
+          tau2res:t2,tau2tot:t2tot,R2:R2,Qr:f.Qr,dfr:k-2,pQr:pchisqUpper(f.Qr,k-2),x:x,y:y,v:v,
+          labels:d.map(function(s){return s.label;})};
+}
+function leaveOneOut(studies, opt){
+  return studies.map(function(s,i){
+    var sub=studies.filter(function(_,j){ return j!==i; });
+    var f=metaFit(sub,opt); f.dropped=s.label; return f;
+  });
+}
+function cumulative(studies, opt){
+  var srt=studies.slice().sort(function(a,b){
+    var ya=num(a.year), yb=num(b.year);
+    if(isFinite(ya)&&isFinite(yb)&&ya!==yb) return ya-yb;
+    return 0;
+  });
+  var out=[];
+  for(var i=0;i<srt.length;i++){
+    var f=metaFit(srt.slice(0,i+1),opt);
+    f.label=srt[i].label; f.year=srt[i].year; out.push(f);
+  }
+  return out;
+}
+function eggerTest(studies){
+  var k=studies.length;
+  if(k<3) return {ok:false,msg:'研究が3件以上必要です'};
+  var sx=0,sy=0,sxx=0,sxy=0,i,se,snd,prec;
+  var X=[],Y=[];
+  for(i=0;i<k;i++){
+    se=Math.sqrt(studies[i].vi); snd=studies[i].yi/se; prec=1/se;
+    X.push(prec); Y.push(snd); sx+=prec; sy+=snd; sxx+=prec*prec; sxy+=prec*snd;
+  }
+  var n=k, det=n*sxx-sx*sx;
+  if(Math.abs(det)<1e-14) return {ok:false,msg:'すべての研究の精度が同じで検定できません'};
+  var b=(n*sxy-sx*sy)/det, a=(sy-b*sx)/n;
+  var rss=0;
+  for(i=0;i<k;i++) rss+=Math.pow(Y[i]-a-b*X[i],2);
+  var s2=rss/(n-2), sea=Math.sqrt(s2*sxx/det);
+  var t=a/sea, p=ptTwo(t,n-2);
+  return {ok:true,intercept:a,se:sea,t:t,df:n-2,p:p,slope:b};
+}
+function beggTest(studies){
+  var k=studies.length;
+  if(k<4) return {ok:false,msg:'研究が4件以上必要です'};
+  var sw=0,swy=0,i;
+  for(i=0;i<k;i++){ var w=1/studies[i].vi; sw+=w; swy+=w*studies[i].yi; }
+  var mu=swy/sw, a=[],b=[];
+  for(i=0;i<k;i++){
+    var vs=studies[i].vi-1/sw;
+    if(vs<=0) vs=1e-8;
+    a.push((studies[i].yi-mu)/Math.sqrt(vs)); b.push(studies[i].vi);
+  }
+  var conc=0,disc=0;
+  for(i=0;i<k;i++) for(var j=i+1;j<k;j++){
+    var s=(a[i]-a[j])*(b[i]-b[j]);
+    if(s>0) conc++; else if(s<0) disc++;
+  }
+  var np=k*(k-1)/2, tau=(conc-disc)/np;
+  var z=(conc-disc)/Math.sqrt(k*(k-1)*(2*k+5)/18);
+  return {ok:true,tau:tau,z:z,p:2*(1-pnorm(Math.abs(z)))};
+}
+function trimFill(studies, opt){
+  var k=studies.length;
+  if(k<3) return {ok:false,msg:'研究が3件以上必要です'};
+  var k0=0, side=1, mu=0, arr=studies.slice();
+  for(var it=0; it<30; it++){
+    var srt=arr.slice().sort(function(p,q){ return p.yi-q.yi; });
+    var kept = k0>0 ? (side>0 ? srt.slice(0,k-k0) : srt.slice(k0)) : srt;
+    var f=metaFit(kept,opt);
+    mu=f.mu;
+    // 中心化した値の順位
+    var dev=arr.map(function(s){ return {d:s.yi-mu, ad:Math.abs(s.yi-mu)}; });
+    dev.sort(function(p,q){ return p.ad-q.ad; });
+    var Tn=0, sumSignRank=0;
+    dev.forEach(function(o,idx){ var rk=idx+1; if(o.d>0){ Tn+=rk; } sumSignRank+=Math.sign(o.d)*rk; });
+    var newSide = (it===0) ? (sumSignRank>0 ? 1 : -1) : side;   // 欠測側は最初に決めて固定
+    var L0=(4*Tn-k*(k+1))/(2*k-1);
+    if(newSide<0){
+      var Tn2=0; dev.forEach(function(o,idx){ if(o.d<0) Tn2+=idx+1; });
+      L0=(4*Tn2-k*(k+1))/(2*k-1);
+    }
+    var newK0=Math.max(0,Math.min(k-2,Math.round(L0)));
+    if(newK0===k0 && newSide===side && it>0) break;
+    k0=newK0; side=newSide;
+  }
+  var imputed=[];
+  if(k0>0){
+    var srt2=studies.slice().sort(function(p,q){ return side>0 ? q.yi-p.yi : p.yi-q.yi; });
+    for(var i=0;i<k0;i++){
+      imputed.push({label:'補完'+(i+1), yi:2*mu-srt2[i].yi, vi:srt2[i].vi, imputed:true});
+    }
+  }
+  var all=studies.concat(imputed);
+  var fit=metaFit(all,opt);
+  return {ok:true,k0:k0,side:side,imputed:imputed,fit:fit,mu0:mu};
+}
+function failSafeN(studies){
+  var sz=0;
+  studies.forEach(function(s){ sz+=s.yi/Math.sqrt(s.vi); });
+  var n=sz*sz/2.705543-studies.length;
+  return {sumZ:sz, N:Math.max(0,Math.round(n))};
+}
+function baujat(studies, opt){
+  var full=metaFit(studies,{model:'fixed',tau:'DL',hk:false});
+  var fullR=metaFit(studies,opt);
+  return studies.map(function(s,i){
+    var w=1/s.vi;
+    var qc=w*Math.pow(s.yi-full.mu,2);
+    var sub=studies.filter(function(_,j){ return j!==i; });
+    var f=metaFit(sub,opt);
+    var infl=Math.pow(fullR.mu-f.mu,2)/(fullR.se*fullR.se);
+    return {label:s.label, x:qc, y:infl};
+  });
+}
+/* ══════════════════════════════════════════════════
+   5. 作図
+   ══════════════════════════════════════════════════ */
+var C = {ink:'#20242A', ink2:'#5C646B', ink3:'#8B929A', rule:'#D6DACD',
+         green:'#1E4A3D', greenL:'#2F6B58', gold:'#A2711A', indigo:'#28486E', crimson:'#8C2F38'};
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(x,d){ if(x==null||!isFinite(x)) return '—'; return x.toFixed(d==null?3:d); }
+function pfmt(p){ if(!isFinite(p)) return '—'; return p<0.001?'< .001':p.toFixed(3).replace(/^0/,''); }
+function back(y, metric){ // 統合尺度 → 表示尺度
+  if(METRICS[metric].log) return Math.exp(y);
+  if(metric==='COR') return Math.tanh(y);
+  return y;
+}
+function fwd(x, metric){
+  if(METRICS[metric].log) return Math.log(x);
+  if(metric==='COR') return Math.atanh(x);
+  return x;
+}
+function dispCI(y,lo,hi,metric,d){
+  return fmt(back(y,metric),d)+' ['+fmt(back(lo,metric),d)+', '+fmt(back(hi,metric),d)+']';
+}
+function truncate(s,n){ s=String(s||''); return s.length>n? s.slice(0,n-1)+'…' : s; }
+
+function axisTicks(lo,hi,metric){
+  if(METRICS[metric].log){
+    var cand=[0.05,0.1,0.2,0.25,0.33,0.5,0.67,1,1.5,2,3,4,5,10,20];
+    var t=cand.filter(function(c){ var l=Math.log(c); return l>=lo-1e-9 && l<=hi+1e-9; });
+    if(t.length<3) t=[Math.exp(lo),1,Math.exp(hi)].filter(function(c){return isFinite(c)&&c>0;});
+    return t.map(function(c){
+      var lab = (Math.abs(c-Math.round(c))<1e-9) ? String(Math.round(c)) : (c<1? c.toFixed(2) : c.toFixed(1));
+      return {v:Math.log(c), t:lab};
+    });
+  }
+  var span=hi-lo, step=Math.pow(10,Math.floor(Math.log10(span/4)));
+  var mult=[1,2,2.5,5,10], best=step;
+  for(var i=0;i<mult.length;i++){ if(span/(step*mult[i])<=6){ best=step*mult[i]; break; } }
+  var start=Math.ceil(lo/best)*best, out=[];
+  for(var v=start; v<=hi+1e-9; v+=best){
+    var vv=Math.abs(v)<1e-12?0:v;
+    out.push({v:vv, t:(Math.abs(best)<0.1? vv.toFixed(2) : Math.abs(best)<1? vv.toFixed(1) : String(Math.round(vv*100)/100))});
+  }
+  return out;
+}
+
+/* ── 森林プロット ─────────────────────── */
+function forestSVG(rows, pooled, metric, opt){
+  // rows: [{type:'study'|'head'|'sub', label, info, yi, lo, hi, w, off}]
+  opt=opt||{};
+  var W=980, L=0, PX0=316, PX1=708, RH=23, top=44;
+  var lows=[], his=[];
+  rows.forEach(function(r){ if(r.type==='study'||r.type==='sub'){ if(isFinite(r.lo)) lows.push(r.lo); if(isFinite(r.hi)) his.push(r.hi); } });
+  if(pooled){ if(isFinite(pooled.lo)) lows.push(pooled.lo); if(isFinite(pooled.hi)) his.push(pooled.hi);
+    if(isFinite(pooled.piLo)) lows.push(pooled.piLo); if(isFinite(pooled.piHi)) his.push(pooled.piHi); }
+  var n0=fwd(METRICS[metric].null0,metric);
+  lows.push(n0); his.push(n0);
+  var xmin=Math.min.apply(null,lows), xmax=Math.max.apply(null,his);
+  // 極端な区間は丸める
+  var sorted=lows.concat(his).sort(function(a,b){return a-b;});
+  var pad=(xmax-xmin)*0.06 || 0.5;
+  xmin-=pad; xmax+=pad;
+  var sc=function(v){ return PX0+(v-xmin)/(xmax-xmin)*(PX1-PX0); };
+  var H=top+rows.length*RH+(pooled?86:14);
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-size="12">';
+  s+='<rect width="'+W+'" height="'+H+'" fill="#fff"/>';
+  // 見出し
+  s+='<text x="0" y="16" fill="'+C.ink2+'" font-size="11" letter-spacing=".08em">研究</text>';
+  s+='<text x="200" y="16" fill="'+C.ink2+'" font-size="11" letter-spacing=".08em">データ</text>';
+  s+='<text x="'+((PX0+PX1)/2)+'" y="16" fill="'+C.ink2+'" font-size="11" text-anchor="middle" letter-spacing=".08em">'+esc(METRICS[metric].short)+'（95%信頼区間）</text>';
+  s+='<text x="'+(PX1+178)+'" y="16" fill="'+C.ink2+'" font-size="11" text-anchor="end" letter-spacing=".08em">効果量 [95%CI]</text>';
+  s+='<text x="'+(W-4)+'" y="16" fill="'+C.ink2+'" font-size="11" text-anchor="end" letter-spacing=".08em">重み</text>';
+  s+='<line x1="0" y1="24" x2="'+W+'" y2="24" stroke="'+C.rule+'"/>';
+  // 目盛
+  var ticks=axisTicks(xmin,xmax,metric);
+  var yAx=top+rows.length*RH+(pooled?48:4);
+  s+='<line x1="'+PX0+'" y1="'+yAx+'" x2="'+PX1+'" y2="'+yAx+'" stroke="'+C.ink2+'"/>';
+  ticks.forEach(function(t){
+    var x=sc(t.v);
+    s+='<line x1="'+x+'" y1="'+yAx+'" x2="'+x+'" y2="'+(yAx+4)+'" stroke="'+C.ink2+'"/>';
+    s+='<text class="mono" x="'+x+'" y="'+(yAx+16)+'" font-size="10" fill="'+C.ink2+'" text-anchor="middle">'+t.t+'</text>';
+  });
+  // 無効果線
+  s+='<line x1="'+sc(n0)+'" y1="'+(top-14)+'" x2="'+sc(n0)+'" y2="'+yAx+'" stroke="'+C.ink3+'" stroke-dasharray="3 3"/>';
+  // 各行
+  rows.forEach(function(r,i){
+    var y=top+i*RH+RH/2;
+    var an=opt.anim? ' class="stagger" style="animation-delay:'+(i*0.035)+'s"':'';
+    if(r.type==='header'){
+      s+='<text x="0" y="'+(y+4)+'" font-size="11.5" font-weight="700" fill="'+C.green+'">'+esc(r.label)+'</text>';
+      s+='<line x1="0" y1="'+(y+9)+'" x2="'+W+'" y2="'+(y+9)+'" stroke="'+C.rule+'" stroke-dasharray="2 2"/>';
+      return;
+    }
+    var col = r.off? C.ink3 : (r.type==='sub'? C.indigo : C.green);
+    s+='<g'+an+'>';
+    s+='<text x="'+(r.type==='sub'?12:0)+'" y="'+(y+4)+'" font-size="11.5" fill="'+(r.off?C.ink3:C.ink)+'"'+(r.type==='sub'?' font-weight="700"':'')+'>'+esc(truncate(r.label,26))+'</text>';
+    if(r.info) s+='<text class="mono" x="200" y="'+(y+4)+'" font-size="10.5" fill="'+C.ink2+'">'+esc(r.info)+'</text>';
+    if(isFinite(r.yi)){
+      var lo=Math.max(r.lo,xmin), hi=Math.min(r.hi,xmax);
+      var arrowL=r.lo<xmin, arrowR=r.hi>xmax;
+      if(r.type==='sub'){
+        var cx=sc(r.yi), h=6;
+        s+='<polygon points="'+sc(r.lo)+','+y+' '+cx+','+(y-h)+' '+sc(r.hi)+','+y+' '+cx+','+(y+h)+'" fill="'+C.indigo+'" opacity=".85"/>';
+      } else {
+        s+='<line x1="'+sc(lo)+'" y1="'+y+'" x2="'+sc(hi)+'" y2="'+y+'" stroke="'+col+'" stroke-width="1.2"/>';
+        s+='<line x1="'+sc(lo)+'" y1="'+(y-3.5)+'" x2="'+sc(lo)+'" y2="'+(y+3.5)+'" stroke="'+col+'" stroke-width="1.2"/>';
+        s+='<line x1="'+sc(hi)+'" y1="'+(y-3.5)+'" x2="'+sc(hi)+'" y2="'+(y+3.5)+'" stroke="'+col+'" stroke-width="1.2"/>';
+        if(arrowL) s+='<polygon points="'+sc(xmin)+','+y+' '+(sc(xmin)+7)+','+(y-4)+' '+(sc(xmin)+7)+','+(y+4)+'" fill="'+col+'"/>';
+        if(arrowR) s+='<polygon points="'+sc(xmax)+','+y+' '+(sc(xmax)-7)+','+(y-4)+' '+(sc(xmax)-7)+','+(y+4)+'" fill="'+col+'"/>';
+        var sz=4+Math.sqrt(Math.max(0,r.w||0))*1.7; sz=Math.min(11,Math.max(3.4,sz));
+        if(r.imputed)
+          s+='<rect x="'+(sc(r.yi)-sz/2)+'" y="'+(y-sz/2)+'" width="'+sz+'" height="'+sz+'" fill="#fff" stroke="'+C.crimson+'" stroke-width="1.2"/>';
+        else
+          s+='<rect x="'+(sc(r.yi)-sz/2)+'" y="'+(y-sz/2)+'" width="'+sz+'" height="'+sz+'" fill="'+col+'" opacity="'+(r.off?.35:.85)+'"/>';
+      }
+      s+='<text class="mono" x="'+(PX1+178)+'" y="'+(y+4)+'" font-size="10.5" text-anchor="end" fill="'+(r.off?C.ink3:C.ink)+'">'+esc(dispCI(r.yi,r.lo,r.hi,metric,2))+'</text>';
+    } else {
+      s+='<text class="mono" x="'+(PX1+178)+'" y="'+(y+4)+'" font-size="10.5" text-anchor="end" fill="'+C.ink3+'">計算できません</text>';
+    }
+    if(r.w!=null&&isFinite(r.w)) s+='<text class="mono" x="'+(W-4)+'" y="'+(y+4)+'" font-size="10.5" text-anchor="end" fill="'+C.ink2+'">'+r.w.toFixed(1)+'%</text>';
+    s+='</g>';
+  });
+  // 統合結果
+  if(pooled){
+    var yp=top+rows.length*RH+12;
+    s+='<line x1="0" y1="'+(yp-11)+'" x2="'+W+'" y2="'+(yp-11)+'" stroke="'+C.rule+'"/>';
+    var cx2=sc(pooled.mu), h2=7.5;
+    var dcl=opt.anim?' class="dia"':'';
+    s+='<polygon'+dcl+' points="'+sc(Math.max(pooled.lo,xmin))+','+yp+' '+cx2+','+(yp-h2)+' '+sc(Math.min(pooled.hi,xmax))+','+yp+' '+cx2+','+(yp+h2)+'" fill="'+C.gold+'"/>';
+    s+='<text x="0" y="'+(yp+4)+'" font-size="12" font-weight="700" fill="'+C.ink+'">'+esc(opt.pooledLabel||'統合（変量効果）')+'</text>';
+    s+='<text class="mono" x="'+(PX1+178)+'" y="'+(yp+4)+'" font-size="11" text-anchor="end" font-weight="700" fill="'+C.ink+'">'+esc(dispCI(pooled.mu,pooled.lo,pooled.hi,metric,2))+'</text>';
+    s+='<text class="mono" x="'+(W-4)+'" y="'+(yp+4)+'" font-size="10.5" text-anchor="end" fill="'+C.ink2+'">100%</text>';
+    if(isFinite(pooled.piLo)){
+      var yq=yp+16;
+      s+='<line x1="'+sc(Math.max(pooled.piLo,xmin))+'" y1="'+yq+'" x2="'+sc(Math.min(pooled.piHi,xmax))+'" y2="'+yq+'" stroke="'+C.indigo+'" stroke-width="1.4" stroke-dasharray="5 3"/>';
+      s+='<text x="0" y="'+(yq+4)+'" font-size="10.5" fill="'+C.indigo+'">予測区間</text>';
+      s+='<text class="mono" x="'+(PX1+178)+'" y="'+(yq+4)+'" font-size="10" text-anchor="end" fill="'+C.indigo+'">'+esc(dispCI(pooled.mu,pooled.piLo,pooled.piHi,metric,2))+'</text>';
+    }
+  }
+  // 向きの注記
+  var yL=H-4;
+  s+='<text x="'+(PX0)+'" y="'+yL+'" font-size="10" fill="'+C.ink3+'">← '+esc(opt.leftLab||'群2が大きい')+'</text>';
+  s+='<text x="'+(PX1)+'" y="'+yL+'" font-size="10" fill="'+C.ink3+'" text-anchor="end">'+esc(opt.rightLab||'群1が大きい')+' →</text>';
+  s+='</svg>';
+  return s;
+}
+
+/* ── ファンネルプロット ───────────────── */
+function funnelSVG(studies, pooled, metric, imputed){
+  var W=700,H=460, ml=64, mr=24, mt=20, mb=54;
+  var xs=[], ses=[];
+  var all=studies.concat(imputed||[]);
+  all.forEach(function(s){ xs.push(s.yi); ses.push(Math.sqrt(s.vi)); });
+  var seMax=Math.max.apply(null,ses)*1.12, mu=pooled.mu;
+  var half=Math.max.apply(null, all.map(function(s){ return Math.abs(s.yi-mu); }));
+  half=Math.max(half, 1.96*seMax)*1.1;
+  var xmin=mu-half, xmax=mu+half;
+  var sx=function(v){ return ml+(v-xmin)/(xmax-xmin)*(W-ml-mr); };
+  var sy=function(se){ return mt+(se/seMax)*(H-mt-mb); };
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-size="12">';
+  s+='<rect width="'+W+'" height="'+H+'" fill="#fff"/>';
+  // 疑似95%領域
+  s+='<polygon points="'+sx(mu)+','+sy(0)+' '+sx(mu-1.96*seMax)+','+sy(seMax)+' '+sx(mu+1.96*seMax)+','+sy(seMax)+'" fill="#F3F6F1" stroke="'+C.rule+'" stroke-dasharray="4 3"/>';
+  s+='<line x1="'+sx(mu)+'" y1="'+sy(0)+'" x2="'+sx(mu)+'" y2="'+sy(seMax)+'" stroke="'+C.gold+'" stroke-width="1.2"/>';
+  // 枠
+  s+='<line x1="'+ml+'" y1="'+(H-mb)+'" x2="'+(W-mr)+'" y2="'+(H-mb)+'" stroke="'+C.ink2+'"/>';
+  s+='<line x1="'+ml+'" y1="'+mt+'" x2="'+ml+'" y2="'+(H-mb)+'" stroke="'+C.ink2+'"/>';
+  axisTicks(xmin,xmax,metric).forEach(function(t){
+    var x=sx(t.v);
+    s+='<line x1="'+x+'" y1="'+(H-mb)+'" x2="'+x+'" y2="'+(H-mb+4)+'" stroke="'+C.ink2+'"/>';
+    s+='<text class="mono" x="'+x+'" y="'+(H-mb+17)+'" font-size="10" text-anchor="middle" fill="'+C.ink2+'">'+t.t+'</text>';
+  });
+  for(var i=0;i<=4;i++){
+    var se=seMax*i/4, yy=sy(se);
+    s+='<line x1="'+(ml-4)+'" y1="'+yy+'" x2="'+ml+'" y2="'+yy+'" stroke="'+C.ink2+'"/>';
+    s+='<text class="mono" x="'+(ml-8)+'" y="'+(yy+3.5)+'" font-size="10" text-anchor="end" fill="'+C.ink2+'">'+se.toFixed(2)+'</text>';
+  }
+  s+='<text x="'+(ml+(W-ml-mr)/2)+'" y="'+(H-14)+'" font-size="11" text-anchor="middle" fill="'+C.ink2+'">'+esc(METRICS[metric].short)+(METRICS[metric].log?'（対数）':'')+'</text>';
+  s+='<text x="16" y="'+(mt+(H-mt-mb)/2)+'" font-size="11" fill="'+C.ink2+'" transform="rotate(-90 16 '+(mt+(H-mt-mb)/2)+')" text-anchor="middle">標準誤差（下ほど小さい研究）</text>';
+  studies.forEach(function(st){
+    s+='<circle cx="'+sx(st.yi)+'" cy="'+sy(Math.sqrt(st.vi))+'" r="4.4" fill="'+C.green+'" opacity=".72"/>';
+  });
+  (imputed||[]).forEach(function(st){
+    s+='<circle cx="'+sx(st.yi)+'" cy="'+sy(Math.sqrt(st.vi))+'" r="4.4" fill="#fff" stroke="'+C.crimson+'" stroke-width="1.4"/>';
+  });
+  s+='</svg>';
+  return s;
+}
+
+/* ── 散布図（メタ回帰・Baujat） ───────── */
+function scatterSVG(pts, o){
+  var W=700,H=420, ml=68, mr=26, mt=18, mb=52;
+  var xs=pts.map(function(p){return p.x;}), ys=pts.map(function(p){return p.y;});
+  var xmin=Math.min.apply(null,xs), xmax=Math.max.apply(null,xs);
+  var ymin=Math.min.apply(null,ys), ymax=Math.max.apply(null,ys);
+  if(o.yLine!=null){ ymin=Math.min(ymin,o.yLine); ymax=Math.max(ymax,o.yLine); }
+  var px=(xmax-xmin)*0.08||1, py=(ymax-ymin)*0.12||1;
+  xmin-=px; xmax+=px; ymin-=py; ymax+=py;
+  var sx=function(v){ return ml+(v-xmin)/(xmax-xmin)*(W-ml-mr); };
+  var sy=function(v){ return H-mb-(v-ymin)/(ymax-ymin)*(H-mt-mb); };
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-size="12">';
+  s+='<rect width="'+W+'" height="'+H+'" fill="#fff"/>';
+  s+='<line x1="'+ml+'" y1="'+(H-mb)+'" x2="'+(W-mr)+'" y2="'+(H-mb)+'" stroke="'+C.ink2+'"/>';
+  s+='<line x1="'+ml+'" y1="'+mt+'" x2="'+ml+'" y2="'+(H-mb)+'" stroke="'+C.ink2+'"/>';
+  var i,v;
+  for(i=0;i<=5;i++){
+    v=xmin+(xmax-xmin)*i/5;
+    s+='<line x1="'+sx(v)+'" y1="'+(H-mb)+'" x2="'+sx(v)+'" y2="'+(H-mb+4)+'" stroke="'+C.ink2+'"/>';
+    s+='<text class="mono" x="'+sx(v)+'" y="'+(H-mb+17)+'" font-size="10" text-anchor="middle" fill="'+C.ink2+'">'+(Math.abs(v)>=100?v.toFixed(0):v.toFixed(2))+'</text>';
+  }
+  for(i=0;i<=4;i++){
+    v=ymin+(ymax-ymin)*i/4;
+    s+='<line x1="'+(ml-4)+'" y1="'+sy(v)+'" x2="'+ml+'" y2="'+sy(v)+'" stroke="'+C.ink2+'"/>';
+    s+='<text class="mono" x="'+(ml-8)+'" y="'+(sy(v)+3.5)+'" font-size="10" text-anchor="end" fill="'+C.ink2+'">'+(Math.abs(v)>=100?v.toFixed(0):v.toFixed(2))+'</text>';
+  }
+  if(o.yLine!=null)
+    s+='<line x1="'+ml+'" y1="'+sy(o.yLine)+'" x2="'+(W-mr)+'" y2="'+sy(o.yLine)+'" stroke="'+C.ink3+'" stroke-dasharray="3 3"/>';
+  if(o.line){
+    var x1=xmin, x2=xmax;
+    s+='<line x1="'+sx(x1)+'" y1="'+sy(o.line.b0+o.line.b1*x1)+'" x2="'+sx(x2)+'" y2="'+sy(o.line.b0+o.line.b1*x2)+'" stroke="'+C.gold+'" stroke-width="1.8"/>';
+  }
+  pts.forEach(function(p){
+    var r=p.r||5;
+    s+='<circle cx="'+sx(p.x)+'" cy="'+sy(p.y)+'" r="'+r+'" fill="'+C.green+'" opacity=".65"/>';
+    if(p.label) s+='<text x="'+(sx(p.x)+r+3)+'" y="'+(sy(p.y)+3.5)+'" font-size="9.5" fill="'+C.ink3+'">'+esc(truncate(p.label,14))+'</text>';
+  });
+  s+='<text x="'+(ml+(W-ml-mr)/2)+'" y="'+(H-13)+'" font-size="11" text-anchor="middle" fill="'+C.ink2+'">'+esc(o.xlab||'')+'</text>';
+  s+='<text x="16" y="'+(mt+(H-mt-mb)/2)+'" font-size="11" fill="'+C.ink2+'" transform="rotate(-90 16 '+(mt+(H-mt-mb)/2)+')" text-anchor="middle">'+esc(o.ylab||'')+'</text>';
+  s+='</svg>';
+  return s;
+}
+/* ══════════════════════════════════════════════════
+   6. 状態
+   ══════════════════════════════════════════════════ */
+var S = {
+  step:1, metric:'SMD', outcome:'',
+  opt:{model:'random', tau:'REML', hk:false, level:0.95},
+  studies:[], files:[], sg:'', sortBy:false, seq:0, tf:null
+};
+var $=function(id){ return document.getElementById(id); };
+var STEPS=[['i','論文を取り込む'],['ii','データを確かめる'],['iii','効果量をそろえる'],
+           ['iv','統合する'],['v','吟味する'],['vi','報告する']];
+
+function newStudy(o){
+  o=o||{};
+  var st={id:++S.seq, label:o.label||('研究'+(S.studies.length+1)), year:o.year||'', sg:o.sg||'',
+    mod:o.mod==null?'':o.mod, mode:o.mode||MODES[S.metric][0], include:true,
+    n1:'',m1:'',s1:'',n2:'',m2:'',s2:'', n:'', r:'', rpre:'', a:'', c:'',
+    est:'', lo:'', hi:'', se:'', quote:o.quote||'', conf:o.conf||'', note:o.note||'', src:o.src||''};
+  ['n1','m1','s1','n2','m2','s2','n','r','rpre','a','c','est','lo','hi','se'].forEach(function(k){
+    if(o[k]!=null && o[k]!=='' ) st[k]=o[k];
+  });
+  if(MODES[S.metric].indexOf(st.mode)<0) st.mode=MODES[S.metric][0];
+  return st;
+}
+function calcAll(){
+  S.studies.forEach(function(st){
+    var e=computeES(st,S.metric);
+    st.yi=e.yi; st.vi=e.vi; st.why=e.why; st.warn=e.warn;
+    st.ok=isFinite(e.yi)&&isFinite(e.vi)&&e.vi>0;
+  });
+}
+function active(){ return S.studies.filter(function(s){ return s.include && s.ok; }); }
+function fit(){ return metaFit(active(), S.opt); }
+
+/* ══════════════════════════════════════════════════
+   7. 画面の骨組み
+   ══════════════════════════════════════════════════ */
+function renderNav(){
+  $('nav').innerHTML=STEPS.map(function(s,i){
+    return '<button data-s="'+(i+1)+'" aria-current="'+(S.step===i+1)+'"><span class="rn">'+s[0]+'</span>'+s[1]+'</button>';
+  }).join('');
+}
+function go(n){
+  S.step=n; calcAll();
+  for(var i=1;i<=6;i++) $('s'+i).classList.toggle('on', i===n);
+  renderNav(); renderBar();
+  if(n===2) renderData();
+  if(n===3) renderES();
+  if(n===4) renderPooled();
+  if(n===5) renderDiag();
+  if(n===6) renderReport();
+  try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){ try{ window.scrollTo(0,0); }catch(e2){} }
+}
+function renderBar(){
+  var a=active(), b=$('bar');
+  if(a.length<1){
+    b.className='bar empty';
+    b.innerHTML='<div class="cell"><span class="k">STATUS</span><span class="v">'+
+      (S.studies.length? '効果量を計算できる研究がまだありません（手順 ii を確認）':'まだ研究が入っていません')+'</span></div>';
+    return;
+  }
+  var f=fit(), M=METRICS[S.metric];
+  b.className='bar';
+  b.innerHTML=
+    '<div class="cell"><span class="k">研究数 k</span><span class="v">'+a.length+' / '+S.studies.length+'</span></div>'+
+    '<div class="cell"><span class="k">'+esc(M.short)+'（'+(S.opt.model==='random'?'変量':'固定')+'）</span><span class="v"><em>'+fmt(back(f.mu,S.metric),3)+'</em>　['+fmt(back(f.lo,S.metric),3)+', '+fmt(back(f.hi,S.metric),3)+']</span></div>'+
+    '<div class="cell"><span class="k">P</span><span class="v">'+pfmt(f.p)+'</span></div>'+
+    '<div class="cell"><span class="k">I²</span><span class="v">'+fmt(f.I2,1)+'%</span></div>'+
+    '<div class="cell"><span class="k">τ²</span><span class="v">'+fmt(f.tau2,4)+'</span></div>';
+}
+
+/* ══════════════════════════════════════════════════
+   8. 手順 ii：データ表
+   ══════════════════════════════════════════════════ */
+var FIELDS={
+  two:[['n1','n₁'],['m1','平均₁'],['s1','SD₁'],['n2','n₂'],['m2','平均₂'],['s2','SD₂']],
+  prepost:[['n','n'],['m1','前平均'],['s1','前SD'],['m2','後平均'],['s2','後SD'],['rpre','前後r']],
+  cor:[['r','r'],['n','n']],
+  twobytwo:[['a','事象₁'],['n1','人数₁'],['c','事象₂'],['n2','人数₂']],
+  direct:[['est','効果量'],['lo','CI下限'],['hi','CI上限'],['se','SE(任意)'],['n','n(任意)']]
+};
+function maxCols(){
+  var m=0; MODES[S.metric].forEach(function(md){ m=Math.max(m,FIELDS[md].length); }); return m;
+}
+function renderData(){
+  var nc=maxCols(), primary=FIELDS[MODES[S.metric][0]];
+  var h='<table><thead><tr>'+
+    '<th class="l">含</th><th class="l">研究（著者・年）</th><th>年</th><th class="l">サブグループ</th><th>調整変数</th><th class="l">入力形式</th>';
+  for(var i=0;i<nc;i++) h+='<th class="num">'+(primary[i]?esc(primary[i][1]):'—')+'</th>';
+  h+='<th class="l">出典・根拠</th><th></th></tr></thead><tbody>';
+  if(!S.studies.length) h+='<tr><td colspan="'+(9+nc)+'" class="l" style="color:#8B929A;padding:22px 8px">研究がまだありません。手順 i でPDFを読み取るか、例のデータを読み込んでください。</td></tr>';
+  S.studies.forEach(function(st,idx){
+    var f=FIELDS[st.mode]||[];
+    h+='<tr data-i="'+idx+'" class="'+(st.include?'':'off')+'">';
+    h+='<td class="l"><input type="checkbox" data-k="include" '+(st.include?'checked':'')+' style="width:auto" aria-label="統合に含める"></td>';
+    h+='<td class="l"><input class="lab" type="text" data-k="label" value="'+esc(st.label)+'"></td>';
+    h+='<td><input type="number" data-k="year" value="'+esc(st.year)+'" style="min-width:64px"></td>';
+    h+='<td class="l"><input type="text" data-k="sg" value="'+esc(st.sg)+'" style="min-width:96px"></td>';
+    h+='<td><input type="number" step="any" data-k="mod" value="'+esc(st.mod)+'" style="min-width:64px"></td>';
+    h+='<td class="l"><select data-k="mode" style="min-width:120px">'+MODES[S.metric].map(function(m){
+        return '<option value="'+m+'"'+(st.mode===m?' selected':'')+'>'+MODE_NAME[m]+'</option>';}).join('')+'</select></td>';
+    for(var j=0;j<nc;j++){
+      if(f[j]) h+='<td><input type="number" step="any" data-k="'+f[j][0]+'" value="'+esc(st[f[j][0]])+'" placeholder="'+esc(f[j][1])+'" title="'+esc(f[j][1])+'"></td>';
+      else h+='<td style="color:#C9CEC3">·</td>';
+    }
+    var cf=st.conf==='高'?'hi':st.conf==='低'?'low':'mid';
+    h+='<td class="l" style="max-width:210px">'+
+       (st.conf?'<span class="chip '+cf+'">確信度 '+esc(st.conf)+'</span> ':'')+
+       (st.src?'<span class="hint">'+esc(truncate(st.src,22))+'</span>':'')+
+       (st.quote?'<div class="hint" style="line-height:1.5">'+esc(truncate(st.quote,40))+'</div>':'')+
+       (st.note?'<div class="hint" style="color:#8C2F38;line-height:1.5">'+esc(truncate(st.note,40))+'</div>':'')+
+       '</td>';
+    h+='<td class="act"><button class="btn ghost sm" data-act="dup">複製</button> <button class="btn ghost sm" data-act="del">削除</button></td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  $('dataTable').innerHTML=h;
+  var bad=S.studies.filter(function(s){ return s.include && !s.ok; }).length;
+  $('dataMsg').textContent = S.studies.length? (bad? bad+' 件は数値が足りず効果量を計算できません（手順 iii に理由が出ます）' : 'すべての行で効果量を計算できます') : '';
+  // 凡例
+  var lg='<h4 style="margin-top:0">入力形式ごとの列の意味</h4><table class="mini">';
+  MODES[S.metric].forEach(function(m){
+    lg+='<tr><td class="l"><b>'+MODE_NAME[m]+'</b></td><td class="l">'+FIELDS[m].map(function(x,i){
+      return '<span class="chip">'+(i+1)+'列目 '+esc(x[1])+'</span>';}).join(' ')+'</td></tr>';
+  });
+  lg+='</table><p class="hint" style="margin-top:10px">群1＝介入・処置群、群2＝対照群。'+esc(METRICS[S.metric].dir)+'。'+
+      '「調整変数」は手順 v のメタ回帰で使う数値（平均年齢、介入時間、出版年など）。「サブグループ」は文字（RCT／準実験、成人／児童など）。</p>';
+  $('modeHelp').innerHTML=lg;
+}
+function bindTable(){
+  var t=$('dataTable');
+  t.addEventListener('input', function(e){
+    var tr=e.target.closest('tr'); if(!tr) return;
+    var i=+tr.dataset.i, k=e.target.dataset.k; if(k==null||!S.studies[i]) return;
+    if(e.target.type==='checkbox') S.studies[i][k]=e.target.checked;
+    else S.studies[i][k]=e.target.value;
+    calcAll(); renderBar();
+  });
+  t.addEventListener('change', function(e){
+    var tr=e.target.closest('tr'); if(!tr) return;
+    if(e.target.dataset.k==='mode'||e.target.type==='checkbox'){ calcAll(); renderData(); renderBar(); syncSG(); }
+  });
+  t.addEventListener('click', function(e){
+    var b=e.target.closest('button[data-act]'); if(!b) return;
+    var i=+b.closest('tr').dataset.i;
+    if(b.dataset.act==='del') S.studies.splice(i,1);
+    if(b.dataset.act==='dup'){ var c=JSON.parse(JSON.stringify(S.studies[i])); c.id=++S.seq; c.label+='（複製）'; S.studies.splice(i+1,0,c); }
+    calcAll(); renderData(); renderBar(); syncSG();
+  });
+}
+function syncSG(){
+  var set={}, o='<option value="">分けない</option>';
+  S.studies.forEach(function(s){ if(s.sg&&s.sg.trim()) set[s.sg.trim()]=1; });
+  if(Object.keys(set).length>1) o+='<option value="sg"'+(S.sg==='sg'?' selected':'')+'>サブグループ列で分ける</option>';
+  else S.sg='';
+  $('sgSel').innerHTML=o;
+}
+
+/* ══════════════════════════════════════════════════
+   9. 手順 iii：効果量
+   ══════════════════════════════════════════════════ */
+function renderES(){
+  var f=fit(), M=METRICS[S.metric], a=active();
+  var h='<table><thead><tr><th class="l">研究</th><th class="l">入力形式</th><th class="num">'+esc(M.short)+
+        '</th><th class="num">分散 v</th><th class="num">SE</th><th class="num">95%CI</th><th class="num">重み</th><th class="l">備考</th></tr></thead><tbody>';
+  S.studies.forEach(function(st){
+    var idx=a.indexOf(st), w=idx>=0&&f.weights? f.weights[idx]:null;
+    h+='<tr class="'+(st.include&&st.ok?'':'off')+'">';
+    h+='<td class="l">'+esc(st.label)+(st.include?'':' <span class="chip">除外</span>')+'</td>';
+    h+='<td class="l">'+MODE_NAME[st.mode]+'</td>';
+    if(st.ok){
+      var se=Math.sqrt(st.vi);
+      h+='<td class="num">'+fmt(back(st.yi,S.metric),3)+'</td><td class="num">'+fmt(st.vi,4)+'</td><td class="num">'+fmt(se,4)+'</td>'+
+         '<td class="num">['+fmt(back(st.yi-1.959964*se,S.metric),2)+', '+fmt(back(st.yi+1.959964*se,S.metric),2)+']</td>'+
+         '<td class="num">'+(w!=null?fmt(w,1)+'%':'—')+'</td>'+
+         '<td class="l"><span class="hint">'+esc(st.why||'')+(st.warn?'　<span style="color:#8C2F38">'+esc(st.warn)+'</span>':'')+'</span></td>';
+    } else {
+      h+='<td class="num" colspan="5" style="text-align:left;color:#8C2F38">'+esc(st.why||'計算できません')+'</td><td></td>';
+    }
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  $('esTable').innerHTML=h;
+  $('esMsg').textContent='重みは現在のモデル（'+(S.opt.model==='random'?'変量効果・τ²は'+S.opt.tau:'固定効果')+'）に基づく値です。';
+  var ex={
+    SMD:'<b>Hedges の g</b>：2群の平均差を併合標準偏差で割り、小標本の偏りを補正します。g = J·(M₁−M₂)/s<sub>pooled</sub>、J = 1 − 3/(4·df−1)。分散は v = (n₁+n₂)/(n₁n₂) + g²/(2·df) に J² を掛けたもの。',
+    MD:'<b>平均差</b>：M₁−M₂ をそのまま使います。分散は s₁²/n₁ + s₂²/n₂。尺度が同じ研究どうしでしか足せません。',
+    COR:'<b>相関係数</b>：r は分布が歪むため、Fisher の z = atanh(r)（分散 1/(n−3)）に直して統合し、表示のときに r へ戻します。',
+    OR:'<b>オッズ比</b>：log(OR) で統合します。分散は 1/a+1/b+1/c+1/d。0のセルがあるときは全セルに0.5を足します。',
+    RR:'<b>リスク比</b>：log(RR) で統合します。分散は 1/a−1/n₁+1/c−1/n₂。',
+    RD:'<b>リスク差</b>：p₁−p₂ をそのまま使い、分散は p(1−p)/n の和。',
+    GEN:'<b>直接入力</b>：入力された効果量と、標準誤差（または95%信頼区間の幅）から分散を求めます。'
+  }[S.metric];
+  $('esFormula').innerHTML=ex+'<p class="hint" style="margin-top:12px">統合は「逆分散重みづけ」で行います。分散が小さい（＝精度の高い）研究ほど重みが大きくなります。変量効果モデルでは、そこに研究間分散 τ² が足され、重みの差が小さくなります。</p>';
+}
+
+/* ══════════════════════════════════════════════════
+   10. 手順 iv：統合と森林プロット
+   ══════════════════════════════════════════════════ */
+function studyInfo(st){
+  if(st.mode==='two') return (st.n1||'?')+' vs '+(st.n2||'?');
+  if(st.mode==='prepost') return 'n='+(st.n||'?');
+  if(st.mode==='cor') return 'n='+(st.n||'?');
+  if(st.mode==='twobytwo') return (st.a||0)+'/'+(st.n1||'?')+' vs '+(st.c||0)+'/'+(st.n2||'?');
+  return st.n? 'n='+st.n : '';
+}
+function forestRows(){
+  var a=active(), f=fit(), rows=[];
+  var order=a.slice();
+  if(S.sortBy) order.sort(function(p,q){ return q.yi-p.yi; });
+  if(S.sg==='sg'){
+    var sub=subgroupAnalysis(order,'sg',S.opt);
+    sub.groups.forEach(function(g){
+      rows.push({type:'header', label:g.name+'（k='+g.n+'）'});
+      order.filter(function(s){ return (s.sg||'（未分類）').trim()===g.name; }).forEach(function(s){
+        var i=a.indexOf(s), se=Math.sqrt(s.vi);
+        rows.push({type:'study',label:s.label+(s.year?' ('+s.year+')':''),info:studyInfo(s),
+          yi:s.yi,lo:s.yi-1.959964*se,hi:s.yi+1.959964*se,w:f.weights[i]});
+      });
+      rows.push({type:'sub', label:'小計：'+g.name, yi:g.mu, lo:g.lo, hi:g.hi, w:null});
+    });
+  } else {
+    order.forEach(function(s){
+      var i=a.indexOf(s), se=Math.sqrt(s.vi);
+      rows.push({type:'study',label:s.label+(s.year?' ('+s.year+')':''),info:studyInfo(s),
+        yi:s.yi,lo:s.yi-1.959964*se,hi:s.yi+1.959964*se,w:f.weights[i]});
+    });
+  }
+  return rows;
+}
+function dirLabels(){
+  var m=S.metric;
+  if(m==='COR') return ['負の相関','正の相関'];
+  if(m==='GEN') return ['負の方向','正の方向'];
+  if(m==='OR'||m==='RR') return ['群1で少ない','群1で多い'];
+  if(m==='RD') return ['群1で少ない','群1で多い'];
+  return ['群2が大きい','群1が大きい'];
+}
+function renderPooled(){
+  var a=active();
+  if(a.length<1){
+    $('pooledBox').innerHTML='<div class="card err">統合できる研究がありません。手順 i か ii に戻ってください。</div>';
+    $('forest').innerHTML=''; $('hetBox').innerHTML=''; return;
+  }
+  var f=fit(), M=METRICS[S.metric];
+  var sig = f.p<0.05;
+  var dl=dirLabels();
+  $('pooledBox').innerHTML=
+   '<div class="card"><div class="grid2">'+
+   '<div><h4 style="margin-top:0">統合効果量</h4>'+
+   '<div class="big-est">'+fmt(back(f.mu,S.metric),3)+' <span>'+esc(M.short)+'</span></div>'+
+   '<div class="note" style="font-family:var(--mono)">95%CI ['+fmt(back(f.lo,S.metric),3)+', '+fmt(back(f.hi,S.metric),3)+']　'+
+   (f.useT?'t':'z')+' = '+fmt(f.stat,2)+'　P '+pfmt(f.p)+'</div>'+
+   '<p class="note" style="margin-top:10px">'+(sig?
+     '無効果の値（'+M.null0+'）を信頼区間が含んでいません。'+(back(f.mu,S.metric)>METRICS[S.metric].null0?dl[1]:dl[0])+'方向の効果が示唆されます。':
+     '信頼区間が無効果の値（'+M.null0+'）をまたいでいます。方向は定まっていません。')+'</p></div>'+
+   '<div><h4 style="margin-top:0">モデルとばらつき</h4><dl class="kv">'+
+   '<dt>モデル</dt><dd>'+(S.opt.model==='random'?'変量効果（'+S.opt.tau+'）':'固定効果')+(f.useT?' ＋ Hartung–Knapp':'')+'</dd>'+
+   '<dt>研究数 k</dt><dd>'+f.k+'</dd>'+
+   '<dt>τ²（τ）</dt><dd>'+fmt(f.tau2,4)+'（'+fmt(f.tau,3)+'）</dd>'+
+   '<dt>I²</dt><dd>'+fmt(f.I2,1)+' %</dd>'+
+   '<dt>H²</dt><dd>'+fmt(f.H2,2)+'</dd>'+
+   '<dt>Q（df='+f.dfQ+'）</dt><dd>'+fmt(f.Q,2)+'　P '+pfmt(f.pQ)+'</dd>'+
+   (isFinite(f.piLo)?'<dt>予測区間</dt><dd>['+fmt(back(f.piLo,S.metric),3)+', '+fmt(back(f.piHi,S.metric),3)+']</dd>':'')+
+   '</dl></div></div></div>';
+  var rows=forestRows();
+  $('forest').innerHTML=forestSVG(rows, f, S.metric,
+    {anim:true, pooledLabel:'統合（'+(S.opt.model==='random'?'変量効果':'固定効果')+'・k='+f.k+'）',
+     leftLab:dl[0], rightLab:dl[1]});
+  // 異質性の説明
+  var lv = f.I2<25?'小さい': f.I2<50?'中くらい': f.I2<75?'大きい':'非常に大きい';
+  var msg='<h3>ばらつきをどう読むか</h3><p class="note">I² = '+fmt(f.I2,1)+
+    '%。研究間で結果が食い違う程度は<b>'+lv+'</b>といえます。I² は「観測されたばらつきのうち、偶然ではなく研究どうしの本当の違いで説明される割合」です。'+
+    'Q 検定は P '+pfmt(f.pQ)+'（研究数が少ないと検出力が低く、多いと些細な差でも有意になります）。</p>';
+  if(isFinite(f.piLo)){
+    var crosses = (f.piLo<fwd(M.null0,S.metric) && f.piHi>fwd(M.null0,S.metric));
+    msg+='<p class="note">予測区間は ['+fmt(back(f.piLo,S.metric),3)+', '+fmt(back(f.piHi,S.metric),3)+
+      ']。次に同じ問いで研究が1つ行われたとき、その真の効果がこの範囲に入ると見込まれます。'+
+      (crosses?'この区間は無効果の値をまたいでおり、<b>状況によっては効果の向きが逆になりうる</b>ことを意味します。':'この区間は無効果の値をまたいでいません。')+'</p>';
+  } else if(S.opt.model==='random'){
+    msg+='<p class="note">τ² が0、または研究数が3未満のため予測区間は表示していません。</p>';
+  }
+  if(S.opt.model==='fixed'&&f.I2>50)
+    msg+='<div class="warn">I² が大きいのに固定効果モデルを使っています。固定効果は「すべての研究で真の効果は同一」という仮定なので、変量効果に切り替えるか、ばらつきの理由を手順 v で探してください。</div>';
+  if(f.k<5)
+    msg+='<div class="warn">研究数が '+f.k+' 件と少なめです。τ² の推定は不安定になりやすく、信頼区間は Hartung–Knapp 法のほうが安全側です。</div>';
+  $('hetBox').innerHTML=msg;
+}
+
+/* ══════════════════════════════════════════════════
+   11. 手順 v：吟味
+   ══════════════════════════════════════════════════ */
+function renderDiag(){
+  var a=active(), M=METRICS[S.metric];
+  if(a.length<2){
+    ['sgBox','mrBox','looBox','pbBox','cumBox'].forEach(function(id){ $(id).innerHTML='<p class="note">研究が2件以上必要です。</p>'; });
+    return;
+  }
+  var f=fit(), dl=dirLabels();
+  // サブグループ
+  var hasSG={}; a.forEach(function(s){ if(s.sg&&s.sg.trim()) hasSG[s.sg.trim()]=1; });
+  if(Object.keys(hasSG).length>1){
+    var sub=subgroupAnalysis(a,'sg',S.opt);
+    var h='<div class="tw"><table><thead><tr><th class="l">サブグループ</th><th class="num">k</th><th class="num">'+esc(M.short)+
+      '</th><th class="num">95%CI</th><th class="num">τ²</th><th class="num">I²</th></tr></thead><tbody>';
+    sub.groups.forEach(function(g){
+      h+='<tr><td class="l">'+esc(g.name)+'</td><td class="num">'+g.k+'</td><td class="num">'+fmt(back(g.mu,S.metric),3)+
+        '</td><td class="num">['+fmt(back(g.lo,S.metric),2)+', '+fmt(back(g.hi,S.metric),2)+']</td><td class="num">'+
+        fmt(g.tau2,4)+'</td><td class="num">'+fmt(g.I2,1)+'%</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    h+='<p class="note" style="margin-top:12px">群間の差の検定：Q = '+fmt(sub.Qb,2)+'（df = '+sub.dfb+'）、P '+pfmt(sub.pb)+'。'+
+       (sub.pb<0.05?'サブグループによって効果の大きさが違うという証拠があります。':'サブグループ間の差は、この研究数では統計的にはっきりしません。')+
+       '　ただしサブグループ分析は<b>研究のランダム割付ではない</b>ため、観察的な比較にとどまります。</p>';
+    var rows=[];
+    sub.groups.forEach(function(g){ rows.push({type:'sub',label:g.name+'（k='+g.k+'）',yi:g.mu,lo:g.lo,hi:g.hi}); });
+    h+='<div class="fig">'+forestSVG(rows,f,S.metric,{pooledLabel:'全体',leftLab:dl[0],rightLab:dl[1]})+'</div>';
+    $('sgBox').innerHTML=h;
+  } else {
+    $('sgBox').innerHTML='<p class="note">サブグループ列（手順 ii）に2種類以上の値を入れると、群ごとの統合と群間差の検定が出ます。</p>';
+  }
+  // メタ回帰
+  var mr=metaRegression(a,S.opt);
+  if(mr.ok){
+    var pts=mr.x.map(function(x,i){ return {x:x, y:back(mr.y[i],S.metric), r:3+ Math.min(8,1/Math.sqrt(mr.v[i])/2), label:mr.labels[i]}; });
+    var line=null;
+    if(!METRICS[S.metric].log&&S.metric!=='COR') line={b0:mr.b0,b1:mr.b1};
+    var mh='<dl class="kv" style="margin-bottom:14px">'+
+      '<dt>傾き b</dt><dd>'+fmt(mr.b1,4)+'（SE '+fmt(mr.se1,4)+'）　95%CI ['+fmt(mr.lo,4)+', '+fmt(mr.hi,4)+']</dd>'+
+      '<dt>検定</dt><dd>z = '+fmt(mr.z,2)+'　P '+pfmt(mr.p)+'</dd>'+
+      '<dt>残差 τ²</dt><dd>'+fmt(mr.tau2res,4)+'（調整変数なしでは '+fmt(mr.tau2tot,4)+'）</dd>'+
+      '<dt>R²（τ²の減り）</dt><dd>'+(isFinite(mr.R2)?fmt(mr.R2,1)+' %':'—')+'</dd>'+
+      '<dt>残差の異質性</dt><dd>Q = '+fmt(mr.Qr,2)+'（df='+mr.dfr+'）　P '+pfmt(mr.pQr)+'</dd></dl>';
+    mh+='<p class="note">調整変数が1増えると効果量は '+fmt(mr.b1,4)+' 変わる、という関係です。'+
+      (mr.p<0.05?'この傾きは統計的に有意で、研究間のばらつきの一部を説明しています。':'傾きははっきりせず、この変数ではばらつきを説明できていません。')+
+      '　研究数は '+mr.k+' 件。<b>1つの調整変数につき最低10研究</b>が目安とされます。残差 τ² は DerSimonian–Laird 法で推定しています。</p>';
+    mh+='<div class="fig">'+scatterSVG(pts,{xlab:'調整変数',ylab:M.short,line:line,yLine:METRICS[S.metric].null0})+'</div>'+
+        '<p class="figcap"><b>図</b>　円の大きさは研究の精度。'+(line?'線は重みづけ回帰直線。':'（対数尺度のため回帰直線は省略）')+'</p>';
+    $('mrBox').innerHTML=mh;
+  } else {
+    $('mrBox').innerHTML='<p class="note">'+esc(mr.msg)+'　手順 ii の「調整変数」列に数値（平均年齢、介入時間、出版年など）を入れると使えます。</p>';
+  }
+  // 一件抜き
+  var loo=leaveOneOut(a,S.opt);
+  var lh='<div class="tw"><table><thead><tr><th class="l">抜いた研究</th><th class="num">'+esc(M.short)+'</th><th class="num">95%CI</th><th class="num">P</th><th class="num">I²</th><th class="num">τ²</th></tr></thead><tbody>';
+  var mn=Infinity,mx=-Infinity,flip=[];
+  loo.forEach(function(r,i){
+    mn=Math.min(mn,r.mu); mx=Math.max(mx,r.mu);
+    var changed=(r.p<0.05)!==(f.p<0.05);
+    if(changed) flip.push(a[i].label);
+    lh+='<tr'+(changed?' style="background:#FBF3E6"':'')+'><td class="l">'+esc(a[i].label)+'</td><td class="num">'+fmt(back(r.mu,S.metric),3)+
+      '</td><td class="num">['+fmt(back(r.lo,S.metric),2)+', '+fmt(back(r.hi,S.metric),2)+']</td><td class="num">'+pfmt(r.p)+
+      '</td><td class="num">'+fmt(r.I2,1)+'%</td><td class="num">'+fmt(r.tau2,4)+'</td></tr>';
+  });
+  lh+='</tbody></table></div>';
+  lh+='<p class="note" style="margin-top:12px">統合値は '+fmt(back(mn,S.metric),3)+' 〜 '+fmt(back(mx,S.metric),3)+
+     ' の範囲で動きます（元の値は '+fmt(back(f.mu,S.metric),3)+'）。'+
+     (flip.length? '<b>'+esc(flip.join('、'))+'</b> を除くと有意性の判定が変わります。結論がこの研究に依存していないか確認してください。'
+                 : 'どの1件を除いても有意性の判定は変わりません。結論は特定の研究に依存していません。')+'</p>';
+  var bj=baujat(a,S.opt);
+  lh+='<div class="fig">'+scatterSVG(bj.map(function(b){return {x:b.x,y:b.y,label:b.label};}),
+      {xlab:'異質性への寄与（Qへの貢献）',ylab:'統合値への影響'})+'</div>'+
+      '<p class="figcap"><b>図</b>　Baujat プロット。右上にある研究ほど、ばらつきの原因であり、かつ結論を動かしています。</p>';
+  $('looBox').innerHTML=lh;
+  // 出版バイアス
+  var ph='';
+  if(a.length<3){ ph='<p class="note">研究が3件以上必要です。</p>'; }
+  else{
+    var eg=eggerTest(a), bg=beggTest(a), tf=trimFill(a,S.opt), fs=failSafeN(a);
+    S.tf=tf;
+    ph+='<div class="fig">'+funnelSVG(a,f,S.metric,tf.ok?tf.imputed:[])+'</div>'+
+        '<p class="figcap"><b>図</b>　ファンネルプロット。左右対称なら偏りは目立ちません。白抜きの点はトリム＆フィル法が「あったかもしれない」と補った研究です。</p>';
+    ph+='<dl class="kv">';
+    ph+='<dt>Egger の回帰検定</dt><dd>'+(eg.ok? '切片 = '+fmt(eg.intercept,3)+'（SE '+fmt(eg.se,3)+'）　t('+eg.df+') = '+fmt(eg.t,2)+'　P '+pfmt(eg.p) : esc(eg.msg))+'</dd>';
+    ph+='<dt>Begg の順位相関</dt><dd>'+(bg.ok? 'τ = '+fmt(bg.tau,3)+'　z = '+fmt(bg.z,2)+'　P '+pfmt(bg.p) : esc(bg.msg))+'</dd>';
+    if(tf.ok) ph+='<dt>トリム＆フィル</dt><dd>'+(tf.k0>0?
+      '補完 '+tf.k0+' 件（'+(tf.side>0?'左':'右')+'側に欠測を想定）　補正後 '+
+      fmt(back(tf.fit.mu,S.metric),3)+' ['+fmt(back(tf.fit.lo,S.metric),2)+', '+fmt(back(tf.fit.hi,S.metric),2)+']'
+      : '欠測研究は想定されませんでした')+'</dd>';
+    ph+='<dt>Fail-safe N</dt><dd>'+fs.N+' 件（Rosenthal 法：この数だけ「効果なし」の未発表研究があれば有意でなくなる）</dd>';
+    ph+='</dl>';
+    var susp=(eg.ok&&eg.p<0.1)||(tf.ok&&tf.k0>0);
+    ph+='<p class="note" style="margin-top:12px">'+
+      (susp? '非対称の兆しがあります。ただし非対称の原因は出版バイアスだけではなく、小規模研究ほど効果が大きく出る質の差、真の異質性、指標の選び方でも起こります。'
+           : '目立った非対称は見られません。ただし研究数が少ないとこれらの検定は検出力が低く、「偏りがない」証明にはなりません。')+
+      (a.length<10? '　<b>研究数が10件未満のときは、ファンネルの非対称の検定は推奨されません（Cochrane ハンドブック）。</b>':'')+'</p>';
+    if(f.I2>=50) ph+='<div class="warn">異質性が大きいときのトリム＆フィル法は、実際には欠けていない研究を補ってしまうことが知られています。補正後の値は「もし非対称が出版バイアスによるものだったら」という仮定つきの数値として読んでください。</div>';
+  }
+  $('pbBox').innerHTML=ph;
+  // 累積
+  var years=a.filter(function(s){ return isFinite(num(s.year)); }).length;
+  if(years<a.length||a.length<3){
+    $('cumBox').innerHTML='<p class="note">すべての研究に年が入っていて、3件以上あるときに、古い研究から順に足していったときの統合値の変化を表示します。</p>';
+  } else {
+    var cum=cumulative(a,S.opt);
+    var crows=cum.map(function(c){ return {type:'study', label:'…+ '+c.label, info:'k='+c.k, yi:c.mu, lo:c.lo, hi:c.hi, w:null}; });
+    $('cumBox').innerHTML='<div class="fig">'+forestSVG(crows,null,S.metric,{leftLab:dl[0],rightLab:dl[1]})+'</div>'+
+      '<p class="figcap"><b>図</b>　累積メタ分析。年の古い研究から1件ずつ足したときの統合値。線が早い段階で落ち着いていれば、その後の研究は結論を変えていません。</p>';
+  }
+}
+/* ══════════════════════════════════════════════════
+   12. 手順 vi：解説・記述例・書き出し
+   ══════════════════════════════════════════════════ */
+function renderReport(){
+  var a=active();
+  if(a.length<2){
+    ['explain','writeup'].forEach(function(id){ $(id).innerHTML='<p>研究が2件以上必要です。</p>'; });
+    $('rcode').textContent=''; return;
+  }
+  var f=fit(), M=METRICS[S.metric], dl=dirLabels();
+  var est=back(f.mu,S.metric), lo=back(f.lo,S.metric), hi=back(f.hi,S.metric);
+  var sig=f.p<0.05, mag='';
+  if(S.metric==='SMD'){ var g=Math.abs(est); mag = g<0.2?'ごく小さい': g<0.5?'小さい': g<0.8?'中くらい':'大きい'; }
+  if(S.metric==='COR'){ var rr=Math.abs(est); mag = rr<0.1?'ごく弱い': rr<0.3?'弱い': rr<0.5?'中くらい':'強い'; }
+  var lv=f.I2<25?'小さい':f.I2<50?'中くらい':f.I2<75?'大きい':'非常に大きい';
+  var mdl=(S.opt.model==='random'?'変量効果モデル（τ² は '+S.opt.tau+' 法）':'固定効果モデル')+(f.useT?'、信頼区間は Hartung–Knapp 法':'');
+  var h='';
+  h+='<p><b>何をまとめたか。</b>'+a.length+'件の研究を'+mdl+'で統合しました。指標は'+M.name+'です。'+
+     (S.outcome? '対象としたアウトカムは「'+esc(S.outcome)+'」です。':'')+'</p>';
+  h+='<p><b>統合の結果。</b>統合効果量は <span class="sig">'+esc(M.short)+' = '+fmt(est,3)+'、95%CI ['+fmt(lo,3)+', '+fmt(hi,3)+']、P '+pfmt(f.p)+'</span> でした。'+
+     (sig? '信頼区間が無効果の値（'+M.null0+'）を含まないため、'+(est>M.null0?dl[1]:dl[0])+'方向の効果があると読めます。'
+         : '信頼区間が無効果の値（'+M.null0+'）をまたいでおり、効果の向きは定まりません。「効果がない」ことが示されたのではなく、「わからない」状態です。')+
+     (mag? '効果の大きさの目安としては'+mag+'水準にあたります。':'')+'</p>';
+  h+='<p><b>研究間のばらつき。</b>I² = '+fmt(f.I2,1)+'%、τ² = '+fmt(f.tau2,4)+'、Q('+f.dfQ+') = '+fmt(f.Q,2)+'（P '+pfmt(f.pQ)+'）。'+
+     'ばらつきは'+lv+'といえます。'+
+     (f.I2>=50? '研究どうしの結果の食い違いが無視できないので、統合値そのものより、<b>なぜ違うのか</b>を手順 v で追うほうが実りがあります。':'');
+  if(isFinite(f.piLo)){
+    h+='予測区間は ['+fmt(back(f.piLo,S.metric),3)+', '+fmt(back(f.piHi,S.metric),3)+'] で、'+
+       ((f.piLo<fwd(M.null0,S.metric)&&f.piHi>fwd(M.null0,S.metric))? 'これは次の研究では逆向きの結果もありうることを意味します。':'次の研究もおおむね同じ向きになると見込まれます。');
+  }
+  h+='</p>';
+  // 重みの偏り
+  var wmax=Math.max.apply(null,f.weights), wi=f.weights.indexOf(wmax);
+  h+='<p><b>重みの偏り。</b>もっとも重い研究は「'+esc(a[wi].label)+'」で '+fmt(wmax,1)+'% を占めます。'+
+     (wmax>50? '半分以上を1件が担っており、統合値はほぼこの研究の値です。':'極端な偏りはありません。')+'</p>';
+  if(a.length>=3){
+    var eg=eggerTest(a), tf=S.tf||trimFill(a,S.opt);
+    h+='<p><b>出版バイアス。</b>'+(eg.ok?'Egger の検定は P '+pfmt(eg.p)+'。':'')+
+       (tf.ok? (tf.k0>0? 'トリム＆フィル法は '+tf.k0+' 件の欠測を想定し、補正後の推定は '+fmt(back(tf.fit.mu,S.metric),3)+' です。' : 'トリム＆フィル法は欠測研究を想定しませんでした。'):'')+
+       (a.length<10?'ただし研究数が10件未満のため、これらの判断は参考程度にとどめてください。':'')+'</p>';
+  }
+  h+='<p><b>読むときの注意。</b>統合された数値は、集めた研究の質を超えません。'+
+     '元の研究にバイアスがあれば、それも平均されて残ります。PDFからの自動抽出を使った場合は、抽出値の照合を済ませたかどうかも結論の信頼性に直結します。</p>';
+  $('explain').innerHTML=h;
+
+  // 記述例
+  var w='';
+  w+='<p><b>【方法】</b>効果量には'+M.name+'を用いた。'+
+     (S.metric==='SMD'?'各研究について、介入後の平均値の差を併合標準偏差で除し、小標本バイアスを補正した Hedges の g を算出した。':'')+
+     (S.metric==='COR'?'相関係数は Fisher の z 変換を施したうえで統合し、結果は r に逆変換して示した。':'')+
+     (METRICS[S.metric].log?'効果量は対数尺度で統合し、結果は元の尺度に戻して示した。':'')+
+     '統合には逆分散重みづけによる'+(S.opt.model==='random'?'変量効果モデルを用い、研究間分散 τ² は '+S.opt.tau+' 法で推定した':'固定効果モデルを用いた')+'。'+
+     (f.useT?'統合効果量の信頼区間には Hartung–Knapp 法を適用した。':'')+
+     '異質性は Q 検定、I²、τ² により評価し、予測区間を併記した。'+
+     (a.length>=10?'出版バイアスはファンネルプロットの目視、Egger の回帰検定、トリム＆フィル法により検討した。':'')+
+     '感度分析として一件除外分析を行った。</p>';
+  w+='<p><b>【結果】</b>計 '+a.length+' 件の研究（'+esc(String(a.reduce(function(t,s){var n=num(s.n1)+num(s.n2); return t+(isFinite(n)?n:(isFinite(num(s.n))?num(s.n):0));},0)||'—'))+' 名）を統合した。'+
+     '統合'+M.short+'は '+fmt(est,2)+'（95%CI '+fmt(lo,2)+'–'+fmt(hi,2)+'、'+(f.useT?'t('+f.df+')':'z')+' = '+fmt(f.stat,2)+'、p '+pfmt(f.p)+'）であった。'+
+     '研究間の異質性は Q('+f.dfQ+') = '+fmt(f.Q,2)+'（p '+pfmt(f.pQ)+'）、I² = '+fmt(f.I2,1)+'%、τ² = '+fmt(f.tau2,3)+'であった。'+
+     (isFinite(f.piLo)?'95%予測区間は '+fmt(back(f.piLo,S.metric),2)+'–'+fmt(back(f.piHi,S.metric),2)+'であった。':'')+
+     '一件除外分析では統合効果量は '+fmt(back(Math.min.apply(null,leaveOneOut(a,S.opt).map(function(r){return r.mu;})),S.metric),2)+
+     '–'+fmt(back(Math.max.apply(null,leaveOneOut(a,S.opt).map(function(r){return r.mu;})),S.metric),2)+'の範囲であった。</p>';
+  w+='<p><b>【限界】</b>'+
+     (f.I2>=50?'研究間の異質性が大きく、統合値を単一の効果として解釈することには慎重を要する。':'')+
+     (a.length<10?'研究数が限られており、出版バイアスの検討および τ² の推定は不安定である。':'')+
+     '対象研究の質の評価、および灰色文献の探索の程度によって結果は変わりうる。</p>';
+  $('writeup').innerHTML=w;
+  $('rcode').textContent=buildR();
+}
+
+/* ── Rコード ─────────────────────────── */
+function buildR(){
+  var a=active(), M=S.metric;
+  var q=function(s){ return '"'+String(s==null?'':s).replace(/"/g,'\\"')+'"'; };
+  var lines=[];
+  lines.push('# ══ メタ分析ラボ が出力したRコード ══');
+  lines.push('# install.packages("metafor")');
+  lines.push('library(metafor)');
+  lines.push('');
+  lines.push('dat <- data.frame(');
+  lines.push('  study = c(' + a.map(function(s){return q(s.label);}).join(', ') + '),');
+  lines.push('  year  = c(' + a.map(function(s){return isFinite(num(s.year))?num(s.year):'NA';}).join(', ') + '),');
+  lines.push('  sg    = c(' + a.map(function(s){return q(s.sg||'NA');}).join(', ') + '),');
+  lines.push('  mod   = c(' + a.map(function(s){return isFinite(num(s.mod))?num(s.mod):'NA';}).join(', ') + '),');
+  lines.push('  yi    = c(' + a.map(function(s){return s.yi.toFixed(6);}).join(', ') + '),');
+  lines.push('  vi    = c(' + a.map(function(s){return s.vi.toFixed(8);}).join(', ') + '),');
+  lines.push('  stringsAsFactors = FALSE');
+  lines.push(')');
+  lines.push('');
+  var allTwo = a.every(function(s){ return s.mode==='two'; });
+  if(allTwo && (M==='SMD'||M==='MD')){
+    lines.push('# 生データから効果量を計算し直す場合（同じ値になります）');
+    lines.push('raw <- data.frame(');
+    ['n1','m1','s1','n2','m2','s2'].forEach(function(k,i){
+      lines.push('  '+['n1i','m1i','sd1i','n2i','m2i','sd2i'][i]+' = c('+a.map(function(s){return num(s[k]);}).join(', ')+')'+(i<5?',':''));
+    });
+    lines.push(')');
+    lines.push('# dat <- escalc(measure="'+(M==='SMD'?'SMD':'MD')+'", m1i=m1i, sd1i=sd1i, n1i=n1i, m2i=m2i, sd2i=sd2i, n2i=n2i, data=raw)');
+    lines.push('');
+  }
+  var allTT = a.every(function(s){ return s.mode==='twobytwo'; });
+  if(allTT && (M==='OR'||M==='RR'||M==='RD')){
+    lines.push('# 生データ（事象数と人数）');
+    lines.push('raw <- data.frame(');
+    lines.push('  ai = c('+a.map(function(s){return num(s.a);}).join(', ')+'),');
+    lines.push('  n1i = c('+a.map(function(s){return num(s.n1);}).join(', ')+'),');
+    lines.push('  ci = c('+a.map(function(s){return num(s.c);}).join(', ')+'),');
+    lines.push('  n2i = c('+a.map(function(s){return num(s.n2);}).join(', ')+')');
+    lines.push(')');
+    lines.push('# dat <- escalc(measure="'+M+'", ai=ai, n1i=n1i, ci=ci, n2i=n2i, data=raw)');
+    lines.push('');
+  }
+  var meth = S.opt.model==='random' ? S.opt.tau : 'FE';
+  lines.push('res <- rma(yi, vi, data = dat, method = "'+meth+'"'+(S.opt.hk?', test = "knha"':'')+')');
+  lines.push('summary(res)');
+  lines.push('confint(res)             # tau^2 と I^2 の信頼区間');
+  lines.push('predict(res, digits = 3'+(METRICS[M].log?', transf = exp':(M==='COR'?', transf = transf.ztor':''))+')  # 予測区間');
+  lines.push('');
+  lines.push('# 森林プロット');
+  lines.push('forest(res, slab = dat$study, header = TRUE'+(METRICS[M].log?', atransf = exp, refline = 0':'')+')');
+  lines.push('');
+  lines.push('# 異質性の検討');
+  lines.push('res_loo <- leave1out(res); res_loo');
+  lines.push('baujat(res)');
+  if(a.some(function(s){return s.sg;})) lines.push('rma(yi, vi, mods = ~ factor(sg), data = dat, method = "'+meth+'")   # サブグループ');
+  if(a.some(function(s){return isFinite(num(s.mod));})) lines.push('rma(yi, vi, mods = ~ mod, data = dat, method = "'+meth+'")          # メタ回帰');
+  lines.push('');
+  lines.push('# 出版バイアス');
+  lines.push('funnel(res)');
+  lines.push('regtest(res)             # Egger');
+  lines.push('ranktest(res)            # Begg');
+  lines.push('trimfill(res)');
+  return lines.join('\n');
+}
+
+/* ── 書き出し ─────────────────────────── */
+function toast(msg){
+  var t=$('toast'); if(!t) return;
+  t.textContent=msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove('on'); }, 2600);
+}
+function download(name, text, mime){
+  try{
+    var b=new Blob([text],{type:(mime||'text/plain')+';charset=utf-8'});
+    var u=URL.createObjectURL(b), a=document.createElement('a');
+    a.href=u; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); },800);
+  }catch(e){}
+  fallback(name, text);
+  toast(name+' を保存しました。保存できていないときは手順 vi の書き出し欄に内容を出しています');
+}
+function fallback(name, text){
+  var o=$('outArea');
+  if(!o) return;
+  o.innerHTML='<p class="hint">保存できないときは、下の内容をコピーして「'+esc(name)+'」という名前で保存してください。</p>'+
+    '<textarea rows="8" id="fbArea"></textarea>';
+  $('fbArea').value=text;
+}
+function csvOut(){
+  var a=active(), f=fit(), M=METRICS[S.metric];
+  var head=['study','year','subgroup','moderator','mode','yi_'+S.metric,'vi','se','ci_low','ci_high','weight_pct','display_est'];
+  var rows=[head.join(',')];
+  a.forEach(function(s,i){
+    var se=Math.sqrt(s.vi);
+    rows.push([JSON.stringify(s.label), s.year||'', JSON.stringify(s.sg||''), s.mod||'', s.mode,
+      s.yi.toFixed(6), s.vi.toFixed(8), se.toFixed(6),
+      (s.yi-1.959964*se).toFixed(6), (s.yi+1.959964*se).toFixed(6),
+      f.weights[i].toFixed(2), back(s.yi,S.metric).toFixed(6)].join(','));
+  });
+  rows.push(['"POOLED ('+(S.opt.model==='random'?'RE-'+S.opt.tau:'FE')+')"','','','','',
+    f.mu.toFixed(6), (f.se*f.se).toFixed(8), f.se.toFixed(6), f.lo.toFixed(6), f.hi.toFixed(6), '100.00', back(f.mu,S.metric).toFixed(6)].join(','));
+  rows.push(['"HETEROGENEITY"','','','','','tau2='+f.tau2.toFixed(6),'I2='+f.I2.toFixed(2),'Q='+f.Q.toFixed(4),'df='+f.dfQ,'p='+f.pQ.toFixed(6),'',''].join(','));
+  return '\ufeff'+rows.join('\n');
+}
+
+/* ══════════════════════════════════════════════════
+   13. PDFの読み取り
+   ══════════════════════════════════════════════════ */
+function fileToB64(file){
+  return new Promise(function(res,rej){
+    var r=new FileReader();
+    r.onload=function(){ res(String(r.result).split(',')[1]); };
+    r.onerror=function(){ rej(new Error('ファイルを読めませんでした')); };
+    r.readAsDataURL(file);
+  });
+}
+function extractPrompt(){
+  var M=METRICS[S.metric], modes=MODES[S.metric];
+  var spec={
+    two:'mode="two"：n1,m1,s1（群1の人数・平均・SD）, n2,m2,s2（群2）',
+    prepost:'mode="prepost"：n, m1,s1（前の平均・SD）, m2,s2（後の平均・SD）',
+    cor:'mode="cor"：r（相関係数）, n（サンプルサイズ）',
+    twobytwo:'mode="twobytwo"：a（群1の事象数）, n1（群1の人数）, c（群2の事象数）, n2（群2の人数）',
+    direct:'mode="direct"：est（報告された効果量）, lo, hi（95%信頼区間）または se'
+  };
+  return [
+    'あなたは系統的レビューのデータ抽出担当です。添付の論文PDFから、メタ分析に必要な数値を正確に抜き出してください。',
+    '統合する指標：'+M.name+'（'+M.dir+'）',
+    '対象アウトカム：'+(S.outcome||'この論文の主要アウトカム'),
+    '群1＝介入群・処置群・実験群、群2＝対照群・統制群とします。',
+    '使える入力形式は次のいずれかです。論文に載っている数値で埋められるものを選んでください：',
+    modes.map(function(m){ return '・'+spec[m]; }).join('\n'),
+    '',
+    '出力はJSONのみ。前置き、説明、コードフェンスは書かないこと。形式：',
+    '{"studies":[{"label":"著者(年)","year":2020,"mode":"two","n1":30,"m1":5.2,"s1":1.1,"n2":30,"m2":4.4,"s2":1.3,"r":null,"n":null,"a":null,"c":null,"est":null,"lo":null,"hi":null,"sg":"RCT","mod":null,"quote":"根拠の箇所を15字以内","conf":"高","note":""}]}',
+    '規則：',
+    '・不明な値は null。使わないフィールドも null。',
+    '・quote は数値の出どころ（例「表2 介入後」）を15字以内で。長い引用は禁止。',
+    '・conf は「高」（本文や表に明記）／「中」（図や間接的な計算から）／「低」（推定・仮定を含む）。',
+    '・標準誤差を標準偏差と取り違えないこと。SEしかない場合は SD = SE×√n に直し、note にその旨を書く。',
+    '・sg には研究デザインや対象の短い分類、mod には平均年齢や介入時間などの数値を入れてよい（なければ null）。',
+    '・1本の論文に独立した比較が複数あれば、studies を複数要素にする。1つも該当しなければ {"studies":[]}。'
+  ].join('\n');
+}
+function stripFence(t){
+  return String(t||'').replace(/^[\s\S]*?```(?:json)?/,'').replace(/```[\s\S]*$/,'').trim() || String(t||'').trim();
+}
+async function extractOne(file){
+  var b64=await fileToB64(file);
+  var res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6', max_tokens:1000,
+      messages:[{role:'user', content:[
+        {type:'document', source:{type:'base64', media_type:'application/pdf', data:b64}},
+        {type:'text', text:extractPrompt()}
+      ]}]
+    })
+  });
+  if(res.status===401||res.status===403)
+    throw new Error('この場所ではPDFの読み取りを使えません。Claude 上で開くか、手入力・貼り付けをお使いください');
+  if(!res.ok) throw new Error('読み取りの通信に失敗しました（'+res.status+'）');
+  var data=await res.json();
+  var txt=(data.content||[]).map(function(c){ return c.type==='text'?c.text:''; }).join('\n');
+  var raw=txt.trim();
+  if(raw.indexOf('```')>=0) raw=stripFence(raw);
+  var s=raw.indexOf('{'), e=raw.lastIndexOf('}');
+  if(s<0||e<0) throw new Error('数値を読み取れませんでした');
+  var obj=JSON.parse(raw.slice(s,e+1));
+  return obj.studies||[];
+}
+async function runExtraction(){
+  var pend=S.files.filter(function(f){ return f.status==='待機'; });
+  if(!pend.length) return;
+  $('runExtract').disabled=true;
+  for(var i=0;i<pend.length;i++){
+    var f=pend[i];
+    f.status='読み取り中'; renderFiles();
+    try{
+      var got=await extractOne(f.file);
+      if(!got.length){ f.status='該当なし'; f.msg='この指標に使える数値が見つかりませんでした'; }
+      else{
+        got.forEach(function(g){
+          var st=newStudy(Object.assign({}, g, {src:f.file.name}));
+          if(g.label) st.label=String(g.label);
+          S.studies.push(st);
+        });
+        f.status='完了'; f.msg=got.length+' 件';
+      }
+    }catch(err){
+      f.status='失敗'; f.msg=err.message;
+    }
+    calcAll(); renderFiles(); renderBar();
+  }
+  $('runExtract').disabled=false;
+  $('extractMsg').textContent='読み取りが終わりました。手順 ii で原典と照合してください。';
+  syncSG();
+}
+function renderFiles(){
+  var h=S.files.map(function(f,i){
+    var cls=f.status==='完了'?'ok':(f.status==='失敗'||f.status==='該当なし')?'ng':(f.status==='読み取り中'?'run':'');
+    return '<li><span class="nm">'+esc(f.file.name)+'</span><span class="st '+cls+'">'+
+      (f.status==='読み取り中'?'<span class="spin"></span>':'')+esc(f.status)+(f.msg?'：'+esc(f.msg):'')+
+      '　<button class="btn ghost sm" data-rm="'+i+'">外す</button></span></li>';
+  }).join('');
+  $('files').innerHTML=h;
+  $('runExtract').disabled = !S.files.some(function(f){ return f.status==='待機'; });
+}
+
+/* ══════════════════════════════════════════════════
+   14. 貼り付け・例のデータ
+   ══════════════════════════════════════════════════ */
+var ALIAS={
+  'study':'label','研究':'label','研究名':'label','著者':'label','label':'label','出典':'label',
+  'year':'year','年':'year','出版年':'year','西暦':'year',
+  'sg':'sg','subgroup':'sg','サブグループ':'sg','群':'sg','分類':'sg','デザイン':'sg',
+  'mod':'mod','moderator':'mod','調整変数':'mod','共変量':'mod',
+  'mode':'mode','形式':'mode','入力形式':'mode',
+  'n1':'n1','n₁':'n1','人数1':'n1','介入n':'n1','n_1':'n1','n1i':'n1',
+  'm1':'m1','平均1':'m1','平均₁':'m1','mean1':'m1','m1i':'m1',
+  's1':'s1','sd1':'s1','SD1':'s1','sd₁':'s1','sd1i':'s1','標準偏差1':'s1',
+  'n2':'n2','n₂':'n2','人数2':'n2','対照n':'n2','n_2':'n2','n2i':'n2',
+  'm2':'m2','平均2':'m2','平均₂':'m2','mean2':'m2','m2i':'m2',
+  's2':'s2','sd2':'s2','SD2':'s2','sd₂':'s2','sd2i':'s2','標準偏差2':'s2',
+  'n':'n','サンプルサイズ':'n','人数':'n',
+  'r':'r','相関':'r','相関係数':'r','rpre':'rpre','前後r':'rpre',
+  'a':'a','事象1':'a','事象₁':'a','ai':'a','イベント1':'a',
+  'c':'c','事象2':'c','事象₂':'c','ci':'c','イベント2':'c',
+  'est':'est','効果量':'est','yi':'est','効果':'est',
+  'lo':'lo','下限':'lo','ci下限':'lo','lower':'lo','ci_low':'lo',
+  'hi':'hi','上限':'hi','ci上限':'hi','upper':'hi','ci_high':'hi',
+  'se':'se','標準誤差':'se'
+};
+function parsePaste(text){
+  var lines=text.replace(/\r/g,'').split('\n').filter(function(l){ return l.trim()!==''; });
+  if(lines.length<2) return {err:'見出し行とデータ行が要ります'};
+  var sep = lines[0].indexOf('\t')>=0 ? '\t' : ',';
+  var head=lines[0].split(sep).map(function(s){ return ALIAS[s.trim().toLowerCase()]||ALIAS[s.trim()]||null; });
+  if(!head.some(function(h){ return h; })) return {err:'見出しを認識できませんでした。「この指標の見出し行を入れる」で形式を確かめてください'};
+  var out=[];
+  for(var i=1;i<lines.length;i++){
+    var cells=lines[i].split(sep), o={};
+    head.forEach(function(k,j){ if(k&&cells[j]!=null) o[k]=cells[j].trim().replace(/^"|"$/g,''); });
+    if(!o.label) o.label='研究'+i;
+    if(!o.mode||MODES[S.metric].indexOf(o.mode)<0) o.mode=guessMode(o);
+    out.push(newStudy(o));
+  }
+  return {rows:out};
+}
+function guessMode(o){
+  var av=MODES[S.metric];
+  if(o.n1!=null&&o.m1!=null&&av.indexOf('two')>=0) return 'two';
+  if(o.a!=null&&av.indexOf('twobytwo')>=0) return 'twobytwo';
+  if(o.r!=null&&av.indexOf('cor')>=0) return 'cor';
+  if(o.est!=null) return 'direct';
+  return av[0];
+}
+function templateHead(){
+  var m=MODES[S.metric][0];
+  var base=['study','year','sg','mod'];
+  return base.concat(FIELDS[m].map(function(f){ return f[0]; })).join(',');
+}
+var SAMPLES={
+  SMD:'study,year,sg,mod,n1,m1,s1,n2,m2,s2\n'+
+    '青木ら,2016,RCT,12,80,72.4,10.1,78,68.7,9.7\n'+
+    '井上ら,2017,RCT,8,120,68.8,12.4,118,65.2,11.8\n'+
+    '上田ら,2018,準実験,16,190,80.5,10.2,185,74.8,10.4\n'+
+    '遠藤ら,2019,RCT,10,150,74.1,11.0,148,71.7,10.6\n'+
+    '大谷ら,2020,準実験,10,60,81.7,9.8,62,75.8,9.9\n'+
+    '加藤ら,2021,RCT,6,200,69.9,10.7,196,68.1,10.9\n'+
+    '木村ら,2022,RCT,14,100,76.3,9.6,98,75.0,10.2\n'+
+    '小林ら,2023,準実験,18,90,77.8,11.3,88,72.6,11.7',
+  MD:'study,year,sg,mod,n1,m1,s1,n2,m2,s2\n'+
+    '研究A,2018,,10,40,128.4,12.1,40,133.9,12.8\n'+
+    '研究B,2019,,12,55,126.9,11.5,54,132.1,13.0\n'+
+    '研究C,2020,,8,33,130.2,13.4,32,133.0,12.2\n'+
+    '研究D,2021,,15,48,124.7,10.9,47,131.8,11.6',
+  COR:'study,year,sg,mod,r,n\n'+
+    '研究1,2015,横断,22,0.34,120\n研究2,2016,縦断,28,0.21,240\n研究3,2018,横断,19,0.45,88\n'+
+    '研究4,2019,縦断,31,0.18,310\n研究5,2020,横断,25,0.39,150\n研究6,2022,縦断,27,0.26,205',
+  OR:'study,year,sg,mod,a,n1,c,n2\n'+
+    '試験1,2014,多施設,60,12,150,25,148\n試験2,2016,単施設,55,8,90,14,92\n試験3,2018,多施設,63,30,320,44,315\n'+
+    '試験4,2020,単施設,58,5,60,11,62\n試験5,2022,多施設,61,22,210,35,205',
+  RR:'study,year,sg,mod,a,n1,c,n2\n'+
+    '試験1,2014,多施設,60,12,150,25,148\n試験2,2016,単施設,55,8,90,14,92\n試験3,2018,多施設,63,30,320,44,315\n'+
+    '試験4,2020,単施設,58,5,60,11,62\n試験5,2022,多施設,61,22,210,35,205',
+  RD:'study,year,sg,mod,a,n1,c,n2\n'+
+    '試験1,2014,多施設,60,12,150,25,148\n試験2,2016,単施設,55,8,90,14,92\n試験3,2018,多施設,63,30,320,44,315\n'+
+    '試験4,2020,単施設,58,5,60,11,62\n試験5,2022,多施設,61,22,210,35,205',
+  GEN:'study,year,sg,mod,est,lo,hi\n'+
+    '研究A,2017,,10,0.42,0.11,0.73\n研究B,2018,,14,0.28,0.02,0.54\n研究C,2019,,9,0.55,0.30,0.80\n'+
+    '研究D,2021,,17,0.19,-0.09,0.47\n研究E,2022,,12,0.36,0.15,0.57'
+};
+
+/* ══════════════════════════════════════════════════
+   15. 結線と初期化
+   ══════════════════════════════════════════════════ */
+function metricHint(){
+  var t={SMD:'2群の平均を比べた研究を、尺度が違っても足し合わせられます。もっともよく使われます。',
+    MD:'すべての研究が同じ尺度・同じ単位のときだけ使えます。',
+    COR:'2つの変数の関係の強さをまとめます。',
+    OR:'症例対照研究や、まれな事象に向きます。',
+    RR:'発生率の比。前向き研究で解釈しやすい指標です。',
+    RD:'絶対的な差。何人に効くかを考えるときに向きます。',
+    GEN:'論文が報告している効果量と信頼区間をそのまま統合します。'}[S.metric];
+  $('metricHint').textContent=t;
+}
+function boot(){
+  renderNav(); bindTable(); metricHint(); renderData(); renderBar(); syncSG();
+  $('nav').addEventListener('click', function(e){ var b=e.target.closest('button[data-s]'); if(b) go(+b.dataset.s); });
+  $('metric').addEventListener('change', function(){
+    S.metric=this.value; metricHint();
+    S.studies.forEach(function(st){ if(MODES[S.metric].indexOf(st.mode)<0) st.mode=MODES[S.metric][0]; });
+    calcAll(); renderData(); renderBar();
+  });
+  $('outcome').addEventListener('input', function(){ S.outcome=this.value; });
+  // PDF
+  var drop=$('drop'), picker=$('picker');
+  drop.addEventListener('click', function(){ picker.click(); });
+  drop.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); picker.click(); } });
+  ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function(e){ addFiles(e.dataTransfer.files); });
+  picker.addEventListener('change', function(){ addFiles(this.files); this.value=''; });
+  function addFiles(list){
+    Array.prototype.forEach.call(list, function(f){
+      if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)) S.files.push({file:f, status:'待機', msg:''});
+    });
+    renderFiles();
+    $('extractMsg').textContent = S.files.length? S.files.length+' 件のPDFを受け付けました':'';
+  }
+  $('files').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-rm]'); if(!b) return;
+    S.files.splice(+b.dataset.rm,1); renderFiles();
+  });
+  $('runExtract').addEventListener('click', function(){
+    $('extractMsg').textContent='読み取り中です。論文の長さによって数十秒かかります。';
+    runExtraction().catch(function(e){ $('extractMsg').textContent='失敗：'+e.message; $('runExtract').disabled=false; });
+  });
+  $('clearFiles').addEventListener('click', function(){ S.files=[]; renderFiles(); $('extractMsg').textContent=''; });
+  // 貼り付け
+  $('doPaste').addEventListener('click', function(){
+    var r=parsePaste($('paste').value);
+    if(r.err){ $('pasteMsg').textContent=r.err; return; }
+    S.studies=S.studies.concat(r.rows); calcAll(); syncSG(); renderBar(); renderData();
+    $('pasteMsg').textContent=r.rows.length+' 件を読み込みました。手順 ii で確認してください。';
+  });
+  $('tmpl').addEventListener('click', function(){ $('paste').value=templateHead()+'\n'; $('pasteMsg').textContent='この見出しに続けてデータ行を書いてください。'; });
+  $('sample').addEventListener('click', function(){
+    var r=parsePaste(SAMPLES[S.metric]);
+    if(r.rows){ S.studies=S.studies.concat(r.rows); calcAll(); syncSG(); renderBar(); renderData();
+      $('pasteMsg').textContent='例のデータ（架空）を '+r.rows.length+' 件読み込みました。'; }
+  });
+  $('addRow').addEventListener('click', function(){ S.studies.push(newStudy({label:'研究'+(S.studies.length+1)})); calcAll(); renderData(); go(2); });
+  $('addRow2').addEventListener('click', function(){ S.studies.push(newStudy({label:'研究'+(S.studies.length+1)})); calcAll(); renderData(); });
+  $('allOn').addEventListener('click', function(){ S.studies.forEach(function(s){ s.include=true; }); calcAll(); renderData(); renderBar(); });
+  $('delAll').addEventListener('click', function(){ if(confirm('すべての研究を消します。よろしいですか。')){ S.studies=[]; calcAll(); renderData(); renderBar(); syncSG(); } });
+  // モデル
+  $('mdlPill').addEventListener('click', function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    S.opt.model=b.dataset.v;
+    Array.prototype.forEach.call(this.children, function(c){ c.setAttribute('aria-pressed', String(c===b)); });
+    $('tauMethod').disabled = S.opt.model!=='random';
+    renderPooled(); renderBar();
+  });
+  $('hkPill').addEventListener('click', function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    S.opt.hk=b.dataset.v==='1';
+    Array.prototype.forEach.call(this.children, function(c){ c.setAttribute('aria-pressed', String(c===b)); });
+    renderPooled(); renderBar();
+  });
+  $('tauMethod').disabled = S.opt.model!=='random';
+  $('tauMethod').addEventListener('change', function(){ S.opt.tau=this.value; renderPooled(); renderBar(); });
+  $('sgSel').addEventListener('change', function(){ S.sg=this.value; renderPooled(); });
+  $('sortBy').addEventListener('change', function(){ S.sortBy=this.checked; renderPooled(); });
+  // 書き出し
+  $('dlForest').addEventListener('click', function(){ download('forest_plot.svg', $('forest').innerHTML, 'image/svg+xml'); });
+  $('dlCsv').addEventListener('click', function(){ download('meta_analysis.csv', csvOut(), 'text/csv'); });
+  $('dlR').addEventListener('click', function(){ download('meta_analysis.R', buildR(), 'text/plain'); });
+  $('cpR').addEventListener('click', function(){ copy(buildR(), this); });
+  $('cpWrite').addEventListener('click', function(){ copy($('writeup').innerText, this); });
+  $('dlJson').addEventListener('click', function(){
+    download('meta_data.json', JSON.stringify({metric:S.metric, outcome:S.outcome, opt:S.opt, studies:S.studies}, null, 1), 'application/json');
+  });
+  $('upJson').addEventListener('click', function(){ $('jsonPick').click(); });
+  $('jsonPick').addEventListener('change', function(){
+    var f=this.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var o=JSON.parse(r.result);
+        S.metric=o.metric||S.metric; S.outcome=o.outcome||''; S.opt=Object.assign(S.opt,o.opt||{});
+        S.studies=(o.studies||[]).map(function(s){ return newStudy(s); });
+        $('metric').value=S.metric; $('outcome').value=S.outcome;
+        calcAll(); metricHint(); renderData(); renderBar(); syncSG(); go(2);
+      }catch(e){ alert('読み込めませんでした：'+e.message); }
+    };
+    r.readAsText(f); this.value='';
+  });
+  function copy(t,btn){
+    var done=function(){ var o=btn.textContent; btn.textContent='コピーしました'; setTimeout(function(){ btn.textContent=o; },1400); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function(){ fallback('copy.txt',t); toast('コピーできなかったので、手順 vi の欄に内容を出しました'); });
+    else { fallback('copy.txt',t); toast('コピーできなかったので、手順 vi の欄に内容を出しました'); }
+  }
+  go(1);
+}
+document.addEventListener('DOMContentLoaded', boot);
+</script></body></html>

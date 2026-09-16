@@ -1,0 +1,3667 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>カテゴリ分析 — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#F0F2EF;
+  --paper-raised:#FFFFFF;
+  --ink:#1C222A;
+  --ink-soft:#5B6470;
+  --line:#DCE0DB;
+  --line-soft:#E9ECE7;
+  --freq:#33587D;
+  --freq-soft:#DCE6EE;
+  --freq-tint:#EEF3F7;
+  --bayes:#BC5F27;
+  --bayes-soft:#F3E1CF;
+  --bayes-tint:#FBF1E7;
+  --good:#3C7A54;
+  --bad:#AE3A46;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+
+/* ---------- Masthead ---------- */
+.masthead{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  border-bottom:2px solid var(--ink);
+  padding-bottom:18px;margin-bottom:8px;flex-wrap:wrap;gap:16px;
+}
+.masthead h1{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:34px;
+  letter-spacing:-0.01em;
+  margin:0 0 4px;
+}
+.masthead .sub{
+  color:var(--ink-soft);
+  font-size:14px;
+  max-width:520px;
+}
+.legend{display:flex;gap:18px;font-size:12.5px;color:var(--ink-soft);align-items:center;}
+.legend .swatch{display:inline-flex;align-items:center;gap:6px;}
+.legend .dot{width:10px;height:10px;border-radius:2px;display:inline-block;}
+.legend .dot.freq{background:var(--freq);}
+.legend .dot.bayes{background:var(--bayes);}
+
+/* ---------- Tabs ---------- */
+.tabs{
+  display:flex;gap:2px;margin:22px 0 20px;
+  border-bottom:1px solid var(--line);
+}
+.tab-btn{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12.5px;letter-spacing:0.02em;
+  background:none;border:none;
+  padding:11px 16px 10px;
+  color:var(--ink-soft);
+  cursor:pointer;
+  border-bottom:2px solid transparent;
+  transform:translateY(1px);
+  transition:color .15s;
+}
+.tab-btn .num{color:var(--ink-soft);opacity:.55;margin-right:7px;}
+.tab-btn:hover{color:var(--ink);}
+.tab-btn.active{color:var(--ink);border-bottom-color:var(--ink);font-weight:600;}
+.tab-btn.active .num{opacity:1;}
+
+.tab-panel{display:none;}
+.tab-panel.active{display:block;animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+/* ---------- Cards ---------- */
+.card{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:20px 22px;
+  margin-bottom:18px;
+}
+.card h2{
+  font-family:'Fraunces',serif;
+  font-size:17px;font-weight:600;margin:0 0 4px;
+}
+.card .desc{color:var(--ink-soft);font-size:13px;margin-bottom:16px;}
+
+.field-row{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:6px;}
+.field{display:flex;flex-direction:column;gap:5px;min-width:120px;}
+.field label{font-size:12px;color:var(--ink-soft);font-weight:600;}
+.field .hint{font-size:11px;color:var(--ink-soft);opacity:.8;font-weight:400;}
+.field input[type=number], .field input[type=text]{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:14px;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#FCFCFB;
+  width:110px;
+  color:var(--ink);
+}
+.field input:focus{outline:2px solid var(--ink);outline-offset:1px;}
+.select-input{
+  font-family:'Inter',sans-serif;font-size:13.5px;
+  padding:7px 10px;border:1px solid var(--line);border-radius:6px;
+  background:#FCFCFB;color:var(--ink);min-width:220px;
+}
+.select-input:focus{outline:2px solid var(--ink);outline-offset:1px;}
+
+/* data table editor */
+.dtable{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px;}
+.dtable th{
+  text-align:left;font-size:11px;color:var(--ink-soft);
+  font-weight:600;padding:4px 8px;border-bottom:1px solid var(--line);
+  font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.03em;
+}
+.dtable td{padding:4px 8px;border-bottom:1px solid var(--line-soft);}
+.dtable input{
+  font-family:'IBM Plex Mono',monospace;font-size:13.5px;
+  padding:5px 7px;border:1px solid var(--line);border-radius:5px;
+  width:100%;background:#FCFCFB;
+}
+.dtable input[type=text]{font-family:'Inter',sans-serif;}
+.row-del{background:none;border:none;color:var(--bad);cursor:pointer;font-size:15px;padding:2px 6px;opacity:.6;}
+.row-del:hover{opacity:1;}
+
+.btn{
+  font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+  padding:8px 16px;border-radius:7px;border:1px solid var(--ink);
+  background:var(--ink);color:#fff;cursor:pointer;
+}
+.btn.ghost{background:none;color:var(--ink);}
+.btn.small{padding:5px 11px;font-size:12px;}
+.btn:hover{opacity:.85;}
+.toolbar{display:flex;gap:10px;margin-top:12px;align-items:center;}
+
+/* ---------- Drop zone ---------- */
+.dropzone{
+  border:1.5px dashed var(--line);
+  border-radius:var(--radius);
+  padding:16px 18px;
+  margin-top:10px;
+  cursor:pointer;
+  display:flex;align-items:center;gap:14px;
+  background:#FAFAF8;
+  transition:border-color .15s, background .15s;
+}
+.dropzone:hover{border-color:var(--ink-soft);}
+.dropzone.drag-active{border-color:var(--bayes);background:var(--bayes-tint);}
+.dropzone-icon{
+  font-size:20px;color:var(--ink-soft);
+  width:34px;height:34px;flex:none;
+  border:1.5px solid var(--line);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  background:#fff;
+}
+.dropzone-text{font-size:13px;font-weight:600;}
+.dropzone-hint{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+.drop-msg{margin-top:8px;font-size:12px;padding:7px 10px;border-radius:6px;}
+.drop-msg.ok{background:#E4F0E7;color:var(--good);}
+.drop-msg.err{background:#F5E2E3;color:var(--bad);}
+
+.input-divider{
+  display:flex;align-items:center;gap:10px;margin:14px 0 2px;
+  font-size:11px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.input-divider::before,.input-divider::after{content:'';flex:1;height:1px;background:var(--line);}
+
+.mode-toggle{display:flex;gap:18px;margin:10px 0 2px;flex-wrap:wrap;}
+.mode-option{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);}
+.mode-option input[type=radio]{accent-color:var(--ink);cursor:pointer;}
+.mode-option label{cursor:pointer;}
+
+.pastearea{margin-top:8px;}
+.pastearea textarea{
+  width:100%;min-height:96px;resize:vertical;
+  font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+  padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+  background:#FCFCFB;color:var(--ink);line-height:1.5;
+}
+.pastearea textarea:focus{outline:2px solid var(--ink);outline-offset:1px;}
+.pastearea .pastearea-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:10px;}
+.pastearea .pastearea-hint{font-size:11.5px;color:var(--ink-soft);}
+
+/* ---------- Results layout ---------- */
+.compare-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+}
+@media (max-width:800px){.compare-grid{grid-template-columns:1fr;}}
+
+.panel{
+  border-radius:var(--radius);
+  padding:18px 20px;
+  border:1px solid var(--line);
+}
+.panel.freq{background:var(--freq-tint);border-color:var(--freq-soft);}
+.panel.bayes{background:var(--bayes-tint);border-color:var(--bayes-soft);}
+.panel-head{
+  display:flex;align-items:center;gap:8px;margin-bottom:14px;
+}
+.panel-head .tag{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:4px;color:#fff;
+}
+.panel.freq .tag{background:var(--freq);}
+.panel.bayes .tag{background:var(--bayes);}
+.panel-head h3{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:0;}
+
+.stat-line{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:6px 0;border-bottom:1px dashed var(--line);
+  font-size:13.5px;
+}
+.stat-line:last-child{border-bottom:none;}
+.stat-line .k{color:var(--ink-soft);}
+.stat-line .v{font-family:'IBM Plex Mono',monospace;font-weight:600;text-align:right;}
+.verdict{
+  margin-top:12px;padding:10px 12px;border-radius:7px;font-size:13px;font-weight:500;
+  background:rgba(255,255,255,.55);
+}
+.verdict.good{color:var(--good);}
+.verdict.bad{color:var(--bad);}
+
+.axis-block{margin-top:22px;}
+.axis-title{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;}
+
+.small-note{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.55;}
+.small-note code{font-family:'IBM Plex Mono',monospace;background:var(--line-soft);padding:1px 4px;border-radius:3px;}
+
+.interp{
+  margin-top:16px;padding:16px 18px;border-radius:var(--radius);
+  background:#fff;border:1px solid var(--line);font-size:13.5px;
+}
+.interp h4{font-family:'Fraunces',serif;font-size:14.5px;margin:0 0 8px;}
+
+.manuscript{
+  margin-top:12px;padding:16px 18px;border-radius:var(--radius);
+  background:#fff;border:1px solid var(--line);font-size:13.5px;
+}
+.manuscript h4{font-family:'Fraunces',serif;font-size:14.5px;margin:0 0 4px;}
+.manuscript .manuscript-lead{font-size:12px;color:var(--ink-soft);margin-bottom:12px;}
+.manuscript-quote{
+  position:relative;
+  padding:12px 16px 12px 18px;
+  margin-bottom:10px;
+  border-left:3px solid var(--line);
+  background:#FAFAF8;
+  border-radius:0 8px 8px 0;
+  font-size:13px;line-height:1.85;
+}
+.manuscript-quote:last-of-type{margin-bottom:0;}
+.manuscript-quote.freq{border-left-color:var(--freq);}
+.manuscript-quote.bayes{border-left-color:var(--bayes);}
+.manuscript-quote .mq-label{
+  display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;
+}
+.manuscript-quote.freq .mq-label{color:var(--freq);}
+.manuscript-quote.bayes .mq-label{color:var(--bayes);}
+.manuscript-quote p{margin:0;color:var(--ink);}
+.manuscript-copy{
+  display:flex;justify-content:flex-end;margin-top:10px;
+}
+.manuscript-copy button{
+  font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;
+  padding:5px 11px;border-radius:6px;border:1px solid var(--line);
+  background:#fff;color:var(--ink-soft);cursor:pointer;
+}
+.manuscript-copy button:hover{color:var(--ink);border-color:var(--ink-soft);}
+.manuscript-copy button.copied{color:var(--good);border-color:var(--good);}
+
+table.mtable{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+table.mtable th{background:#F5F5F2;font-weight:600;padding:6px 9px;text-align:right;border:1px solid var(--line);font-size:11.5px;color:var(--ink-soft);}
+table.mtable th:first-child{text-align:left;}
+table.mtable td{padding:6px 9px;border:1px solid var(--line-soft);text-align:right;font-family:'IBM Plex Mono',monospace;}
+table.mtable td:first-child{text-align:left;font-family:'Inter',sans-serif;}
+
+/* ---------- R code block (dark, syntax highlighted) ---------- */
+.rcode-block{
+  margin-top:18px;border-radius:var(--radius);overflow:hidden;
+  border:1px solid #33333d;
+}
+.rcode-head{
+  display:flex;align-items:center;gap:10px;
+  background:#242429;padding:9px 14px;
+  border-bottom:1px solid #33333d;
+}
+.rcode-title{
+  font-family:'Fraunces',serif;font-size:14px;font-weight:600;color:#E8E8ED;flex:none;
+}
+.rcode-badge{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;
+  letter-spacing:.03em;color:#8A8A96;background:#1A1A1F;
+  border:1px solid #3A3A44;border-radius:4px;padding:2px 7px;margin-right:auto;
+}
+.rcode-copy{
+  font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;
+  padding:5px 11px;border-radius:6px;border:1px solid #3A3A44;
+  background:#1A1A1F;color:#B8B8C2;cursor:pointer;flex:none;
+}
+.rcode-copy:hover{color:#fff;border-color:#57576A;}
+.rcode-copy.copied{color:#7FD99A;border-color:#7FD99A;}
+.rcode-pre{
+  margin:0;padding:16px 18px;background:#1B1B20;overflow-x:auto;
+  font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.7;
+}
+.rcode-pre code{color:#D4D4D8;white-space:pre;}
+.tok-comment{color:#7DA36B;font-style:italic;}
+.tok-string{color:#D89A6A;}
+.tok-number{color:#9FCB8F;}
+.tok-keyword{color:#D488C9;}
+.tok-const{color:#6FA8DC;}
+.tok-func{color:#E5D08A;}
+.tok-ident{color:#8FC5F0;}
+.tok-op{color:#D4D4D8;}
+.tok-punct{color:#9A9AA4;}
+
+footer.credit{margin-top:36px;font-size:11.5px;color:var(--ink-soft);text-align:center;}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-compare);--paper:var(--al-bg);--paper-raised:var(--al-surface);--ink:var(--al-ink);--ink-soft:var(--al-ink-2);--line:var(--al-line);--line-soft:var(--al-line-2);}body{font-family:var(--al-sans)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#compare">比べる</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>カテゴリ分析</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="app">
+
+  <div class="masthead">
+    <div>
+      <h1>カテゴリ分析</h1>
+      <div class="sub">カテゴリカルデータ分析 — 同じデータを頻度論とベイズ統計の両方のレンズで読む。</div>
+    </div>
+    <div class="legend">
+      <span class="swatch"><span class="dot freq"></span>頻度論</span>
+      <span class="swatch"><span class="dot bayes"></span>ベイズ</span>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="binom"><span class="num">01</span>二項検定</button>
+    <button class="tab-btn" data-tab="multi"><span class="num">02</span>多項検定（適合度）</button>
+    <button class="tab-btn" data-tab="cont"><span class="num">03</span>分割表（独立性）</button>
+    <button class="tab-btn" data-tab="loglin"><span class="num">04</span>対数線形回帰</button>
+    <button class="tab-btn" data-tab="abtest"><span class="num">05</span>A/Bテスト</button>
+    <button class="tab-btn" data-tab="informed_multi"><span class="num">06</span>Informed多項検定</button>
+    <button class="tab-btn" data-tab="informed_binom"><span class="num">07</span>Informed多重二項検定</button>
+  </nav>
+
+  <main id="main"></main>
+
+  <footer class="credit">正確二項検定・カイ二乗検定はいずれも解析的な厳密（または漸近）解。ベイズ側の分割表・対数線形モデルの証拠比較には BIC 近似ベイズファクター（Raftery, 1986）を使用しています。</footer>
+</div>
+
+<script>
+// ===================== 基礎数学関数 =====================
+
+// log Gamma (Lanczos近似)
+function logGamma(x) {
+  const g = 7;
+  const c = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+  ];
+  if (x < 0.5) {
+    return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+  }
+  x -= 1;
+  let a = c[0];
+  const t = x + g + 0.5;
+  for (let i = 1; i < g + 2; i++) a += c[i] / (x + i);
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+function logChoose(n, k) {
+  if (k < 0 || k > n) return -Infinity;
+  return logGamma(n + 1) - logGamma(k + 1) - logGamma(n - k + 1);
+}
+
+function logBeta(a, b) {
+  return logGamma(a) + logGamma(b) - logGamma(a + b);
+}
+
+// 正則化不完全ベータ関数 I_x(a,b)
+function betacf(x, a, b) {
+  const MAXIT = 200, EPS = 3e-12, FPMIN = 1e-300;
+  let qab = a + b, qap = a + 1, qam = a - 1;
+  let c = 1, d = 1 - (qab * x) / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m <= MAXIT; m++) {
+    const m2 = 2 * m;
+    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    h *= d * c;
+    aa = -((a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < EPS) break;
+  }
+  return h;
+}
+
+function regIncompleteBeta(x, a, b) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const bt = Math.exp(logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  if (x < (a + 1) / (a + b + 2)) {
+    return (bt * betacf(x, a, b)) / a;
+  } else {
+    return 1 - (bt * betacf(1 - x, b, a)) / b;
+  }
+}
+
+// betaの逆関数（分位点） 二分探索
+function betaQuantile(p, a, b) {
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    if (regIncompleteBeta(mid, a, b) < p) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function betaPDF(x, a, b) {
+  if (x <= 0 || x >= 1) return 0;
+  return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - logBeta(a, b));
+}
+
+// 正則化不完全ガンマ関数 P(a,x) （下側）: カイ二乗CDFに使用
+function gammpSeries(a, x) {
+  const ITMAX = 300, EPS = 3e-14;
+  if (x <= 0) return 0;
+  let ap = a, sum = 1 / a, del = sum;
+  for (let n = 1; n <= ITMAX; n++) {
+    ap += 1;
+    del *= x / ap;
+    sum += del;
+    if (Math.abs(del) < Math.abs(sum) * EPS) break;
+  }
+  return sum * Math.exp(-x + a * Math.log(x) - logGamma(a));
+}
+
+function gammqCF(a, x) {
+  const ITMAX = 300, EPS = 3e-14, FPMIN = 1e-300;
+  let b = x + 1 - a, c = 1 / FPMIN, d = 1 / b, h = d;
+  for (let i = 1; i <= ITMAX; i++) {
+    const an = -i * (i - a);
+    b += 2;
+    d = an * d + b; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = b + an / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < EPS) break;
+  }
+  return Math.exp(-x + a * Math.log(x) - logGamma(a)) * h;
+}
+
+function lowerGammaP(a, x) {
+  if (x < 0 || a <= 0) return NaN;
+  if (x === 0) return 0;
+  if (x < a + 1) return gammpSeries(a, x);
+  return 1 - gammqCF(a, x);
+}
+
+function chiSquareCDF(x, k) {
+  if (x <= 0) return 0;
+  return lowerGammaP(k / 2, x / 2);
+}
+
+// 標準正規分布
+function normalCDF(x) {
+  return 0.5 * (1 + erf(x / Math.SQRT2));
+}
+function erf(x) {
+  // Abramowitz-Stegun 7.1.26
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741,
+        a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const t = 1 / (1 + p * x);
+  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return sign * y;
+}
+function normalQuantile(p) {
+  // Acklam's algorithm
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+             1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+             6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+             -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
+             3.754408661907416e+00];
+  const plow = 0.02425, phigh = 1 - plow;
+  let q, r;
+  if (p < plow) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+           ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  } else if (p <= phigh) {
+    q = p - 0.5; r = q*q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q /
+           (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  } else {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+            ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+}
+
+// ===================== 二項検定 =====================
+function binomPMF(k, n, p) {
+  if (p <= 0) return k === 0 ? 1 : 0;
+  if (p >= 1) return k === n ? 1 : 0;
+  return Math.exp(logChoose(n, k) + k * Math.log(p) + (n - k) * Math.log(1 - p));
+}
+
+// 正確二項検定（両側, R の binom.test と同じ方式）。
+// n が非有限（Infinity/NaN）または非常に大きい場合、k=0..n の全数計算は
+// ブラウザが固まる原因になるため、閾値を超えたら連続性補正つき正規近似に切り替える。
+const BINOM_EXACT_MAX_N = 200000;
+function binomTestExact(x, n, p0) {
+  if (!isFinite(n) || !isFinite(x) || n < 0 || x < 0) {
+    return { pvalue: NaN, exact: false };
+  }
+  if (n > BINOM_EXACT_MAX_N) {
+    // 連続性補正つき正規近似（両側）
+    const mean = n * p0, sd = Math.sqrt(n * p0 * (1 - p0));
+    if (sd <= 0) return { pvalue: (x === mean ? 1 : 0), exact: false };
+    const z = (Math.abs(x - mean) - 0.5) / sd;
+    const pvalue = Math.min(1, 2 * (1 - normalCDF(z)));
+    return { pvalue, exact: false };
+  }
+  const d0 = binomPMF(x, n, p0);
+  let pval = 0;
+  const relTol = 1e-7;
+  for (let k = 0; k <= n; k++) {
+    const dk = binomPMF(k, n, p0);
+    if (dk <= d0 * (1 + relTol)) pval += dk;
+  }
+  return { pvalue: Math.min(1, pval), exact: true };
+}
+
+// Clopper-Pearson 信頼区間
+function clopperPearsonCI(x, n, alpha) {
+  if (!isFinite(n) || !isFinite(x) || n < 0 || x < 0 || x > n) return [NaN, NaN];
+  const lo = x === 0 ? 0 : betaQuantile(alpha / 2, x, n - x + 1);
+  const hi = x === n ? 1 : betaQuantile(1 - alpha / 2, x + 1, n - x);
+  return [lo, hi];
+}
+
+// ===================== 多項検定（適合度） =====================
+// 頻度論: カイ二乗適合度検定 + G検定
+function chiSqGOF(observed, expectedProb) {
+  const n = observed.reduce((a, b) => a + b, 0);
+  const k = observed.length;
+  let chi2 = 0, G = 0;
+  const expected = expectedProb.map(p => p * n);
+  for (let i = 0; i < k; i++) {
+    const e = expected[i], o = observed[i];
+    chi2 += (o - e) * (o - e) / e;
+    if (o > 0) G += 2 * o * Math.log(o / e);
+  }
+  const df = k - 1;
+  const pChi2 = 1 - chiSquareCDF(chi2, df);
+  const pG = 1 - chiSquareCDF(G, df);
+  return { chi2, G, df, pChi2, pG, expected };
+}
+
+// ベイズ: Dirichlet-多項モデルの周辺尤度 vs 帰無点仮説(p0)の尤度比 = ベイズファクター
+function dirichletMultinomialLogML(observed, alpha) {
+  const n = observed.reduce((a, b) => a + b, 0);
+  const A = alpha.reduce((a, b) => a + b, 0);
+  let s = logGamma(n + 1) - observed.reduce((a, x) => a + logGamma(x + 1), 0);
+  s += logGamma(A) - logGamma(n + A);
+  for (let i = 0; i < observed.length; i++) {
+    s += logGamma(observed[i] + alpha[i]) - logGamma(alpha[i]);
+  }
+  return s;
+}
+function multinomialLogLikNull(observed, p0) {
+  const n = observed.reduce((a, b) => a + b, 0);
+  let s = logGamma(n + 1) - observed.reduce((a, x) => a + logGamma(x + 1), 0);
+  for (let i = 0; i < observed.length; i++) {
+    if (observed[i] > 0) s += observed[i] * Math.log(p0[i]);
+  }
+  return s;
+}
+// 各カテゴリの事後分布は Dirichlet(alpha_i + x_i) の周辺 = Beta(alpha_i+x_i, A+n-alpha_i-x_i)
+function dirichletMarginalCI(observed, alpha, credLevel) {
+  const n = observed.reduce((a, b) => a + b, 0);
+  const A = alpha.reduce((a, b) => a + b, 0);
+  const lowerQ = (1 - credLevel) / 2, upperQ = 1 - (1 - credLevel) / 2;
+  return observed.map((x, i) => {
+    const a = alpha[i] + x, b = A + n - alpha[i] - x;
+    return {
+      mean: a / (a + b),
+      lo: betaQuantile(lowerQ, a, b),
+      hi: betaQuantile(upperQ, a, b)
+    };
+  });
+}
+
+// ===================== 分割表 (カイ二乗独立性検定) =====================
+function contingencyChiSq(table) {
+  const r = table.length, c = table[0].length;
+  const rowSum = table.map(row => row.reduce((a, b) => a + b, 0));
+  const colSum = Array(c).fill(0);
+  for (let j = 0; j < c; j++) for (let i = 0; i < r; i++) colSum[j] += table[i][j];
+  const N = rowSum.reduce((a, b) => a + b, 0);
+  const expected = table.map((row, i) => row.map((_, j) => (rowSum[i] * colSum[j]) / N));
+  let chi2 = 0, G = 0;
+  for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) {
+    const e = expected[i][j], o = table[i][j];
+    chi2 += (o - e) * (o - e) / e;
+    if (o > 0) G += 2 * o * Math.log(o / e);
+  }
+  const df = (r - 1) * (c - 1);
+  const pChi2 = 1 - chiSquareCDF(chi2, df);
+  const pG = 1 - chiSquareCDF(G, df);
+  const cramerV = Math.sqrt(chi2 / (N * (Math.min(r, c) - 1)));
+  return { chi2, G, df, pChi2, pG, expected, rowSum, colSum, N, cramerV };
+}
+
+// BIC近似ベイズファクター（独立/簡約モデル(帰無) vs 飽和モデル(対立)）
+// Raftery(1986)の近似: BIC_k = G²(またはχ²) - df*ln(N) は 2*log(BF[飽和:モデルk]) の近似
+// よって BF(モデルk:飽和) = exp(-BIC_k/2)。BIC_k<0 (統計量が自由度*ln(N)より小さい)なら
+// 簡約モデル（独立）が優勢、BIC_k>0なら飽和（依存）モデルが優勢。
+function bicBayesFactor(statistic, df, N) {
+  const deltaBIC = statistic - df * Math.log(N);
+  const logBF_indep_over_dep = -deltaBIC / 2;
+  return { deltaBIC, BF_indep_over_dep: Math.exp(logBF_indep_over_dep) };
+}
+
+// ===================== 線形代数 (Gauss-Jordan) =====================
+function matInverse(M) {
+  const n = M.length;
+  const A = M.map((row, i) => row.concat(Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))));
+  for (let col = 0; col < n; col++) {
+    let pivot = col;
+    for (let r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[pivot][col])) pivot = r;
+    if (Math.abs(A[pivot][col]) < 1e-14) continue; // 特異に近い列はスキップ（正則化前提）
+    [A[col], A[pivot]] = [A[pivot], A[col]];
+    const div = A[col][col];
+    for (let k = 0; k < 2 * n; k++) A[col][k] /= div;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const factor = A[r][col];
+      for (let k = 0; k < 2 * n; k++) A[r][k] -= factor * A[col][k];
+    }
+  }
+  return A.map(row => row.slice(n));
+}
+function matVec(M, v) {
+  return M.map(row => row.reduce((s, x, j) => s + x * v[j], 0));
+}
+function matMulDiagMat(X, w) {
+  // returns X^T diag(w) X  (X: n x p, w: length n)
+  const n = X.length, p = X[0].length;
+  const out = Array.from({ length: p }, () => Array(p).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let a = 0; a < p; a++) {
+      const xa = X[i][a] * w[i];
+      for (let b = 0; b < p; b++) out[a][b] += xa * X[i][b];
+    }
+  }
+  return out;
+}
+function matTVec(X, v) {
+  // X^T v
+  const n = X.length, p = X[0].length;
+  const out = Array(p).fill(0);
+  for (let i = 0; i < n; i++) for (let a = 0; a < p; a++) out[a] += X[i][a] * v[i];
+  return out;
+}
+
+// Poisson対数線形モデル IRLS推定 (log link), ridge=事前分散1/tauの正則化(0でMLE相当)
+function poissonIRLS(X, y, ridge) {
+  ridge = ridge || 0;
+  const n = X.length, p = X[0].length;
+  let beta = Array(p).fill(0);
+  // 初期値: 切片相当をlog(mean(y))に、他は0
+  const meanY = y.reduce((a, b) => a + b, 0) / n;
+  beta[0] = Math.log(Math.max(meanY, 1e-3));
+  let converged = false;
+  let XtWX_inv = null;
+  for (let iter = 0; iter < 100; iter++) {
+    const eta = X.map(row => row.reduce((s, x, j) => s + x * beta[j], 0));
+    const mu = eta.map(e => Math.exp(Math.min(e, 30)));
+    const w = mu.slice(); // Poisson: variance = mu, IRLS weight = mu (canonical link)
+    const z = eta.map((e, i) => e + (y[i] - mu[i]) / Math.max(mu[i], 1e-8));
+    const XtWX = matMulDiagMat(X, w);
+    for (let i = 0; i < p; i++) XtWX[i][i] += ridge; // ridge正則化(ベイズ: 平均0のNormal事前の近似)
+    const XtWz = matTVec(X, w.map((wi, i) => wi * z[i]));
+    XtWX_inv = matInverse(XtWX);
+    const newBeta = matVec(XtWX_inv, XtWz);
+    const diff = newBeta.reduce((s, b, i) => s + Math.abs(b - beta[i]), 0);
+    beta = newBeta;
+    if (diff < 1e-10) { converged = true; break; }
+  }
+  const eta = X.map(row => row.reduce((s, x, j) => s + x * beta[j], 0));
+  const mu = eta.map(e => Math.exp(Math.min(e, 30)));
+  const w = mu.slice();
+  const XtWX = matMulDiagMat(X, w);
+  for (let i = 0; i < p; i++) XtWX[i][i] += ridge;
+  const cov = matInverse(XtWX);
+  const se = cov.map((row, i) => Math.sqrt(Math.max(row[i], 0)));
+  let deviance = 0;
+  for (let i = 0; i < n; i++) {
+    const yi = y[i], mui = mu[i];
+    deviance += 2 * ((yi > 0 ? yi * Math.log(yi / mui) : 0) - (yi - mui));
+  }
+  const aic = deviance + 2 * p; // (定数項は比較のみに用いるので相対値として扱う)
+  return { beta, se, cov, mu, deviance, aic, converged, df_resid: n - p };
+}
+
+// ============================================================
+// モンテカルロサンプリング（Informed仮説検定のエンカプシング事前分布BF用）
+// ============================================================
+
+// Gamma(shape,1)乱数（Marsaglia-Tsang法）。shape<1はブースト法を併用。
+function sampleGamma(shape) {
+  if (shape < 1) {
+    const u = Math.random();
+    return sampleGamma(1 + shape) * Math.pow(u, 1 / shape);
+  }
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  while (true) {
+    let x, v;
+    do {
+      const u1 = Math.random(), u2 = Math.random();
+      x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      v = 1 + c * x;
+    } while (v <= 0);
+    v = v * v * v;
+    const u = Math.random();
+    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+function sampleDirichlet(alphaVec) {
+  const gammas = alphaVec.map(a => sampleGamma(a));
+  const sum = gammas.reduce((s, g) => s + g, 0);
+  return gammas.map(g => g / sum);
+}
+function sampleBeta(a, b) {
+  const x = sampleGamma(a), y = sampleGamma(b);
+  return x / (x + y);
+}
+
+// rankOrder: 「大きい順」に並べたインデックス配列（例:[0,1,2]はp0>p1>p2を意味する）
+// sampleFn(): 1回分の抽出（長さkの配列）を返す関数
+// 事前分布サンプルと事後分布サンプルの両方から制約充足率を実測し、
+// BF_1u = P(制約|事後) / P(制約|事前) を求める（Klugkist & Hoijtink, 2007 のエンカプシング事前分布法）。
+function orderConstraintProb(sampleFn, rankOrder, nDraws) {
+  let count = 0;
+  for (let i = 0; i < nDraws; i++) {
+    const d = sampleFn();
+    let ok = true;
+    for (let j = 0; j < rankOrder.length - 1; j++) {
+      if (!(d[rankOrder[j]] > d[rankOrder[j + 1]])) { ok = false; break; }
+    }
+    if (ok) count++;
+  }
+  return count / nDraws;
+}
+function factorial(k) { let r = 1; for (let i = 2; i <= k; i++) r *= i; return r; }
+
+</script>
+<script>
+// ============================================================
+// ユーティリティ
+// ============================================================
+function el(tag, attrs, children) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    if (k === 'class') e.className = attrs[k];
+    else if (k === 'html') e.innerHTML = attrs[k];
+    else e.setAttribute(k, attrs[k]);
+  }
+  (children || []).forEach(c => {
+    if (c === null || c === undefined) return;
+    const isPrimitive = typeof c === 'string' || typeof c === 'number';
+    e.appendChild(isPrimitive ? document.createTextNode(String(c)) : c);
+  });
+  return e;
+}
+function fmt(x, d) {
+  if (x === null || x === undefined || !isFinite(x)) return '—';
+  d = d === undefined ? 4 : d;
+  return Number(x).toFixed(d);
+}
+function fmtp(x) {
+  if (x === null || x === undefined || isNaN(x)) return '—';
+  if (!isFinite(x)) return '—';
+  if (x < 0.0001) return '< 0.0001';
+  return Number(x).toFixed(4);
+}
+function pct(x, d) {
+  if (x === null || x === undefined || !isFinite(x)) return '—';
+  return (x * 100).toFixed(d === undefined ? 1 : d) + '%';
+}
+function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+// 個票データ／集計済みデータ の入力形式を切り替えるラジオトグル
+function modeToggle(nameAttr, initialValue, onChange) {
+  const options = [
+    { value: 'individual', label: '個票データ（1行=1個体）' },
+    { value: 'aggregate', label: '集計済み度数表' },
+  ];
+  const wrap = el('div', { class: 'mode-toggle' });
+  options.forEach(opt => {
+    const id = nameAttr + '-' + opt.value;
+    const input = el('input', { type: 'radio', name: nameAttr, id, value: opt.value });
+    input.checked = (opt.value === initialValue);
+    input.addEventListener('change', () => { if (input.checked) onChange(opt.value); });
+    const label = el('label', { for: id }, [opt.label]);
+    wrap.appendChild(el('span', { class: 'mode-option' }, [input, label]));
+  });
+  return wrap;
+}
+
+function svgEl(tag, attrs) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+// ============================================================
+// CSV解析 & ドラッグ&ドロップ ファイル入力
+// ============================================================
+function parseCSV(text) {
+  return text
+    .split(/\r\n|\r|\n/)
+    .map(line => line.split(/,|\t/).map(c => c.trim().replace(/^"(.*)"$/, '$1')))
+    .filter(row => row.length && row.some(c => c !== ''));
+}
+function isNumericCell(c) {
+  return c !== '' && c !== null && c !== undefined && !isNaN(Number(c));
+}
+
+// 個票データの1行目が「見出し行」か「実データの1件目」かを自動判定する。
+// numCols列で比較し、1行目と同じ値の組み合わせが2行目以降に再度現れる場合は
+// （カテゴリ値は通常繰り返し出現するため）見出し行ではなく実データとみなす。
+// 現れない場合は変数名などの見出し行とみなして読み飛ばす。
+function detectAndStripHeader(rows, numCols) {
+  if (rows.length < 2) return { header: null, dataRows: rows };
+  const first = rows[0].slice(0, numCols).map(v => (v || '').trim());
+  const reappears = rows.slice(1).some(r => {
+    for (let i = 0; i < numCols; i++) if ((r[i] || '').trim() !== first[i]) return false;
+    return true;
+  });
+  if (reappears) return { header: null, dataRows: rows };
+  return { header: rows[0], dataRows: rows.slice(1) };
+}
+
+// ============================================================
+// N変数（3変数以上を含む）の個票データ対応: 対数線形モデル用
+// ============================================================
+
+// 個票データから、水準数の少ない列を自動でカテゴリ変数として検出する共通処理。
+// 通し番号・ID等（ほぼ全行が一意な値）の列は自動的に除外する。
+// minCatCols: 検出すべきカテゴリ変数の最小数（多項検定=1、対数線形回帰=2）
+function detectCategoricalColumnsCSV(text, minCatCols) {
+  const rows = parseCSV(text);
+  if (!rows.length) throw new Error('データが空です');
+  const numCols = Math.max(...rows.map(r => r.length));
+  const { header, dataRows } = detectAndStripHeader(rows, numCols);
+  if (!dataRows.length) throw new Error('データ行が見つかりません');
+  const colNames = header ? header.slice(0, numCols) : Array.from({ length: numCols }, (_, i) => `変数${i + 1}`);
+
+  const nRows = dataRows.length;
+  const excludedCols = [];
+  const catCols = [];
+  for (let ci = 0; ci < numCols; ci++) {
+    const vals = dataRows.map(r => (r[ci] || '').trim()).filter(v => v !== '');
+    const uniq = new Set(vals);
+    if (uniq.size >= Math.max(3, Math.ceil(nRows * 0.9))) {
+      excludedCols.push({ name: (colNames[ci] || `列${ci + 1}`).replace(/^\uFEFF/, ''), idx: ci, uniqueCount: uniq.size });
+    } else {
+      catCols.push({ name: (colNames[ci] || `列${ci + 1}`).replace(/^\uFEFF/, ''), idx: ci });
+    }
+  }
+  if (catCols.length < minCatCols) {
+    throw new Error(`カテゴリ変数（水準数の少ない列）が${minCatCols}つ以上見つかりませんでした`);
+  }
+
+  const variables = catCols.map(c => {
+    const order = [];
+    dataRows.forEach(r => { const v = (r[c.idx] || '').trim(); if (v !== '' && !order.includes(v)) order.push(v); });
+    return { name: c.name, levels: order, colIdx: c.idx };
+  });
+  const records = dataRows
+    .map(r => {
+      const rec = {};
+      variables.forEach(v => { rec[v.name] = (r[v.colIdx] || '').trim(); });
+      return rec;
+    })
+    .filter(rec => variables.every(v => rec[v.name] !== ''));
+
+  return { variables, records, excludedCols, totalRows: records.length };
+}
+
+function parseMultiVarIndividualCSV(text) {
+  return detectCategoricalColumnsCSV(text, 2);
+}
+
+// 完全クロス集計表を作る（観測されなかった組合せも度数0として含める）
+function buildFullCrosstab(variables, records) {
+  const dims = variables.map(v => v.levels.length);
+  const total = dims.reduce((a, b) => a * b, 1);
+  const counts = new Array(total).fill(0);
+  function comboIndex(idxArr) {
+    let idx = 0;
+    for (let i = 0; i < idxArr.length; i++) idx = idx * dims[i] + idxArr[i];
+    return idx;
+  }
+  records.forEach(rec => {
+    const idxArr = variables.map(v => v.levels.indexOf(rec[v.name]));
+    if (idxArr.some(i => i < 0)) return;
+    counts[comboIndex(idxArr)]++;
+  });
+  function idxArrFromLinear(lin) {
+    const arr = new Array(variables.length);
+    let rem = lin;
+    for (let i = variables.length - 1; i >= 0; i--) { arr[i] = rem % dims[i]; rem = Math.floor(rem / dims[i]); }
+    return arr;
+  }
+  const freq = [];
+  for (let lin = 0; lin < total; lin++) {
+    const idxArr = idxArrFromLinear(lin);
+    freq.push({ idxArr, labels: idxArr.map((li, vi) => variables[vi].levels[li]), count: counts[lin] });
+  }
+  return freq;
+}
+
+function combinations(arr, k) {
+  if (k === 0) return [[]];
+  if (arr.length < k) return [];
+  const [first, ...rest] = arr;
+  const withFirst = combinations(rest, k - 1).map(c => [first, ...c]);
+  const withoutFirst = combinations(rest, k);
+  return withFirst.concat(withoutFirst);
+}
+
+// maxOrder次までの交互作用項を含む一般化デザイン行列（基準カテゴリコーディング）
+function buildGeneralDesignMatrix(variables, freqTable, maxOrder) {
+  const nVars = variables.length;
+  const termGroups = [];
+  for (let order = 1; order <= maxOrder; order++) {
+    combinations([...Array(nVars).keys()], order).forEach(varIdxCombo => {
+      let dummyCombos = [[]];
+      varIdxCombo.forEach(vi => {
+        const nDummies = variables[vi].levels.length - 1;
+        const newCombos = [];
+        dummyCombos.forEach(dc => { for (let d = 0; d < nDummies; d++) newCombos.push([...dc, d]); });
+        dummyCombos = newCombos;
+      });
+      dummyCombos.forEach(dc => {
+        const label = varIdxCombo.map((vi, k) => `${variables[vi].name}=${variables[vi].levels[dc[k] + 1]}`).join(' × ');
+        termGroups.push({ varIdxCombo, dummyIdx: dc, label, order });
+      });
+    });
+  }
+  const X = freqTable.map(row => {
+    const xrow = [1];
+    termGroups.forEach(tg => {
+      let val = 1;
+      tg.varIdxCombo.forEach((vi, k) => { val *= (row.idxArr[vi] === tg.dummyIdx[k] + 1) ? 1 : 0; });
+      xrow.push(val);
+    });
+    return xrow;
+  });
+  const termLabels = ['切片(intercept)', ...termGroups.map(tg => tg.label)];
+  return { X, termLabels, termGroups };
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+// onFile(text, filename) を呼び出す汎用ドロップゾーン。成功/失敗はホスト側でcatchして表示する。
+function createDropZone(hintText, onFile) {
+  const msgBox = el('div', { class: 'drop-msg', style: 'display:none;' });
+  const zone = el('div', { class: 'dropzone', tabindex: '0' }, [
+    el('div', { class: 'dropzone-icon' }, ['⇪']),
+    el('div', { class: 'dropzone-text' }, ['ファイルをドラッグ&ドロップ、またはクリックして選択']),
+    el('div', { class: 'dropzone-hint' }, [hintText]),
+  ]);
+  const input = el('input', { type: 'file', accept: '.csv,.txt', style: 'display:none;' });
+
+  async function handleFiles(files) {
+    if (!files || !files.length) return;
+    const file = files[0];
+    try {
+      const text = await readFileAsText(file);
+      onFile(text, file.name);
+      msgBox.style.display = 'block';
+      msgBox.className = 'drop-msg ok';
+      msgBox.textContent = `✓ 「${file.name}」を読み込みました。`;
+    } catch (err) {
+      msgBox.style.display = 'block';
+      msgBox.className = 'drop-msg err';
+      msgBox.textContent = `✕ 読み込みに失敗しました：${err.message || err}`;
+    }
+  }
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') input.click(); });
+  input.addEventListener('change', () => handleFiles(input.files));
+  ['dragenter', 'dragover'].forEach(evt => zone.addEventListener(evt, (e) => {
+    e.preventDefault(); e.stopPropagation(); zone.classList.add('drag-active');
+  }));
+  ['dragleave', 'dragend'].forEach(evt => zone.addEventListener(evt, (e) => {
+    e.preventDefault(); e.stopPropagation(); zone.classList.remove('drag-active');
+  }));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    zone.classList.remove('drag-active');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  return el('div', {}, [zone, input, msgBox]);
+}
+
+// onText(text) を呼び出す、CSV貼り付け用テキストエリア。成功/失敗をその場に表示する。
+function createPasteArea(placeholderText, onText) {
+  const msgBox = el('div', { class: 'drop-msg', style: 'display:none;' });
+  const textarea = el('textarea', { placeholder: placeholderText, spellcheck: 'false' });
+  const applyBtn = el('button', { class: 'btn small' }, ['この内容を適用']);
+
+  applyBtn.addEventListener('click', () => {
+    const text = textarea.value.trim();
+    if (!text) return;
+    try {
+      onText(text);
+      msgBox.style.display = 'block';
+      msgBox.className = 'drop-msg ok';
+      msgBox.textContent = '✓ 貼り付けたデータを適用しました。';
+    } catch (err) {
+      msgBox.style.display = 'block';
+      msgBox.className = 'drop-msg err';
+      msgBox.textContent = `✕ 読み込みに失敗しました：${err.message || err}`;
+    }
+  });
+  // Ctrl/Cmd+Enter でも適用できるようにする
+  textarea.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') applyBtn.click();
+  });
+
+  return el('div', { class: 'pastearea' }, [
+    textarea,
+    el('div', { class: 'pastearea-foot' }, [
+      el('div', { class: 'pastearea-hint' }, ['Ctrl(⌘)+Enter でも適用できます']),
+      applyBtn,
+    ]),
+    msgBox,
+  ]);
+}
+
+function parseBinaryToken(tok) {
+  if (tok === undefined || tok === null) return null;
+  const t = String(tok).trim().toLowerCase();
+  if (['1', 'success', 'yes', 'true', '成功', 'はい'].includes(t)) return 1;
+  if (['0', 'failure', 'fail', 'no', 'false', '失敗', 'いいえ'].includes(t)) return 0;
+  return null;
+}
+
+// ============================================================
+// 信号装置1: IntervalTwin — 同一軸上に頻度論CIとベイズ信用区間を並べる
+// range: [axisMin, axisMax]  freqIv:{lo,hi,point,label} bayesIv:{lo,hi,point,label}
+// refLine: 参照値（帰無仮説値など）を破線で表示
+// ============================================================
+function intervalTwin(opts) {
+  const W = 640, H = 118, padL = 46, padR = 24, top = 14;
+  const axisMin = opts.axisMin, axisMax = opts.axisMax;
+  const x = v => padL + (clamp01((v - axisMin) / (axisMax - axisMin))) * (W - padL - padR);
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', height: H, style: 'display:block;overflow:visible;' });
+
+  // 軸線
+  const axisY = H - 20;
+  svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: axisY, y2: axisY, stroke: '#C7CCC6', 'stroke-width': 1 }));
+  // 目盛り
+  const nTicks = 5;
+  for (let i = 0; i <= nTicks; i++) {
+    const v = axisMin + (axisMax - axisMin) * (i / nTicks);
+    const tx = x(v);
+    svg.appendChild(svgEl('line', { x1: tx, x2: tx, y1: axisY, y2: axisY + 4, stroke: '#C7CCC6', 'stroke-width': 1 }));
+    const t = svgEl('text', { x: tx, y: axisY + 16, 'font-size': '9.5', fill: '#8A9089', 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono, monospace' });
+    t.textContent = opts.tickFmt ? opts.tickFmt(v) : v.toFixed(2);
+    svg.appendChild(t);
+  }
+  // 参照線
+  if (opts.refLine !== undefined && opts.refLine !== null) {
+    const rx = x(opts.refLine);
+    svg.appendChild(svgEl('line', { x1: rx, x2: rx, y1: top - 4, y2: axisY, stroke: '#9AA0A6', 'stroke-width': 1.2, 'stroke-dasharray': '3,3' }));
+    const lbl = svgEl('text', { x: rx, y: top - 7, 'font-size': '9.5', fill: '#8A9089', 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono, monospace' });
+    lbl.textContent = opts.refLabel || '';
+    svg.appendChild(lbl);
+  }
+
+  function row(iv, y, color, label) {
+    if (!iv) return;
+    const x1 = x(iv.lo), x2 = x(iv.hi), xp = x(iv.point);
+    svg.appendChild(svgEl('line', { x1, x2, y1: y, y2: y, stroke: color, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    svg.appendChild(svgEl('line', { x1, x2: x1, y1: y - 5, y2: y + 5, stroke: color, 'stroke-width': 2 }));
+    svg.appendChild(svgEl('line', { x1: x2, x2, y1: y - 5, y2: y + 5, stroke: color, 'stroke-width': 2 }));
+    svg.appendChild(svgEl('circle', { cx: xp, cy: y, r: 5, fill: '#fff', stroke: color, 'stroke-width': 2.5 }));
+    const lt = svgEl('text', { x: padL - 8, y: y + 3.5, 'font-size': '10.5', fill: color, 'text-anchor': 'end', 'font-family': 'IBM Plex Mono, monospace', 'font-weight': '600' });
+    lt.textContent = label;
+    svg.appendChild(lt);
+  }
+  row(opts.freqIv, top + 18, opts.freqColor || '#33587D', opts.freqLabel || 'CI');
+  row(opts.bayesIv, top + 48, opts.bayesColor || '#BC5F27', opts.bayesLabel || 'CrI');
+
+  return svg;
+}
+
+// ============================================================
+// 信号装置2: EvidenceAxis — p値の位置とベイズ事後モデル確率の位置を
+// 0〜1の同じ物差し上に置いて比較する（検定の結論比較用）
+// ============================================================
+function evidenceAxis(opts) {
+  const W = 640, H = 104, padL = 46, padR = 24, top = 12;
+  const x = v => padL + clamp01(v) * (W - padL - padR);
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', height: H, style: 'display:block;overflow:visible;' });
+  const axisY = H - 20;
+  svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: axisY, y2: axisY, stroke: '#C7CCC6', 'stroke-width': 1 }));
+  for (let i = 0; i <= 5; i++) {
+    const v = i / 5, tx = x(v);
+    svg.appendChild(svgEl('line', { x1: tx, x2: tx, y1: axisY, y2: axisY + 4, stroke: '#C7CCC6', 'stroke-width': 1 }));
+    const t = svgEl('text', { x: tx, y: axisY + 16, 'font-size': '9.5', fill: '#8A9089', 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono, monospace' });
+    t.textContent = v.toFixed(1);
+    svg.appendChild(t);
+  }
+  // alpha threshold
+  if (opts.alpha !== undefined) {
+    const ax = x(opts.alpha);
+    svg.appendChild(svgEl('line', { x1: ax, x2: ax, y1: top - 2, y2: axisY, stroke: '#9AA0A6', 'stroke-width': 1.2, 'stroke-dasharray': '3,3' }));
+    const lbl = svgEl('text', { x: ax, y: top - 5, 'font-size': '9.5', fill: '#8A9089', 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono, monospace' });
+    lbl.textContent = 'α=' + opts.alpha;
+    svg.appendChild(lbl);
+  }
+  function marker(v, y, color, label, sub) {
+    const mx = x(v);
+    svg.appendChild(svgEl('circle', { cx: mx, cy: y, r: 6, fill: color }));
+    const lt = svgEl('text', { x: padL - 8, y: y + 3.5, 'font-size': '10.5', fill: color, 'text-anchor': 'end', 'font-family': 'IBM Plex Mono, monospace', 'font-weight': '600' });
+    lt.textContent = label;
+    svg.appendChild(lt);
+    const st = svgEl('text', { x: mx, y: y - 11, 'font-size': '10', fill: color, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono, monospace', 'font-weight': '600' });
+    st.textContent = sub;
+    svg.appendChild(st);
+  }
+  marker(opts.pValue, top + 20, '#33587D', 'p値', fmtp(opts.pValue));
+  marker(opts.postProb, top + 52, '#BC5F27', '事後確率', pct(opts.postProb, 1));
+  return svg;
+}
+
+// ============================================================
+// 論文での結果の記述例（自動生成テキスト・コピー可能）
+// ============================================================
+function copyText(text, btn) {
+  const done = () => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ コピーしました';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { /* no-op */ }
+  document.body.removeChild(ta);
+}
+
+// ============================================================
+// Rコード表示（JASP Rコンソール対応）: 簡易シンタックスハイライト
+// ============================================================
+function escapeHtmlText(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function highlightR(code) {
+  const KEYWORDS = new Set(['if', 'else', 'for', 'while', 'repeat', 'function', 'return', 'break', 'next', 'in']);
+  const CONSTANTS = new Set(['TRUE', 'FALSE', 'NULL', 'NA', 'Inf', 'NaN', 'T', 'F']);
+  // トークン化: コメント / 文字列 / 数値 / 演算子 / 識別子(+関数呼び出し判定) / 区切り記号
+  const pattern = /(#[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b[0-9]+\.?[0-9]*(?:[eE][+-]?[0-9]+)?L?\b)|(<<-|->>|<-|->|==|!=|<=|>=|&&|\|\||%[A-Za-z]*%|::{1,2}|[-+*/^=<>!&|~$@?])|([A-Za-z_.][A-Za-z0-9_.]*)(\s*)(\()?|([{}()\[\],;])/g;
+  let result = '', lastIndex = 0, m;
+  while ((m = pattern.exec(code)) !== null) {
+    if (m.index > lastIndex) result += escapeHtmlText(code.slice(lastIndex, m.index));
+    const [, comment, str, num, op, ident, sp, paren, punct] = m;
+    if (comment) result += `<span class="tok-comment">${escapeHtmlText(comment)}</span>`;
+    else if (str) result += `<span class="tok-string">${escapeHtmlText(str)}</span>`;
+    else if (num) result += `<span class="tok-number">${escapeHtmlText(num)}</span>`;
+    else if (op) result += `<span class="tok-op">${escapeHtmlText(op)}</span>`;
+    else if (ident) {
+      const parenSpan = paren ? '<span class="tok-punct">(</span>' : '';
+      if (KEYWORDS.has(ident)) result += `<span class="tok-keyword">${ident}</span>${escapeHtmlText(sp || '')}${parenSpan}`;
+      else if (CONSTANTS.has(ident)) result += `<span class="tok-const">${ident}</span>${escapeHtmlText(sp || '')}${parenSpan}`;
+      else if (paren) result += `<span class="tok-func">${escapeHtmlText(ident)}</span>${escapeHtmlText(sp || '')}<span class="tok-punct">(</span>`;
+      else result += `<span class="tok-ident">${escapeHtmlText(ident)}</span>${escapeHtmlText(sp || '')}`;
+    }
+    else if (punct) result += `<span class="tok-punct">${escapeHtmlText(punct)}</span>`;
+    lastIndex = pattern.lastIndex;
+  }
+  result += escapeHtmlText(code.slice(lastIndex));
+  return result;
+}
+function rCodeBlock(title, code) {
+  const pre = el('pre', { class: 'rcode-pre' });
+  const codeEl = el('code', {});
+  codeEl.innerHTML = highlightR(code.trim());
+  pre.appendChild(codeEl);
+  const btn = el('button', { class: 'rcode-copy' }, ['コピー']);
+  btn.addEventListener('click', () => copyText(code.trim(), btn));
+  return el('div', { class: 'rcode-block' }, [
+    el('div', { class: 'rcode-head' }, [
+      el('span', { class: 'rcode-title' }, [title]),
+      el('span', { class: 'rcode-badge' }, ['R / JASP Rコンソール']),
+      btn,
+    ]),
+    pre,
+  ]);
+}
+// Rの文字列ベクトル / 数値ベクトルリテラルを生成するヘルパー
+function rNum(v, d) {
+  if (d === undefined) d = 6;
+  let s = Number(v).toFixed(d);
+  if (s.indexOf('.') >= 0) s = s.replace(/0+$/, '').replace(/\.$/, '');
+  return s;
+}
+function rVec(arr) {
+  if (arr.every(v => typeof v === 'number' && isFinite(v))) return `c(${arr.map(v => rNum(v)).join(', ')})`;
+  return `c(${arr.map(v => JSON.stringify(String(v))).join(', ')})`;
+}
+// multibridgeパッケージのHr引数用の文字列ベクトルを組み立てる（例: c("C","<","B","<","A")）。
+// rankOrder は「大きい順」のインデックス配列なので、小さい順に反転してから "<" で連結する。
+function buildMultibridgeHrVec(names, rankOrder) {
+  const smallToLarge = rankOrder.slice().reverse().map(i => names[i]);
+  const parts = [];
+  smallToLarge.forEach((name, idx) => {
+    parts.push(JSON.stringify(name));
+    if (idx < smallToLarge.length - 1) parts.push('"<"');
+  });
+  return `c(${parts.join(', ')})`;
+}
+
+// freqText / bayesText: 記述例の本文（文字列）
+function manuscriptExample(freqText, bayesText) {
+  const combined = `【頻度論】\n${freqText}\n\n【ベイズ】\n${bayesText}`;
+  const copyBtn = el('button', {}, ['この文章をコピー']);
+  copyBtn.addEventListener('click', () => copyText(combined, copyBtn));
+  return el('div', { class: 'manuscript' }, [
+    el('h4', {}, ['論文での結果の記述例']),
+    el('div', { class: 'manuscript-lead' }, ['現在の入力データと設定値をもとに自動生成した文例です。数値・表現は投稿先の作法に合わせて調整してください。']),
+    el('div', { class: 'manuscript-quote freq' }, [
+      el('span', { class: 'mq-label' }, ['頻度論（例）']),
+      el('p', {}, [freqText]),
+    ]),
+    el('div', { class: 'manuscript-quote bayes' }, [
+      el('span', { class: 'mq-label' }, ['ベイズ（例）']),
+      el('p', {}, [bayesText]),
+    ]),
+    el('div', { class: 'manuscript-copy' }, [copyBtn]),
+  ]);
+}
+// ============================================================
+// タブ1: 二項検定
+// ============================================================
+const binomState = { n: 40, x: 26, p0: 0.5, alpha: 0.05, a0: 1, b0: 1, inputMode: 'individual', rawFrequency: null, successCategory: null,
+  rawVariables: null, rawRecords: null, rawExcluded: null, selectedVarName: null };
+
+function applyBinomParsedText(text, mode) {
+  if (mode === 'individual') {
+    const parsed = detectCategoricalColumnsCSV(text, 1);
+    binomState.rawVariables = parsed.variables;
+    binomState.rawRecords = parsed.records;
+    binomState.rawExcluded = parsed.excludedCols;
+    if (!binomState.selectedVarName || !parsed.variables.some(v => v.name === binomState.selectedVarName)) {
+      binomState.selectedVarName = parsed.variables[0].name;
+    }
+    syncBinomFromSelectedVariable();
+  } else {
+    const { n, x } = parseBinomCSV(text);
+    binomState.n = n; binomState.x = x;
+    binomState.rawFrequency = null;
+    binomState.rawVariables = null;
+    document.getElementById('bn-n').value = n;
+    document.getElementById('bn-x').value = x;
+  }
+  renderBinomFreqTable();
+  computeBinom();
+}
+function categoriesFromVariable(variable, records) {
+  const counts = {};
+  variable.levels.forEach(l => { counts[l] = 0; });
+  records.forEach(rec => { const v = rec[variable.name]; if (v in counts) counts[v]++; });
+  if (variable.levels.length < 2) throw new Error('カテゴリが1種類しかありません（2種類以上必要です）');
+  return variable.levels.map(label => ({ label, count: counts[label] }));
+}
+function syncBinomFromSelectedVariable() {
+  const v = binomState.rawVariables.find(v => v.name === binomState.selectedVarName);
+  binomState.rawFrequency = categoriesFromVariable(v, binomState.rawRecords);
+  binomState.varName = v.name;
+  if (!binomState.successCategory || !binomState.rawFrequency.some(c => c.label === binomState.successCategory)) {
+    binomState.successCategory = binomState.rawFrequency[0].label;
+  }
+  syncBinomFromFrequency();
+}
+function syncBinomFromFrequency() {
+  const total = binomState.rawFrequency.reduce((s, c) => s + c.count, 0);
+  const succ = binomState.rawFrequency.find(c => c.label === binomState.successCategory);
+  binomState.n = total;
+  binomState.x = succ ? succ.count : 0;
+  document.getElementById('bn-n').value = binomState.n;
+  document.getElementById('bn-x').value = binomState.x;
+}
+
+function renderBinomTab() {
+  const root = el('div', { class: 'tab-panel active', id: 'panel-binom' });
+
+  const card = el('div', { class: 'card' }, [
+    el('h2', {}, ['データ入力']),
+    el('div', { class: 'desc' }, ['二値カテゴリ（成功／失敗）の観測データと、比較したい帰無仮説の比率を入力してください。個票データを読み込むと、度数分布表を自動作成してから検定します。']),
+    el('div', { class: 'field-row' }, [
+      field('試行回数 n', 'number', binomState.n, v => { binomState.n = +v; computeBinom(); }, 'bn-n'),
+      field('成功数 x', 'number', binomState.x, v => { binomState.x = +v; computeBinom(); }, 'bn-x'),
+      field('帰無仮説の比率 p₀', 'number', binomState.p0, v => { binomState.p0 = +v; computeBinom(); }, 'bn-p0', '0〜1', 0.01),
+      field('有意水準 α', 'number', binomState.alpha, v => { binomState.alpha = +v; computeBinom(); }, 'bn-alpha', '', 0.01),
+    ]),
+    el('div', { class: 'field-row' }, [
+      field('事前分布 Beta(a₀,', 'number', binomState.a0, v => { binomState.a0 = Math.max(0.01, +v); computeBinom(); }, 'bn-a0', 'a₀', 0.5),
+      field('b₀)', 'number', binomState.b0, v => { binomState.b0 = Math.max(0.01, +v); computeBinom(); }, 'bn-b0', 'b₀ (Beta(1,1)=一様事前)', 0.5),
+    ]),
+    el('div', { id: 'bn-freq-table-host' }),
+    el('div', { class: 'input-divider' }, ['ファイル / 貼り付けで読み込み']),
+    modeToggle('bn-mode', binomState.inputMode, (v) => { binomState.inputMode = v; }),
+    createDropZone(
+      '個票データ（1行=1個体、1列以上。ID列は自動除外、見出し行は任意で自動判定。値は文字列でも可）、または集計値「n,x」の2列',
+      (text) => applyBinomParsedText(text, binomState.inputMode)
+    ),
+    el('div', { class: 'input-divider' }, ['または貼り付け']),
+    createPasteArea(
+      '個票データの例（1行=1個体）:\nresponse\n賛成\n反対\n賛成\n賛成\n...\n\n集計値の例:\nn,x\n50,34',
+      (text) => applyBinomParsedText(text, binomState.inputMode)
+    ),
+  ]);
+  root.appendChild(card);
+
+  const resultHost = el('div', { id: 'binom-results' });
+  root.appendChild(resultHost);
+  return root;
+}
+
+// 度数分布表と「成功」カテゴリの選択UIを描画する（個票データ読み込み時のみ表示）
+function renderBinomFreqTable() {
+  const host = document.getElementById('bn-freq-table-host');
+  if (!host) return;
+  host.innerHTML = '';
+  const freq = binomState.rawFrequency;
+  if (!freq) return;
+
+  const infoChildren = [];
+  if (binomState.rawExcluded && binomState.rawExcluded.length) {
+    infoChildren.push(el('div', { class: 'small-note', style: 'margin-bottom:8px;' }, [
+      `個体識別子とみなして自動的に除外した列: ${binomState.rawExcluded.map(c => `「${c.name}」（一意な値 ${c.uniqueCount}件）`).join('、')}`
+    ]));
+  }
+  if (binomState.rawVariables && binomState.rawVariables.length > 1) {
+    const varSelect = el('select', { class: 'select-input' });
+    binomState.rawVariables.forEach(v => {
+      const opt = el('option', { value: v.name }, [`${v.name}（${v.levels.length}カテゴリ）`]);
+      if (v.name === binomState.selectedVarName) opt.setAttribute('selected', 'selected');
+      varSelect.appendChild(opt);
+    });
+    varSelect.addEventListener('change', () => {
+      binomState.selectedVarName = varSelect.value;
+      binomState.successCategory = null;
+      syncBinomFromSelectedVariable();
+      renderBinomFreqTable();
+      computeBinom();
+    });
+    infoChildren.push(el('div', { class: 'field', style: 'margin-bottom:10px;' }, [el('label', {}, ['集計する変数を選択（複数のカテゴリ列が見つかりました）']), varSelect]));
+  }
+
+  const total = freq.reduce((s, c) => s + c.count, 0);
+  const table = el('table', { class: 'mtable' });
+  table.appendChild(el('tr', {}, [el('th', {}, ['カテゴリ']), el('th', {}, ['度数']), el('th', {}, ['比率'])]));
+  freq.forEach(c => {
+    table.appendChild(el('tr', {}, [el('td', {}, [c.label]), el('td', {}, [String(c.count)]), el('td', {}, [pct(c.count / total, 1)])]));
+  });
+
+  const select = el('select', { id: 'bn-success-select', class: 'select-input' });
+  freq.forEach(c => {
+    const opt = el('option', { value: c.label }, [`${c.label}（n=${c.count}）`]);
+    if (c.label === binomState.successCategory) opt.setAttribute('selected', 'selected');
+    select.appendChild(opt);
+  });
+  select.addEventListener('change', () => {
+    binomState.successCategory = select.value;
+    syncBinomFromFrequency();
+    computeBinom();
+  });
+
+  host.appendChild(el('div', { class: 'card', style: 'background:#FAFAF8;' }, [
+    el('h2', {}, ['個票データから作成した度数分布表']).also(h => h.style.fontSize = '15px'),
+    ...infoChildren,
+    el('div', { class: 'desc' }, [`変数「${binomState.varName || ''}」の値を集計しました（全${total}件、${freq.length}カテゴリ）。「成功」とみなすカテゴリを選んでください。`]),
+    table,
+    el('div', { class: 'field-row', style: 'margin-top:12px;' }, [
+      el('div', { class: 'field' }, [el('label', {}, ['成功とみなすカテゴリ']), select]),
+    ]),
+  ]));
+}
+
+// 集計済み値「n,x」の1行サマリーを読み込む（見出し行つき可）
+function parseBinomCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) throw new Error('データが空です');
+
+  let dataRows = rows.slice();
+  const firstRowNumeric = dataRows[0].every(c => c !== '' && isNumericCell(c));
+  let headerMap = null;
+  if (!firstRowNumeric) {
+    headerMap = dataRows[0].map(c => c.toLowerCase());
+    dataRows = dataRows.slice(1);
+  }
+  if (!dataRows.length) throw new Error('数値データが見つかりません');
+
+  if (dataRows.length === 1 && dataRows[0].length === 2 && dataRows[0].every(isNumericCell)) {
+    let [a, b] = dataRows[0].map(Number);
+    if (headerMap) {
+      const iN = headerMap.findIndex(h => h.includes('n') || h.includes('試行'));
+      const iX = headerMap.findIndex(h => h.includes('x') || h.includes('成功'));
+      if (iN === 0 && iX === 1) return { n: a, x: b };
+      if (iN === 1 && iX === 0) return { n: b, x: a };
+    }
+    return a >= b ? { n: a, x: b } : { n: b, x: a };
+  }
+
+  throw new Error('集計値モードでは「n,x」の2列・1データ行のみ対応しています（個票データの場合は上の切替えで「個票データ」を選んでください）');
+}
+
+function field(labelText, type, value, onChange, id, hint, step) {
+  const input = el('input', { type, value, id, step: step || 'any' });
+  input.addEventListener('input', () => onChange(input.value));
+  const children = [el('label', {}, [labelText]), input];
+  if (hint) children.push(el('div', { class: 'hint' }, [hint]));
+  return el('div', { class: 'field' }, children);
+}
+
+function computeBinom() {
+  const host = document.getElementById('binom-results');
+  if (!host) return;
+  host.innerHTML = '';
+  let { n, x, p0, alpha, a0, b0 } = binomState;
+  if (!isFinite(n) || !isFinite(x) || !(n > 0) || x < 0 || x > n || p0 <= 0 || p0 >= 1 || alpha <= 0 || alpha >= 1) {
+    host.appendChild(el('div', { class: 'card' }, ['入力値を確認してください（0 ≤ x ≤ n、0 < p₀ < 1、0 < α < 1。n・x は有限の数値である必要があります）。']));
+    return;
+  }
+  const phat = x / n;
+
+  // 頻度論
+  const pvalResult = Stat.binomTestExact(x, n, p0);
+  const pval = pvalResult.pvalue;
+  const pvalExact = pvalResult.exact;
+  const ci = Stat.clopperPearsonCI(x, n, alpha);
+  const sigFreq = pval < alpha;
+
+  // ベイズ
+  const aPost = a0 + x, bPost = b0 + (n - x);
+  const postMean = aPost / (aPost + bPost);
+  const postMedian = Stat.betaQuantile(0.5, aPost, bPost);
+  const credLevel = 1 - alpha;
+  const crLo = Stat.betaQuantile(alpha / 2, aPost, bPost);
+  const crHi = Stat.betaQuantile(1 - alpha / 2, aPost, bPost);
+  const pGreater = 1 - Stat.regIncompleteBeta(p0, aPost, bPost);
+  const pLess = 1 - pGreater;
+  // Savage-Dickey BF: BF01 = posterior density at p0 / prior density at p0
+  const priorDens = Stat.betaPDF(p0, a0, b0);
+  const postDens = Stat.betaPDF(p0, aPost, bPost);
+  const BF01 = postDens / priorDens;
+  const BF10 = 1 / BF01;
+
+  const grid = el('div', { class: 'compare-grid' });
+
+  // Frequentist panel
+  const freqPanel = el('div', { class: 'panel freq' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論']), el('h3', {}, ['正確二項検定'])]),
+    statLine('観測比率 x/n', fmt(phat, 4)),
+    statLine(pvalExact ? '両側 p 値（正確二項検定）' : '両側 p 値（大標本のため正規近似）', fmtp(pval)),
+    statLine(`${pct(1 - alpha, 0)} Clopper–Pearson 信頼区間`, `[${fmt(ci[0], 4)}, ${fmt(ci[1], 4)}]`),
+    el('div', { class: 'verdict ' + (sigFreq ? 'bad' : 'good') }, [
+      sigFreq
+        ? `p = ${fmtp(pval)} < α = ${alpha} → H₀: p = ${p0} を棄却`
+        : `p = ${fmtp(pval)} ≥ α = ${alpha} → H₀: p = ${p0} を棄却しない`
+    ]),
+  ]);
+
+  // Bayesian panel
+  const bayesPanel = el('div', { class: 'panel bayes' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['Beta–二項モデル'])]),
+    statLine('事前分布', `Beta(${fmt(a0, 2)}, ${fmt(b0, 2)})`),
+    statLine('事後分布', `Beta(${fmt(aPost, 2)}, ${fmt(bPost, 2)})`),
+    statLine('事後平均 / 中央値', `${fmt(postMean, 4)} / ${fmt(postMedian, 4)}`),
+    statLine(`${pct(credLevel, 0)} 信用区間`, `[${fmt(crLo, 4)}, ${fmt(crHi, 4)}]`),
+    statLine(`P(p > ${p0} | データ)`, pct(pGreater, 1)),
+    statLine('ベイズファクター BF₁₀（対 p₀）', fmt(BF10, 3) + bfTag(BF10)),
+    el('div', { class: 'verdict ' + (BF10 > 3 || BF10 < 1 / 3 ? (BF10 > 1 ? 'bad' : 'good') : '') }, [
+      bfInterpretation(BF10, p0)
+    ]),
+  ]);
+
+  grid.appendChild(freqPanel);
+  grid.appendChild(bayesPanel);
+  host.appendChild(grid);
+
+  const axisCard = el('div', { class: 'card axis-block' }, [
+    el('div', { class: 'axis-title' }, ['同一軸上の区間比較（点推定・区間・帰無値 p₀）']),
+    intervalTwin({
+      axisMin: 0, axisMax: 1,
+      freqIv: { lo: ci[0], hi: ci[1], point: phat },
+      bayesIv: { lo: crLo, hi: crHi, point: postMean },
+      refLine: p0, refLabel: `p₀=${p0}`,
+      freqLabel: 'CI', bayesLabel: 'CrI',
+      tickFmt: v => v.toFixed(2)
+    })
+  ]);
+  host.appendChild(axisCard);
+
+  host.appendChild(el('div', { class: 'interp' }, [
+    el('h4', {}, ['読み方']),
+    el('div', { class: 'small-note' }, [
+      `頻度論の信頼区間は「同じ手続きを繰り返した場合に真の比率を含む割合が${pct(1 - alpha, 0)}」という長期頻度の主張です。一方ベイズの信用区間は「データと事前分布のもとで真の比率がこの範囲にある事後確率が${pct(credLevel, 0)}」という直接的な確率主張です。事前分布を Beta(1,1)（一様）にすると点推定・区間はほぼ一致しますが、事前分布に強い情報を与えるほど両者はずれていきます。ベイズファクターは Savage–Dickey 密度比 `,
+      el('code', {}, ['BF₀₁ = 事後密度(p₀) / 事前密度(p₀)']),
+      ' により、p₀ という点仮説そのものへの証拠を定量化します（p値とは解釈が異なる点に注意）。'
+    ])
+  ]));
+
+  const freqText = `${n}件中${x}件（${fmt(phat * 100, 1)}%）で事象の生起が観測された。母比率が p₀ = ${p0} であるという帰無仮説について${pvalExact ? '正確二項検定' : '正規近似による二項検定'}を行ったところ、観測された比率は統計的に${sigFreq ? '有意な差を示した' : '有意な差を示さなかった'}（${pvalExact ? '正確二項検定' : '正規近似（連続性補正あり）'}, p = ${fmtp(pval)}, 両側検定）。比率の${pct(1 - alpha, 0)} Clopper–Pearson信頼区間は [${fmt(ci[0], 3)}, ${fmt(ci[1], 3)}] であった。`;
+  const bayesText = `ベイズ的分析では、Beta(${fmt(a0, 2)}, ${fmt(b0, 2)}) を事前分布とした場合、データを踏まえた事後分布は Beta(${fmt(aPost, 2)}, ${fmt(bPost, 2)}) となり、事後平均は ${fmt(postMean, 3)}（${pct(credLevel, 0)}信用区間 [${fmt(crLo, 3)}, ${fmt(crHi, 3)}]）であった。p₀ = ${p0} に対するベイズファクターは BF₁₀ = ${fmt(BF10, 2)} であり、${BF10 >= 1 ? `対立仮説（p ≠ ${p0}）` : `帰無仮説（p = ${p0}）`}を支持する${bfStrengthWord(BF10)}証拠と解釈された（P(p > ${p0} | データ) = ${pct(pGreater, 1)}）。`;
+  host.appendChild(manuscriptExample(freqText, bayesText));
+
+  const rCode = `# ==== データ（個票から作成した集計値） ====
+n <- ${rNum(n, 0)}       # 試行回数
+x <- ${rNum(x, 0)}       # 成功数
+p0 <- ${rNum(p0)}     # 帰無仮説の比率
+alpha <- ${rNum(alpha)}
+
+# ==== 頻度論: 正確二項検定 ====
+freq_result <- binom.test(x, n, p = p0, alternative = "two.sided",
+                           conf.level = 1 - alpha)
+print(freq_result)
+
+# ==== ベイズ: Beta-二項モデル ====
+a0 <- ${rNum(a0)}   # 事前分布 Beta(a0, b0) の a0
+b0 <- ${rNum(b0)}   # 事前分布 Beta(a0, b0) の b0
+a_post <- a0 + x
+b_post <- b0 + (n - x)
+post_mean <- a_post / (a_post + b_post)
+cri <- qbeta(c(alpha / 2, 1 - alpha / 2), a_post, b_post)
+cat("事後平均:", post_mean, "\\n")
+cat("信用区間:", cri, "\\n")
+
+# ベイズファクター（Savage-Dickey密度比）
+prior_dens <- dbeta(p0, a0, b0)
+post_dens  <- dbeta(p0, a_post, b_post)
+BF01 <- post_dens / prior_dens
+BF10 <- 1 / BF01
+cat("BF10:", BF10, "\\n")
+
+# JASP同様、BayesFactorパッケージでも計算できます
+if (!requireNamespace("BayesFactor", quietly = TRUE)) install.packages("BayesFactor", repos = "https://cloud.r-project.org")
+library(BayesFactor)
+bf <- proportionBF(y = x, N = n, p = p0)
+print(bf)
+`;
+  host.appendChild(rCodeBlock('二項検定のRコード', rCode));
+}
+
+function statLine(k, v) {
+  return el('div', { class: 'stat-line' }, [el('span', { class: 'k' }, [k]), el('span', { class: 'v' }, [v])]);
+}
+function bfTag(bf) {
+  return '';
+}
+function bfInterpretation(BF10, p0) {
+  const kr = kassRaftery(BF10);
+  if (BF10 >= 1) return `データは H₁（p ≠ ${p0}）を H₀ の ${fmt(BF10, 2)} 倍支持 — ${kr}`;
+  return `データは H₀（p = ${p0}）を H₁ の ${fmt(1 / BF10, 2)} 倍支持 — ${kr}`;
+}
+function kassRaftery(BF10) {
+  const b = Math.max(BF10, 1 / BF10);
+  const lb = Math.log(b);
+  let label;
+  if (lb < Math.log(3)) label = '証拠としてはごく弱い';
+  else if (lb < Math.log(10)) label = '証拠として中程度';
+  else if (lb < Math.log(30)) label = '証拠として強い';
+  else if (lb < Math.log(100)) label = '証拠としてかなり強い';
+  else label = '証拠として非常に強い';
+  return `(Kass–Raftery基準：${label})`;
+}
+// 文中で「〜を支持する[強さ]証拠と解釈された」のように使うための形容詞のみを返す版
+function bfStrengthWord(BF10) {
+  const b = Math.max(BF10, 1 / BF10);
+  const lb = Math.log(b);
+  if (lb < Math.log(3)) return 'ごく弱い';
+  if (lb < Math.log(10)) return '中程度の';
+  if (lb < Math.log(30)) return '強い';
+  if (lb < Math.log(100)) return 'かなり強い';
+  return '非常に強い';
+}
+// ============================================================
+// タブ2: 多項検定（適合度）
+// ============================================================
+const multiState = {
+  rows: [
+    { name: 'カテゴリA', obs: 24, p0: 0.25 },
+    { name: 'カテゴリB', obs: 18, p0: 0.25 },
+    { name: 'カテゴリC', obs: 30, p0: 0.25 },
+    { name: 'カテゴリD', obs: 12, p0: 0.25 },
+  ],
+  alpha: 0.05,
+  concEach: 1,
+  inputMode: 'individual',
+  rawVariables: null, rawRecords: null, rawExcluded: null, selectedVarName: null
+};
+
+function applyMultiParsedText(text, mode) {
+  if (mode === 'individual') {
+    const parsed = parseIndividualMultiCSV(text);
+    multiState.rawVariables = parsed.variables;
+    multiState.rawRecords = parsed.records;
+    multiState.rawExcluded = parsed.excludedCols;
+    if (!multiState.selectedVarName || !parsed.variables.some(v => v.name === multiState.selectedVarName)) {
+      multiState.selectedVarName = parsed.variables[0].name;
+    }
+    syncMultiFromSelectedVariable();
+  } else {
+    multiState.rows = parseMultiCSV(text);
+    multiState.rawVariables = null;
+  }
+  renderMultiVarSelector();
+  renderMultiTable(); computeMulti();
+}
+function syncMultiFromSelectedVariable() {
+  const v = multiState.rawVariables.find(v => v.name === multiState.selectedVarName);
+  multiState.rows = frequencyRowsFromVariable(v, multiState.rawRecords);
+}
+function renderMultiVarSelector() {
+  const host = document.getElementById('multi-var-selector-host');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!multiState.rawVariables) return;
+  const children = [];
+  if (multiState.rawExcluded && multiState.rawExcluded.length) {
+    children.push(el('div', { class: 'small-note', style: 'margin-bottom:8px;' }, [
+      `個体識別子とみなして自動的に除外した列: ${multiState.rawExcluded.map(c => `「${c.name}」（一意な値 ${c.uniqueCount}件）`).join('、')}`
+    ]));
+  }
+  if (multiState.rawVariables.length > 1) {
+    const select = el('select', { class: 'select-input' });
+    multiState.rawVariables.forEach(v => {
+      const opt = el('option', { value: v.name }, [`${v.name}（${v.levels.length}カテゴリ）`]);
+      if (v.name === multiState.selectedVarName) opt.setAttribute('selected', 'selected');
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      multiState.selectedVarName = select.value;
+      syncMultiFromSelectedVariable();
+      renderMultiTable(); computeMulti();
+    });
+    children.push(el('div', { class: 'field' }, [el('label', {}, ['集計する変数を選択（複数のカテゴリ列が見つかりました）']), select]));
+  }
+  if (children.length) host.appendChild(el('div', { class: 'card', style: 'background:#FAFAF8;' }, children));
+}
+
+function renderMultiTab() {
+  const root = el('div', { class: 'tab-panel', id: 'panel-multi' });
+  const card = el('div', { class: 'card' }, [
+    el('h2', {}, ['データ入力']),
+    el('div', { class: 'desc' }, ['3つ以上のカテゴリの観測度数と、帰無仮説として比較したい理論比率 p₀ を入力してください（p₀ の合計は自動正規化されます）。個票データを読み込むと度数分布表を自動作成します。']),
+    el('div', { id: 'multi-var-selector-host' }),
+    el('div', { id: 'multi-table-host' }),
+    el('div', { class: 'toolbar' }, [
+      el('button', { class: 'btn small ghost' }, ['+ カテゴリを追加']).also(b => b.addEventListener('click', () => {
+        multiState.rows.push({ name: 'カテゴリ' + (multiState.rows.length + 1), obs: 10, p0: 1 / (multiState.rows.length + 1) });
+        renderMultiTable(); computeMulti();
+      })),
+      el('button', { class: 'btn small ghost' }, ['p₀ を均等割りにする']).also(b => b.addEventListener('click', () => {
+        const k = multiState.rows.length;
+        multiState.rows.forEach(r => r.p0 = 1 / k);
+        renderMultiTable(); computeMulti();
+      })),
+    ]),
+    el('div', { class: 'field-row', style: 'margin-top:14px;' }, [
+      field('有意水準 α', 'number', multiState.alpha, v => { multiState.alpha = +v; computeMulti(); }, 'mu-alpha', '', 0.01),
+      field('Dirichlet事前濃度（各カテゴリ）', 'number', multiState.concEach, v => { multiState.concEach = Math.max(0.01, +v); computeMulti(); }, 'mu-conc', '各αᵢの値。1で一様事前', 0.5),
+    ]),
+    el('div', { class: 'input-divider' }, ['ファイル / 貼り付けで読み込み']),
+    modeToggle('mu-mode', multiState.inputMode, (v) => { multiState.inputMode = v; }),
+    createDropZone(
+      '個票データ（1行=1個体、1列以上。ID列は自動除外、見出し行は任意で自動判定）、または集計済みの「カテゴリ名,観測度数,[p₀]」',
+      (text) => applyMultiParsedText(text, multiState.inputMode)
+    ),
+    el('div', { class: 'input-divider' }, ['または貼り付け']),
+    createPasteArea(
+      '個票データの例（1行=1個体）:\nresponse\nA\nB\nA\nC\n...\n\n集計済みの例:\ncategory,count,p0\nカテゴリA,24,0.25\nカテゴリB,18,0.25\n...',
+      (text) => applyMultiParsedText(text, multiState.inputMode)
+    ),
+  ]);
+  root.appendChild(card);
+  root.appendChild(el('div', { id: 'multi-results' }));
+  return root;
+}
+
+// small helper to attach listeners fluently
+Element.prototype.also = function (fn) { fn(this); return this; };
+
+// 個票データ（1列・見出し行つき）からカテゴリ別の度数分布表（multiState.rows形式）を作成する
+// 個票データ（ID列は自動除外）からカテゴリ別の度数分布表を作成する。
+// カテゴリ列が複数見つかった場合は、どの列を集計するか選択できるようにする。
+function parseIndividualMultiCSV(text) {
+  return detectCategoricalColumnsCSV(text, 1);
+}
+function frequencyRowsFromVariable(variable, records) {
+  const counts = {};
+  variable.levels.forEach(l => { counts[l] = 0; });
+  records.forEach(rec => { const v = rec[variable.name]; if (v in counts) counts[v]++; });
+  const k = variable.levels.length;
+  if (k < 2) throw new Error('カテゴリが1種類しかありません（2種類以上必要です）');
+  return variable.levels.map(label => ({ name: label, obs: counts[label], p0: 1 / k }));
+}
+
+function parseMultiCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) throw new Error('データが空です');
+  let dataRows = rows.slice();
+  // 見出し行の判定: 観測度数列(2列目)が数値でなければ見出しとみなす
+  if (dataRows[0].length >= 2 && !isNumericCell(dataRows[0][1])) {
+    dataRows = dataRows.slice(1);
+  }
+  if (dataRows.length < 2) throw new Error('カテゴリは2行以上必要です');
+
+  const hasP0 = dataRows.every(r => r.length >= 3 && isNumericCell(r[2]));
+  const k = dataRows.length;
+  const parsed = dataRows.map((r, i) => ({
+    name: r[0] || ('カテゴリ' + (i + 1)),
+    obs: isNumericCell(r[1]) ? Number(r[1]) : 0,
+    p0: hasP0 ? Number(r[2]) : 1 / k,
+  }));
+  return parsed;
+}
+
+function renderMultiTable() {
+  const host = document.getElementById('multi-table-host');
+  if (!host) return;
+  host.innerHTML = '';
+  const table = el('table', { class: 'dtable' });
+  table.appendChild(el('tr', {}, [
+    el('th', {}, ['カテゴリ名']), el('th', {}, ['観測度数']), el('th', {}, ['帰無比率 p₀']), el('th', {}, [''])
+  ]));
+  multiState.rows.forEach((row, i) => {
+    const nameInput = el('input', { type: 'text', value: row.name });
+    nameInput.addEventListener('input', () => { row.name = nameInput.value; computeMulti(); });
+    const obsInput = el('input', { type: 'number', value: row.obs, min: '0' });
+    obsInput.addEventListener('input', () => { row.obs = +obsInput.value; computeMulti(); });
+    const p0Input = el('input', { type: 'number', value: row.p0, step: '0.01', min: '0', max: '1' });
+    p0Input.addEventListener('input', () => { row.p0 = +p0Input.value; computeMulti(); });
+    const delBtn = el('button', { class: 'row-del' }, ['✕']);
+    delBtn.addEventListener('click', () => {
+      if (multiState.rows.length <= 2) return;
+      multiState.rows.splice(i, 1); renderMultiTable(); computeMulti();
+    });
+    table.appendChild(el('tr', {}, [
+      el('td', {}, [nameInput]), el('td', {}, [obsInput]), el('td', {}, [p0Input]), el('td', {}, [delBtn])
+    ]));
+  });
+  host.appendChild(table);
+}
+
+function computeMulti() {
+  const host = document.getElementById('multi-results');
+  if (!host) return;
+  host.innerHTML = '';
+  const rows = multiState.rows;
+  const obs = rows.map(r => r.obs);
+  const p0raw = rows.map(r => r.p0);
+  const p0sum = p0raw.reduce((a, b) => a + b, 0);
+  if (p0sum <= 0 || obs.some(o => o < 0 || isNaN(o)) || rows.length < 2) {
+    host.appendChild(el('div', { class: 'card' }, ['入力値を確認してください（度数は0以上、p₀の合計は正の値）。']));
+    return;
+  }
+  const p0 = p0raw.map(p => p / p0sum); // 正規化
+  const n = obs.reduce((a, b) => a + b, 0);
+  const alpha = multiState.alpha;
+
+  const gof = Stat.chiSqGOF(obs, p0);
+  const alphaVec = rows.map(() => multiState.concEach);
+  const logml1 = Stat.dirichletMultinomialLogML(obs, alphaVec);
+  const logml0 = Stat.multinomialLogLikNull(obs, p0);
+  const BF10 = Math.exp(logml1 - logml0);
+  const BF01 = 1 / BF10;
+  const postProbNull = BF01 / (BF01 + 1); // 事前モデル確率1:1の場合
+  const credLevel = 1 - alpha;
+  const marg = Stat.dirichletMarginalCI(obs, alphaVec, credLevel);
+
+  const grid = el('div', { class: 'compare-grid' });
+  const freqPanel = el('div', { class: 'panel freq' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論']), el('h3', {}, ['カイ二乗適合度検定'])]),
+    statLine('サンプルサイズ n', n),
+    statLine('χ² 統計量', fmt(gof.chi2, 3)),
+    statLine('自由度 df', gof.df),
+    statLine('p 値（χ²近似）', fmtp(gof.pChi2)),
+    statLine('p 値（G検定・尤度比）', fmtp(gof.pG)),
+    el('div', { class: 'verdict ' + (gof.pChi2 < alpha ? 'bad' : 'good') }, [
+      gof.pChi2 < alpha
+        ? `p = ${fmtp(gof.pChi2)} < α = ${alpha} → 観測比率は指定した p₀ から有意にずれている`
+        : `p = ${fmtp(gof.pChi2)} ≥ α = ${alpha} → p₀ からのずれは有意でない`
+    ]),
+  ]);
+  const bayesPanel = el('div', { class: 'panel bayes' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['Dirichlet–多項モデル'])]),
+    statLine('事前分布', `Dirichlet(${alphaVec.map(a => fmt(a, 1)).join(', ')})`),
+    statLine('ベイズファクター BF₁₀（自由推定 対 p₀固定）', fmt(BF10, 4)),
+    statLine('P(p₀が正しい | データ)', pct(postProbNull, 1) + '（事前モデル確率1:1）'),
+    el('div', { class: 'verdict ' + (BF10 > 3 || BF10 < 1 / 3 ? (BF10 > 1 ? 'bad' : 'good') : '') }, [
+      bfInterpretation(BF10, 'p₀')
+    ]),
+  ]);
+  grid.appendChild(freqPanel); grid.appendChild(bayesPanel);
+  host.appendChild(grid);
+
+  // 全体の証拠軸
+  host.appendChild(el('div', { class: 'card axis-block' }, [
+    el('div', { class: 'axis-title' }, ['適合度検定：p値の位置 と 「p₀が正しい」事後確率の位置']),
+    evidenceAxis({ pValue: gof.pChi2, postProb: postProbNull, alpha })
+  ]));
+
+  // カテゴリ別テーブル
+  const mtable = el('table', { class: 'mtable' });
+  mtable.appendChild(el('tr', {}, [
+    el('th', {}, ['カテゴリ']), el('th', {}, ['観測']), el('th', {}, ['期待(H₀)']),
+    el('th', {}, ['観測比率']), el('th', {}, [`頻度論 ${pct(credLevel, 0)}CI`]),
+    el('th', {}, ['ベイズ事後平均']), el('th', {}, [`ベイズ ${pct(credLevel, 0)}CrI`]),
+  ]));
+  rows.forEach((r, i) => {
+    const ciBin = Stat.clopperPearsonCI(obs[i], n, alpha);
+    mtable.appendChild(el('tr', {}, [
+      el('td', {}, [r.name]),
+      el('td', {}, [String(obs[i])]),
+      el('td', {}, [fmt(gof.expected[i], 2)]),
+      el('td', {}, [fmt(obs[i] / n, 3)]),
+      el('td', {}, [`[${fmt(ciBin[0], 3)}, ${fmt(ciBin[1], 3)}]`]),
+      el('td', {}, [fmt(marg[i].mean, 3)]),
+      el('td', {}, [`[${fmt(marg[i].lo, 3)}, ${fmt(marg[i].hi, 3)}]`]),
+    ]));
+  });
+  host.appendChild(el('div', { class: 'card' }, [
+    el('h2', {}, ['カテゴリ別の内訳']),
+    mtable
+  ]));
+
+  host.appendChild(el('div', { class: 'interp' }, [
+    el('h4', {}, ['読み方']),
+    el('div', { class: 'small-note' }, [
+      '頻度論のカイ二乗適合度検定は「全カテゴリが同時に p₀ 通りである」という帰無仮説を一括で検定します。カテゴリ別の信頼区間は各カテゴリを「そのカテゴリ vs それ以外」の二項として個別に区間推定したものです（多重比較の調整はしていません）。ベイズ側は Dirichlet 事前分布のもとで各カテゴリの比率を同時推定し、周辺事後分布（Beta分布）から信用区間を得ます。ベイズファクターは「p₀ に固定したモデル」対「比率を自由に推定するモデル」の周辺尤度比で、事前濃度（Dirichlet の αᵢ）を大きくするほど自由モデルへの罰則が強まり、証拠は帰無側に寄りやすくなります。'
+    ])
+  ]));
+
+  const freqText = `多項適合度検定（カイ二乗検定）を行った結果、観測度数（n = ${n}）の比率は、帰無仮説で指定した理論比率（${rows.map((r, i) => `${r.name} = ${fmt(p0[i], 2)}`).join(', ')}）と統計的に${gof.pChi2 < alpha ? '有意に異なっていた' : '有意には異ならなかった'}（χ²(${gof.df}) = ${fmt(gof.chi2, 2)}, p = ${fmtp(gof.pChi2)}）。`;
+  const bayesText = `ベイズ的分析では、Dirichlet(${alphaVec.map(a => fmt(a, 1)).join(', ')}) を事前分布として用いたところ、理論比率に固定したモデルと比率を自由に推定するモデルとのベイズファクターは BF₁₀ = ${fmt(BF10, 3)} であり、${BF10 >= 1 ? '自由推定モデル（理論比率からの乖離）' : '帰無仮説（指定した理論比率）'}を支持する${bfStrengthWord(BF10)}証拠と解釈された（P(p₀が正しい | データ) = ${pct(postProbNull, 1)}）。`;
+  host.appendChild(manuscriptExample(freqText, bayesText));
+
+  const rCode = `# ==== データ（個票から作成した度数分布表） ====
+observed <- ${rVec(obs)}
+names(observed) <- ${rVec(rows.map(r => r.name))}
+p0 <- ${rVec(p0.map(p => Number(rNum(p, 4))))}
+alpha <- ${rNum(alpha)}
+
+# ==== 頻度論: カイ二乗適合度検定 ====
+freq_result <- chisq.test(observed, p = p0)
+print(freq_result)
+
+# ==== ベイズ: Dirichlet-多項モデルの周辺尤度によるベイズファクター ====
+dirichlet_alpha <- ${rVec(alphaVec)}   # 各カテゴリの事前濃度
+n <- sum(observed)
+A <- sum(dirichlet_alpha)
+logml1 <- lgamma(n + 1) - sum(lgamma(observed + 1)) +
+          lgamma(A) - lgamma(n + A) +
+          sum(lgamma(observed + dirichlet_alpha) - lgamma(dirichlet_alpha))
+logml0 <- lgamma(n + 1) - sum(lgamma(observed + 1)) + sum(observed * log(p0))
+BF10 <- exp(logml1 - logml0)
+cat("BF10（自由推定 対 p0固定）:", BF10, "\\n")
+
+# 各カテゴリの事後信用区間（Dirichlet事後分布の周辺 = Beta分布）
+post_mean <- (observed + dirichlet_alpha) / (n + A)
+cri_lo <- qbeta(alpha / 2, observed + dirichlet_alpha, n + A - observed - dirichlet_alpha)
+cri_hi <- qbeta(1 - alpha / 2, observed + dirichlet_alpha, n + A - observed - dirichlet_alpha)
+data.frame(category = names(observed), post_mean, cri_lo, cri_hi)
+`;
+  host.appendChild(rCodeBlock('多項検定のRコード', rCode));
+}
+// ============================================================
+// タブ3: 分割表（独立性の検定）
+// ============================================================
+const contState = {
+  rowLabels: ['グループ1', 'グループ2'],
+  colLabels: ['結果X', '結果Y', '結果Z'],
+  table: [[20, 15, 5], [8, 18, 22]],
+  alpha: 0.05,
+  concCell: 1,
+  inputMode: 'individual', // 'individual'（個票データ） | 'aggregate'（集計済み度数表）
+  rawVariables: null, rawRecords: null, rawExcluded: null, selectedRowVar: null, selectedColVar: null
+};
+
+function applyContParsedText(text, mode) {
+  if (mode === 'individual') {
+    const parsed = detectCategoricalColumnsCSV(text, 2);
+    contState.rawVariables = parsed.variables;
+    contState.rawRecords = parsed.records;
+    contState.rawExcluded = parsed.excludedCols;
+    if (!contState.selectedRowVar || !parsed.variables.some(v => v.name === contState.selectedRowVar)) {
+      contState.selectedRowVar = parsed.variables[0].name;
+    }
+    if (!contState.selectedColVar || contState.selectedColVar === contState.selectedRowVar || !parsed.variables.some(v => v.name === contState.selectedColVar)) {
+      const alt = parsed.variables.find(v => v.name !== contState.selectedRowVar);
+      contState.selectedColVar = alt ? alt.name : parsed.variables[0].name;
+    }
+    syncContFromSelectedVariables();
+  } else {
+    const parsed = parseContCSV(text);
+    contState.rowLabels = parsed.rowLabels;
+    contState.colLabels = parsed.colLabels;
+    contState.table = parsed.table;
+    contState.rawVariables = null;
+  }
+  renderContVarSelector();
+  renderContTable(); computeCont();
+}
+function syncContFromSelectedVariables() {
+  const rowVar = contState.rawVariables.find(v => v.name === contState.selectedRowVar);
+  const colVar = contState.rawVariables.find(v => v.name === contState.selectedColVar);
+  const table = rowVar.levels.map(() => colVar.levels.map(() => 0));
+  contState.rawRecords.forEach(rec => {
+    const ri = rowVar.levels.indexOf(rec[rowVar.name]);
+    const ci = colVar.levels.indexOf(rec[colVar.name]);
+    if (ri >= 0 && ci >= 0) table[ri][ci]++;
+  });
+  contState.rowLabels = rowVar.levels.slice();
+  contState.colLabels = colVar.levels.slice();
+  contState.table = table;
+}
+function renderContVarSelector() {
+  const host = document.getElementById('cont-var-selector-host');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!contState.rawVariables) return;
+  const children = [];
+  if (contState.rawExcluded && contState.rawExcluded.length) {
+    children.push(el('div', { class: 'small-note', style: 'margin-bottom:8px;' }, [
+      `個体識別子とみなして自動的に除外した列: ${contState.rawExcluded.map(c => `「${c.name}」（一意な値 ${c.uniqueCount}件）`).join('、')}`
+    ]));
+  }
+  if (contState.rawVariables.length > 2) {
+    const rowSelect = el('select', { class: 'select-input' });
+    const colSelect = el('select', { class: 'select-input' });
+    contState.rawVariables.forEach(v => {
+      const opt1 = el('option', { value: v.name }, [`${v.name}（${v.levels.length}カテゴリ）`]);
+      if (v.name === contState.selectedRowVar) opt1.setAttribute('selected', 'selected');
+      rowSelect.appendChild(opt1);
+      const opt2 = el('option', { value: v.name }, [`${v.name}（${v.levels.length}カテゴリ）`]);
+      if (v.name === contState.selectedColVar) opt2.setAttribute('selected', 'selected');
+      colSelect.appendChild(opt2);
+    });
+    rowSelect.addEventListener('change', () => { contState.selectedRowVar = rowSelect.value; syncContFromSelectedVariables(); renderContTable(); computeCont(); });
+    colSelect.addEventListener('change', () => { contState.selectedColVar = colSelect.value; syncContFromSelectedVariables(); renderContTable(); computeCont(); });
+    children.push(el('div', { class: 'field-row' }, [
+      el('div', { class: 'field' }, [el('label', {}, ['行変数を選択（3変数以上見つかりました）']), rowSelect]),
+      el('div', { class: 'field' }, [el('label', {}, ['列変数を選択']), colSelect]),
+    ]));
+  }
+  if (children.length) host.appendChild(el('div', { class: 'card', style: 'background:#FAFAF8;' }, children));
+}
+
+function renderContTab() {
+  const root = el('div', { class: 'tab-panel', id: 'panel-cont' });
+  const card = el('div', { class: 'card' }, [
+    el('h2', {}, ['データ入力：分割表']),
+    el('div', { class: 'desc' }, ['行×列のクロス集計表にセルの度数を直接入力・編集できます。行・列見出しはクリックして編集できます。']),
+    el('div', { id: 'cont-var-selector-host' }),
+    el('div', { id: 'cont-table-host' }),
+    el('div', { class: 'toolbar' }, [
+      el('button', { class: 'btn small ghost' }, ['+ 行を追加']).also(b => b.addEventListener('click', () => {
+        contState.rowLabels.push('グループ' + (contState.rowLabels.length + 1));
+        contState.table.push(contState.colLabels.map(() => 10));
+        renderContTable(); computeCont();
+      })),
+      el('button', { class: 'btn small ghost' }, ['+ 列を追加']).also(b => b.addEventListener('click', () => {
+        contState.colLabels.push('結果' + (contState.colLabels.length + 1));
+        contState.table.forEach(row => row.push(10));
+        renderContTable(); computeCont();
+      })),
+    ]),
+    el('div', { class: 'field-row', style: 'margin-top:14px;' }, [
+      field('有意水準 α', 'number', contState.alpha, v => { contState.alpha = +v; computeCont(); }, 'ct-alpha', '', 0.01),
+      field('Dirichlet事前濃度（各セル）', 'number', contState.concCell, v => { contState.concCell = Math.max(0.01, +v); computeCont(); }, 'ct-conc', '各セルの αᵢⱼ。1で一様、0.5でJeffreys事前', 0.5),
+    ]),
+    el('div', { class: 'input-divider' }, ['ファイル / 貼り付けで読み込み']),
+    modeToggle('ct-mode', contState.inputMode, (v) => { contState.inputMode = v; }),
+    createDropZone(
+      '個票データ（1行=1個体、2列以上。ID列は自動除外、見出し行は任意で自動判定）、または集計済みの行×列度数行列',
+      (text) => applyContParsedText(text, contState.inputMode)
+    ),
+    el('div', { class: 'input-divider' }, ['または貼り付け']),
+    createPasteArea(
+      '個票データの例（1行=1個体）:\ngender,response\n男性,賛成\n男性,反対\n女性,賛成\n...\n\n集計済み表の例:\n,結果X,結果Y,結果Z\nグループ1,20,15,5\nグループ2,8,18,22',
+      (text) => applyContParsedText(text, contState.inputMode)
+    ),
+  ]);
+  root.appendChild(card);
+  root.appendChild(el('div', { id: 'cont-results' }));
+  return root;
+}
+
+function parseContCSV(text) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) throw new Error('2行以上のデータが必要です');
+  const width = Math.max(...rows.map(r => r.length));
+  if (width < 2) throw new Error('2列以上のデータが必要です');
+
+  const topLeftIsLabel = !isNumericCell(rows[0][0]);
+  let rowLabels, colLabels, table;
+
+  if (topLeftIsLabel) {
+    colLabels = rows[0].slice(1).map((c, j) => c || ('結果' + (j + 1)));
+    const dataRows = rows.slice(1);
+    rowLabels = dataRows.map((r, i) => r[0] || ('グループ' + (i + 1)));
+    table = dataRows.map(r => colLabels.map((_, j) => Number(r[j + 1]) || 0));
+  } else {
+    colLabels = rows[0].map((_, j) => '結果' + (j + 1));
+    rowLabels = rows.map((_, i) => 'グループ' + (i + 1));
+    table = rows.map(r => colLabels.map((_, j) => Number(r[j]) || 0));
+  }
+  if (rowLabels.length < 2 || colLabels.length < 2) throw new Error('行・列とも2つ以上必要です');
+  return { rowLabels, colLabels, table };
+}
+
+function renderContTable() {
+  const host = document.getElementById('cont-table-host');
+  if (!host) return;
+  host.innerHTML = '';
+  const table = el('table', { class: 'dtable' });
+  const header = el('tr', {}, [el('th', {}, [''])]);
+  contState.colLabels.forEach((c, j) => {
+    const inp = el('input', { type: 'text', value: c });
+    inp.addEventListener('input', () => { contState.colLabels[j] = inp.value; computeCont(); });
+    const th = el('th', {}, [inp]);
+    if (contState.colLabels.length > 2) {
+      const del = el('button', { class: 'row-del', style: 'display:block;margin:2px auto 0;' }, ['✕']);
+      del.addEventListener('click', () => {
+        contState.colLabels.splice(j, 1);
+        contState.table.forEach(row => row.splice(j, 1));
+        renderContTable(); computeCont();
+      });
+      th.appendChild(del);
+    }
+    header.appendChild(th);
+  });
+  table.appendChild(header);
+
+  contState.table.forEach((row, i) => {
+    const tr = el('tr', {});
+    const labelInp = el('input', { type: 'text', value: contState.rowLabels[i] });
+    labelInp.addEventListener('input', () => { contState.rowLabels[i] = labelInp.value; computeCont(); });
+    const labelCell = el('td', {}, [labelInp]);
+    if (contState.rowLabels.length > 2) {
+      const del = el('button', { class: 'row-del' }, ['✕']);
+      del.addEventListener('click', () => {
+        contState.rowLabels.splice(i, 1);
+        contState.table.splice(i, 1);
+        renderContTable(); computeCont();
+      });
+      labelCell.appendChild(del);
+    }
+    tr.appendChild(labelCell);
+    row.forEach((v, j) => {
+      const cellInp = el('input', { type: 'number', value: v, min: '0' });
+      cellInp.addEventListener('input', () => { contState.table[i][j] = +cellInp.value; computeCont(); });
+      tr.appendChild(el('td', {}, [cellInp]));
+    });
+    table.appendChild(tr);
+  });
+  host.appendChild(table);
+}
+
+function computeCont() {
+  const host = document.getElementById('cont-results');
+  if (!host) return;
+  host.innerHTML = '';
+  const tbl = contState.table;
+  if (tbl.some(row => row.some(v => isNaN(v) || v < 0))) {
+    host.appendChild(el('div', { class: 'card' }, ['セルの度数を確認してください（0以上の数値）。']));
+    return;
+  }
+  const r = tbl.length, c = tbl[0].length;
+  const alpha = contState.alpha;
+  const res = Stat.contingencyChiSq(tbl);
+  const bic = Stat.bicBayesFactor(res.chi2, res.df, res.N);
+  const BF_indep = bic.BF_indep_over_dep;
+  const postProbIndep = BF_indep / (BF_indep + 1);
+  const credLevel = 1 - alpha;
+
+  const grid = el('div', { class: 'compare-grid' });
+  const freqPanel = el('div', { class: 'panel freq' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論']), el('h3', {}, ['カイ二乗独立性検定'])]),
+    statLine('サンプルサイズ N', res.N),
+    statLine('χ² 統計量', fmt(res.chi2, 3)),
+    statLine('自由度 df', res.df),
+    statLine('p 値（χ²近似）', fmtp(res.pChi2)),
+    statLine('p 値（G検定・尤度比）', fmtp(res.pG)),
+    statLine("Cramér's V（効果量）", fmt(res.cramerV, 3)),
+    el('div', { class: 'verdict ' + (res.pChi2 < alpha ? 'bad' : 'good') }, [
+      res.pChi2 < alpha
+        ? `p = ${fmtp(res.pChi2)} < α = ${alpha} → 行と列は独立ではない（連関あり）`
+        : `p = ${fmtp(res.pChi2)} ≥ α = ${alpha} → 独立性を棄却しない`
+    ]),
+  ]);
+  const bayesPanel = el('div', { class: 'panel bayes' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['BIC近似ベイズファクター'])]),
+    statLine('ΔBIC = 統計量 − df·ln(N)', fmt(bic.deltaBIC, 3)),
+    statLine('BF（独立モデル : 依存モデル）', fmt(BF_indep, 4)),
+    statLine('P(独立モデル | データ)', pct(postProbIndep, 1) + '（事前モデル確率1:1）'),
+    el('div', { class: 'verdict ' + (BF_indep < 1 / 3 ? 'bad' : (BF_indep > 3 ? 'good' : '')) }, [
+      BF_indep >= 1
+        ? `データは独立モデルを依存モデルの ${fmt(BF_indep, 2)} 倍支持 — ${kassRaftery(BF_indep)}`
+        : `データは依存モデルを独立モデルの ${fmt(1 / BF_indep, 2)} 倍支持 — ${kassRaftery(BF_indep)}`
+    ]),
+  ]);
+  grid.appendChild(freqPanel); grid.appendChild(bayesPanel);
+  host.appendChild(grid);
+
+  host.appendChild(el('div', { class: 'card axis-block' }, [
+    el('div', { class: 'axis-title' }, ['独立性検定：p値の位置 と 「独立モデル」事後確率の位置']),
+    evidenceAxis({ pValue: res.pChi2, postProb: postProbIndep, alpha })
+  ]));
+
+  // 期待度数テーブル
+  const etable = el('table', { class: 'mtable' });
+  etable.appendChild(el('tr', {}, [el('th', {}, ['期待度数']), ...contState.colLabels.map(c => el('th', {}, [c]))]));
+  res.expected.forEach((row, i) => {
+    etable.appendChild(el('tr', {}, [el('td', {}, [contState.rowLabels[i]]), ...row.map(v => el('td', {}, [fmt(v, 2)]))]));
+  });
+
+  // セル別 観測比率のCI(頻度論) vs Dirichlet周辺CrI(ベイズ)
+  const alphaMat = tbl.map(row => row.map(() => contState.concCell));
+  const flatObs = [], flatAlpha = [];
+  tbl.forEach((row, i) => row.forEach((v, j) => { flatObs.push(v); flatAlpha.push(alphaMat[i][j]); }));
+  const marg = Stat.dirichletMarginalCI(flatObs, flatAlpha, credLevel);
+  const ptable = el('table', { class: 'mtable' });
+  ptable.appendChild(el('tr', {}, [
+    el('th', {}, ['セル']), el('th', {}, ['観測']), el('th', {}, ['セル比率 (n/N)']),
+    el('th', {}, [`頻度論 ${pct(credLevel, 0)}CI`]), el('th', {}, ['ベイズ事後平均']), el('th', {}, [`ベイズ ${pct(credLevel, 0)}CrI`]),
+  ]));
+  let idx = 0;
+  tbl.forEach((row, i) => row.forEach((v, j) => {
+    const ciBin = Stat.clopperPearsonCI(v, res.N, alpha);
+    ptable.appendChild(el('tr', {}, [
+      el('td', {}, [`${contState.rowLabels[i]} × ${contState.colLabels[j]}`]),
+      el('td', {}, [String(v)]),
+      el('td', {}, [fmt(v / res.N, 3)]),
+      el('td', {}, [`[${fmt(ciBin[0], 3)}, ${fmt(ciBin[1], 3)}]`]),
+      el('td', {}, [fmt(marg[idx].mean, 3)]),
+      el('td', {}, [`[${fmt(marg[idx].lo, 3)}, ${fmt(marg[idx].hi, 3)}]`]),
+    ]));
+    idx++;
+  }));
+
+  host.appendChild(el('div', { class: 'card' }, [el('h2', {}, ['独立モデルの期待度数']), etable]));
+  host.appendChild(el('div', { class: 'card' }, [el('h2', {}, ['セル別の内訳（同時確率としての解釈）']), ptable]));
+
+  host.appendChild(el('div', { class: 'interp' }, [
+    el('h4', {}, ['読み方']),
+    el('div', { class: 'small-note' }, [
+      '頻度論のカイ二乗検定は「行と列が独立である」という帰無仮説のもとでの観測乖離の大きさをp値として要約します。ベイズ側は正確なベイズファクターの代わりに、対数尤度比検定統計量から ',
+      el('code', {}, ['BIC近似（Raftery, 1986）']),
+      ' を用いた近似ベイズファクターを表示しています。サンプルサイズが大きい場合に信頼できる近似で、p値が有意でなくても大標本ではBFが依存モデルを支持することがある（逆に非有意でも独立モデルを積極的に支持できる）という、両者の質的な違いが見える設計です。'
+    ])
+  ]));
+
+  const freqText = `カイ二乗独立性検定を行った結果、行カテゴリ（${contState.rowLabels.join('/')}）と列カテゴリ（${contState.colLabels.join('/')}）の間に${res.pChi2 < alpha ? '統計的に有意な連関が認められた' : '統計的に有意な連関は認められなかった'}（χ²(${res.df}, N = ${res.N}) = ${fmt(res.chi2, 2)}, p = ${fmtp(res.pChi2)}, Cramér's V = ${fmt(res.cramerV, 3)}）。`;
+  const bayesText = `ベイズ的分析では、対数尤度比検定統計量に基づくBIC近似ベイズファクター（Raftery, 1986）が BF(独立:依存) = ${fmt(BF_indep, 4)} であり、${BF_indep >= 1 ? '独立モデル' : '依存（連関あり）モデル'}を支持する${bfStrengthWord(BF_indep)}証拠と解釈された（P(独立モデル | データ) = ${pct(postProbIndep, 1)}）。`;
+  host.appendChild(manuscriptExample(freqText, bayesText));
+
+  const flatVals = [];
+  tbl.forEach(row => row.forEach(v => flatVals.push(v)));
+  const rCode = `# ==== データ（個票を自動でクロス集計した分割表） ====
+tab <- matrix(${rVec(flatVals)}, nrow = ${r}, byrow = TRUE,
+              dimnames = list(${rVec(contState.rowLabels)}, ${rVec(contState.colLabels)}))
+alpha <- ${rNum(alpha)}
+print(tab)
+
+# ==== 頻度論: カイ二乗独立性検定 ====
+freq_result <- chisq.test(tab)
+print(freq_result)
+
+chi2 <- unname(freq_result$statistic)
+df <- unname(freq_result$parameter)
+N <- sum(tab)
+cramers_v <- sqrt(chi2 / (N * (min(nrow(tab), ncol(tab)) - 1)))
+cat("Cramér's V:", cramers_v, "\\n")
+
+# ==== ベイズ: BayesFactorパッケージによる分割表のベイズファクター ====
+if (!requireNamespace("BayesFactor", quietly = TRUE)) install.packages("BayesFactor", repos = "https://cloud.r-project.org")
+library(BayesFactor)
+bf <- contingencyTableBF(tab, sampleType = "indepMulti", fixedMargin = "rows")
+print(bf)
+
+# 参考: 本アプリと同じ BIC近似ベイズファクター（Raftery, 1986）
+deltaBIC <- chi2 - df * log(N)
+BF_indep_over_dep <- exp(-deltaBIC / 2)
+cat("BF(独立:依存) [BIC近似]:", BF_indep_over_dep, "\\n")
+`;
+  host.appendChild(rCodeBlock('分割表（独立性検定）のRコード', rCode));
+}
+// ============================================================
+// タブ4: 対数線形回帰（分割表タブと同じデータを使用）
+// ============================================================
+const loglinState = { alpha: 0.05, priorPrecision: 0.01, inputMode: 'individual', nway: null };
+
+function applyLoglinParsedText(text, mode) {
+  if (mode === 'aggregate') {
+    applyContParsedText(text, 'aggregate');
+    loglinState.nway = null;
+  } else {
+    const parsed = parseMultiVarIndividualCSV(text);
+    if (parsed.variables.length === 2) {
+      applyContParsedText(text, 'individual');
+      loglinState.nway = null;
+    } else {
+      loglinState.nway = { variables: parsed.variables, records: parsed.records, excludedCols: parsed.excludedCols };
+    }
+  }
+  buildLoglinTablePreview();
+  computeLoglin();
+}
+
+function renderLoglinTab() {
+  const root = el('div', { class: 'tab-panel', id: 'panel-loglin' });
+  root.appendChild(el('div', { class: 'card' }, [
+    el('h2', {}, ['データ']),
+    el('div', { class: 'desc' }, ['2変数のデータは「③ 分割表」タブと共有されます。3変数以上のカテゴリ変数を含む個票データを読み込むと、多元配置の対数線形モデル（相互独立モデル・全次数未満の交互作用モデル・飽和モデルの比較）を自動実行します。通し番号などID列は自動的に除外されます。']),
+    el('div', { id: 'loglin-table-preview' }),
+    el('div', { class: 'field-row', style: 'margin-top:14px;' }, [
+      field('有意水準 α', 'number', loglinState.alpha, v => { loglinState.alpha = +v; computeLoglin(); }, 'll-alpha', '', 0.01),
+      field('ベイズ事前精度 τ', 'number', loglinState.priorPrecision, v => { loglinState.priorPrecision = Math.max(0, +v); computeLoglin(); }, 'll-tau', '各係数 ~ Normal(0, 1/τ)。τ→0 でMLEに一致（ラプラス近似）', 0.01),
+    ]),
+    el('div', { class: 'input-divider' }, ['ファイル / 貼り付けで読み込み']),
+    modeToggle('ll-mode', loglinState.inputMode, (v) => { loglinState.inputMode = v; }),
+    createDropZone(
+      '個票データ（1行=1個体、2列以上。ID列は自動除外、見出し行は任意で自動判定）、または集計済みの行×列度数行列',
+      (text) => applyLoglinParsedText(text, loglinState.inputMode)
+    ),
+    el('div', { class: 'input-divider' }, ['または貼り付け']),
+    createPasteArea(
+      '個票データの例（2変数、1行=1個体）:\ngender,response\n男性,賛成\n男性,反対\n女性,賛成\n...\n\n個票データの例（3変数以上も可）:\n番号,授業形式,満足度,学年\n1,対面,満足,低学年\n2,オンライン,不満,高学年\n...\n\n集計済み表の例（2変数のみ）:\n,結果X,結果Y,結果Z\nグループ1,20,15,5\nグループ2,8,18,22',
+      (text) => applyLoglinParsedText(text, loglinState.inputMode)
+    ),
+  ]));
+  root.appendChild(el('div', { id: 'loglin-results' }));
+  return root;
+}
+
+function buildLoglinTablePreview() {
+  const host = document.getElementById('loglin-table-preview');
+  if (!host) return;
+  host.innerHTML = '';
+  if (loglinState.nway) {
+    const { variables, records, excludedCols } = loglinState.nway;
+    if (excludedCols && excludedCols.length) {
+      host.appendChild(el('div', { class: 'small-note', style: 'margin-bottom:8px;' }, [
+        `個体識別子とみなして自動的に除外した列: ${excludedCols.map(c => `「${c.name}」（一意な値 ${c.uniqueCount}件）`).join('、')}`
+      ]));
+    }
+    const freq = buildFullCrosstab(variables, records);
+    const t = el('table', { class: 'mtable' });
+    t.appendChild(el('tr', {}, [...variables.map(v => el('th', { style: 'text-align:left;' }, [v.name])), el('th', {}, ['度数'])]));
+    freq.forEach(f => {
+      t.appendChild(el('tr', {}, [...f.labels.map(l => el('td', { style: 'text-align:left;font-family:Inter,sans-serif;' }, [l])), el('td', {}, [String(f.count)])]));
+    });
+    host.appendChild(el('div', { class: 'desc' }, [`${variables.length}変数（${variables.map(v => v.name).join(' × ')}）の度数分布表を個票データ（全${records.length}件）から自動作成しました。`]));
+    host.appendChild(t);
+  } else {
+    const t = el('table', { class: 'mtable' });
+    t.appendChild(el('tr', {}, [el('th', {}, ['']), ...contState.colLabels.map(c => el('th', {}, [c]))]));
+    contState.table.forEach((row, i) => {
+      t.appendChild(el('tr', {}, [el('td', {}, [contState.rowLabels[i]]), ...row.map(v => el('td', {}, [String(v)]))]));
+    });
+    host.appendChild(t);
+  }
+}
+
+function buildDesignMatrices() {
+  const tbl = contState.table, r = tbl.length, c = tbl[0].length;
+  const y = [];
+  const Xindep = [], Xsat = [];
+  const termsIndep = ['切片(intercept)'];
+  for (let i = 1; i < r; i++) termsIndep.push(`行:${contState.rowLabels[i]}`);
+  for (let j = 1; j < c; j++) termsIndep.push(`列:${contState.colLabels[j]}`);
+  const termsSat = termsIndep.slice();
+  for (let i = 1; i < r; i++) for (let j = 1; j < c; j++) {
+    termsSat.push(`交互作用:${contState.rowLabels[i]}×${contState.colLabels[j]}`);
+  }
+  for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) {
+    y.push(tbl[i][j]);
+    const rowIndep = [1];
+    for (let ii = 1; ii < r; ii++) rowIndep.push(i === ii ? 1 : 0);
+    for (let jj = 1; jj < c; jj++) rowIndep.push(j === jj ? 1 : 0);
+    Xindep.push(rowIndep);
+    const rowSat = rowIndep.slice();
+    for (let ii = 1; ii < r; ii++) for (let jj = 1; jj < c; jj++) {
+      rowSat.push((i === ii && j === jj) ? 1 : 0);
+    }
+    Xsat.push(rowSat);
+  }
+  return { y, Xindep, Xsat, termsIndep, termsSat, r, c };
+}
+
+function computeLoglin() {
+  buildLoglinTablePreview();
+  const host = document.getElementById('loglin-results');
+  if (!host) return;
+  host.innerHTML = '';
+  if (loglinState.nway) { computeLoglinNWay(host); return; }
+  const tbl = contState.table;
+  if (tbl.some(row => row.some(v => isNaN(v) || v < 0))) {
+    host.appendChild(el('div', { class: 'card' }, ['「③ 分割表」タブでセルの度数を確認してください。']));
+    return;
+  }
+  const { y, Xindep, Xsat, termsIndep, termsSat, r, c } = buildDesignMatrices();
+  const alpha = loglinState.alpha;
+  const tau = loglinState.priorPrecision;
+  const N = y.reduce((a, b) => a + b, 0);
+
+  const fitIndepMLE = Stat.poissonIRLS(Xindep, y, 0);
+  const fitSatMLE = Stat.poissonIRLS(Xsat, y, 0);
+  const fitIndepBayes = Stat.poissonIRLS(Xindep, y, tau);
+  const fitSatBayes = Stat.poissonIRLS(Xsat, y, tau);
+
+  const dfDiff = fitSatMLE.beta.length - fitIndepMLE.beta.length; // = (r-1)(c-1)
+  const devDiff = fitIndepMLE.deviance - fitSatMLE.deviance; // ≈ G統計量（尤度比）
+  const pLR = 1 - Stat.chiSquareCDF(devDiff, dfDiff);
+  const bic = Stat.bicBayesFactor(devDiff, dfDiff, N);
+  const BF_indep = bic.BF_indep_over_dep;
+  const postProbIndep = BF_indep / (BF_indep + 1);
+
+  const z = Stat.normalQuantile(1 - alpha / 2);
+
+  const grid = el('div', { class: 'compare-grid' });
+  const freqPanel = el('div', { class: 'panel freq' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論']), el('h3', {}, ['Poisson対数線形モデル（IRLS/最尤法）'])]),
+    statLine('独立モデル 逸脱度 (deviance)', fmt(fitIndepMLE.deviance, 3)),
+    statLine('独立モデル AIC（相対値）', fmt(fitIndepMLE.aic, 3)),
+    statLine('飽和モデル 逸脱度', fmt(fitSatMLE.deviance, 4) + '（＝0が理論値）'),
+    statLine('尤度比検定 (独立 vs 飽和)', `Δdev=${fmt(devDiff, 3)}, df=${dfDiff}`),
+    statLine('p 値', fmtp(pLR)),
+    el('div', { class: 'verdict ' + (pLR < alpha ? 'bad' : 'good') }, [
+      pLR < alpha
+        ? `p = ${fmtp(pLR)} < α = ${alpha} → 独立モデルは飽和モデルに比べ有意に当てはまりが悪い（交互作用項が必要）`
+        : `p = ${fmtp(pLR)} ≥ α = ${alpha} → 独立モデルで十分に説明できる`
+    ]),
+  ]);
+  const bayesPanel = el('div', { class: 'panel bayes' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['ラプラス近似による事後分布'])]),
+    statLine('事前分布', `各係数 ~ Normal(0, ${fmt(1 / Math.max(tau, 1e-9), 1)})`),
+    statLine('独立モデル 逸脱度（MAP・事前あり）', fmt(fitIndepBayes.deviance, 3)),
+    statLine('ΔBIC = Δdev − df·ln(N)', fmt(bic.deltaBIC, 3)),
+    statLine('BF（独立モデル : 飽和モデル）', fmt(BF_indep, 4)),
+    statLine('P(独立モデル | データ)', pct(postProbIndep, 1)),
+    el('div', { class: 'verdict ' + (BF_indep < 1 / 3 ? 'bad' : (BF_indep > 3 ? 'good' : '')) }, [
+      BF_indep >= 1
+        ? `データは独立モデルを ${fmt(BF_indep, 2)} 倍支持 — ${kassRaftery(BF_indep)}`
+        : `データは飽和（交互作用あり）モデルを ${fmt(1 / BF_indep, 2)} 倍支持 — ${kassRaftery(BF_indep)}`
+    ]),
+  ]);
+  grid.appendChild(freqPanel); grid.appendChild(bayesPanel);
+  host.appendChild(grid);
+
+  host.appendChild(el('div', { class: 'card axis-block' }, [
+    el('div', { class: 'axis-title' }, ['モデル選択：p値の位置 と 「独立モデル」事後確率の位置']),
+    evidenceAxis({ pValue: pLR, postProb: postProbIndep, alpha })
+  ]));
+
+  // 係数比較テーブル（飽和モデルの係数：切片・行・列・交互作用）
+  const ctable = el('table', { class: 'mtable' });
+  ctable.appendChild(el('tr', {}, [
+    el('th', {}, ['項']), el('th', {}, ['頻度論 推定値(β̂)']), el('th', {}, [`頻度論 ${pct(1 - alpha, 0)}Wald CI`]),
+    el('th', {}, ['ベイズ 事後平均(MAP)']), el('th', {}, [`ベイズ ${pct(1 - alpha, 0)}CrI（正規近似）`]),
+  ]));
+  termsSat.forEach((term, i) => {
+    const bF = fitSatMLE.beta[i], seF = fitSatMLE.se[i];
+    const bB = fitSatBayes.beta[i], seB = fitSatBayes.se[i];
+    ctable.appendChild(el('tr', {}, [
+      el('td', {}, [term]),
+      el('td', {}, [fmt(bF, 3)]),
+      el('td', {}, [`[${fmt(bF - z * seF, 3)}, ${fmt(bF + z * seF, 3)}]`]),
+      el('td', {}, [fmt(bB, 3)]),
+      el('td', {}, [`[${fmt(bB - z * seB, 3)}, ${fmt(bB + z * seB, 3)}]`]),
+    ]));
+  });
+  host.appendChild(el('div', { class: 'card' }, [
+    el('h2', {}, ['飽和モデルの係数（log スケール）']),
+    el('div', { class: 'desc' }, ['基準カテゴリは各行・列の最初の水準です。交互作用項が0から離れているほど、その行×列の組み合わせで独立からのズレが大きいことを示します。']),
+    ctable
+  ]));
+
+  // 主要交互作用項のIntervalTwin（最初の交互作用項があれば表示）
+  const firstInterIdx = termsSat.findIndex(t => t.startsWith('交互作用'));
+  if (firstInterIdx >= 0) {
+    const bF = fitSatMLE.beta[firstInterIdx], seF = fitSatMLE.se[firstInterIdx];
+    const bB = fitSatBayes.beta[firstInterIdx], seB = fitSatBayes.se[firstInterIdx];
+    const lo = Math.min(bF - z * seF, bB - z * seB) - 0.2;
+    const hi = Math.max(bF + z * seF, bB + z * seB) + 0.2;
+    host.appendChild(el('div', { class: 'card axis-block' }, [
+      el('div', { class: 'axis-title' }, [`交互作用係数の比較：${termsSat[firstInterIdx]}`]),
+      intervalTwin({
+        axisMin: lo, axisMax: hi,
+        freqIv: { lo: bF - z * seF, hi: bF + z * seF, point: bF },
+        bayesIv: { lo: bB - z * seB, hi: bB + z * seB, point: bB },
+        refLine: 0, refLabel: '0（交互作用なし）',
+        freqLabel: 'CI', bayesLabel: 'CrI',
+        tickFmt: v => v.toFixed(2)
+      })
+    ]));
+  }
+
+  host.appendChild(el('div', { class: 'interp' }, [
+    el('h4', {}, ['読み方']),
+    el('div', { class: 'small-note' }, [
+      '対数線形モデルでは、セル度数の対数を行・列の主効果と交互作用項の線形和で表します。交互作用項をすべて0とした「独立モデル」は分割表の期待度数と数学的に一致し、その逸脱度は③タブのG統計量と一致します。頻度論はWald信頼区間（最尤推定値 ± z·SE）、ベイズは各係数に弱情報事前分布 ',
+      el('code', {}, ['Normal(0, 1/τ)']),
+      ' を課したラプラス近似（観測フィッシャー情報行列を分散共分散行列とする正規近似事後分布）による信用区間です。τ を0に近づけるほど頻度論の最尤推定と一致し、τ を大きくするほど係数は0に縮小（正則化）されます。'
+    ])
+  ]));
+
+  const freqText = `対数線形モデルによる尤度比検定の結果、独立モデルは飽和モデルと比較して${pLR < alpha ? '統計的に有意に当てはまりが悪かった（交互作用項が必要であった）' : '当てはまりに統計的に有意な差はなかった（独立モデルで十分に説明できた）'}（尤度比検定: Δdeviance(${dfDiff}) = ${fmt(devDiff, 2)}, p = ${fmtp(pLR)}）。`;
+  const bayesText = `ベイズ的分析（ラプラス近似）では、BIC近似ベイズファクター（Raftery, 1986）が BF(独立:飽和) = ${fmt(BF_indep, 4)} であり、${BF_indep >= 1 ? '独立モデル' : '飽和モデル（交互作用あり）'}を支持する${bfStrengthWord(BF_indep)}証拠と解釈された（P(独立モデル | データ) = ${pct(postProbIndep, 1)}）。`;
+  host.appendChild(manuscriptExample(freqText, bayesText));
+
+  const flatVals2 = [];
+  tbl.forEach(row => row.forEach(v => flatVals2.push(v)));
+  const rCode = `# ==== データ（個票を自動でクロス集計した分割表） ====
+tab <- matrix(${rVec(flatVals2)}, nrow = ${r}, byrow = TRUE,
+              dimnames = list(${rVec(contState.rowLabels)}, ${rVec(contState.colLabels)}))
+df <- as.data.frame(as.table(tab))
+colnames(df) <- c("row_var", "col_var", "Freq")
+alpha <- ${rNum(alpha)}
+
+# ==== 頻度論: Poisson対数線形モデル（独立モデル vs 飽和モデル） ====
+model_indep <- glm(Freq ~ row_var + col_var, family = poisson, data = df)
+model_sat   <- glm(Freq ~ row_var * col_var, family = poisson, data = df)
+print(anova(model_indep, model_sat, test = "Chisq"))
+summary(model_sat)
+
+# ==== ベイズ: 弱情報事前分布 Normal(0, 1/tau) によるMAP推定（ラプラス近似） ====
+tau <- ${rNum(tau)}
+if (!requireNamespace("arm", quietly = TRUE)) install.packages("arm", repos = "https://cloud.r-project.org")
+library(arm)
+model_sat_bayes <- bayesglm(Freq ~ row_var * col_var, family = poisson, data = df,
+                             prior.mean = 0, prior.scale = sqrt(1 / tau), prior.df = Inf)
+summary(model_sat_bayes)
+
+# ==== BIC近似ベイズファクター（独立モデル vs 飽和モデル） ====
+dev_diff <- deviance(model_indep) - deviance(model_sat)
+df_diff  <- df.residual(model_indep) - df.residual(model_sat)
+N <- sum(df$Freq)
+deltaBIC <- dev_diff - df_diff * log(N)
+BF_indep_over_sat <- exp(-deltaBIC / 2)
+cat("BF(独立:飽和) [BIC近似]:", BF_indep_over_sat, "\\n")
+`;
+  host.appendChild(rCodeBlock('対数線形回帰のRコード', rCode));
+}
+
+// ============================================================
+// 対数線形回帰: N変数（3変数以上）版
+// ============================================================
+function rExpandGridFreqVector(variables, freqTable) {
+  const lookup = {};
+  freqTable.forEach(f => { lookup[f.labels.join('\u0001')] = f.count; });
+  const dims = variables.map(v => v.levels.length);
+  const total = dims.reduce((a, b) => a * b, 1);
+  const result = [];
+  for (let lin = 0; lin < total; lin++) {
+    let rem = lin;
+    const idxArr = [];
+    for (let i = 0; i < variables.length; i++) { idxArr.push(rem % dims[i]); rem = Math.floor(rem / dims[i]); }
+    const labels = idxArr.map((li, vi) => variables[vi].levels[li]);
+    result.push(lookup[labels.join('\u0001')] || 0);
+  }
+  return result;
+}
+function orderLabel(order, nVars) {
+  if (order === 1) return '相互独立モデル（主効果のみ）';
+  if (order === nVars) return '飽和モデル';
+  return `${order}次までの交互作用モデル`;
+}
+
+function computeLoglinNWay(host) {
+  const { variables, records } = loglinState.nway;
+  const alpha = loglinState.alpha;
+  const tau = loglinState.priorPrecision;
+  const nVars = variables.length;
+  const freq = buildFullCrosstab(variables, records);
+  const y = freq.map(f => f.count);
+  const N = y.reduce((a, b) => a + b, 0);
+  const z = Stat.normalQuantile(1 - alpha / 2);
+
+  const dmMain = buildGeneralDesignMatrix(variables, freq, 1);
+  const dmSat = buildGeneralDesignMatrix(variables, freq, nVars);
+  const fitMainMLE = Stat.poissonIRLS(dmMain.X, y, 0);
+  const fitSatMLE = Stat.poissonIRLS(dmSat.X, y, 0);
+  const fitMainBayes = Stat.poissonIRLS(dmMain.X, y, tau);
+  const fitSatBayes = Stat.poissonIRLS(dmSat.X, y, tau);
+
+  const dfDiffMain = fitSatMLE.beta.length - fitMainMLE.beta.length;
+  const devDiffMain = fitMainMLE.deviance - fitSatMLE.deviance;
+  const pMain = 1 - Stat.chiSquareCDF(devDiffMain, dfDiffMain);
+  const bicMain = Stat.bicBayesFactor(devDiffMain, dfDiffMain, N);
+  const BFMain = bicMain.BF_indep_over_dep;
+  const postProbMain = BFMain / (BFMain + 1);
+
+  host.appendChild(el('div', { class: 'card' }, [
+    el('h2', {}, ['比較①：相互独立モデル vs 飽和モデル（全体の当てはまり）'])
+  ]));
+  const grid1 = el('div', { class: 'compare-grid' });
+  grid1.appendChild(el('div', { class: 'panel freq' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論']), el('h3', {}, ['Poisson対数線形モデル'])]),
+    statLine('相互独立モデル 逸脱度', fmt(fitMainMLE.deviance, 3)),
+    statLine('飽和モデル 逸脱度', fmt(fitSatMLE.deviance, 4) + '（＝0が理論値）'),
+    statLine('尤度比検定', `Δdev=${fmt(devDiffMain, 3)}, df=${dfDiffMain}`),
+    statLine('p 値', fmtp(pMain)),
+    el('div', { class: 'verdict ' + (pMain < alpha ? 'bad' : 'good') }, [
+      pMain < alpha
+        ? `p = ${fmtp(pMain)} < α = ${alpha} → 変数間に何らかの連関がある（相互独立ではない）`
+        : `p = ${fmtp(pMain)} ≥ α = ${alpha} → 相互独立モデルで十分に説明できる`
+    ]),
+  ]));
+  grid1.appendChild(el('div', { class: 'panel bayes' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['ラプラス近似'])]),
+    statLine('事前分布', `各係数 ~ Normal(0, ${fmt(1 / Math.max(tau, 1e-9), 1)})`),
+    statLine('ΔBIC', fmt(bicMain.deltaBIC, 3)),
+    statLine('BF（独立 : 飽和）', fmt(BFMain, 4)),
+    statLine('P(独立モデル | データ)', pct(postProbMain, 1)),
+    el('div', { class: 'verdict ' + (BFMain < 1 / 3 ? 'bad' : (BFMain > 3 ? 'good' : '')) }, [
+      BFMain >= 1
+        ? `データは相互独立モデルを ${fmt(BFMain, 2)} 倍支持 — ${kassRaftery(BFMain)}`
+        : `データは飽和モデルを ${fmt(1 / BFMain, 2)} 倍支持 — ${kassRaftery(BFMain)}`
+    ]),
+  ]));
+  host.appendChild(grid1);
+  host.appendChild(el('div', { class: 'card axis-block' }, [
+    el('div', { class: 'axis-title' }, ['p値の位置 と 「相互独立モデル」事後確率の位置']),
+    evidenceAxis({ pValue: pMain, postProb: postProbMain, alpha })
+  ]));
+
+  // ---- 比較②: 最高次未満の交互作用モデル vs 飽和モデル（最高次交互作用の検定） ----
+  let dmReduced, fitReducedMLE, fitReducedBayes, devDiffTop, dfDiffTop, pTop, bicTop, BFTop, postProbTop;
+  if (nVars >= 3) {
+    dmReduced = buildGeneralDesignMatrix(variables, freq, nVars - 1);
+    fitReducedMLE = Stat.poissonIRLS(dmReduced.X, y, 0);
+    fitReducedBayes = Stat.poissonIRLS(dmReduced.X, y, tau);
+    dfDiffTop = fitSatMLE.beta.length - fitReducedMLE.beta.length;
+    devDiffTop = fitReducedMLE.deviance - fitSatMLE.deviance;
+    pTop = 1 - Stat.chiSquareCDF(devDiffTop, dfDiffTop);
+    bicTop = Stat.bicBayesFactor(devDiffTop, dfDiffTop, N);
+    BFTop = bicTop.BF_indep_over_dep;
+    postProbTop = BFTop / (BFTop + 1);
+
+    host.appendChild(el('div', { class: 'card' }, [
+      el('h2', {}, [`比較②：${orderLabel(nVars - 1, nVars)} vs 飽和モデル（${nVars}次交互作用は必要か）`])
+    ]));
+    const grid2 = el('div', { class: 'compare-grid' });
+    grid2.appendChild(el('div', { class: 'panel freq' }, [
+      el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論']), el('h3', {}, ['Poisson対数線形モデル'])]),
+      statLine(`${nVars - 1}次までの交互作用モデル 逸脱度`, fmt(fitReducedMLE.deviance, 3)),
+      statLine('飽和モデル 逸脱度', fmt(fitSatMLE.deviance, 4)),
+      statLine('尤度比検定', `Δdev=${fmt(devDiffTop, 3)}, df=${dfDiffTop}`),
+      statLine('p 値', fmtp(pTop)),
+      el('div', { class: 'verdict ' + (pTop < alpha ? 'bad' : 'good') }, [
+        pTop < alpha
+          ? `p = ${fmtp(pTop)} < α = ${alpha} → ${nVars}次の交互作用が統計的に必要（変数間の関連の仕方が他の変数の水準によって変わる）`
+          : `p = ${fmtp(pTop)} ≥ α = ${alpha} → ${nVars}次の交互作用は不要（${nVars - 1}次までのモデルで十分）`
+      ]),
+    ]));
+    grid2.appendChild(el('div', { class: 'panel bayes' }, [
+      el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['ラプラス近似'])]),
+      statLine('ΔBIC', fmt(bicTop.deltaBIC, 3)),
+      statLine(`BF（${nVars - 1}次まで : 飽和）`, fmt(BFTop, 4)),
+      statLine(`P(${nVars - 1}次までのモデル | データ)`, pct(postProbTop, 1)),
+      el('div', { class: 'verdict ' + (BFTop < 1 / 3 ? 'bad' : (BFTop > 3 ? 'good' : '')) }, [
+        BFTop >= 1
+          ? `データは${nVars - 1}次までのモデルを ${fmt(BFTop, 2)} 倍支持 — ${kassRaftery(BFTop)}`
+          : `データは飽和（${nVars}次交互作用あり）モデルを ${fmt(1 / BFTop, 2)} 倍支持 — ${kassRaftery(BFTop)}`
+      ]),
+    ]));
+    host.appendChild(grid2);
+    host.appendChild(el('div', { class: 'card axis-block' }, [
+      el('div', { class: 'axis-title' }, [`p値の位置 と 「${nVars - 1}次までのモデル」事後確率の位置`]),
+      evidenceAxis({ pValue: pTop, postProb: postProbTop, alpha })
+    ]));
+  }
+
+  // ---- 飽和モデルの係数テーブル ----
+  const ctable = el('table', { class: 'mtable' });
+  ctable.appendChild(el('tr', {}, [
+    el('th', {}, ['項']), el('th', {}, ['頻度論 推定値(β̂)']), el('th', {}, [`頻度論 ${pct(1 - alpha, 0)}Wald CI`]),
+    el('th', {}, ['ベイズ 事後平均(MAP)']), el('th', {}, [`ベイズ ${pct(1 - alpha, 0)}CrI（正規近似）`]),
+  ]));
+  dmSat.termLabels.forEach((term, i) => {
+    const bF = fitSatMLE.beta[i], seF = fitSatMLE.se[i];
+    const bB = fitSatBayes.beta[i], seB = fitSatBayes.se[i];
+    ctable.appendChild(el('tr', {}, [
+      el('td', {}, [term]),
+      el('td', {}, [fmt(bF, 3)]),
+      el('td', {}, [`[${fmt(bF - z * seF, 3)}, ${fmt(bF + z * seF, 3)}]`]),
+      el('td', {}, [fmt(bB, 3)]),
+      el('td', {}, [`[${fmt(bB - z * seB, 3)}, ${fmt(bB + z * seB, 3)}]`]),
+    ]));
+  });
+  host.appendChild(el('div', { class: 'card' }, [
+    el('h2', {}, ['飽和モデルの係数（log スケール）']),
+    el('div', { class: 'desc' }, ['基準カテゴリは各変数の最初の水準です。最高次の交互作用項が0から離れているほど、その組み合わせで独立からのズレが変数の水準に依存して変化していることを示します。']),
+    ctable
+  ]));
+
+  const topTermIdx = dmSat.termGroups.findIndex(tg => tg.order === nVars);
+  if (topTermIdx >= 0) {
+    const i = topTermIdx + 1; // +1: intercept分ずれる
+    const bF = fitSatMLE.beta[i], seF = fitSatMLE.se[i];
+    const bB = fitSatBayes.beta[i], seB = fitSatBayes.se[i];
+    const lo = Math.min(bF - z * seF, bB - z * seB) - 0.2;
+    const hi = Math.max(bF + z * seF, bB + z * seB) + 0.2;
+    host.appendChild(el('div', { class: 'card axis-block' }, [
+      el('div', { class: 'axis-title' }, [`最高次交互作用係数の比較：${dmSat.termLabels[i]}`]),
+      intervalTwin({
+        axisMin: lo, axisMax: hi,
+        freqIv: { lo: bF - z * seF, hi: bF + z * seF, point: bF },
+        bayesIv: { lo: bB - z * seB, hi: bB + z * seB, point: bB },
+        refLine: 0, refLabel: '0（交互作用なし）',
+        freqLabel: 'CI', bayesLabel: 'CrI',
+        tickFmt: v => v.toFixed(2)
+      })
+    ]));
+  }
+
+  host.appendChild(el('div', { class: 'interp' }, [
+    el('h4', {}, ['読み方']),
+    el('div', { class: 'small-note' }, [
+      `${nVars}変数（${variables.map(v => v.name).join('、')}）の多元配置対数線形モデルです。相互独立モデルは全ての変数が互いに独立であることを、飽和モデルは全ての交互作用を含み観測度数に完全に一致するモデルを表します。` +
+      (nVars >= 3 ? `比較②は「${nVars}次の交互作用（変数間の連関のしかたが、他の変数の水準によって変わるかどうか）」を検定するもので、階層的対数線形モデルの標準的な分析手順（低次モデルから順に当てはまりを確認する）に対応します。` : '') +
+      ' 頻度論はWald信頼区間（最尤推定値 ± z·SE）、ベイズは弱情報事前分布 ',
+      el('code', {}, ['Normal(0, 1/τ)']),
+      ' を課したラプラス近似による信用区間です。'
+    ])
+  ]));
+
+  const freqText = `${nVars}変数（${variables.map(v => v.name).join('、')}）の対数線形モデルによる尤度比検定の結果、相互独立モデルは飽和モデルと比較して${pMain < alpha ? '統計的に有意に当てはまりが悪かった' : '当てはまりに統計的に有意な差はなかった'}（Δdeviance(${dfDiffMain}) = ${fmt(devDiffMain, 2)}, p = ${fmtp(pMain)}）。` +
+    (nVars >= 3 ? `さらに${nVars}次の交互作用の検定では、${pTop < alpha ? `統計的に有意であり（Δdeviance(${dfDiffTop}) = ${fmt(devDiffTop, 2)}, p = ${fmtp(pTop)}）、変数間の連関のしかたが他の変数の水準に依存することが示された` : `統計的に有意ではなく（p = ${fmtp(pTop)}）、${nVars - 1}次までの交互作用モデルで十分に説明できた`}。` : '');
+  const bayesText = `ベイズ的分析（ラプラス近似）では、相互独立モデルと飽和モデルを比較したBIC近似ベイズファクターが BF = ${fmt(BFMain, 4)} であり、${BFMain >= 1 ? '相互独立モデル' : '飽和モデル'}を支持する${bfStrengthWord(BFMain)}証拠と解釈された（P(独立モデル | データ) = ${pct(postProbMain, 1)}）。` +
+    (nVars >= 3 ? `${nVars}次交互作用の検定でも、BF = ${fmt(BFTop, 4)} により${BFTop >= 1 ? `${nVars - 1}次までのモデル` : '飽和モデル（高次交互作用あり）'}を支持する${bfStrengthWord(BFTop)}証拠が得られた。` : '');
+  host.appendChild(manuscriptExample(freqText, bayesText));
+
+  // ---- Rコード ----
+  const orderedFreqMain = rExpandGridFreqVector(variables, freq);
+  const expandGridArgs = variables.map(v => `${v.name} = ${rVec(v.levels)}`).join(',\n  ');
+  const mainFormula = variables.map(v => v.name).join(' + ');
+  const satFormula = `(${variables.map(v => v.name).join(' + ')})^${nVars}`;
+  const reducedFormula = nVars >= 3 ? `(${variables.map(v => v.name).join(' + ')})^${nVars - 1}` : null;
+  const rCode2 = `# ==== データ（個票を自動で多元クロス集計した度数分布表） ====
+freq_df <- expand.grid(
+  ${expandGridArgs}
+)
+freq_df$Freq <- ${rVec(orderedFreqMain)}
+alpha <- ${rNum(alpha)}
+print(freq_df)
+
+# ==== 頻度論: 階層的対数線形モデル（相互独立 → 飽和） ====
+model_main <- glm(Freq ~ ${mainFormula}, family = poisson, data = freq_df)
+model_sat  <- glm(Freq ~ ${satFormula}, family = poisson, data = freq_df)
+print(anova(model_main, model_sat, test = "Chisq"))
+${reducedFormula ? `
+# ${nVars}次交互作用の検定（${nVars - 1}次までのモデル vs 飽和モデル）
+model_reduced <- glm(Freq ~ ${reducedFormula}, family = poisson, data = freq_df)
+print(anova(model_reduced, model_sat, test = "Chisq"))
+` : ''}
+summary(model_sat)
+
+# ==== ベイズ: 弱情報事前分布 Normal(0, 1/tau) によるMAP推定（ラプラス近似） ====
+tau <- ${rNum(tau)}
+if (!requireNamespace("arm", quietly = TRUE)) install.packages("arm", repos = "https://cloud.r-project.org")
+library(arm)
+model_sat_bayes <- bayesglm(Freq ~ ${satFormula}, family = poisson, data = freq_df,
+                             prior.mean = 0, prior.scale = sqrt(1 / tau), prior.df = Inf)
+summary(model_sat_bayes)
+
+# ==== BIC近似ベイズファクター（相互独立 vs 飽和） ====
+dev_diff <- deviance(model_main) - deviance(model_sat)
+df_diff  <- df.residual(model_main) - df.residual(model_sat)
+N <- sum(freq_df$Freq)
+deltaBIC <- dev_diff - df_diff * log(N)
+BF_main_over_sat <- exp(-deltaBIC / 2)
+cat("BF(相互独立:飽和) [BIC近似]:", BF_main_over_sat, "\\n")
+`;
+  host.appendChild(rCodeBlock('対数線形回帰のRコード（多元配置）', rCode2));
+}
+
+// ============================================================
+// タブ5: A/Bテスト（2群の比率の比較）
+// ============================================================
+const abState = { nA: 400, xA: 62, nB: 380, xB: 90, alpha: 0.05, a0: 1, b0: 1, nameA: 'グループA', nameB: 'グループB', nDraws: 30000,
+  inputMode: 'individual', rawGroupVar: null, rawOutcomeVar: null, rawRecords: null, rawExcluded: null, successCategory: null };
+
+function parseABAggregateCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) throw new Error('データが空です');
+  let dataRows = rows.slice();
+  if (dataRows[0].length >= 2 && !isNumericCell(dataRows[0][1])) dataRows = dataRows.slice(1);
+  if (dataRows.length !== 2) throw new Error('集計値モードでは「グループ名,n,x」の2行（群Aと群B）が必要です');
+  const parsed = dataRows.map((r, i) => ({ name: r[0] || ('群' + (i === 0 ? 'A' : 'B')), n: Number(r[1]), x: Number(r[2]) }));
+  if (parsed.some(p => !isFinite(p.n) || !isFinite(p.x))) throw new Error('n・xの値を確認してください');
+  return parsed;
+}
+function applyABParsedText(text, mode) {
+  if (mode === 'individual') {
+    const parsed = detectCategoricalColumnsCSV(text, 2);
+    const groupVar = parsed.variables[0], outcomeVar = parsed.variables[1];
+    if (groupVar.levels.length !== 2) throw new Error('グループ列は2水準（2群）である必要があります。3群以上の場合は「Informed多重二項検定」タブをご利用ください');
+    if (outcomeVar.levels.length !== 2) throw new Error('結果列は2水準（成功/失敗など）である必要があります');
+    abState.rawGroupVar = groupVar;
+    abState.rawOutcomeVar = outcomeVar;
+    abState.rawRecords = parsed.records;
+    abState.rawExcluded = parsed.excludedCols;
+    if (!abState.successCategory || !outcomeVar.levels.includes(abState.successCategory)) {
+      abState.successCategory = outcomeVar.levels[0];
+    }
+    syncABFromRaw();
+  } else {
+    const parsed = parseABAggregateCSV(text);
+    abState.nameA = parsed[0].name; abState.nA = parsed[0].n; abState.xA = parsed[0].x;
+    abState.nameB = parsed[1].name; abState.nB = parsed[1].n; abState.xB = parsed[1].x;
+    abState.rawGroupVar = null;
+    document.getElementById('ab-nameA').value = abState.nameA;
+    document.getElementById('ab-nA').value = abState.nA;
+    document.getElementById('ab-xA').value = abState.xA;
+    document.getElementById('ab-nameB').value = abState.nameB;
+    document.getElementById('ab-nB').value = abState.nB;
+    document.getElementById('ab-xB').value = abState.xB;
+  }
+  renderABFreqTable();
+  computeAB();
+}
+function syncABFromRaw() {
+  const gv = abState.rawGroupVar, ov = abState.rawOutcomeVar, recs = abState.rawRecords, successCategory = abState.successCategory;
+  const groupA = gv.levels[0], groupB = gv.levels[1];
+  let nA = 0, xA = 0, nB = 0, xB = 0;
+  recs.forEach(rec => {
+    const g = rec[gv.name], o = rec[ov.name];
+    if (g === groupA) { nA++; if (o === successCategory) xA++; }
+    else if (g === groupB) { nB++; if (o === successCategory) xB++; }
+  });
+  abState.nameA = groupA; abState.nA = nA; abState.xA = xA;
+  abState.nameB = groupB; abState.nB = nB; abState.xB = xB;
+  document.getElementById('ab-nameA').value = abState.nameA;
+  document.getElementById('ab-nA').value = abState.nA;
+  document.getElementById('ab-xA').value = abState.xA;
+  document.getElementById('ab-nameB').value = abState.nameB;
+  document.getElementById('ab-nB').value = abState.nB;
+  document.getElementById('ab-xB').value = abState.xB;
+}
+function renderABFreqTable() {
+  const host = document.getElementById('ab-freq-table-host');
+  if (!host) return;
+  host.innerHTML = '';
+  const gv = abState.rawGroupVar;
+  if (!gv) return;
+  const ov = abState.rawOutcomeVar, recs = abState.rawRecords;
+  const infoChildren = [];
+  if (abState.rawExcluded && abState.rawExcluded.length) {
+    infoChildren.push(el('div', { class: 'small-note', style: 'margin-bottom:8px;' }, [
+      `個体識別子とみなして自動的に除外した列: ${abState.rawExcluded.map(c => `「${c.name}」（一意な値 ${c.uniqueCount}件）`).join('、')}`
+    ]));
+  }
+  const table = el('table', { class: 'mtable' });
+  table.appendChild(el('tr', {}, [el('th', {}, ['']), ...ov.levels.map(l => el('th', {}, [l]))]));
+  gv.levels.forEach(gl => {
+    const rowCounts = ov.levels.map(ol => recs.filter(r => r[gv.name] === gl && r[ov.name] === ol).length);
+    table.appendChild(el('tr', {}, [el('td', {}, [gl]), ...rowCounts.map(c => el('td', {}, [String(c)]))]));
+  });
+  const select = el('select', { id: 'ab-success-select', class: 'select-input' });
+  ov.levels.forEach(l => {
+    const opt = el('option', { value: l }, [l]);
+    if (l === abState.successCategory) opt.setAttribute('selected', 'selected');
+    select.appendChild(opt);
+  });
+  select.addEventListener('change', () => { abState.successCategory = select.value; syncABFromRaw(); computeAB(); });
+  host.appendChild(el('div', { class: 'card', style: 'background:#FAFAF8;' }, [
+    el('h2', {}, ['個票データから作成したクロス集計表']).also(h => h.style.fontSize = '15px'),
+    ...infoChildren,
+    el('div', { class: 'desc' }, [`変数「${gv.name}」（群）×「${ov.name}」（結果）を集計しました。「成功」とみなす結果を選んでください。`]),
+    table,
+    el('div', { class: 'field-row', style: 'margin-top:12px;' }, [
+      el('div', { class: 'field' }, [el('label', {}, ['成功とみなす結果']), select]),
+    ]),
+  ]));
+}
+
+function renderABTab() {
+  const root = el('div', { class: 'tab-panel', id: 'panel-abtest' });
+  const card = el('div', { class: 'card' }, [
+    el('h2', {}, ['データ入力：2群の比較']),
+    el('div', { class: 'desc' }, ['独立した2群（例：施策A/B、対照群/介入群）の試行数と成功数を入力してください。2×2の分割表と数学的には同じデータですが、群間の差の大きさ（リスク差・オッズ比）や事後確率に焦点を当てた出力になります。個票データを読み込むと自動的にクロス集計します。']),
+    el('div', { class: 'field-row' }, [
+      field('群Aの名前', 'text', abState.nameA, v => { abState.nameA = v; computeAB(); }, 'ab-nameA'),
+      field('試行回数 n(A)', 'number', abState.nA, v => { abState.nA = +v; computeAB(); }, 'ab-nA'),
+      field('成功数 x(A)', 'number', abState.xA, v => { abState.xA = +v; computeAB(); }, 'ab-xA'),
+    ]),
+    el('div', { class: 'field-row' }, [
+      field('群Bの名前', 'text', abState.nameB, v => { abState.nameB = v; computeAB(); }, 'ab-nameB'),
+      field('試行回数 n(B)', 'number', abState.nB, v => { abState.nB = +v; computeAB(); }, 'ab-nB'),
+      field('成功数 x(B)', 'number', abState.xB, v => { abState.xB = +v; computeAB(); }, 'ab-xB'),
+    ]),
+    el('div', { class: 'field-row' }, [
+      field('有意水準 α', 'number', abState.alpha, v => { abState.alpha = +v; computeAB(); }, 'ab-alpha', '', 0.01),
+      field('事前分布 Beta(a₀,', 'number', abState.a0, v => { abState.a0 = Math.max(0.01, +v); computeAB(); }, 'ab-a0', 'a₀（両群共通）', 0.5),
+      field('b₀)', 'number', abState.b0, v => { abState.b0 = Math.max(0.01, +v); computeAB(); }, 'ab-b0', 'b₀', 0.5),
+    ]),
+    el('div', { id: 'ab-freq-table-host' }),
+    el('div', { class: 'input-divider' }, ['ファイル / 貼り付けで読み込み']),
+    modeToggle('ab-mode', abState.inputMode, (v) => { abState.inputMode = v; }),
+    createDropZone(
+      '個票データ（1行=1個体、2列：群・結果。ID列は自動除外）、または集計値「グループ名,n,x」の2行',
+      (text) => applyABParsedText(text, abState.inputMode)
+    ),
+    el('div', { class: 'input-divider' }, ['または貼り付け']),
+    createPasteArea(
+      '個票データの例（1行=1個体）:\ngroup,outcome\nグループA,成功\nグループA,失敗\nグループB,成功\n...\n\n集計値の例:\ngroup,n,x\nグループA,400,62\nグループB,380,90',
+      (text) => applyABParsedText(text, abState.inputMode)
+    ),
+  ]);
+  root.appendChild(card);
+  root.appendChild(el('div', { id: 'ab-results' }));
+  return root;
+}
+
+function computeAB() {
+  const host = document.getElementById('ab-results');
+  if (!host) return;
+  host.innerHTML = '';
+  const { nA, xA, nB, xB, alpha, a0, b0 } = abState;
+  if (![nA, xA, nB, xB].every(isFinite) || nA <= 0 || nB <= 0 || xA < 0 || xA > nA || xB < 0 || xB > nB) {
+    host.appendChild(el('div', { class: 'card' }, ['入力値を確認してください（0 ≤ x ≤ n、n > 0、すべて有限の数値）。']));
+    return;
+  }
+  const pA = xA / nA, pB = xB / nB;
+  const diff = pB - pA;
+
+  // 頻度論: プールした2標本比率のz検定（2x2のカイ二乗検定と同値）
+  const pooledP = (xA + xB) / (nA + nB);
+  const seP = Math.sqrt(pooledP * (1 - pooledP) * (1 / nA + 1 / nB));
+  const z = seP > 0 ? diff / seP : 0;
+  const pval = 2 * (1 - Stat.normalCDF(Math.abs(z)));
+  const zCrit = Stat.normalQuantile(1 - alpha / 2);
+  const seUnpooled = Math.sqrt(pA * (1 - pA) / nA + pB * (1 - pB) / nB);
+  const diffCI = [diff - zCrit * seUnpooled, diff + zCrit * seUnpooled];
+  const rr = pA > 0 ? pB / pA : NaN;
+  const oddsA = xA / Math.max(nA - xA, 0.5), oddsB = xB / Math.max(nB - xB, 0.5);
+  const orVal = oddsB / oddsA;
+  const seLogOR = Math.sqrt(1 / Math.max(xA, 0.5) + 1 / Math.max(nA - xA, 0.5) + 1 / Math.max(xB, 0.5) + 1 / Math.max(nB - xB, 0.5));
+  const orCI = [Math.exp(Math.log(orVal) - zCrit * seLogOR), Math.exp(Math.log(orVal) + zCrit * seLogOR)];
+
+  // ベイズ: 独立なBeta事後分布からモンテカルロ標本抽出
+  const aA = a0 + xA, bA = b0 + (nA - xA), aB = a0 + xB, bB = b0 + (nB - xB);
+  const nDraws = abState.nDraws;
+  let diffs = new Array(nDraws), countBgtA = 0;
+  for (let i = 0; i < nDraws; i++) {
+    const pa = Stat.sampleBeta(aA, bA), pb = Stat.sampleBeta(aB, bB);
+    diffs[i] = pb - pa;
+    if (pb > pa) countBgtA++;
+  }
+  diffs.sort((x, y) => x - y);
+  const qLo = diffs[Math.floor((alpha / 2) * nDraws)], qHi = diffs[Math.floor((1 - alpha / 2) * nDraws)];
+  const postProbBgtA = countBgtA / nDraws;
+  const postMeanA = aA / (aA + bA), postMeanB = aB / (aB + bB);
+  const credLevel = 1 - alpha;
+
+  // BIC近似ベイズファクター（H0: pA=pB 対 H1: pA≠pB）— 2×2分割表と同じ考え方
+  const cross = Stat.contingencyChiSq([[xA, nA - xA], [xB, nB - xB]]);
+  const bic = Stat.bicBayesFactor(cross.chi2, cross.df, nA + nB);
+  const BF01 = bic.BF_indep_over_dep; // 「独立（差なし）：依存（差あり）」に対応
+  const BF10 = 1 / BF01;
+  const postProbNoDiff = BF01 / (BF01 + 1);
+
+  const grid = el('div', { class: 'compare-grid' });
+  grid.appendChild(el('div', { class: 'panel freq' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論']), el('h3', {}, ['2標本比率のz検定'])]),
+    statLine(`${abState.nameA} 比率`, fmt(pA, 4)),
+    statLine(`${abState.nameB} 比率`, fmt(pB, 4)),
+    statLine('比率差 (B − A)', fmt(diff, 4)),
+    statLine(`${pct(credLevel, 0)} 信頼区間（差）`, `[${fmt(diffCI[0], 4)}, ${fmt(diffCI[1], 4)}]`),
+    statLine('相対リスク (B/A)', fmt(rr, 3)),
+    statLine('オッズ比 (B/A)', `${fmt(orVal, 3)} [${fmt(orCI[0], 3)}, ${fmt(orCI[1], 3)}]`),
+    statLine('z統計量 / p値', `z=${fmt(z, 3)}, ${fmtp(pval)}`),
+    el('div', { class: 'verdict ' + (pval < alpha ? 'bad' : 'good') }, [
+      pval < alpha
+        ? `p = ${fmtp(pval)} < α = ${alpha} → 2群間の比率に有意差あり`
+        : `p = ${fmtp(pval)} ≥ α = ${alpha} → 有意差は認められない`
+    ]),
+  ]));
+  grid.appendChild(el('div', { class: 'panel bayes' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['独立Beta事後分布（モンテカルロ）'])]),
+    statLine(`${abState.nameA} 事後平均`, fmt(postMeanA, 4)),
+    statLine(`${abState.nameB} 事後平均`, fmt(postMeanB, 4)),
+    statLine(`${pct(credLevel, 0)} 信用区間（差）`, `[${fmt(qLo, 4)}, ${fmt(qHi, 4)}]`),
+    statLine(`P(${abState.nameB} > ${abState.nameA} | データ)`, pct(postProbBgtA, 1)),
+    statLine('ベイズファクター BF₁₀（差あり 対 差なし）', fmt(BF10, 4)),
+    el('div', { class: 'verdict ' + (BF10 > 3 || BF10 < 1 / 3 ? (BF10 > 1 ? 'bad' : 'good') : '') }, [
+      BF10 >= 1
+        ? `データは「差あり」を「差なし」の ${fmt(BF10, 2)} 倍支持 — ${kassRaftery(BF10)}`
+        : `データは「差なし」を「差あり」の ${fmt(1 / BF10, 2)} 倍支持 — ${kassRaftery(BF10)}`
+    ]),
+  ]));
+  host.appendChild(grid);
+
+  host.appendChild(el('div', { class: 'card axis-block' }, [
+    el('div', { class: 'axis-title' }, ['同一軸上の比率比較']),
+    intervalTwin({
+      axisMin: 0, axisMax: 1,
+      freqIv: { lo: Math.max(0, pA - zCrit * Math.sqrt(pA * (1 - pA) / nA)), hi: Math.min(1, pA + zCrit * Math.sqrt(pA * (1 - pA) / nA)), point: pA },
+      bayesIv: { lo: Stat.betaQuantile(alpha / 2, aB, bB), hi: Stat.betaQuantile(1 - alpha / 2, aB, bB), point: postMeanB },
+      refLine: pA, refLabel: `${abState.nameA}=${fmt(pA, 3)}`,
+      freqLabel: `${abState.nameA} CI`, bayesLabel: `${abState.nameB} CrI`,
+      tickFmt: v => v.toFixed(2)
+    })
+  ]));
+  host.appendChild(el('div', { class: 'card axis-block' }, [
+    el('div', { class: 'axis-title' }, ['p値の位置 と 「差あり」事後確率の位置']),
+    evidenceAxis({ pValue: pval, postProb: 1 - postProbNoDiff, alpha })
+  ]));
+
+  host.appendChild(el('div', { class: 'interp' }, [
+    el('h4', {}, ['読み方']),
+    el('div', { class: 'small-note' }, [
+      'A/Bテストは本質的に2×2分割表の独立性検定と同じデータ構造ですが、群間の「差の大きさ」（比率差・相対リスク・オッズ比）を主役に置く点が特徴です。頻度論はプールした分散を用いた2標本比率のz検定（2×2のカイ二乗検定と数学的に同値）で、信頼区間には非プール分散（Wald法）を使用しています。ベイズ側は両群を独立なBeta事後分布として推定し、モンテカルロ抽出により「Bの方が大きい事後確率」や比率差の信用区間を求めています。ベイズファクターは分割表タブと同じBIC近似を使用しており、JASPの',
+      el('code', {}, ['abtest']),
+      ' パッケージが用いる情報事前分布（log odds比への正規事前分布）による厳密なベイズファクターとは異なる近似値である点に注意してください（Rコードで比較できます）。'
+    ])
+  ]));
+
+  const freqText = `${abState.nameA}（n=${nA}, x=${xA}, 比率=${fmt(pA, 3)}）と${abState.nameB}（n=${nB}, x=${xB}, 比率=${fmt(pB, 3)}）の比率を2標本z検定で比較したところ、両群の比率は${pval < alpha ? '統計的に有意に異なっていた' : '統計的に有意には異ならなかった'}（z = ${fmt(z, 2)}, p = ${fmtp(pval)}, 比率差の${pct(credLevel, 0)}信頼区間 [${fmt(diffCI[0], 3)}, ${fmt(diffCI[1], 3)}]）。`;
+  const bayesText = `ベイズ的分析では、両群独立のBeta事後分布から比率差の${pct(credLevel, 0)}信用区間は [${fmt(qLo, 3)}, ${fmt(qHi, 3)}] と推定され、P(${abState.nameB} > ${abState.nameA} | データ) = ${pct(postProbBgtA, 1)} であった。BIC近似ベイズファクターは BF₁₀ = ${fmt(BF10, 3)} であり、${BF10 >= 1 ? '差があるモデル' : '差がないモデル'}を支持する${bfStrengthWord(BF10)}証拠と解釈された。`;
+  host.appendChild(manuscriptExample(freqText, bayesText));
+
+  const rCode = `# ==== データ ====
+nA <- ${rNum(nA, 0)}; xA <- ${rNum(xA, 0)}   # ${abState.nameA}
+nB <- ${rNum(nB, 0)}; xB <- ${rNum(xB, 0)}   # ${abState.nameB}
+alpha <- ${rNum(alpha)}
+
+# ==== 頻度論: 2標本比率のz検定（prop.test） ====
+freq_result <- prop.test(c(xA, xB), c(nA, nB), correct = FALSE)
+print(freq_result)
+
+# オッズ比・相対リスク（epitoolsパッケージ等でも計算可）
+pA <- xA / nA; pB <- xB / nB
+rr <- pB / pA
+or_val <- (xB / (nB - xB)) / (xA / (nA - xA))
+cat("相対リスク:", rr, " オッズ比:", or_val, "\\n")
+
+# ==== ベイズ: 独立Beta事後分布によるモンテカルロ推定 ====
+a0 <- ${rNum(a0)}; b0 <- ${rNum(b0)}
+set.seed(1)
+draws <- 100000
+pa_draws <- rbeta(draws, a0 + xA, b0 + (nA - xA))
+pb_draws <- rbeta(draws, a0 + xB, b0 + (nB - xB))
+diff_draws <- pb_draws - pa_draws
+cat("P(B > A):", mean(pb_draws > pa_draws), "\\n")
+cat("差の", 100 * (1 - alpha), "%信用区間:", quantile(diff_draws, c(alpha / 2, 1 - alpha / 2)), "\\n")
+
+# ==== JASP同様、informed prior による厳密なベイズファクター（abtestパッケージ） ====
+if (!requireNamespace("abtest", quietly = TRUE)) install.packages("abtest", repos = "https://cloud.r-project.org")
+library(abtest)
+ab <- ab_test(data = list(y1 = xA, n1 = nA, y2 = xB, n2 = nB))
+print(ab)
+# plot(ab)  # 事前分布・事後分布・BFの可視化
+`;
+  host.appendChild(rCodeBlock('A/BテストのRコード', rCode));
+}
+
+// ============================================================
+// タブ6: Informed 多項検定（順序制約つき仮説検定）
+// ============================================================
+const informedMultiState = {
+  rows: [
+    { name: 'カテゴリA', obs: 50, rank: 1 },
+    { name: 'カテゴリB', obs: 30, rank: 2 },
+    { name: 'カテゴリC', obs: 20, rank: 3 },
+  ],
+  concEach: 1,
+  alpha: 0.05,
+  nDraws: 50000,
+  inputMode: 'individual', rawVariables: null, rawRecords: null, rawExcluded: null, selectedVarName: null,
+};
+
+function parseInformedMultiAggregateCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) throw new Error('データが空です');
+  let dataRows = rows.slice();
+  if (dataRows[0].length >= 2 && !isNumericCell(dataRows[0][1])) dataRows = dataRows.slice(1);
+  if (dataRows.length < 3) throw new Error('カテゴリは3つ以上必要です');
+  const hasRank = dataRows.every(r => r.length >= 3 && isNumericCell(r[2]));
+  return dataRows.map((r, i) => ({
+    name: r[0] || ('カテゴリ' + (i + 1)),
+    obs: isNumericCell(r[1]) ? Number(r[1]) : 0,
+    rank: hasRank ? Number(r[2]) : i + 1,
+  }));
+}
+function applyInformedMultiParsedText(text, mode) {
+  if (mode === 'individual') {
+    const parsed = parseIndividualMultiCSV(text);
+    informedMultiState.rawVariables = parsed.variables;
+    informedMultiState.rawRecords = parsed.records;
+    informedMultiState.rawExcluded = parsed.excludedCols;
+    if (!informedMultiState.selectedVarName || !parsed.variables.some(v => v.name === informedMultiState.selectedVarName)) {
+      informedMultiState.selectedVarName = parsed.variables[0].name;
+    }
+    syncInformedMultiFromSelectedVariable();
+  } else {
+    informedMultiState.rows = parseInformedMultiAggregateCSV(text);
+    informedMultiState.rawVariables = null;
+  }
+  renderInformedMultiVarSelector();
+  renderInformedMultiTable(); computeInformedMulti();
+}
+function syncInformedMultiFromSelectedVariable() {
+  const v = informedMultiState.rawVariables.find(v => v.name === informedMultiState.selectedVarName);
+  const counts = {};
+  v.levels.forEach(l => { counts[l] = 0; });
+  informedMultiState.rawRecords.forEach(rec => { const val = rec[v.name]; if (val in counts) counts[val]++; });
+  informedMultiState.rows = v.levels.map((label, i) => ({ name: label, obs: counts[label], rank: i + 1 }));
+}
+function renderInformedMultiVarSelector() {
+  const host = document.getElementById('im-var-selector-host');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!informedMultiState.rawVariables) return;
+  const children = [];
+  if (informedMultiState.rawExcluded && informedMultiState.rawExcluded.length) {
+    children.push(el('div', { class: 'small-note', style: 'margin-bottom:8px;' }, [
+      `個体識別子とみなして自動的に除外した列: ${informedMultiState.rawExcluded.map(c => `「${c.name}」（一意な値 ${c.uniqueCount}件）`).join('、')}`
+    ]));
+  }
+  if (informedMultiState.rawVariables.length > 1) {
+    const select = el('select', { class: 'select-input' });
+    informedMultiState.rawVariables.forEach(v => {
+      const opt = el('option', { value: v.name }, [`${v.name}（${v.levels.length}カテゴリ）`]);
+      if (v.name === informedMultiState.selectedVarName) opt.setAttribute('selected', 'selected');
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      informedMultiState.selectedVarName = select.value;
+      syncInformedMultiFromSelectedVariable();
+      renderInformedMultiTable(); computeInformedMulti();
+    });
+    children.push(el('div', { class: 'field' }, [el('label', {}, ['集計する変数を選択（複数のカテゴリ列が見つかりました）']), select]));
+  }
+  if (children.length) host.appendChild(el('div', { class: 'card', style: 'background:#FAFAF8;' }, children));
+}
+
+function renderInformedMultiTab() {
+  const root = el('div', { class: 'tab-panel', id: 'panel-informed_multi' });
+  const card = el('div', { class: 'card' }, [
+    el('h2', {}, ['データ入力：Informed 多項検定']),
+    el('div', { class: 'desc' }, ['3つ以上のカテゴリについて、観測度数と「想定する順序」（順位）を入力してください。順位は1（最大）〜k（最小）の並び替えとして指定します。例えば p₁ > p₂ > p₃ という仮説なら、カテゴリ1に順位1、カテゴリ2に順位2、カテゴリ3に順位3を割り当てます。個票データを読み込むと度数分布表を自動作成します（順位は仮の値が入るため、読み込み後に編集してください）。']),
+    el('div', { id: 'im-var-selector-host' }),
+    el('div', { id: 'im-table-host' }),
+    el('div', { class: 'toolbar' }, [
+      el('button', { class: 'btn small ghost' }, ['+ カテゴリを追加']).also(b => b.addEventListener('click', () => {
+        informedMultiState.rows.push({ name: 'カテゴリ' + (informedMultiState.rows.length + 1), obs: 10, rank: informedMultiState.rows.length + 1 });
+        renderInformedMultiTable(); computeInformedMulti();
+      })),
+    ]),
+    el('div', { class: 'field-row', style: 'margin-top:14px;' }, [
+      field('有意水準 α', 'number', informedMultiState.alpha, v => { informedMultiState.alpha = +v; computeInformedMulti(); }, 'im-alpha', '', 0.01),
+      field('Dirichlet事前濃度（各カテゴリ共通）', 'number', informedMultiState.concEach, v => { informedMultiState.concEach = Math.max(0.01, +v); computeInformedMulti(); }, 'im-conc', '順序制約の事前確率 1/k! を仮定するため全カテゴリで共通の値を使用', 0.5),
+    ]),
+    el('div', { class: 'input-divider' }, ['ファイル / 貼り付けで読み込み']),
+    modeToggle('im-mode', informedMultiState.inputMode, (v) => { informedMultiState.inputMode = v; }),
+    createDropZone(
+      '個票データ（1行=1個体、1列以上。ID列は自動除外）、または集計済みの「カテゴリ名,観測度数,[順位]」',
+      (text) => applyInformedMultiParsedText(text, informedMultiState.inputMode)
+    ),
+    el('div', { class: 'input-divider' }, ['または貼り付け']),
+    createPasteArea(
+      '個票データの例（1行=1個体）:\nresponse\nA\nB\nA\nC\n...\n\n集計済みの例（順位は省略可）:\ncategory,count,rank\nカテゴリA,50,1\nカテゴリB,30,2\nカテゴリC,20,3',
+      (text) => applyInformedMultiParsedText(text, informedMultiState.inputMode)
+    ),
+  ]);
+  root.appendChild(card);
+  root.appendChild(el('div', { id: 'im-results' }));
+  return root;
+}
+function renderInformedMultiTable() {
+  const host = document.getElementById('im-table-host');
+  if (!host) return;
+  host.innerHTML = '';
+  const table = el('table', { class: 'dtable' });
+  table.appendChild(el('tr', {}, [el('th', {}, ['カテゴリ名']), el('th', {}, ['観測度数']), el('th', {}, ['順位（1=最大）']), el('th', {}, [''])]));
+  informedMultiState.rows.forEach((row, i) => {
+    const nameInput = el('input', { type: 'text', value: row.name });
+    nameInput.addEventListener('input', () => { row.name = nameInput.value; computeInformedMulti(); });
+    const obsInput = el('input', { type: 'number', value: row.obs, min: '0' });
+    obsInput.addEventListener('input', () => { row.obs = +obsInput.value; computeInformedMulti(); });
+    const rankInput = el('input', { type: 'number', value: row.rank, min: '1', step: '1' });
+    rankInput.addEventListener('input', () => { row.rank = +rankInput.value; computeInformedMulti(); });
+    const delBtn = el('button', { class: 'row-del' }, ['✕']);
+    delBtn.addEventListener('click', () => {
+      if (informedMultiState.rows.length <= 3) return;
+      informedMultiState.rows.splice(i, 1); renderInformedMultiTable(); computeInformedMulti();
+    });
+    table.appendChild(el('tr', {}, [el('td', {}, [nameInput]), el('td', {}, [obsInput]), el('td', {}, [rankInput]), el('td', {}, [delBtn])]));
+  });
+  host.appendChild(table);
+}
+function validateRanks(rows) {
+  const k = rows.length;
+  const ranks = rows.map(r => r.rank);
+  const sorted = ranks.slice().sort((a, b) => a - b);
+  for (let i = 0; i < k; i++) if (sorted[i] !== i + 1) return false;
+  return true;
+}
+function computeInformedMulti() {
+  const host = document.getElementById('im-results');
+  if (!host) return;
+  host.innerHTML = '';
+  const rows = informedMultiState.rows;
+  const obs = rows.map(r => r.obs);
+  const k = rows.length;
+  const alpha = informedMultiState.alpha;
+  if (k < 3 || obs.some(o => !isFinite(o) || o < 0)) {
+    host.appendChild(el('div', { class: 'card' }, ['入力値を確認してください（カテゴリは3つ以上、度数は0以上の有限の数値）。']));
+    return;
+  }
+  if (!validateRanks(rows)) {
+    host.appendChild(el('div', { class: 'card' }, [`順位が正しくありません。1〜${k}を1回ずつ使う並び替えにしてください。`]));
+    return;
+  }
+  const n = obs.reduce((a, b) => a + b, 0);
+  const rankOrder = rows.map((r, i) => i).sort((a, b) => rows[a].rank - rows[b].rank); // 大きい順のインデックス列
+  const alphaVec = rows.map(() => informedMultiState.concEach);
+  const uniformP0 = rows.map(() => 1 / k);
+
+  // 等質性検定（H0: 全カテゴリ均等）— 既存の多項検定と同じ枠組み
+  const gof = Stat.chiSqGOF(obs, uniformP0);
+  const logml1 = Stat.dirichletMultinomialLogML(obs, alphaVec);
+  const logml0 = Stat.multinomialLogLikNull(obs, uniformP0);
+  const BF_u0 = Math.exp(logml1 - logml0); // 自由推定(u) 対 均等(0)
+
+  // 順序制約つきベイズファクター（エンカプシング事前分布法, モンテカルロ）
+  const nDraws = informedMultiState.nDraws;
+  const priorProb = Stat.orderConstraintProb(() => Stat.sampleDirichlet(alphaVec), rankOrder, nDraws);
+  const alphaPost = rows.map((r, i) => alphaVec[i] + obs[i]);
+  const postProb = Stat.orderConstraintProb(() => Stat.sampleDirichlet(alphaPost), rankOrder, nDraws);
+  const priorProbSafe = Math.max(priorProb, 1 / nDraws);
+  const postProbSafe = Math.max(postProb, 1 / nDraws);
+  const BF_1u = postProbSafe / priorProbSafe;
+  const BF_10 = BF_1u * BF_u0;
+
+  // 3モデルの事後確率（事前モデル確率1:1:1と仮定）: Hu, H1(順序), H0(均等)
+  const wU = 1, w1 = BF_1u, w0 = 1 / BF_u0;
+  const wsum = wU + w1 + w0;
+  const postProbU = wU / wsum, postProb1 = w1 / wsum, postProb0 = w0 / wsum;
+
+  // 頻度論の代替: 隣接順位ペアの片側z検定（Intersection-Union法）
+  const pHat = obs.map(o => o / n);
+  const pairTests = [];
+  for (let j = 0; j < rankOrder.length - 1; j++) {
+    const i1 = rankOrder[j], i2 = rankOrder[j + 1];
+    const p1 = pHat[i1], p2 = pHat[i2];
+    const varDiff = ((p1 + p2) - (p1 - p2) * (p1 - p2)) / n; // 同一多項標本内の共分散を考慮
+    const zStat = varDiff > 0 ? (p1 - p2) / Math.sqrt(varDiff) : (p1 > p2 ? Infinity : 0);
+    const pOneSided = 1 - Stat.normalCDF(zStat);
+    pairTests.push({ nameHi: rows[i1].name, nameLo: rows[i2].name, p1, p2, z: zStat, p: pOneSided });
+  }
+  const iuP = Math.max(...pairTests.map(t => t.p)); // Intersection-Union: 最大のp値で判定
+  const iuSupported = iuP < alpha;
+
+  const grid = el('div', { class: 'compare-grid' });
+  const ptRows = pairTests.map(t => `${t.nameHi}(${fmt(t.p1, 3)}) > ${t.nameLo}(${fmt(t.p2, 3)}): z=${fmt(t.z, 2)}, p=${fmtp(t.p)}`);
+  grid.appendChild(el('div', { class: 'panel freq' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論（代替）']), el('h3', {}, ['隣接順位の片側検定（Intersection-Union法）'])]),
+    ...ptRows.map(r => el('div', { class: 'stat-line', style: 'font-size:12.5px;' }, [el('span', { class: 'k' }, [r])])),
+    statLine('均等性のカイ二乗検定 p値（参考）', fmtp(gof.pChi2)),
+    el('div', { class: 'verdict ' + (iuSupported ? 'good' : 'bad') }, [
+      iuSupported
+        ? `すべての隣接ペアが有意（最大p = ${fmtp(iuP)} < α = ${alpha}）→ 指定した順序仮説を支持`
+        : `一部の隣接ペアが非有意（最大p = ${fmtp(iuP)} ≥ α = ${alpha}）→ 順序仮説を統計的に支持できない`
+    ]),
+  ]));
+  grid.appendChild(el('div', { class: 'panel bayes' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['エンカプシング事前分布法（モンテカルロ）'])]),
+    statLine('P(順序制約 | 事前分布)', fmt(priorProb, 4)),
+    statLine('P(順序制約 | 事後分布)', fmt(postProb, 4)),
+    statLine('BF₁ᵤ（順序制約 対 無制約）', fmt(BF_1u, 3)),
+    statLine('BFᵤ₀（無制約 対 均等）', fmt(BF_u0, 3)),
+    statLine('BF₁₀（順序制約 対 均等）', fmt(BF_10, 3)),
+    statLine('事後モデル確率 [Hu, H₁順序, H₀均等]', `${pct(postProbU, 1)}, ${pct(postProb1, 1)}, ${pct(postProb0, 1)}`),
+    el('div', { class: 'verdict ' + (BF_1u > 3 ? 'good' : (BF_1u < 1 / 3 ? 'bad' : '')) }, [
+      BF_1u >= 1
+        ? `データは順序制約仮説を無制約モデルの ${fmt(BF_1u, 2)} 倍支持 — ${kassRaftery(BF_1u)}`
+        : `データは無制約モデルを順序制約仮説の ${fmt(1 / BF_1u, 2)} 倍支持 — ${kassRaftery(BF_1u)}`
+    ]),
+  ]));
+  host.appendChild(grid);
+
+  // カテゴリ別の内訳
+  const mtable = el('table', { class: 'mtable' });
+  mtable.appendChild(el('tr', {}, [el('th', {}, ['カテゴリ']), el('th', {}, ['指定順位']), el('th', {}, ['観測度数']), el('th', {}, ['観測比率']), el('th', {}, ['事後平均']), el('th', {}, [`ベイズ${pct(1 - alpha, 0)}CrI`])]));
+  const marg = Stat.dirichletMarginalCI(obs, alphaVec, 1 - alpha);
+  rows.forEach((r, i) => {
+    mtable.appendChild(el('tr', {}, [
+      el('td', {}, [r.name]), el('td', {}, [String(r.rank)]), el('td', {}, [String(obs[i])]),
+      el('td', {}, [fmt(pHat[i], 3)]), el('td', {}, [fmt(marg[i].mean, 3)]), el('td', {}, [`[${fmt(marg[i].lo, 3)}, ${fmt(marg[i].hi, 3)}]`]),
+    ]));
+  });
+  host.appendChild(el('div', { class: 'card' }, [el('h2', {}, ['カテゴリ別の内訳']), mtable]));
+
+  host.appendChild(el('div', { class: 'interp' }, [
+    el('h4', {}, ['読み方']),
+    el('div', { class: 'small-note' }, [
+      'Informed（順序制約つき）検定は、「どのカテゴリがどのカテゴリより多いか」という具体的な順序仮説を、順序を問わない自由推定モデル（Hu）や、全カテゴリが均等（H₀）というモデルと比較します。頻度論には順序制約検定の標準手法（カイ二乗混合分布によるorder-restricted尤度比検定）が存在しますが実装が複雑なため、ここでは近似的な代替として隣接する順位ペアそれぞれに片側2標本比率検定を行い、すべて有意であれば順序仮説を支持するとみなすIntersection-Union法を採用しています。ベイズ側は',
+      el('code', {}, ['Klugkist & Hoijtink (2007)']),
+      ' のエンカプシング事前分布法に基づき、無制約のDirichlet事前分布・事後分布それぞれから乱数を発生させ、指定した順序を満たす割合の比（事後÷事前）としてベイズファクターBF₁ᵤを推定しています（モンテカルロ標本数: ' + nDraws.toLocaleString() + '）。'
+    ])
+  ]));
+
+  const orderText = rankOrder.map(i => rows[i].name).join(' > ');
+  const freqText = `${k}つのカテゴリ（観測度数の合計 N = ${n}）について、順序仮説 ${orderText} を隣接順位ペアの片側検定（Intersection-Union法）で検討したところ、${iuSupported ? 'すべての隣接比較が有意であり（最大 p = ' + fmtp(iuP) + '）、指定した順序が統計的に支持された' : '一部の隣接比較が有意でなく（最大 p = ' + fmtp(iuP) + '）、指定した順序を統計的に支持する証拠は得られなかった'}。`;
+  const bayesText = `ベイズ的分析では、エンカプシング事前分布法（Klugkist & Hoijtink, 2007）により、順序仮説 ${orderText} を支持するベイズファクターは無制約モデルに対して BF₁ᵤ = ${fmt(BF_1u, 3)}、均等モデルに対して BF₁₀ = ${fmt(BF_10, 3)} であり、${BF_1u >= 1 ? '順序仮説を支持する' : '順序仮説を支持しない'}${bfStrengthWord(BF_1u)}証拠と解釈された。`;
+  host.appendChild(manuscriptExample(freqText, bayesText));
+
+  const rCode = `# ==== データ（個票から作成した度数分布表） ====
+observed <- ${rVec(obs)}
+names(observed) <- ${rVec(rows.map(r => r.name))}
+factor_levels <- ${rVec(rows.map(r => r.name))}   # observedと同じ並び順
+# 指定した順序仮説（大きい順）: ${orderText}
+alpha <- ${rNum(alpha)}
+
+# ==== 頻度論（参考）: 均等性のカイ二乗適合度検定 ====
+print(chisq.test(observed))
+
+# ==== ベイズ: Informed 多項検定（multibridgeパッケージ） ====
+if (!requireNamespace("multibridge", quietly = TRUE)) install.packages("multibridge", repos = "https://cloud.r-project.org")
+library(multibridge)
+# Hrは「小さい順」に "<" で連結して指定する（多重比較も "," や "&" でつなげられます）
+Hr <- ${buildMultibridgeHrVec(rows.map(r => r.name), rankOrder)}
+result <- mult_bf_informed(x = observed, Hr = Hr,
+                            a = rep(${rNum(informedMultiState.concEach)}, length(observed)),
+                            factor_levels = factor_levels, seed = 1, niter = 5000)
+summary(result)
+
+# ==== 上記と同じ考え方の簡易実装（エンカプシング事前分布法・モンテカルロ） ====
+if (!requireNamespace("gtools", quietly = TRUE)) install.packages("gtools", repos = "https://cloud.r-project.org")
+set.seed(1)
+draws <- ${rNum(nDraws, 0)}
+alpha_vec <- rep(${rNum(informedMultiState.concEach)}, length(observed))
+prior_draws <- gtools::rdirichlet(draws, alpha_vec)
+post_draws  <- gtools::rdirichlet(draws, alpha_vec + observed)
+order_idx <- order(-c(${rankOrder.map(i => i + 1).join(', ')}))  # 大きい順のインデックス
+check_order <- function(m) {
+  apply(m, 1, function(p) all(diff(p[order_idx]) < 0))
+}
+prior_p <- mean(check_order(prior_draws))
+post_p  <- mean(check_order(post_draws))
+BF_1u <- post_p / prior_p
+cat("BF_1u:", BF_1u, "\\n")
+`;
+  host.appendChild(rCodeBlock('Informed多項検定のRコード', rCode));
+}
+
+// ============================================================
+// タブ7: Informed 多重二項検定（複数の独立した二項比率の順序制約検定）
+// ============================================================
+const informedBinomState = {
+  rows: [
+    { name: 'グループ1', n: 100, x: 70, rank: 1 },
+    { name: 'グループ2', n: 100, x: 50, rank: 2 },
+    { name: 'グループ3', n: 100, x: 30, rank: 3 },
+  ],
+  a0: 1, b0: 1,
+  alpha: 0.05,
+  nDraws: 50000,
+  inputMode: 'individual', rawGroupVar: null, rawOutcomeVar: null, rawRecords: null, rawExcluded: null, successCategory: null,
+};
+
+function parseInformedBinomAggregateCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) throw new Error('データが空です');
+  let dataRows = rows.slice();
+  if (dataRows[0].length >= 2 && !isNumericCell(dataRows[0][1])) dataRows = dataRows.slice(1);
+  if (dataRows.length < 3) throw new Error('グループは3つ以上必要です');
+  const hasRank = dataRows.every(r => r.length >= 4 && isNumericCell(r[3]));
+  return dataRows.map((r, i) => ({
+    name: r[0] || ('グループ' + (i + 1)),
+    n: Number(r[1]), x: Number(r[2]),
+    rank: hasRank ? Number(r[3]) : i + 1,
+  }));
+}
+function applyInformedBinomParsedText(text, mode) {
+  if (mode === 'individual') {
+    const parsed = detectCategoricalColumnsCSV(text, 2);
+    const groupVar = parsed.variables[0], outcomeVar = parsed.variables[1];
+    if (outcomeVar.levels.length !== 2) throw new Error('結果列は2水準（成功/失敗など）である必要があります');
+    if (groupVar.levels.length < 3) throw new Error('グループ列は3水準（3グループ）以上が必要です。2グループの場合は「A/Bテスト」タブをご利用ください');
+    informedBinomState.rawGroupVar = groupVar;
+    informedBinomState.rawOutcomeVar = outcomeVar;
+    informedBinomState.rawRecords = parsed.records;
+    informedBinomState.rawExcluded = parsed.excludedCols;
+    if (!informedBinomState.successCategory || !outcomeVar.levels.includes(informedBinomState.successCategory)) {
+      informedBinomState.successCategory = outcomeVar.levels[0];
+    }
+    syncInformedBinomFromRaw();
+  } else {
+    informedBinomState.rows = parseInformedBinomAggregateCSV(text);
+    informedBinomState.rawGroupVar = null;
+  }
+  renderInformedBinomFreqInfo();
+  renderInformedBinomTable(); computeInformedBinom();
+}
+function syncInformedBinomFromRaw() {
+  const gv = informedBinomState.rawGroupVar, ov = informedBinomState.rawOutcomeVar;
+  const recs = informedBinomState.rawRecords, successCategory = informedBinomState.successCategory;
+  informedBinomState.rows = gv.levels.map((gl, i) => {
+    const groupRecs = recs.filter(r => r[gv.name] === gl);
+    const n = groupRecs.length;
+    const x = groupRecs.filter(r => r[ov.name] === successCategory).length;
+    return { name: gl, n, x, rank: i + 1 };
+  });
+}
+function renderInformedBinomFreqInfo() {
+  const host = document.getElementById('ib-freq-info-host');
+  if (!host) return;
+  host.innerHTML = '';
+  const gv = informedBinomState.rawGroupVar;
+  if (!gv) return;
+  const ov = informedBinomState.rawOutcomeVar;
+  const children = [];
+  if (informedBinomState.rawExcluded && informedBinomState.rawExcluded.length) {
+    children.push(el('div', { class: 'small-note', style: 'margin-bottom:8px;' }, [
+      `個体識別子とみなして自動的に除外した列: ${informedBinomState.rawExcluded.map(c => `「${c.name}」（一意な値 ${c.uniqueCount}件）`).join('、')}`
+    ]));
+  }
+  const select = el('select', { class: 'select-input' });
+  ov.levels.forEach(l => {
+    const opt = el('option', { value: l }, [l]);
+    if (l === informedBinomState.successCategory) opt.setAttribute('selected', 'selected');
+    select.appendChild(opt);
+  });
+  select.addEventListener('change', () => {
+    informedBinomState.successCategory = select.value;
+    syncInformedBinomFromRaw();
+    renderInformedBinomTable(); computeInformedBinom();
+  });
+  children.push(el('div', { class: 'desc' }, [`変数「${gv.name}」（群）×「${ov.name}」（結果）を集計しました。「成功」とみなす結果を選んでください。`]));
+  children.push(el('div', { class: 'field' }, [el('label', {}, ['成功とみなす結果']), select]));
+  host.appendChild(el('div', { class: 'card', style: 'background:#FAFAF8;' }, children));
+}
+
+function renderInformedBinomTab() {
+  const root = el('div', { class: 'tab-panel', id: 'panel-informed_binom' });
+  const card = el('div', { class: 'card' }, [
+    el('h2', {}, ['データ入力：Informed 多重二項検定']),
+    el('div', { class: 'desc' }, ['3つ以上の独立したグループ（それぞれ試行回数・成功数を持つ独立な二項分布）について、観測データと「想定する順序」（順位）を入力してください。多項検定と異なり、各グループの比率は互いに独立です（例：異なる用量群での反応率、異なる学年での賛成率など）。個票データを読み込むと自動的に集計します（順位は仮の値が入るため、読み込み後に編集してください）。']),
+    el('div', { id: 'ib-freq-info-host' }),
+    el('div', { id: 'ib-table-host' }),
+    el('div', { class: 'toolbar' }, [
+      el('button', { class: 'btn small ghost' }, ['+ グループを追加']).also(b => b.addEventListener('click', () => {
+        informedBinomState.rows.push({ name: 'グループ' + (informedBinomState.rows.length + 1), n: 100, x: 50, rank: informedBinomState.rows.length + 1 });
+        renderInformedBinomTable(); computeInformedBinom();
+      })),
+    ]),
+    el('div', { class: 'field-row', style: 'margin-top:14px;' }, [
+      field('有意水準 α', 'number', informedBinomState.alpha, v => { informedBinomState.alpha = +v; computeInformedBinom(); }, 'ib-alpha', '', 0.01),
+      field('事前分布 Beta(a₀,', 'number', informedBinomState.a0, v => { informedBinomState.a0 = Math.max(0.01, +v); computeInformedBinom(); }, 'ib-a0', 'a₀（全グループ共通）', 0.5),
+      field('b₀)', 'number', informedBinomState.b0, v => { informedBinomState.b0 = Math.max(0.01, +v); computeInformedBinom(); }, 'ib-b0', 'b₀', 0.5),
+    ]),
+    el('div', { class: 'input-divider' }, ['ファイル / 貼り付けで読み込み']),
+    modeToggle('ib-mode', informedBinomState.inputMode, (v) => { informedBinomState.inputMode = v; }),
+    createDropZone(
+      '個票データ（1行=1個体、2列：グループ・結果。ID列は自動除外）、または集計済みの「グループ名,n,x,[順位]」',
+      (text) => applyInformedBinomParsedText(text, informedBinomState.inputMode)
+    ),
+    el('div', { class: 'input-divider' }, ['または貼り付け']),
+    createPasteArea(
+      '個票データの例（1行=1個体）:\ngroup,outcome\nグループ1,成功\nグループ1,失敗\nグループ2,成功\n...\n\n集計済みの例（順位は省略可）:\nname,n,x,rank\nグループ1,100,70,1\nグループ2,100,50,2\nグループ3,100,30,3',
+      (text) => applyInformedBinomParsedText(text, informedBinomState.inputMode)
+    ),
+  ]);
+  root.appendChild(card);
+  root.appendChild(el('div', { id: 'ib-results' }));
+  return root;
+}
+function renderInformedBinomTable() {
+  const host = document.getElementById('ib-table-host');
+  if (!host) return;
+  host.innerHTML = '';
+  const table = el('table', { class: 'dtable' });
+  table.appendChild(el('tr', {}, [el('th', {}, ['グループ名']), el('th', {}, ['試行回数 n']), el('th', {}, ['成功数 x']), el('th', {}, ['順位（1=最大）']), el('th', {}, [''])]));
+  informedBinomState.rows.forEach((row, i) => {
+    const nameInput = el('input', { type: 'text', value: row.name });
+    nameInput.addEventListener('input', () => { row.name = nameInput.value; computeInformedBinom(); });
+    const nInput = el('input', { type: 'number', value: row.n, min: '0' });
+    nInput.addEventListener('input', () => { row.n = +nInput.value; computeInformedBinom(); });
+    const xInput = el('input', { type: 'number', value: row.x, min: '0' });
+    xInput.addEventListener('input', () => { row.x = +xInput.value; computeInformedBinom(); });
+    const rankInput = el('input', { type: 'number', value: row.rank, min: '1', step: '1' });
+    rankInput.addEventListener('input', () => { row.rank = +rankInput.value; computeInformedBinom(); });
+    const delBtn = el('button', { class: 'row-del' }, ['✕']);
+    delBtn.addEventListener('click', () => {
+      if (informedBinomState.rows.length <= 3) return;
+      informedBinomState.rows.splice(i, 1); renderInformedBinomTable(); computeInformedBinom();
+    });
+    table.appendChild(el('tr', {}, [el('td', {}, [nameInput]), el('td', {}, [nInput]), el('td', {}, [xInput]), el('td', {}, [rankInput]), el('td', {}, [delBtn])]));
+  });
+  host.appendChild(table);
+}
+function computeInformedBinom() {
+  const host = document.getElementById('ib-results');
+  if (!host) return;
+  host.innerHTML = '';
+  const rows = informedBinomState.rows;
+  const k = rows.length;
+  const alpha = informedBinomState.alpha;
+  const a0 = informedBinomState.a0, b0 = informedBinomState.b0;
+  if (k < 3 || rows.some(r => !isFinite(r.n) || !isFinite(r.x) || r.n <= 0 || r.x < 0 || r.x > r.n)) {
+    host.appendChild(el('div', { class: 'card' }, ['入力値を確認してください（グループは3つ以上、0 ≤ x ≤ n、n > 0）。']));
+    return;
+  }
+  if (!validateRanks(rows)) {
+    host.appendChild(el('div', { class: 'card' }, [`順位が正しくありません。1〜${k}を1回ずつ使う並び替えにしてください。`]));
+    return;
+  }
+  const rankOrder = rows.map((r, i) => i).sort((a, b) => rows[a].rank - rows[b].rank);
+  const pHat = rows.map(r => r.x / r.n);
+  const N = rows.reduce((s, r) => s + r.n, 0);
+
+  // 等質性検定（H0: 全グループの比率が等しい）— k×2分割表として扱う
+  const table2 = rows.map(r => [r.x, r.n - r.x]);
+  const cross = Stat.contingencyChiSq(table2);
+  const bic = Stat.bicBayesFactor(cross.chi2, cross.df, N);
+  const BF_0u = bic.BF_indep_over_dep; // 独立(=全比率等しい,0) 対 依存(=比率が異なる,u)
+  const BF_u0 = 1 / BF_0u;
+
+  // 順序制約つきベイズファクター（独立Betaのエンカプシング事前分布法, モンテカルロ）
+  const nDraws = informedBinomState.nDraws;
+  const priorProb = Stat.orderConstraintProb(() => rows.map(() => Stat.sampleBeta(a0, b0)), rankOrder, nDraws);
+  const postProb = Stat.orderConstraintProb(() => rows.map(r => Stat.sampleBeta(a0 + r.x, b0 + (r.n - r.x))), rankOrder, nDraws);
+  const priorProbSafe = Math.max(priorProb, 1 / nDraws);
+  const postProbSafe = Math.max(postProb, 1 / nDraws);
+  const BF_1u = postProbSafe / priorProbSafe;
+  const BF_10 = BF_1u * BF_u0;
+
+  const wU = 1, w1 = BF_1u, w0 = BF_0u;
+  const wsum = wU + w1 + w0;
+  const postProbU = wU / wsum, postProb1 = w1 / wsum, postProb0 = w0 / wsum;
+
+  // 頻度論の代替: 隣接順位ペアの片側2標本比率検定（独立群、Intersection-Union法）
+  const pairTests = [];
+  for (let j = 0; j < rankOrder.length - 1; j++) {
+    const i1 = rankOrder[j], i2 = rankOrder[j + 1];
+    const p1 = pHat[i1], p2 = pHat[i2], n1 = rows[i1].n, n2 = rows[i2].n;
+    const varDiff = p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2;
+    const zStat = varDiff > 0 ? (p1 - p2) / Math.sqrt(varDiff) : (p1 > p2 ? Infinity : 0);
+    const pOneSided = 1 - Stat.normalCDF(zStat);
+    pairTests.push({ nameHi: rows[i1].name, nameLo: rows[i2].name, p1, p2, z: zStat, p: pOneSided });
+  }
+  const iuP = Math.max(...pairTests.map(t => t.p));
+  const iuSupported = iuP < alpha;
+
+  const grid = el('div', { class: 'compare-grid' });
+  const ptRows = pairTests.map(t => `${t.nameHi}(${fmt(t.p1, 3)}) > ${t.nameLo}(${fmt(t.p2, 3)}): z=${fmt(t.z, 2)}, p=${fmtp(t.p)}`);
+  grid.appendChild(el('div', { class: 'panel freq' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['頻度論（代替）']), el('h3', {}, ['隣接順位の片側検定（Intersection-Union法）'])]),
+    ...ptRows.map(r => el('div', { class: 'stat-line', style: 'font-size:12.5px;' }, [el('span', { class: 'k' }, [r])])),
+    statLine('等質性のカイ二乗検定', `χ²(${cross.df}) = ${fmt(cross.chi2, 2)}, p = ${fmtp(cross.pChi2)}`),
+    el('div', { class: 'verdict ' + (iuSupported ? 'good' : 'bad') }, [
+      iuSupported
+        ? `すべての隣接ペアが有意（最大p = ${fmtp(iuP)} < α = ${alpha}）→ 指定した順序仮説を支持`
+        : `一部の隣接ペアが非有意（最大p = ${fmtp(iuP)} ≥ α = ${alpha}）→ 順序仮説を統計的に支持できない`
+    ]),
+  ]));
+  grid.appendChild(el('div', { class: 'panel bayes' }, [
+    el('div', { class: 'panel-head' }, [el('span', { class: 'tag' }, ['ベイズ']), el('h3', {}, ['独立Betaのエンカプシング事前分布法'])]),
+    statLine('P(順序制約 | 事前分布)', fmt(priorProb, 4)),
+    statLine('P(順序制約 | 事後分布)', fmt(postProb, 4)),
+    statLine('BF₁ᵤ（順序制約 対 無制約）', fmt(BF_1u, 3)),
+    statLine('BFᵤ₀（無制約 対 均等）', fmt(BF_u0, 3)),
+    statLine('BF₁₀（順序制約 対 均等）', fmt(BF_10, 3)),
+    statLine('事後モデル確率 [Hu, H₁順序, H₀均等]', `${pct(postProbU, 1)}, ${pct(postProb1, 1)}, ${pct(postProb0, 1)}`),
+    el('div', { class: 'verdict ' + (BF_1u > 3 ? 'good' : (BF_1u < 1 / 3 ? 'bad' : '')) }, [
+      BF_1u >= 1
+        ? `データは順序制約仮説を無制約モデルの ${fmt(BF_1u, 2)} 倍支持 — ${kassRaftery(BF_1u)}`
+        : `データは無制約モデルを順序制約仮説の ${fmt(1 / BF_1u, 2)} 倍支持 — ${kassRaftery(BF_1u)}`
+    ]),
+  ]));
+  host.appendChild(grid);
+
+  const mtable = el('table', { class: 'mtable' });
+  mtable.appendChild(el('tr', {}, [el('th', {}, ['グループ']), el('th', {}, ['指定順位']), el('th', {}, ['n']), el('th', {}, ['x']), el('th', {}, ['観測比率']), el('th', {}, ['ベイズ事後平均']), el('th', {}, [`ベイズ${pct(1 - alpha, 0)}CrI`])]));
+  rows.forEach((r, i) => {
+    const aPost = a0 + r.x, bPost = b0 + (r.n - r.x);
+    const mean = aPost / (aPost + bPost);
+    const lo = Stat.betaQuantile(alpha / 2, aPost, bPost), hi = Stat.betaQuantile(1 - alpha / 2, aPost, bPost);
+    mtable.appendChild(el('tr', {}, [
+      el('td', {}, [r.name]), el('td', {}, [String(r.rank)]), el('td', {}, [String(r.n)]), el('td', {}, [String(r.x)]),
+      el('td', {}, [fmt(pHat[i], 3)]), el('td', {}, [fmt(mean, 3)]), el('td', {}, [`[${fmt(lo, 3)}, ${fmt(hi, 3)}]`]),
+    ]));
+  });
+  host.appendChild(el('div', { class: 'card' }, [el('h2', {}, ['グループ別の内訳']), mtable]));
+
+  host.appendChild(el('div', { class: 'interp' }, [
+    el('h4', {}, ['読み方']),
+    el('div', { class: 'small-note' }, [
+      '多重二項検定は、複数の「独立した」二項比率（例：異なる用量群の反応率）について順序仮説を検討する点が多項検定（1つの標本内でのカテゴリ構成比の比較）と異なります。頻度論の代替として、隣接する順位ペアごとに独立2標本比率のz検定（多項検定のような共分散項なし）を行い、すべて有意なら順序仮説を支持するとみなすIntersection-Union法を用いています。ベイズ側は各グループの比率を独立なBeta事後分布として推定し、',
+      el('code', {}, ['Klugkist & Hoijtink (2007)']),
+      ' のエンカプシング事前分布法により、指定した順序を満たす確率の事後/事前比としてベイズファクターBF₁ᵤを求めています。全グループに共通の事前分布 Beta(a₀,b₀) を用いることで、順序制約の事前確率が理論上 1/k!（kはグループ数）になる対称性を利用しています。'
+    ])
+  ]));
+
+  const orderText = rankOrder.map(i => rows[i].name).join(' > ');
+  const freqText = `${k}個の独立したグループ（合計 N = ${N}）について、順序仮説 ${orderText} を隣接順位ペアの片側検定（Intersection-Union法）で検討したところ、${iuSupported ? 'すべての隣接比較が有意であり（最大 p = ' + fmtp(iuP) + '）、指定した順序が統計的に支持された' : '一部の隣接比較が有意でなく（最大 p = ' + fmtp(iuP) + '）、指定した順序を統計的に支持する証拠は得られなかった'}。参考として、全グループの比率が等しいという帰無仮説に対するカイ二乗検定は χ²(${cross.df}) = ${fmt(cross.chi2, 2)}, p = ${fmtp(cross.pChi2)} であった。`;
+  const bayesText = `ベイズ的分析では、エンカプシング事前分布法により、順序仮説 ${orderText} を支持するベイズファクターは無制約モデルに対して BF₁ᵤ = ${fmt(BF_1u, 3)}、均等モデルに対して BF₁₀ = ${fmt(BF_10, 3)} であり、${BF_1u >= 1 ? '順序仮説を支持する' : '順序仮説を支持しない'}${bfStrengthWord(BF_1u)}証拠と解釈された。`;
+  host.appendChild(manuscriptExample(freqText, bayesText));
+
+  const rCode = `# ==== データ ====
+n_vec <- ${rVec(rows.map(r => r.n))}
+x_vec <- ${rVec(rows.map(r => r.x))}
+names(n_vec) <- names(x_vec) <- ${rVec(rows.map(r => r.name))}
+factor_levels <- ${rVec(rows.map(r => r.name))}   # x_vec/n_vecと同じ並び順
+# 指定した順序仮説（大きい順）: ${orderText}
+alpha <- ${rNum(alpha)}
+
+# ==== 頻度論（参考）: 等質性のカイ二乗検定 ====
+tab <- cbind(success = x_vec, failure = n_vec - x_vec)
+print(chisq.test(tab))
+
+# ==== ベイズ: Informed 多重二項検定（multibridgeパッケージ） ====
+if (!requireNamespace("multibridge", quietly = TRUE)) install.packages("multibridge", repos = "https://cloud.r-project.org")
+library(multibridge)
+# Hrは「小さい順」に "<" で連結して指定する
+Hr <- ${buildMultibridgeHrVec(rows.map(r => r.name), rankOrder)}
+result <- binom_bf_informed(x = x_vec, n = n_vec, Hr = Hr,
+                             a = rep(${rNum(a0)}, length(x_vec)), b = rep(${rNum(b0)}, length(x_vec)),
+                             factor_levels = factor_levels, seed = 1, niter = 5000)
+summary(result)
+
+# ==== 上記と同じ考え方の簡易実装（独立Betaのエンカプシング事前分布法） ====
+set.seed(1)
+draws <- ${rNum(nDraws, 0)}
+k <- length(n_vec)
+order_idx <- order(-c(${rankOrder.map(i => i + 1).join(', ')}))
+prior_mat <- sapply(1:k, function(i) rbeta(draws, ${rNum(a0)}, ${rNum(b0)}))
+post_mat  <- sapply(1:k, function(i) rbeta(draws, ${rNum(a0)} + x_vec[i], ${rNum(b0)} + (n_vec[i] - x_vec[i])))
+check_order <- function(m) apply(m, 1, function(p) all(diff(p[order_idx]) < 0))
+prior_p <- mean(check_order(prior_mat))
+post_p  <- mean(check_order(post_mat))
+cat("BF_1u:", post_p / prior_p, "\\n")
+`;
+  host.appendChild(rCodeBlock('Informed多重二項検定のRコード', rCode));
+}
+// ============================================================
+// メイン: タブ切り替え & 初期化
+// ============================================================
+const Stat = window; // stats-core-embed.js の関数はグローバルに定義されている
+
+function mountApp() {
+  const main = document.getElementById('main');
+  main.appendChild(renderBinomTab());
+  const multiPanel = renderMultiTab(); multiPanel.id = 'panel-multi'; main.appendChild(multiPanel);
+  const contPanel = renderContTab(); contPanel.id = 'panel-cont'; main.appendChild(contPanel);
+  const loglinPanel = renderLoglinTab(); loglinPanel.id = 'panel-loglin'; main.appendChild(loglinPanel);
+  main.appendChild(renderABTab());
+  main.appendChild(renderInformedMultiTab());
+  main.appendChild(renderInformedBinomTab());
+
+  renderMultiTable();
+  renderContTable();
+  renderInformedMultiTable();
+  renderInformedBinomTable();
+
+  computeBinom();
+  computeMulti();
+  computeCont();
+  computeLoglin();
+  computeAB();
+  computeInformedMulti();
+  computeInformedBinom();
+
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const targetId = {
+      binom: 'panel-binom', multi: 'panel-multi', cont: 'panel-cont', loglin: 'panel-loglin',
+      abtest: 'panel-abtest', informed_multi: 'panel-informed_multi', informed_binom: 'panel-informed_binom'
+    }[tab];
+    document.getElementById(targetId).classList.add('active');
+    if (tab === 'loglin') computeLoglin(); // 分割表タブの最新データを反映
+  });
+}
+
+document.addEventListener('DOMContentLoaded', mountApp);
+
+</script>
+</body>
+</html>

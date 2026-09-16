@@ -1,0 +1,3510 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QDA ワークベンチ — データ分析ラボ</title>
+<style>
+:root{
+  --ink:#141d24; --ink2:#3d4c57; --ink3:#6e7d88;
+  --paper:#e6eae8; --card:#fdfdfc; --rule:#c7d0d1; --rule2:#e2e7e6;
+  --indigo:#1f3d5c; --indigo-d:#122536; --indigo-l:#e8eef4;
+  --marker:#f2cb3f; --seal:#98392c; --moss:#3f6b52;
+  --sh:0 1px 0 rgba(20,29,36,.06), 0 6px 18px -12px rgba(20,29,36,.5);
+  --serif:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",Georgia,serif;
+  --sans:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular","SF Mono","Osaka-Mono","Roboto Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--sans);
+  font-size:14px; line-height:1.7; -webkit-text-size-adjust:100%;
+  background-image:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 240px);
+}
+h1,h2,h3,h4{font-family:var(--serif); font-weight:600; margin:0; letter-spacing:.02em}
+button,input,select,textarea{font-family:inherit; font-size:inherit; color:inherit}
+textarea{line-height:1.8}
+::selection{background:#fdf0b8}
+
+/* ---------- eyebrow / labels ---------- */
+.eyebrow{font-family:var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink3)}
+.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
+
+/* ---------- topbar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:40; background:var(--indigo-d); color:#eef3f7;
+  border-bottom:1px solid #0a151f; display:flex; flex-wrap:wrap; align-items:center;
+  gap:14px; padding:8px 16px;
+}
+.brand{display:flex; align-items:baseline; gap:10px; min-width:0}
+.brand .mark{
+  font-family:var(--mono); font-size:10px; letter-spacing:.2em;
+  border:1px solid rgba(238,243,247,.35); padding:3px 6px; border-radius:2px; color:#cfe0ee;
+}
+.brand h1{font-size:17px; color:#fff; outline:none; max-width:44vw; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
+.brand h1:focus{border-bottom:1px dashed rgba(255,255,255,.6)}
+.brand .stat{font-family:var(--mono); font-size:11px; color:#9fb6c9; white-space:nowrap}
+.steps{display:flex; gap:2px; flex-wrap:wrap; margin-left:auto}
+.steps button{
+  background:transparent; border:1px solid transparent; color:#b9cbda; cursor:pointer;
+  padding:6px 10px; border-radius:3px; display:flex; align-items:baseline; gap:7px; line-height:1.3;
+}
+.steps button i{font-family:var(--mono); font-style:normal; font-size:10px; color:#7d99b0}
+.steps button:hover{background:rgba(255,255,255,.07); color:#fff}
+.steps button[aria-current="true"]{background:var(--marker); color:#2a2205; border-color:#d8b21f}
+.steps button[aria-current="true"] i{color:#6b5807}
+.acts{display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+.steps button.dic{border-color:rgba(238,243,247,.3); margin-left:6px}
+.steps button.dic[aria-current="true"]{background:#cfe0ee; color:#122536; border-color:#cfe0ee}
+.preset{padding:11px 12px; border-bottom:1px solid var(--rule2)}
+.preset h4{font-size:13px; margin:0 0 2px}
+.preset .cred{font-size:11px; color:var(--ink3); line-height:1.5; margin-top:3px}
+.dicrow{display:grid; grid-template-columns:1fr auto; gap:6px 10px; padding:9px 11px; border-bottom:1px solid var(--rule2); align-items:center}
+.dicrow .meta{font-family:var(--mono); font-size:10px; color:var(--ink3)}
+.dicrow .cred{font-size:11px; color:var(--ink3); line-height:1.5; margin-top:2px}
+.draft{white-space:pre-wrap; font-family:var(--serif); font-size:14.5px; line-height:2.0; color:var(--ink)}
+.draft::first-line{font-weight:600}
+#mxTest table{margin-top:6px}
+.badge{font-family:var(--mono); font-size:9px; letter-spacing:.05em; padding:1px 5px; border-radius:2px; border:1px solid var(--rule); background:#f4f6f6; color:var(--ink2)}
+
+/* ---------- buttons ---------- */
+.btn{
+  background:var(--indigo); color:#fff; border:1px solid var(--indigo-d); border-radius:3px;
+  padding:5px 11px; cursor:pointer; white-space:nowrap;
+}
+.btn:hover{background:#2a5077}
+.btn.ghost{background:transparent; color:var(--indigo); border-color:var(--rule)}
+.topbar .btn.ghost{color:#cfe0ee; border-color:rgba(238,243,247,.35)}
+.topbar .btn.ghost:hover{background:rgba(255,255,255,.1)}
+.btn.ghost:hover{background:var(--indigo-l)}
+.btn.sm{padding:2px 8px; font-size:12px}
+.btn.warn{background:var(--seal); border-color:#6f271d}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.chk{display:flex; align-items:center; gap:5px; font-size:12px; color:#cfe0ee; cursor:pointer}
+.link{background:none; border:none; color:var(--indigo); text-decoration:underline; cursor:pointer; padding:0; font-size:inherit}
+
+/* ---------- layout ---------- */
+main{padding:16px; max-width:1680px; margin:0 auto}
+.step{display:none}
+.step.on{display:block; animation:fade .18s ease-out}
+@keyframes fade{from{opacity:0; transform:translateY(3px)} to{opacity:1; transform:none}}
+.grid{display:grid; gap:14px}
+.g-1-2-1{grid-template-columns:250px minmax(0,1fr) 310px}
+.g-1-2{grid-template-columns:290px minmax(0,1fr)}
+.g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1180px){.g-1-2-1,.g-1-2,.g-3{grid-template-columns:1fr}}
+@media(max-width:820px){.g-2{grid-template-columns:1fr} main{padding:10px}}
+
+.card{background:var(--card); border:1px solid var(--rule); border-radius:4px; box-shadow:var(--sh)}
+.card>header{
+  display:flex; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid var(--rule2);
+  background:linear-gradient(180deg,#fff,#f7f8f7);
+}
+.card>header h2,.card>header h3{font-size:14px; margin-right:auto}
+.card .body{padding:12px}
+.card .body.tight{padding:0}
+.scroll{overflow:auto}
+.h-sm{max-height:260px} .h-md{max-height:420px} .h-lg{max-height:70vh}
+.muted{color:var(--ink3)}
+.small{font-size:12px}
+.hint{font-size:12px; color:var(--ink3); line-height:1.6}
+.empty{padding:22px 14px; text-align:center; color:var(--ink3); font-size:13px}
+.empty strong{display:block; font-family:var(--serif); color:var(--ink2); font-size:14px; margin-bottom:4px}
+.row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.row.tw{flex-wrap:nowrap}
+.sep{height:1px; background:var(--rule2); margin:10px 0}
+label.f{display:block; font-size:12px; color:var(--ink2); margin:8px 0 3px}
+input[type=text],input[type=number],input[type=search],select,textarea{
+  width:100%; background:#fff; border:1px solid var(--rule); border-radius:3px; padding:5px 7px;
+}
+input:focus,select:focus,textarea:focus{outline:2px solid #b9d3ee; outline-offset:0; border-color:var(--indigo)}
+:focus-visible{outline:2px solid var(--indigo); outline-offset:1px}
+textarea{resize:vertical; min-height:70px}
+table{width:100%; border-collapse:collapse; font-size:13px}
+th,td{border-bottom:1px solid var(--rule2); padding:5px 7px; text-align:left; vertical-align:top}
+th{font-size:11px; letter-spacing:.06em; color:var(--ink3); font-weight:600; background:#f7f8f7; position:sticky; top:0; z-index:2}
+tbody tr:hover{background:#fbfbf9}
+
+/* ---------- dropzone ---------- */
+.dz{
+  border:1px dashed var(--rule); border-radius:4px; background:
+    repeating-linear-gradient(-45deg,rgba(31,61,92,.03) 0 8px,transparent 8px 16px);
+  padding:26px 18px; text-align:center; cursor:pointer; transition:background .15s,border-color .15s;
+}
+.dz:hover,.dz.hot{border-color:var(--indigo); background:#f1f5f9}
+.dz .big{font-family:var(--serif); font-size:16px}
+#veil{
+  position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center;
+  background:rgba(18,37,54,.75); color:#fff; font-family:var(--serif); font-size:22px; letter-spacing:.08em;
+}
+#veil.on{display:flex}
+#veil div{border:2px dashed rgba(255,255,255,.6); padding:40px 60px; border-radius:6px}
+
+/* ---------- document reader : signature margin annotations ---------- */
+.docwrap{background:var(--card)}
+.doctabs{display:flex; gap:1px; overflow-x:auto; border-bottom:1px solid var(--rule); background:#f2f4f3}
+.doctabs button{
+  border:none; background:transparent; padding:7px 12px; cursor:pointer; white-space:nowrap;
+  border-bottom:2px solid transparent; color:var(--ink2); font-size:13px;
+}
+.doctabs button[aria-current="true"]{background:#fff; border-bottom-color:var(--seal); color:var(--ink)}
+.reader{padding:6px 0 40px}
+.para{display:grid; grid-template-columns:132px minmax(0,1fr); gap:0; border-bottom:1px solid #f0f2f1}
+.para:hover{background:#fcfcfa}
+.gutter{
+  border-right:1px solid var(--rule2); padding:8px 8px 8px 12px; display:flex; flex-direction:column;
+  gap:3px; align-items:flex-start; background:linear-gradient(90deg,#fbfbf9,#fff);
+}
+.gutter .pno{font-family:var(--mono); font-size:10px; color:#a9b6bf}
+.slip{
+  font-size:11px; line-height:1.45; padding:1px 5px; border-radius:2px; border:1px solid rgba(20,29,36,.18);
+  cursor:pointer; text-align:left; max-width:112px; word-break:break-all; background:#fff;
+}
+.slip.an{font-style:italic}
+.ptext{padding:8px 16px 8px 14px; white-space:pre-wrap; word-break:break-word; font-size:15px; line-height:2.05}
+.ptext.mincho{font-family:var(--serif); font-size:16px}
+.hl{mix-blend-mode:multiply; border-radius:2px; padding:1px 0; cursor:pointer}
+.hl.focus{outline:1.5px solid var(--seal); outline-offset:1px}
+.kw{background:#cfe6ff; mix-blend-mode:multiply}
+
+/* selection toolbar */
+#seltool{
+  position:absolute; z-index:60; display:none; background:var(--indigo-d); color:#fff; border-radius:4px;
+  padding:6px; box-shadow:0 10px 26px -10px rgba(0,0,0,.6); width:280px;
+}
+#seltool.on{display:block}
+#seltool .q{font-size:12px; color:#bcd0e0; max-height:36px; overflow:hidden; margin-bottom:6px; border-left:2px solid var(--marker); padding-left:6px}
+#seltool select,#seltool input{background:#0f2130; border-color:#2f4e69; color:#fff}
+#seltool .row{gap:5px}
+#seltool .seg{display:flex; gap:0; border:1px solid #2f4e69; border-radius:3px; overflow:hidden; flex:1}
+#seltool .seg button{flex:1; background:#12283a; border:none; color:#b9cbda; font-size:11px; padding:4px 2px; cursor:pointer}
+#seltool .seg button[aria-pressed="true"]{background:var(--marker); color:#2a2205}
+
+/* ---------- chips / lists ---------- */
+.chip{
+  display:inline-flex; align-items:center; gap:5px; border:1px solid rgba(20,29,36,.2);
+  border-radius:2px; padding:2px 7px; font-size:12px; background:#fff; cursor:pointer;
+}
+.chip .n{font-family:var(--mono); font-size:10px; color:var(--ink3)}
+.chip.on{box-shadow:inset 0 0 0 1.5px var(--indigo)}
+.sw{width:10px; height:10px; border-radius:2px; border:1px solid rgba(0,0,0,.2); flex:none}
+.list{list-style:none; margin:0; padding:0}
+.list li{border-bottom:1px solid var(--rule2); padding:6px 10px; display:flex; gap:8px; align-items:center}
+.list li:hover{background:#fbfbf9}
+.list li .t{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis}
+.kind{font-family:var(--mono); font-size:9px; letter-spacing:.06em; padding:1px 4px; border-radius:2px; border:1px solid}
+.kind.d{color:#2b5364; border-color:#9dc0cc; background:#eaf4f7}
+.kind.a{color:#6a3b7a; border-color:#c3a8ce; background:#f4ecf7}
+.seg-quote{border-left:3px solid var(--marker); padding:4px 0 4px 9px; margin:0 0 8px; font-size:13px; line-height:1.75}
+.seg-quote .meta{font-family:var(--mono); font-size:10px; color:var(--ink3); display:flex; gap:8px; margin-top:3px}
+
+/* ---------- matrix ---------- */
+.mx{font-size:12px}
+.mx th:first-child,.mx td:first-child{position:sticky; left:0; background:#fff; z-index:1; min-width:130px}
+.mx th{white-space:nowrap; font-size:10px}
+.mx td.c{text-align:center; font-family:var(--mono); cursor:pointer}
+.mx td.c:hover{outline:1.5px solid var(--indigo)}
+
+/* ---------- viz ---------- */
+.vtabs{display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px}
+.vtabs button{background:#fff; border:1px solid var(--rule); border-radius:3px; padding:5px 10px; cursor:pointer}
+.vtabs button[aria-current="true"]{background:var(--indigo); color:#fff; border-color:var(--indigo-d)}
+.vpane{display:none} .vpane.on{display:block}
+canvas{max-width:100%; background:#fff; border:1px solid var(--rule2); border-radius:3px}
+svg.net{width:100%; background:#fff; border:1px solid var(--rule2); border-radius:3px; touch-action:none; display:block}
+.tree{font-size:13px}
+.tree ul{list-style:none; margin:0; padding-left:14px; border-left:1px dotted var(--rule)}
+.tree li{padding:1px 0}
+.tree .w{cursor:pointer}
+.tree .c{font-family:var(--mono); font-size:10px; color:var(--ink3)}
+.pill{font-family:var(--mono); font-size:10px; background:var(--indigo-l); color:var(--indigo); padding:1px 5px; border-radius:8px}
+
+/* ---------- modal / toast ---------- */
+#modal{position:fixed; inset:0; background:rgba(18,37,54,.6); z-index:100; display:none; align-items:flex-start; justify-content:center; padding:6vh 12px; overflow:auto}
+#modal.on{display:flex}
+#modalCard{background:var(--card); border-radius:5px; width:min(700px,100%); box-shadow:0 24px 60px -20px rgba(0,0,0,.6)}
+#modalCard header{display:flex; align-items:center; padding:11px 14px; border-bottom:1px solid var(--rule2)}
+#modalCard header h3{font-size:15px; margin-right:auto}
+#modalCard .body{padding:14px; max-height:66vh; overflow:auto}
+#modalCard footer{padding:11px 14px; border-top:1px solid var(--rule2); display:flex; gap:8px; justify-content:flex-end}
+#toasts{position:fixed; right:14px; bottom:14px; z-index:120; display:flex; flex-direction:column; gap:7px}
+.toast{background:var(--indigo-d); color:#fff; padding:8px 13px; border-radius:3px; font-size:13px; box-shadow:0 8px 22px -10px rgba(0,0,0,.6); animation:fade .2s}
+.toast.bad{background:var(--seal)}
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+@media print{
+  body{background:#fff}
+  .topbar,.acts,.steps,.doctabs,#seltool,#toasts,.vtabs{display:none !important}
+  .scroll,.h-sm,.h-md,.h-lg{max-height:none !important; overflow:visible !important}
+  .card{box-shadow:none; border-color:#999; break-inside:auto}
+  .para{break-inside:avoid}
+}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-text);--paper:var(--al-bg);--card:var(--al-surface);--ink:var(--al-ink);--ink2:var(--al-ink-2);--ink3:var(--al-ink-3);--rule:var(--al-line);--rule2:var(--al-line-2);--indigo:var(--al-cat);--indigo-d:var(--al-cat-deep);--indigo-l:var(--al-cat-soft);--serif:var(--al-serif);--sans:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#text">質的・テキスト</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>QDA ワークベンチ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">QDA</span>
+    <h1 id="projName" contenteditable="true" spellcheck="false">無題のプロジェクト</h1>
+    <span class="stat" id="projStat">資料 0 ／ コード 0 ／ 抽出 0</span>
+  </div>
+  <nav class="steps" id="steps">
+    <button data-step="1"><i>01</i>読み込み・通読</button>
+    <button data-step="2"><i>02</i>コーディング</button>
+    <button data-step="3"><i>03</i>カテゴリー・行列</button>
+    <button data-step="4"><i>04</i>視覚化・ストーリー</button>
+    <button data-step="5"><i>05</i>メモ・省察</button>
+    <button data-step="6"><i>06</i>読み取り・記述例</button>
+    <button data-step="7" class="dic"><i>＋</i>辞書</button>
+  </nav>
+  <div class="acts">
+    <button class="btn ghost sm" id="btnOpen">開く</button>
+    <button class="btn ghost sm" id="btnMerge">マージ</button>
+    <button class="btn sm" id="btnSave">保存</button>
+    <label class="chk" title="このブラウザに自動で保存します"><input type="checkbox" id="autosave">自動保存</label>
+  </div>
+</header>
+
+<main>
+<!-- ================= STEP 1 ================= -->
+<section class="step" id="step1">
+  <div class="grid g-1-2">
+    <div style="display:grid; gap:14px; align-content:start">
+      <div class="card">
+        <header><span class="eyebrow">step 01</span><h2>データを読み込む</h2></header>
+        <div class="body">
+          <div class="dz" id="dz">
+            <div class="big">ここにファイルをドロップ</div>
+            <div class="hint" style="margin-top:6px">
+              逐語録・フィールドノート・自由記述など<br>
+              .txt / .md / .csv / .tsv / .vtt / .srt / .docx / .json（プロジェクト）
+            </div>
+            <div style="margin-top:10px"><span class="btn ghost sm">ファイルを選ぶ</span></div>
+          </div>
+          <label class="f">テキストを直接貼り付ける</label>
+          <textarea id="pasteBox" placeholder="逐語録などを貼り付けてから「資料として追加」を押します。" style="min-height:90px"></textarea>
+          <div class="row" style="margin-top:6px">
+            <input type="text" id="pasteName" placeholder="資料名（例：Aさん_インタビュー1回目）" style="flex:1; min-width:160px">
+            <button class="btn sm" id="pasteAdd">資料として追加</button>
+          </div>
+          <div class="sep"></div>
+          <p class="hint">CSV / TSV は 1 行を 1 資料として読み込み、本文以外の列は属性（年齢・性別など）になります。列の対応は読み込み時に指定できます。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <header><h3>自動処理</h3></header>
+        <div class="body">
+          <p class="hint" style="margin-top:0">逐語録の行頭が「A：」「話者1:」「【B】」の形式なら、発言者を検出してコードを一括付与します。</p>
+          <div class="row">
+            <button class="btn ghost sm" id="autoSpeaker">発言者別に自動コーディング</button>
+            <button class="btn ghost sm" id="autoHead">見出し行（Q1・■など）で自動コーディング</button>
+            <button class="btn ghost sm" id="toDic">辞書で自動コーディング</button>
+          </div>
+          <div class="sep"></div>
+          <label class="f">通読の設定</label>
+          <label class="chk" style="color:var(--ink2)"><input type="checkbox" id="minchoToggle">本文を明朝体で表示（印刷・熟読向け）</label>
+          <div class="row" style="margin-top:8px">
+            <button class="btn ghost sm" id="printDoc">通読用に印刷</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; gap:14px; align-content:start">
+      <div class="card">
+        <header>
+          <h2>資料一覧</h2>
+          <span class="muted small" id="docCount"></span>
+          <button class="btn ghost sm" id="attrAdd">属性の項目を追加</button>
+        </header>
+        <div class="body tight scroll h-md" id="docTableWrap"></div>
+      </div>
+      <div class="card">
+        <header><h3>資料メモ（通読の気づき）</h3><span class="muted small" id="docMemoWho"></span></header>
+        <div class="body">
+          <select id="memoDocSel" style="margin-bottom:8px"></select>
+          <textarea id="docMemo" placeholder="背景・文脈、初読で気づいたこと、疑問。ここに書いた内容は資料と一緒に保存されます。" style="min-height:120px"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= STEP 2 ================= -->
+<section class="step" id="step2">
+  <div class="grid g-1-2-1">
+    <div style="display:grid; gap:14px; align-content:start">
+      <div class="card">
+        <header><h3>コード</h3><span class="muted small" id="codeCount"></span></header>
+        <div class="body" style="padding:9px 10px">
+          <div class="row tw">
+            <input type="text" id="newCodeName" placeholder="新しいコード名" style="flex:1">
+            <button class="btn sm" id="newCodeAdd">追加</button>
+          </div>
+          <div class="row" style="margin-top:6px; font-size:12px">
+            <label class="chk" style="color:var(--ink2)"><input type="radio" name="nck" value="descriptive" checked>記述的</label>
+            <label class="chk" style="color:var(--ink2)"><input type="radio" name="nck" value="analytic">分析的</label>
+            <button class="link" id="codeFrameBtn" style="margin-left:auto">コード枠を一括作成</button>
+          </div>
+        </div>
+        <div class="body tight scroll h-md" id="codeList"></div>
+      </div>
+
+      <div class="card">
+        <header><h3>検索と一括コーディング</h3></header>
+        <div class="body">
+          <div class="row tw">
+            <input type="search" id="q" placeholder="語句を検索（KWIC）" style="flex:1">
+            <button class="btn sm" id="qBtn">検索</button>
+          </div>
+          <label class="chk" style="color:var(--ink2); margin-top:5px"><input type="checkbox" id="qRegex">正規表現として扱う</label>
+          <div id="qResult" class="scroll h-sm" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <header><h3>コードクエリ</h3></header>
+        <div class="body">
+          <div class="row tw" style="gap:5px">
+            <select id="cqA" style="flex:1"></select>
+            <select id="cqRel" style="width:auto">
+              <option value="overlap">と重なる</option>
+              <option value="inside">の中にある</option>
+              <option value="near">の近くにある</option>
+              <option value="not">があってこれがない</option>
+              <option value="para">と同じ段落にある</option>
+            </select>
+            <select id="cqB" style="flex:1"></select>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <label class="small muted">近さ（字）</label>
+            <input type="number" id="cqNear" value="100" min="10" style="width:74px">
+            <button class="btn sm" id="cqRun" style="margin-left:auto">調べる</button>
+          </div>
+          <div id="cqOut" class="scroll h-sm" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card docwrap">
+      <header>
+        <span class="eyebrow">step 02</span><h2>コーディング面</h2>
+        <span class="muted small" id="readerStat"></span>
+        <label class="chk" style="color:var(--ink2)"><input type="checkbox" id="dimOther">選択中のコードだけ表示</label>
+      </header>
+      <div class="doctabs" id="doctabs"></div>
+      <div class="scroll h-lg" id="readerWrap"><div class="reader" id="reader"></div></div>
+    </div>
+
+    <div style="display:grid; gap:14px; align-content:start">
+      <div class="card">
+        <header><h3>インスペクタ</h3></header>
+        <div class="body" id="inspector"></div>
+      </div>
+      <div class="card">
+        <header><h3>抽出（セグメント一覧）</h3><span class="muted small" id="retrCount"></span></header>
+        <div class="body scroll h-md" id="retrieval"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= STEP 3 ================= -->
+<section class="step" id="step3">
+  <div class="grid g-1-2" style="margin-bottom:14px">
+    <div class="card">
+      <header><span class="eyebrow">step 03</span><h3>カテゴリー</h3></header>
+      <div class="body">
+        <div class="row tw">
+          <input type="text" id="newCatName" placeholder="カテゴリー名（抽象度の高いまとまり）" style="flex:1">
+          <button class="btn sm" id="newCatAdd">追加</button>
+        </div>
+        <p class="hint" style="margin-top:7px">コードをドラッグしてカテゴリーに入れます。似ているコードを比較しながら、まとまりを作ってください。</p>
+        <div id="catBoard" style="margin-top:8px; display:grid; gap:8px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <header>
+        <h2>コードブック</h2>
+        <button class="btn ghost sm" id="cbCsv">CSVで書き出す</button>
+        <button class="btn ghost sm" id="cbMd">Markdownで書き出す</button>
+      </header>
+      <div class="body tight scroll h-lg" id="codebook"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <header>
+      <h2>行列コーディング（フレームワーク行列）</h2>
+      <label class="small muted">行</label>
+      <select id="mxRow" style="width:auto"><option value="code">コード</option><option value="category">カテゴリー</option><option value="word">抽出語（単語）</option><option value="bunsetsu">文節</option></select>
+      <label class="small muted">上位</label><input type="number" id="mxTop" value="40" min="5" max="200" style="width:64px">
+      <label class="small muted">最小出現</label><input type="number" id="mxMin" value="2" min="1" style="width:56px">
+      <label class="chk" style="color:var(--ink2)" title="「安全神話が」「安全神話は」を同じ行にまとめます"><input type="checkbox" id="mxStem">文節の助詞を落とす</label>
+      <label class="small muted">列</label>
+      <select id="mxCol" style="width:auto"></select>
+      <label class="small muted">値</label>
+      <select id="mxVal" style="width:auto"><option value="count">出現数</option><option value="binary">有無</option><option value="docs">資料数</option></select>
+      <button class="btn ghost sm" id="mxTestBtn">カイ二乗検定</button>
+      <button class="btn ghost sm" id="mxCsv">CSVで書き出す</button>
+    </header>
+    <div class="body tight scroll" style="max-height:56vh" id="matrix"></div>
+    <div class="body" id="mxTest" style="border-top:1px solid var(--rule2); display:none"></div>
+    <div class="body" id="mxCell" style="border-top:1px solid var(--rule2); display:none"></div>
+  </div>
+</section>
+
+<!-- ================= STEP 4 ================= -->
+<section class="step" id="step4">
+  <div class="vtabs" id="vtabs">
+    <button data-v="cloud" aria-current="true">ワードクラウド</button>
+    <button data-v="tree">ワードツリー</button>
+    <button data-v="net">共起ネットワーク</button>
+    <button data-v="dendro">コードの樹形図</button>
+    <button data-v="portrait">資料ポートレイト</button>
+    <button data-v="map">カテゴリー関連図</button>
+    <button data-v="story">ストーリーライン</button>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <header>
+      <h3>語の取り出し方</h3>
+      <span class="muted small" id="tokStat">簡易モード（文字種ベース）</span>
+      <button class="btn ghost sm" id="loadKuromoji">高精度モードを読み込む（kuromoji.js）</button>
+    </header>
+    <div class="body">
+      <div class="row">
+        <label class="small muted">対象</label>
+        <select id="tokScope" style="width:auto"></select>
+        <label class="small muted">品詞</label>
+        <span id="posBox" class="row" style="gap:9px"></span>
+        <label class="small muted">最小出現</label>
+        <input type="number" id="minFreq" value="2" min="1" style="width:64px">
+        <label class="small muted">最小文字数</label>
+        <input type="number" id="minLen" value="2" min="1" style="width:64px">
+      </div>
+      <label class="f">除外する語（ストップワード・カンマ区切り）</label>
+      <input type="text" id="stopExtra" placeholder="思う, こと, ある">
+      <div class="row small muted" id="dicStatus" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="vpane on" id="v-cloud">
+    <div class="card">
+      <header><h2>ワードクラウド</h2>
+        <label class="small muted">語数</label><input type="number" id="wcN" value="80" min="10" max="300" style="width:70px">
+        <label class="small muted">大きさ</label>
+        <select id="wcWeight" style="width:auto"><option value="freq">出現数</option><option value="ll" disabled>特徴度（参照コーパス比）</option></select>
+        <button class="btn sm" id="wcRun">作成</button>
+        <button class="btn ghost sm" id="wcPng">PNGで保存</button>
+      </header>
+      <div class="body">
+        <canvas id="wcCanvas" width="1000" height="560"></canvas>
+        <div id="wcTable" class="scroll h-sm" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpane" id="v-tree">
+    <div class="card">
+      <header><h2>ワードツリー</h2>
+        <input type="text" id="wtWord" placeholder="中心にする語" style="width:170px">
+        <select id="wtDir" style="width:auto"><option value="after">後ろに続く語</option><option value="before">前にある語</option></select>
+        <label class="small muted">深さ</label><input type="number" id="wtDepth" value="4" min="1" max="8" style="width:60px">
+        <button class="btn sm" id="wtRun">作成</button>
+      </header>
+      <div class="body scroll h-lg tree" id="wtOut"><div class="empty"><strong>語を入れて「作成」</strong>その語のあとに何が語られたかが枝分かれで見えます。</div></div>
+    </div>
+  </div>
+
+  <div class="vpane" id="v-net">
+    <div class="card">
+      <header><h2>共起ネットワーク</h2>
+        <select id="netMode" style="width:auto"><option value="word">語 × 語</option><option value="code">コード × コード（Code Map）</option></select>
+        <label class="small muted">節点数</label><input type="number" id="netN" value="45" min="5" max="120" style="width:64px">
+        <label class="small muted">共起の強さ</label><input type="number" id="netMinE" value="2" min="1" style="width:60px">
+        <button class="btn sm" id="netRun">作成</button>
+        <button class="btn ghost sm" id="netPng">PNGで保存</button>
+      </header>
+      <div class="body">
+        <p class="hint" style="margin-top:0">節点はドラッグで動かせます。太い線ほど一緒に現れる度合い（Jaccard 係数）が高い組み合わせです。色は接続の多さで濃くなります。</p>
+        <svg class="net" id="netSvg" viewBox="0 0 1000 620" height="560"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpane" id="v-dendro">
+    <div class="card">
+      <header><h2>コードの樹形図（階層クラスター分析）</h2>
+        <label class="small muted">コード数</label><input type="number" id="dendN" value="30" min="3" max="60" style="width:66px">
+        <button class="btn sm" id="dendRun">作成</button>
+        <button class="btn ghost sm" id="dendPng">PNGで保存</button>
+      </header>
+      <div class="body">
+        <p class="hint" style="margin-top:0">同じ段落に一緒に現れるかどうか（Jaccard距離・群平均法）でコードをまとめた図です。近い位置で結ばれたコードほど、似た文脈で語られています。カテゴリー化の手がかりになります。</p>
+        <svg class="net" id="dendroSvg" viewBox="0 0 1000 500" height="480"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpane" id="v-portrait">
+    <div class="card">
+      <header><h2>資料ポートレイト</h2><button class="btn ghost sm" id="portRun">作り直す</button></header>
+      <div class="body scroll h-lg">
+        <p class="hint" style="margin-top:0">資料の先頭から末尾までを帯にして、どこにどのコードが現れるかを見ます。帯をクリックすると本文のその箇所へ移動します。</p>
+        <div id="portrait"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpane" id="v-map">
+    <div class="card">
+      <header><h2>カテゴリー関連図</h2>
+        <select id="mapAdd" style="width:auto"></select>
+        <button class="btn ghost sm" id="mapAddBtn">図に置く</button>
+        <button class="btn ghost sm" id="mapLinkMode" aria-pressed="false">矢印を引く</button>
+        <button class="btn ghost sm" id="mapClear">全部消す</button>
+        <button class="btn ghost sm" id="mapPng">PNGで保存</button>
+      </header>
+      <div class="body">
+        <p class="hint" style="margin-top:0">「いつ・どこで・なぜ・どのように」その現象が起きているのかを、カテゴリーとコードを置いて矢印でつなぎ、結果図にします。矢印は 2 つの節点を続けてクリックすると引けます（ラベルも付けられます）。</p>
+        <svg class="net" id="mapSvg" viewBox="0 0 1000 620" height="560"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="vpane" id="v-story">
+    <div class="grid g-1-2">
+      <div class="card">
+        <header><h3>使える概念</h3></header>
+        <div class="body">
+          <p class="hint" style="margin-top:0">ストーリーラインは、生成したカテゴリーとコードだけを使って書きます。クリックで本文に挿入されます。使った概念には印が付きます。</p>
+          <div id="conceptChips" class="row" style="gap:5px; margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <header><h2>ストーリーライン</h2><span class="muted small" id="storyStat"></span>
+          <button class="btn ghost sm" id="storyReport">レポートを書き出す</button>
+        </header>
+        <div class="body">
+          <textarea id="storyBox" style="min-height:300px" placeholder="例）〈安全神話〉のもとで〈組織間関係〉が…という状況において、〈貞観津波〉の情報は〈…〉として扱われ、結果として〈…〉が生じていた。"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= STEP 5 ================= -->
+<section class="step" id="step5">
+  <div class="grid g-3" style="margin-bottom:14px">
+    <div class="card">
+      <header><span class="eyebrow">memo</span><h3>コードメモ</h3><button class="btn ghost sm" data-newmemo="code">＋</button></header>
+      <div class="body tight scroll h-md" data-memolist="code"></div>
+    </div>
+    <div class="card">
+      <header><span class="eyebrow">memo</span><h3>理論メモ</h3><button class="btn ghost sm" data-newmemo="theory">＋</button></header>
+      <div class="body tight scroll h-md" data-memolist="theory"></div>
+    </div>
+    <div class="card">
+      <header><span class="eyebrow">memo</span><h3>方法論メモ</h3><button class="btn ghost sm" data-newmemo="method">＋</button></header>
+      <div class="body tight scroll h-md" data-memolist="method"></div>
+    </div>
+  </div>
+
+  <div class="grid g-1-2">
+    <div class="card">
+      <header><h3>メモを書く</h3><span class="muted small" id="memoEditWho">未選択</span>
+        <button class="btn ghost sm" id="memoDel">削除</button>
+      </header>
+      <div class="body">
+        <input type="text" id="memoTitle" placeholder="見出し">
+        <label class="f">関連づけるコード・資料</label>
+        <select id="memoRef"></select>
+        <label class="f">本文</label>
+        <textarea id="memoBody" style="min-height:180px" placeholder="思いついたアイデア・仮説・次の分析方針を、その場で書き残します。"></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <header><span class="eyebrow">reflexivity</span><h2>省察（メタ観察）</h2></header>
+      <div class="body">
+        <label class="f">なぜこの研究テーマを設定したのか</label>
+        <textarea id="rf1" placeholder="関心の由来、現場との関わり。"></textarea>
+        <label class="f">どのような立場から解釈しているのか</label>
+        <textarea id="rf2" placeholder="専門・経験・立場が解釈にどう影響しうるか。"></textarea>
+        <label class="f">解釈に影響したと考えられること／別の読み方の可能性</label>
+        <textarea id="rf3" placeholder="反例、うまく説明できなかったデータ、他の解釈。"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn ghost sm" id="expCodings">コーディングをCSVで書き出す</button>
+          <button class="btn ghost sm" id="expReport">分析レポート（Markdown）</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= 辞書 ================= -->
+<!-- ================= STEP 6：読み取り ================= -->
+<section class="step" id="step6">
+  <div class="grid g-2">
+    <div class="card">
+      <header><span class="eyebrow">step 06</span><h2>結果の読み取り</h2>
+        <span class="muted small" id="interpStat"></span>
+        <button class="btn ghost sm" id="interpRun">作り直す</button>
+        <button class="btn ghost sm" id="interpCopy">コピー</button>
+      </header>
+      <div class="body scroll h-lg"><div id="interpOut" class="draft"></div></div>
+    </div>
+    <div class="card">
+      <header><h2>論文での記述例</h2>
+        <button class="btn ghost sm" id="paperCopy">コピー</button>
+        <button class="btn sm" id="interpMd">Markdownで書き出す</button>
+      </header>
+      <div class="body scroll h-lg"><div id="paperOut" class="draft"></div></div>
+    </div>
+  </div>
+  <p class="hint" style="margin:10px 2px">自動生成した下書きです。数量は計算どおりですが、意味づけは研究者が原文に戻って確かめ、〔　〕の部分を自分の言葉で埋めてください。</p>
+</section>
+
+<section class="step" id="step7">
+  <div class="grid g-1-2">
+    <div style="display:grid; gap:14px; align-content:start">
+      <div class="card">
+        <header><span class="eyebrow">dictionary</span><h2>公開辞書を取り込む</h2></header>
+        <div class="body tight">
+          <div id="presetList"></div>
+        </div>
+      </div>
+      <div class="card">
+        <header><h3>URL・ファイルから取り込む</h3></header>
+        <div class="body">
+          <div class="dz" id="dicDz" style="padding:16px">
+            <div class="big" style="font-size:14px">辞書ファイルをドロップ</div>
+            <div class="hint" style="margin-top:4px">1行1語／「語, コード名」／「語, 極性」／「見出し, 異表記…」に対応</div>
+          </div>
+          <label class="f">URLから取り込む</label>
+          <div class="row tw">
+            <input type="text" id="dicUrl" placeholder="https://raw.githubusercontent.com/…" style="flex:1">
+            <select id="dicUrlKind" style="width:auto">
+              <option value="auto">種類を自動判定</option>
+              <option value="stop">ストップワード</option>
+              <option value="syn">同義語・表記ゆれ</option>
+              <option value="term">複合語・専門用語</option>
+              <option value="coding">コーディング辞書</option>
+              <option value="polarity">極性辞書</option>
+            </select>
+            <button class="btn sm" id="dicUrlGo">取り込む</button>
+          </div>
+          <p class="hint">取得先が CORS に対応していないと、ブラウザからは読み込めません。その場合はファイルを保存してドロップしてください。</p>
+          <label class="f">貼り付けて作る</label>
+          <textarea id="dicPaste" style="min-height:80px" placeholder="安全神話, 組織の前提&#10;想定外, 責任の所在"></textarea>
+          <div class="row" style="margin-top:6px">
+            <input type="text" id="dicPasteName" placeholder="辞書の名前" style="flex:1; min-width:140px">
+            <button class="btn sm" id="dicPasteGo">辞書にする</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; gap:14px; align-content:start">
+      <div class="card">
+        <header><h2>読み込んだ辞書</h2><span class="muted small" id="dicCount"></span></header>
+        <div class="body tight scroll h-md" id="dicList"></div>
+      </div>
+      <div class="card">
+        <header><h3>辞書で自動コーディングする</h3></header>
+        <div class="body">
+          <div class="row">
+            <label class="small muted">辞書</label>
+            <select id="dcDict" style="flex:1; min-width:150px"></select>
+            <label class="small muted">範囲</label>
+            <select id="dcUnit" style="width:auto">
+              <option value="bunsetsu">文節</option>
+              <option value="match">単語（語そのもの）</option>
+              <option value="sentence">文</option>
+              <option value="para">段落</option>
+            </select>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <label class="chk" style="color:var(--ink2)"><input type="checkbox" id="dcCat" checked>辞書名のカテゴリーにまとめる</label>
+            <label class="chk" style="color:var(--ink2)"><input type="checkbox" id="dcScope">開いている資料だけ</label>
+            <button class="btn sm" id="dcGo" style="margin-left:auto">コーディングする</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn ghost sm" id="dcExpand">今ある抽出を文節の範囲に広げる</button>
+          </div>
+          <p class="hint">辞書に載っている語を含む文節に、対応するコードを演繹的コーディングとして付けます（既定は文節単位）。付けたあとは通常どおり手作業で直せます。</p>
+        </div>
+      </div>
+      <div class="card">
+        <header><h3>極性の集計</h3><button class="btn ghost sm" id="polCsv">CSVで書き出す</button></header>
+        <div class="body tight scroll h-md" id="polTable"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="veil"><div>ドロップして読み込む</div></div>
+<div id="seltool">
+  <div class="q" id="stQuote"></div>
+  <div class="row tw" style="margin-bottom:5px">
+    <select id="stCode" style="flex:1"></select>
+    <button class="btn sm" id="stApply">付与</button>
+  </div>
+  <div class="row" style="margin-bottom:5px">
+    <div class="seg" id="stKind">
+      <button data-k="descriptive" aria-pressed="true">記述的</button>
+      <button data-k="analytic" aria-pressed="false">分析的</button>
+    </div>
+    <div class="seg" id="stMode">
+      <button data-m="inductive" aria-pressed="true">帰納的</button>
+      <button data-m="deductive" aria-pressed="false">演繹的</button>
+    </div>
+  </div>
+  <div class="row tw">
+    <button class="btn ghost sm" id="stInvivo" style="flex:1; color:#cfe0ee; border-color:#2f4e69">In vivo（選択語をコード名に）</button>
+    <button class="btn ghost sm" id="stNote" style="color:#cfe0ee; border-color:#2f4e69">メモ</button>
+  </div>
+</div>
+<div id="modal"><div id="modalCard"></div></div>
+<div id="toasts"></div>
+<script>
+/* ============================================================
+   QDA WORKBENCH — 質的データ分析支援
+   ============================================================ */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.prototype.slice.call((r||document).querySelectorAll(s));
+const uid = p => p + Math.random().toString(36).slice(2, 9);
+const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+const PALETTE = ['#f2cb3f','#8fd0a8','#9fc3ea','#f2a58c','#c9b6e4','#a8dbd6','#e9cf9a','#d8e29a','#f0b3c7','#b9c6d6','#dcc0a8','#a9d1b0','#e7bcd6','#c2d4a8'];
+
+function blank(){
+  return {v:1, name:'無題のプロジェクト', created:new Date().toISOString(),
+    docs:[], codes:[], categories:[], codings:[], memos:[], attrKeys:[], dicts:[], summaries:{}, reliability:null,
+    storyline:'', reflexivity:{q1:'',q2:'',q3:''}, map:{nodes:[],links:[]}};
+}
+let P = blank();
+const UI = {step:1, docId:null, codeId:null, focus:null, memoId:null, viz:'cloud',
+  kind:'descriptive', mode:'inductive', sel:null, tokenizer:null, kuroState:'none',
+  mapLink:{on:false, first:null}, mxCell:null, netData:null};
+
+/* ---------------- utilities ---------------- */
+function toast(msg, bad){
+  const t = document.createElement('div');
+  t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; }, 2600);
+  setTimeout(() => t.remove(), 3100);
+}
+function dl(name, content, type){
+  const blob = new Blob([content], {type: (type||'text/plain') + ';charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function saveDataUrl(name, dataUrl){
+  const a = document.createElement('a');
+  a.download = name; a.href = dataUrl;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function csvCell(v){
+  const s = v == null ? '' : String(v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function toCsv(rows){ return '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n'); }
+
+function modal(title, bodyHtml, buttons){
+  const card = $('#modalCard');
+  card.innerHTML = '<header><h3>' + esc(title) + '</h3><button class="btn ghost sm" data-x>閉じる</button></header>'
+    + '<div class="body">' + bodyHtml + '</div><footer></footer>';
+  const foot = card.querySelector('footer');
+  (buttons || []).forEach(b => {
+    const el = document.createElement('button');
+    el.className = 'btn' + (b.primary ? '' : ' ghost'); el.textContent = b.label;
+    el.onclick = () => b.onClick(closeModal, card);
+    foot.appendChild(el);
+  });
+  card.querySelector('[data-x]').onclick = closeModal;
+  $('#modal').classList.add('on');
+  return card;
+}
+function closeModal(){ $('#modal').classList.remove('on'); $('#modalCard').innerHTML = ''; }
+$('#modal').addEventListener('mousedown', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); hideSelTool(); } });
+
+/* ---------------- storage ---------------- */
+let saveTimer = null;
+function markDirty(){
+  updateStat();
+  if ($('#autosave').checked) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveLocal, 900);
+  }
+}
+function exportProject(){
+  const o = JSON.parse(JSON.stringify(P));
+  (o.dicts || []).forEach(d => { if (!d.persist) d.entries = []; });
+  return o;
+}
+async function saveLocal(){
+  try {
+    if (typeof window.storage === 'undefined') return;
+    const s = JSON.stringify(exportProject());
+    if (s.length > 4400000) { toast('データが大きいため自動保存を省きました。「保存」でファイルに残してください。', true); return; }
+    await window.storage.set('qda:project', s);
+  } catch (e) { /* 保存できない環境ではファイル保存を使う */ }
+}
+async function loadLocal(){
+  try {
+    if (typeof window.storage === 'undefined') return false;
+    const r = await window.storage.get('qda:project');
+    if (r && r.value) {
+      const o = JSON.parse(r.value);
+      if (o && o.docs) { P = normalize(o); return true; }
+    }
+  } catch (e) {}
+  return false;
+}
+function normalize(o){
+  const b = blank();
+  const p = Object.assign(b, o);
+  p.reflexivity = Object.assign({q1:'',q2:'',q3:''}, o.reflexivity || {});
+  p.map = Object.assign({nodes:[],links:[]}, o.map || {});
+  p.summaries = o.summaries || {};
+  ['docs','codes','categories','codings','memos','attrKeys','dicts'].forEach(k => { if (!Array.isArray(p[k])) p[k] = []; });
+  return p;
+}
+
+/* ---------------- model helpers ---------------- */
+const curDoc = () => P.docs.find(d => d.id === UI.docId) || P.docs[0] || null;
+const codeById = id => P.codes.find(c => c.id === id);
+const docById = id => P.docs.find(d => d.id === id);
+const codingsOf = code => P.codings.filter(c => c.codeId === code);
+function nextColor(){ return PALETTE[P.codes.length % PALETTE.length]; }
+
+function addDoc(name, text, attrs){
+  const d = {id:uid('d'), name:name || ('資料' + (P.docs.length+1)), text:String(text || ''),
+    attrs:attrs || {}, memo:'', added:new Date().toISOString()};
+  P.docs.push(d);
+  Object.keys(d.attrs).forEach(k => { if (P.attrKeys.indexOf(k) < 0) P.attrKeys.push(k); });
+  if (!UI.docId) UI.docId = d.id;
+  return d;
+}
+function ensureCode(name, kind){
+  name = String(name || '').trim().slice(0, 60);
+  if (!name) return null;
+  let c = P.codes.find(x => x.name === name);
+  if (!c) {
+    c = {id:uid('c'), name:name, kind:kind || 'descriptive', color:nextColor(),
+      def:'', include:'', exclude:'', example:'', categoryId:null, memo:''};
+    P.codes.push(c);
+  }
+  return c;
+}
+function addCoding(docId, codeId, start, end, kind, mode, memo){
+  if (!codeId || end <= start) return null;
+  const dup = P.codings.find(c => c.docId === docId && c.codeId === codeId && c.start === start && c.end === end);
+  if (dup) return dup;
+  const d = docById(docId); if (!d) return null;
+  const cg = {id:uid('g'), docId:docId, codeId:codeId, start:start, end:end,
+    text:d.text.slice(start, end), kind:kind || 'descriptive', mode:mode || 'inductive',
+    memo:memo || '', coder:'', ts:new Date().toISOString()};
+  P.codings.push(cg);
+  return cg;
+}
+function updateStat(){
+  $('#projStat').textContent = '資料 ' + P.docs.length + ' ／ コード ' + P.codes.length + ' ／ 抽出 ' + P.codings.length;
+  $('#docCount').textContent = P.docs.length ? P.docs.length + ' 件' : '';
+  $('#codeCount').textContent = P.codes.length ? P.codes.length + ' 件' : '';
+}
+
+/* ============================================================
+   ファイル読み込み（ドラッグ＆ドロップ）
+   ============================================================ */
+let dragDepth = 0;
+const hasFiles = e => { const t = e.dataTransfer && e.dataTransfer.types; return t && Array.prototype.indexOf.call(t, 'Files') >= 0; };
+window.addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth++; $('#veil').classList.add('on'); });
+window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener('dragleave', e => { if (!hasFiles(e)) return; dragDepth--; if (dragDepth <= 0) { dragDepth = 0; $('#veil').classList.remove('on'); } });
+window.addEventListener('drop', e => {
+  e.preventDefault(); dragDepth = 0; $('#veil').classList.remove('on');
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+});
+$('#dz').addEventListener('click', () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.multiple = true;
+  inp.accept = '.txt,.md,.csv,.tsv,.vtt,.srt,.json,.docx,text/plain';
+  inp.onchange = () => handleFiles(inp.files);
+  inp.click();
+});
+
+function readText(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = () => rej(new Error('読み込みに失敗しました'));
+    fr.readAsText(file, 'utf-8');
+  });
+}
+async function handleFiles(files){
+  const list = Array.prototype.slice.call(files);
+  for (const f of list) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (UI.step === 7) { await importDictFile(f); continue; }
+    try {
+      if (ext === 'json') { await importJson(await readText(f), f.name); }
+      else if (ext === 'docx') { await importDocx(f); }
+      else if (ext === 'csv' || ext === 'tsv') { importTable(await readText(f), f.name, ext === 'tsv' ? '\t' : ','); }
+      else if (ext === 'vtt' || ext === 'srt') { addDoc(f.name.replace(/\.[^.]+$/,''), stripCaptions(await readText(f))); toast(f.name + ' を読み込みました'); }
+      else { addDoc(f.name.replace(/\.[^.]+$/,''), await readText(f)); toast(f.name + ' を読み込みました'); }
+    } catch (err) { toast(f.name + '：' + err.message, true); }
+  }
+  renderAll(); markDirty();
+}
+function stripCaptions(t){
+  return t.replace(/^WEBVTT.*$/m, '')
+    .split(/\r?\n/)
+    .filter(l => !/^\d+$/.test(l.trim()) && !/-->/.test(l))
+    .join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error('外部ライブラリを読み込めませんでした'));
+    document.head.appendChild(s);
+  });
+}
+async function importDocx(file){
+  if (!window.mammoth) await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js');
+  const buf = await file.arrayBuffer();
+  const r = await window.mammoth.extractRawText({arrayBuffer: buf});
+  addDoc(file.name.replace(/\.[^.]+$/,''), (r.value || '').replace(/\n{3,}/g, '\n\n'));
+  toast(file.name + ' を読み込みました');
+}
+function parseDelim(text, delim){
+  const rows = []; let row = [], cell = '', q = false;
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i+1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(cell); cell = ''; }
+    else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell.length || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+function importTable(text, fname, delim){
+  const rows = parseDelim(text, delim);
+  if (rows.length < 2) { addDoc(fname, text); return; }
+  const head = rows[0].map((h, i) => String(h).trim() || ('列' + (i+1)));
+  const body = rows.slice(1);
+  const avg = head.map((h, i) => body.reduce((s, r) => s + String(r[i] || '').length, 0) / body.length);
+  const textIdx = avg.indexOf(Math.max.apply(null, avg));
+  const opts = i => head.map((h, j) => '<option value="' + j + '"' + (j === i ? ' selected' : '') + '>' + esc(h) + '</option>').join('');
+  const html = '<p class="hint" style="margin-top:0">1 行を 1 資料として読み込みます（' + body.length + ' 行）。</p>'
+    + '<label class="f">本文の列</label><select id="mapText">' + opts(textIdx) + '</select>'
+    + '<label class="f">資料名の列</label><select id="mapName"><option value="-1">通し番号にする</option>' + opts(textIdx === 0 ? -1 : 0) + '</select>'
+    + '<label class="f">属性として取り込む列</label><div class="row" id="mapAttrs" style="gap:10px">'
+    + head.map((h, j) => '<label class="chk" style="color:var(--ink2)"><input type="checkbox" value="' + j + '"' + (j !== textIdx ? ' checked' : '') + '>' + esc(h) + '</label>').join('') + '</div>';
+  modal(fname + ' の列を対応づける', html, [{label:'読み込む', primary:true, onClick:(close, card) => {
+    const ti = +card.querySelector('#mapText').value;
+    const ni = +card.querySelector('#mapName').value;
+    const ai = $$('#mapAttrs input:checked', card).map(x => +x.value).filter(j => j !== ti);
+    body.forEach((r, k) => {
+      const attrs = {};
+      ai.forEach(j => { const v = String(r[j] || '').trim(); if (v) attrs[head[j]] = v; });
+      const nm = ni >= 0 ? (String(r[ni] || '').trim() || ('行' + (k+1))) : ('行' + (k+1));
+      addDoc(nm, String(r[ti] || ''), attrs);
+    });
+    close(); renderAll(); markDirty();
+    toast(body.length + ' 件の資料を読み込みました');
+  }}]);
+}
+async function importJson(txt, fname){
+  let o; try { o = JSON.parse(txt); } catch (e) { throw new Error('JSON として読めませんでした'); }
+  if (!o || !Array.isArray(o.docs)) { addDoc(fname, txt); return; }
+  modal('プロジェクトファイルを読み込む',
+    '<p>' + esc(fname) + ' には資料 ' + o.docs.length + ' 件、コード ' + ((o.codes||[]).length) + ' 件、抽出 ' + ((o.codings||[]).length) + ' 件が入っています。</p>'
+    + '<p class="hint">「開く」は今の内容を置き換えます。「マージ」は今のプロジェクトに統合し、コーダー間の一致も算出します。</p>',
+    [{label:'開く', onClick:close => { P = normalize(o); UI.docId = P.docs[0] ? P.docs[0].id : null; close(); bindProject(); renderAll(); markDirty(); toast('プロジェクトを開きました'); }},
+     {label:'マージする', primary:true, onClick:close => { close(); mergeProject(o); }}]);
+}
+
+/* ============================================================
+   ステップ1：資料一覧・属性・メモ
+   ============================================================ */
+function renderDocTable(){
+  const wrap = $('#docTableWrap');
+  if (!P.docs.length) {
+    wrap.innerHTML = '<div class="empty"><strong>まだ資料がありません</strong>左のドロップ領域にファイルを落とすか、テキストを貼り付けて始めます。</div>';
+    return;
+  }
+  let h = '<table><thead><tr><th>資料名</th><th>文字数</th>'
+    + P.attrKeys.map(k => '<th>' + esc(k) + '</th>').join('')
+    + '<th>抽出</th><th></th></tr></thead><tbody>';
+  P.docs.forEach(d => {
+    h += '<tr><td><input type="text" data-dname="' + d.id + '" value="' + esc(d.name) + '" style="border:none; background:transparent; padding:0"></td>'
+      + '<td class="num muted">' + d.text.length.toLocaleString() + '</td>'
+      + P.attrKeys.map(k => '<td><input type="text" data-attr="' + esc(k) + '" data-did="' + d.id + '" value="' + esc(d.attrs[k] || '') + '" style="border:none; background:transparent; padding:0; min-width:64px"></td>').join('')
+      + '<td class="num muted">' + P.codings.filter(c => c.docId === d.id).length + '</td>'
+      + '<td style="white-space:nowrap"><button class="btn ghost sm" data-openDoc="' + d.id + '">開く</button> '
+      + '<button class="btn ghost sm" data-delDoc="' + d.id + '">削除</button></td></tr>';
+  });
+  wrap.innerHTML = h + '</tbody></table>';
+  $$('[data-dname]', wrap).forEach(i => i.oninput = () => { docById(i.dataset.dname).name = i.value; renderTabs(); markDirty(); });
+  $$('[data-attr]', wrap).forEach(i => i.oninput = () => { docById(i.dataset.did).attrs[i.dataset.attr] = i.value; markDirty(); });
+  $$('[data-openDoc]', wrap).forEach(b => b.onclick = () => { UI.docId = b.dataset.opendoc; go(2); });
+  $$('[data-delDoc]', wrap).forEach(b => b.onclick = () => {
+    const id = b.dataset.deldoc, d = docById(id);
+    modal('資料を削除する', '<p>「' + esc(d.name) + '」と、その資料に付けた抽出（' + P.codings.filter(c => c.docId === id).length + ' 件）を削除します。</p>',
+      [{label:'削除する', primary:true, onClick:close => {
+        P.docs = P.docs.filter(x => x.id !== id);
+        P.codings = P.codings.filter(c => c.docId !== id);
+        if (UI.docId === id) UI.docId = P.docs[0] ? P.docs[0].id : null;
+        close(); renderAll(); markDirty();
+      }}]);
+  });
+}
+function renderMemoDoc(){
+  const sel = $('#memoDocSel');
+  sel.innerHTML = P.docs.map(d => '<option value="' + d.id + '">' + esc(d.name) + '</option>').join('') || '<option value="">（資料なし）</option>';
+  if (UI.docId) sel.value = UI.docId;
+  const d = docById(sel.value);
+  $('#docMemo').value = d ? (d.memo || '') : '';
+  $('#docMemo').disabled = !d;
+  $('#docMemoWho').textContent = d ? d.name : '';
+}
+$('#memoDocSel').onchange = () => { UI.docId = $('#memoDocSel').value; renderMemoDoc(); };
+$('#docMemo').oninput = () => { const d = docById($('#memoDocSel').value); if (d) { d.memo = $('#docMemo').value; markDirty(); } };
+$('#pasteAdd').onclick = () => {
+  const t = $('#pasteBox').value.trim();
+  if (!t) { toast('貼り付けるテキストがありません', true); return; }
+  addDoc($('#pasteName').value.trim() || null, t);
+  $('#pasteBox').value = ''; $('#pasteName').value = '';
+  renderAll(); markDirty(); toast('資料を追加しました');
+};
+$('#attrAdd').onclick = () => {
+  modal('属性の項目を追加', '<label class="f">項目名（例：年齢、性別、職位、所属）</label><input type="text" id="akName" placeholder="性別">', [
+    {label:'追加', primary:true, onClick:(close, card) => {
+      const v = card.querySelector('#akName').value.trim();
+      if (v && P.attrKeys.indexOf(v) < 0) P.attrKeys.push(v);
+      close(); renderAll(); markDirty();
+    }}]);
+};
+$('#minchoToggle').onchange = renderReader;
+$('#printDoc').onclick = () => window.print();
+
+/* 自動コーディング：発言者 */
+$('#autoSpeaker').onclick = () => {
+  if (!P.docs.length) { toast('資料がありません', true); return; }
+  let n = 0, speakers = {};
+  P.docs.forEach(d => {
+    const lines = d.text.split('\n');
+    let off = 0, cur = null, curStart = 0;
+    const flush = end => {
+      if (cur && end > curStart) {
+        const c = ensureCode('話者：' + cur, 'descriptive');
+        if (addCoding(d.id, c.id, curStart, end, 'descriptive', 'deductive')) { n++; speakers[cur] = 1; }
+      }
+    };
+    lines.forEach(line => {
+      const m = line.match(/^\s*(?:【([^】]{1,14})】|([^\s：:「」]{1,14})\s*[：:])\s*/);
+      if (m) { flush(off > 0 ? off - 1 : 0); cur = (m[1] || m[2]).trim(); curStart = off + m[0].length; }
+      off += line.length + 1;
+    });
+    flush(d.text.length);
+  });
+  renderAll(); markDirty();
+  n ? toast(Object.keys(speakers).length + ' 名の発言に ' + n + ' 件コードを付けました')
+    : toast('「A：」「【B】」のような発言者の記載が見つかりませんでした', true);
+};
+/* 自動コーディング：見出し行 */
+$('#autoHead').onclick = () => {
+  let n = 0;
+  P.docs.forEach(d => {
+    const lines = d.text.split('\n');
+    let off = 0, cur = null, curStart = 0;
+    const flush = end => {
+      if (cur && end > curStart) {
+        const c = ensureCode(cur.slice(0, 30), 'descriptive');
+        if (addCoding(d.id, c.id, curStart, end, 'descriptive', 'deductive')) n++;
+      }
+    };
+    lines.forEach(line => {
+      const m = line.match(/^\s*(?:[QqＱ]\s*(\d+)[\.．:：]?\s*(.*)$|[■◆●▼＃#]+\s*(.+)$)/);
+      if (m) {
+        flush(off > 0 ? off - 1 : 0);
+        cur = m[3] ? m[3].trim() : ('Q' + m[1] + (m[2] ? ' ' + m[2].trim() : ''));
+        curStart = off + line.length + 1;
+      }
+      off += line.length + 1;
+    });
+    flush(d.text.length);
+  });
+  renderAll(); markDirty();
+  n ? toast(n + ' 件のセクションにコードを付けました') : toast('「Q1」「■」などの見出し行が見つかりませんでした', true);
+};
+
+/* ============================================================
+   ステップ2：コーディング面
+   ============================================================ */
+function renderTabs(){
+  const t = $('#doctabs');
+  t.innerHTML = P.docs.map(d => '<button data-tab="' + d.id + '" aria-current="' + (d.id === UI.docId) + '">' + esc(d.name)
+    + ' <span class="num muted">' + P.codings.filter(c => c.docId === d.id).length + '</span></button>').join('');
+  $$('[data-tab]', t).forEach(b => b.onclick = () => { UI.docId = b.dataset.tab; UI.focus = null; renderReader(); renderTabs(); renderInspector(); });
+}
+function paragraphs(text){
+  const out = []; let off = 0;
+  text.split('\n').forEach(p => { out.push({s:off, e:off + p.length, t:p}); off += p.length + 1; });
+  return out;
+}
+function renderReader(){
+  const d = curDoc();
+  const R = $('#reader');
+  if (!d) {
+    R.innerHTML = '<div class="empty"><strong>資料を読み込むとここに本文が出ます</strong>本文をマウスでなぞると、コードを付けるパネルが開きます。</div>';
+    $('#readerStat').textContent = ''; return;
+  }
+  UI.docId = d.id;
+  const dim = $('#dimOther').checked && UI.codeId;
+  const mine = P.codings.filter(c => c.docId === d.id && (!dim || c.codeId === UI.codeId));
+  $('#readerStat').textContent = d.text.length.toLocaleString() + ' 字 ／ 抽出 ' + P.codings.filter(c => c.docId === d.id).length + ' 件';
+  const mincho = $('#minchoToggle').checked ? ' mincho' : '';
+  const html = paragraphs(d.text).map((p, i) => {
+    const here = mine.filter(c => c.start < p.e && c.end > p.s);
+    const gut = '<div class="gutter"><span class="pno">' + String(i+1).padStart(3, '0') + '</span>'
+      + here.map(c => {
+          const cd = codeById(c.codeId); if (!cd) return '';
+          return '<button class="slip' + (cd.kind === 'analytic' ? ' an' : '') + '" data-slip="' + c.id
+            + '" style="background:' + cd.color + '33; border-color:' + cd.color + '">' + esc(cd.name) + '</button>';
+        }).join('') + '</div>';
+    let inner;
+    if (!p.t.length) inner = '<span data-off="' + p.s + '"> </span>';
+    else if (!here.length) inner = '<span data-off="' + p.s + '">' + esc(p.t) + '</span>';
+    else {
+      const bounds = new Set([p.s, p.e]);
+      here.forEach(c => { bounds.add(clamp(c.start, p.s, p.e)); bounds.add(clamp(c.end, p.s, p.e)); });
+      const bs = Array.from(bounds).sort((a, b) => a - b);
+      inner = '';
+      for (let k = 0; k < bs.length - 1; k++) {
+        const a = bs[k], b = bs[k+1]; if (b <= a) continue;
+        const hits = here.filter(c => c.start <= a && c.end >= b);
+        const frag = esc(d.text.slice(a, b));
+        if (!hits.length) { inner += '<span data-off="' + a + '">' + frag + '</span>'; continue; }
+        const cols = hits.map(c => (codeById(c.codeId) || {color:'#ddd'}).color);
+        let sh = [];
+        for (let z = 1; z < Math.min(cols.length, 4); z++) sh.push('inset 0 -' + (z * 3) + 'px 0 ' + cols[z]);
+        const names = hits.map(c => (codeById(c.codeId) || {name:'?'}).name).join(' / ');
+        inner += '<span class="hl' + (UI.focus && hits.some(c => c.id === UI.focus) ? ' focus' : '') + '" data-off="' + a
+          + '" data-cids="' + hits.map(c => c.id).join(',') + '" title="' + esc(names) + '"'
+          + ' style="background:' + cols[0] + (sh.length ? ';box-shadow:' + sh.join(',') : '') + '">' + frag + '</span>';
+      }
+    }
+    return '<div class="para">' + gut + '<div class="ptext' + mincho + '">' + inner + '</div></div>';
+  }).join('');
+  R.innerHTML = html;
+  $$('[data-slip]', R).forEach(b => b.onclick = () => { UI.focus = b.dataset.slip; renderReader(); renderInspector(); });
+  $$('[data-cids]', R).forEach(s => s.onclick = e => {
+    e.stopPropagation();
+    const ids = s.dataset.cids.split(',');
+    UI.focus = ids.indexOf(UI.focus) >= 0 && ids.length > 1 ? ids[(ids.indexOf(UI.focus)+1) % ids.length] : ids[0];
+    renderReader(); renderInspector();
+  });
+}
+/* --- 選択範囲の取得 --- */
+function offsetOf(node, offset){
+  let el = node.nodeType === 3 ? node.parentElement : node;
+  if (node.nodeType !== 3) {
+    const kids = Array.prototype.slice.call(node.childNodes, 0, offset);
+    const base = el.closest ? el.closest('[data-off]') : null;
+    if (base) return +base.dataset.off + kids.reduce((s, n) => s + (n.textContent || '').length, 0);
+    return null;
+  }
+  const sp = el.closest('[data-off]');
+  if (!sp) return null;
+  let extra = 0, walk = sp.firstChild;
+  while (walk && walk !== node) { extra += (walk.textContent || '').length; walk = walk.nextSibling; }
+  return +sp.dataset.off + extra + offset;
+}
+function readSelection(){
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const r = sel.getRangeAt(0);
+  if (!$('#reader').contains(r.commonAncestorContainer)) return null;
+  const a = offsetOf(r.startContainer, r.startOffset), b = offsetOf(r.endContainer, r.endOffset);
+  if (a == null || b == null || b <= a) return null;
+  const d = curDoc();
+  return {docId:d.id, start:a, end:b, text:d.text.slice(a, b), rect:r.getBoundingClientRect()};
+}
+function showSelTool(s){
+  UI.sel = s;
+  const el = $('#seltool');
+  $('#stQuote').textContent = s.text.slice(0, 90);
+  refreshCodeSelect();
+  el.classList.add('on');
+  const w = 280;
+  el.style.left = clamp(s.rect.left + window.scrollX, 8, window.innerWidth - w - 12) + 'px';
+  el.style.top = (s.rect.bottom + window.scrollY + 8) + 'px';
+}
+function hideSelTool(){ $('#seltool').classList.remove('on'); UI.sel = null; }
+function refreshCodeSelect(){
+  const sel = $('#stCode');
+  const keep = sel.value;
+  sel.innerHTML = '<option value="__new">＋ 新しいコードを作る…</option>'
+    + P.codes.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
+  if (UI.codeId && P.codes.some(c => c.id === UI.codeId)) sel.value = UI.codeId;
+  else if (keep && sel.querySelector('[value="' + keep + '"]')) sel.value = keep;
+}
+$('#readerWrap').addEventListener('mouseup', () => setTimeout(() => { const s = readSelection(); s ? showSelTool(s) : hideSelTool(); }, 10));
+$('#readerWrap').addEventListener('touchend', () => setTimeout(() => { const s = readSelection(); if (s) showSelTool(s); }, 60));
+$$('#stKind button').forEach(b => b.onclick = () => { UI.kind = b.dataset.k; $$('#stKind button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+$$('#stMode button').forEach(b => b.onclick = () => { UI.mode = b.dataset.m; $$('#stMode button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+
+function applyCoding(codeName, memo){
+  const s = UI.sel; if (!s) return;
+  let cid;
+  if (codeName != null) { const c = ensureCode(codeName, UI.kind); if (!c) return; cid = c.id; }
+  else {
+    const v = $('#stCode').value;
+    if (v === '__new') { newCodeDialog(name => { const c = ensureCode(name, UI.kind); if (c) { UI.codeId = c.id; finish(c.id); } }); return; }
+    cid = v;
+  }
+  finish(cid);
+  function finish(id){
+    const cg = addCoding(s.docId, id, s.start, s.end, UI.kind, UI.mode, memo);
+    UI.focus = cg ? cg.id : null; UI.codeId = id;
+    hideSelTool(); window.getSelection().removeAllRanges();
+    renderAll(); markDirty();
+  }
+}
+$('#stApply').onclick = () => applyCoding(null);
+$('#stInvivo').onclick = () => { if (UI.sel) applyCoding(UI.sel.text.trim().replace(/\s+/g, ' ').slice(0, 30)); };
+$('#stNote').onclick = () => {
+  if (!UI.sel) return;
+  const s = UI.sel;
+  modal('この抽出にメモを付ける', '<p class="seg-quote">' + esc(s.text.slice(0, 200)) + '</p>'
+    + '<label class="f">メモ（なぜここを切り出したか、解釈のねらい）</label><textarea id="cgMemo"></textarea>',
+    [{label:'コードを付けて保存', primary:true, onClick:(close, card) => {
+      const m = card.querySelector('#cgMemo').value; close(); UI.sel = s; applyCoding(null, m);
+    }}]);
+};
+function newCodeDialog(cb){
+  modal('新しいコード', '<label class="f">コード名</label><input type="text" id="ncName">'
+    + '<p class="hint">初学者のうちは、対象者が使った生の言葉（In vivo code）をそのまま使うのも有効です。</p>',
+    [{label:'作る', primary:true, onClick:(close, card) => { const v = card.querySelector('#ncName').value.trim(); close(); if (v) cb(v); }}]);
+  setTimeout(() => { const i = $('#ncName'); if (i) i.focus(); }, 30);
+}
+$('#newCodeAdd').onclick = () => {
+  const v = $('#newCodeName').value.trim(); if (!v) return;
+  const kind = ($$('input[name=nck]').find(r => r.checked) || {value:'descriptive'}).value;
+  const c = ensureCode(v, kind); UI.codeId = c.id;
+  $('#newCodeName').value = ''; renderAll(); markDirty();
+};
+$('#newCodeName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#newCodeAdd').click(); });
+$('#codeFrameBtn').onclick = () => {
+  modal('コード枠を一括作成', '<p class="hint" style="margin-top:0">既存の枠組み（先行研究・インタビューガイド）から演繹的に使うコードを、1 行 1 コードで貼り付けます。</p>'
+    + '<textarea id="cfList" style="min-height:150px" placeholder="安全神話&#10;組織間関係&#10;想定外"></textarea>'
+    + '<div class="row" style="margin-top:8px"><label class="chk" style="color:var(--ink2)"><input type="checkbox" id="cfAnalytic" checked>分析的コーディングとして登録</label></div>',
+    [{label:'作る', primary:true, onClick:(close, card) => {
+      const kind = card.querySelector('#cfAnalytic').checked ? 'analytic' : 'descriptive';
+      const n = card.querySelector('#cfList').value.split('\n').map(s => s.trim()).filter(Boolean);
+      n.forEach(x => ensureCode(x, kind));
+      close(); renderAll(); markDirty(); toast(n.length + ' 件のコードを作りました');
+    }}]);
+};
+function renderCodeList(){
+  const box = $('#codeList');
+  if (!P.codes.length) { box.innerHTML = '<div class="empty"><strong>コードがありません</strong>本文をなぞって付けるか、上の欄で作ります。</div>'; return; }
+  const sorted = P.codes.slice().sort((a, b) => codingsOf(b.id).length - codingsOf(a.id).length);
+  box.innerHTML = '<ul class="list">' + sorted.map(c =>
+    '<li' + (c.id === UI.codeId ? ' style="background:var(--indigo-l)"' : '') + '>'
+    + '<input type="color" value="' + c.color + '" data-col="' + c.id + '" style="width:20px; height:20px; padding:0; border:none; background:none; flex:none">'
+    + '<button class="t" data-pick="' + c.id + '" style="background:none; border:none; text-align:left; cursor:pointer; padding:0">' + esc(c.name) + '</button>'
+    + '<span class="kind ' + (c.kind === 'analytic' ? 'a">分析' : 'd">記述') + '</span>'
+    + '<span class="num muted">' + codingsOf(c.id).length + '</span>'
+    + '<button class="btn ghost sm" data-cdel="' + c.id + '" title="削除">×</button></li>').join('') + '</ul>';
+  $$('[data-pick]', box).forEach(b => b.onclick = () => { UI.codeId = UI.codeId === b.dataset.pick ? null : b.dataset.pick; UI.focus = null; renderAll(); });
+  $$('[data-col]', box).forEach(i => i.oninput = () => { codeById(i.dataset.col).color = i.value; renderReader(); markDirty(); });
+  $$('[data-cdel]', box).forEach(b => b.onclick = () => {
+    const id = b.dataset.cdel, c = codeById(id);
+    modal('コードを削除する', '<p>「' + esc(c.name) + '」と、そのコードの抽出 ' + codingsOf(id).length + ' 件を削除します。</p>',
+      [{label:'削除する', primary:true, onClick:close => {
+        P.codes = P.codes.filter(x => x.id !== id);
+        P.codings = P.codings.filter(x => x.codeId !== id);
+        P.map.nodes = P.map.nodes.filter(n => n.ref !== id);
+        if (UI.codeId === id) UI.codeId = null;
+        close(); renderAll(); markDirty();
+      }}]);
+  });
+}
+function renderInspector(){
+  const box = $('#inspector');
+  const cg = P.codings.find(c => c.id === UI.focus);
+  if (cg) {
+    const cd = codeById(cg.codeId) || {name:'?', color:'#ddd'};
+    box.innerHTML = '<div class="row" style="margin-bottom:6px"><span class="sw" style="background:' + cd.color + '"></span>'
+      + '<strong>' + esc(cd.name) + '</strong><span class="pill">' + (cg.kind === 'analytic' ? '分析的' : '記述的') + '</span>'
+      + '<span class="pill">' + (cg.mode === 'deductive' ? '演繹的' : '帰納的') + '</span></div>'
+      + '<div class="seg-quote">' + esc(cg.text.slice(0, 400)) + '<div class="meta"><span>' + esc((docById(cg.docId) || {name:''}).name) + '</span><span>' + cg.start + '–' + cg.end + ' 字</span></div></div>'
+      + '<label class="f">コードを変える</label><select id="insCode">' + P.codes.map(c => '<option value="' + c.id + '"' + (c.id === cg.codeId ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</select>'
+      + '<label class="f">この抽出のメモ</label><textarea id="insMemo" style="min-height:80px">' + esc(cg.memo || '') + '</textarea>'
+      + '<div class="row" style="margin-top:8px"><button class="btn ghost sm" id="insToExample">コードブックの引用例にする</button>'
+      + '<button class="btn warn sm" id="insDel">抽出を削除</button></div>';
+    $('#insCode').onchange = e => { cg.codeId = e.target.value; renderAll(); markDirty(); };
+    $('#insMemo').oninput = e => { cg.memo = e.target.value; markDirty(); };
+    $('#insToExample').onclick = () => { const c = codeById(cg.codeId); if (c) { c.example = cg.text.slice(0, 200); toast('引用例に入れました'); markDirty(); } };
+    $('#insDel').onclick = () => { P.codings = P.codings.filter(x => x.id !== cg.id); UI.focus = null; renderAll(); markDirty(); };
+    return;
+  }
+  const c = codeById(UI.codeId);
+  if (c) {
+    const list = codingsOf(c.id);
+    const docs = new Set(list.map(x => x.docId));
+    box.innerHTML = '<div class="row" style="margin-bottom:6px"><span class="sw" style="background:' + c.color + '"></span><strong>' + esc(c.name) + '</strong></div>'
+      + '<p class="hint" style="margin-top:0">抽出 ' + list.length + ' 件 ／ ' + docs.size + ' 資料に出現</p>'
+      + '<label class="f">コード名</label><input type="text" id="cName" value="' + esc(c.name) + '">'
+      + '<label class="f">種類</label><select id="cKind"><option value="descriptive"' + (c.kind === 'descriptive' ? ' selected' : '') + '>記述的（事象・テーマに振り分ける）</option><option value="analytic"' + (c.kind === 'analytic' ? ' selected' : '') + '>分析的（抽象的な概念・要因）</option></select>'
+      + '<label class="f">定義</label><textarea id="cDef" style="min-height:60px">' + esc(c.def) + '</textarea>'
+      + '<label class="f">別のコードに統合する</label><div class="row tw"><select id="cMergeTo" style="flex:1"><option value="">選ぶ…</option>'
+      + P.codes.filter(x => x.id !== c.id).map(x => '<option value="' + x.id + '">' + esc(x.name) + '</option>').join('') + '</select>'
+      + '<button class="btn sm" id="cMergeGo">統合</button></div>'
+      + '<div class="row" style="margin-top:8px"><button class="btn ghost sm" id="cMemoBtn">コードメモを書く</button></div>';
+    $('#cMergeGo').onclick = () => {
+      const to = $('#cMergeTo').value;
+      if (!to) { toast('統合先のコードを選んでください', true); return; }
+      modal('コードを統合する', '<p>「' + esc(c.name) + '」の抽出' + list.length + '件を「' + esc((codeById(to) || {}).name) + '」に移し、「' + esc(c.name) + '」を削除します。</p>',
+        [{label:'統合する', primary:true, onClick:close => { close(); mergeCodes(c.id, to); toast('コードを統合しました'); }}]);
+    };
+    $('#cName').oninput = e => { c.name = e.target.value; renderCodeList(); renderReader(); markDirty(); };
+    $('#cKind').onchange = e => { c.kind = e.target.value; renderCodeList(); markDirty(); };
+    $('#cDef').oninput = e => { c.def = e.target.value; markDirty(); };
+    $('#cMemoBtn').onclick = () => { newMemo('code', c.id, 'コードメモ：' + c.name); go(5); };
+    return;
+  }
+  box.innerHTML = '<div class="empty"><strong>ここに詳細が出ます</strong>本文をなぞってコードを付けると、その抽出の中身・メモを編集できます。左のコードを選ぶと定義を書けます。</div>';
+}
+function renderRetrieval(){
+  const box = $('#retrieval');
+  const list = UI.codeId ? codingsOf(UI.codeId) : P.codings.slice(-40).reverse();
+  $('#retrCount').textContent = UI.codeId ? (codeById(UI.codeId) || {}).name + '：' + list.length + ' 件' : '最近の 40 件';
+  if (!list.length) { box.innerHTML = '<div class="empty">抽出はまだありません。</div>'; return; }
+  box.innerHTML = list.map(cg => {
+    const cd = codeById(cg.codeId) || {name:'?', color:'#ddd'};
+    return '<div class="seg-quote" style="border-color:' + cd.color + '"><button data-jump="' + cg.id + '" style="background:none; border:none; text-align:left; padding:0; cursor:pointer">'
+      + esc(cg.text.slice(0, 160)) + (cg.text.length > 160 ? '…' : '') + '</button>'
+      + '<div class="meta"><span>' + esc((docById(cg.docId) || {name:''}).name) + '</span>'
+      + (UI.codeId ? '' : '<span>' + esc(cd.name) + '</span>')
+      + (cg.memo ? '<span>メモあり</span>' : '') + '</div></div>';
+  }).join('');
+  $$('[data-jump]', box).forEach(b => b.onclick = () => jumpTo(b.dataset.jump));
+}
+function jumpTo(cgId){
+  const cg = P.codings.find(c => c.id === cgId); if (!cg) return;
+  UI.docId = cg.docId; UI.focus = cgId; go(2); renderReader(); renderTabs(); renderInspector();
+  setTimeout(() => {
+    const el = $('[data-cids*="' + cgId + '"]') || $('[data-slip="' + cgId + '"]');
+    if (el) el.scrollIntoView({block:'center', behavior:'smooth'});
+  }, 60);
+}
+/* 検索・一括コーディング */
+$('#qBtn').onclick = runSearch;
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+function runSearch(){
+  const q = $('#q').value.trim(), out = $('#qResult');
+  if (!q) { out.innerHTML = ''; return; }
+  let re;
+  try { re = new RegExp($('#qRegex').checked ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'); }
+  catch (e) { out.innerHTML = '<p class="hint">正規表現として読めませんでした。</p>'; return; }
+  const hits = [];
+  P.docs.forEach(d => { let m; re.lastIndex = 0; while ((m = re.exec(d.text))) { hits.push({docId:d.id, s:m.index, e:m.index + m[0].length}); if (!m[0].length) re.lastIndex++; if (hits.length > 400) break; } });
+  if (!hits.length) { out.innerHTML = '<p class="hint">見つかりませんでした。</p>'; return; }
+  out.innerHTML = '<div class="row" style="margin-bottom:6px"><span class="pill">' + hits.length + ' 件</span>'
+    + '<select id="bulkCode" style="flex:1; min-width:110px"><option value="">コードを選ぶ</option>' + P.codes.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('') + '</select>'
+    + '<select id="bulkUnit" style="width:auto"><option value="bunsetsu">文節</option><option value="match">一致部分</option><option value="sentence">文</option><option value="para">段落</option></select>'
+    + '<button class="btn sm" id="bulkGo">一括で付ける</button></div>'
+    + hits.slice(0, 120).map(h => {
+      const d = docById(h.docId);
+      const a = Math.max(0, h.s - 28), b = Math.min(d.text.length, h.e + 34);
+      return '<div class="seg-quote" style="border-color:#9fc3ea"><span class="muted">…' + esc(d.text.slice(a, h.s)) + '</span><span class="kw">'
+        + esc(d.text.slice(h.s, h.e)) + '</span><span class="muted">' + esc(d.text.slice(h.e, b)) + '…</span>'
+        + '<div class="meta"><span>' + esc(d.name) + '</span><span>' + h.s + ' 字</span></div></div>';
+    }).join('');
+  $('#bulkGo').onclick = () => {
+    const cid = $('#bulkCode').value; if (!cid) { toast('コードを選んでください', true); return; }
+    const unit = $('#bulkUnit').value; let n = 0;
+    hits.forEach(h => {
+      const d = docById(h.docId); let s = h.s, e = h.e;
+      if (unit === 'sentence') { s = sentStart(d.text, h.s); e = sentEnd(d.text, h.e); }
+      else if (unit === 'bunsetsu') { const b = bunsetsuRange(d, h.s, h.e); if (b) { s = b.s; e = b.e; } }
+      else if (unit === 'para') { s = d.text.lastIndexOf('\n', h.s - 1) + 1; const nx = d.text.indexOf('\n', h.e); e = nx < 0 ? d.text.length : nx; }
+      if (addCoding(d.id, cid, s, e, 'descriptive', 'deductive')) n++;
+    });
+    renderAll(); markDirty(); toast(n + ' 件にコードを付けました');
+  };
+}
+const SENT_END = /[。．.!?！？\n]/;
+function sentStart(t, i){ for (let k = i - 1; k >= 0; k--) if (SENT_END.test(t[k])) return k + 1; return 0; }
+function sentEnd(t, i){ for (let k = i; k < t.length; k++) if (SENT_END.test(t[k])) return k + 1; return t.length; }
+$('#dimOther').onchange = renderReader;
+$('#readerWrap').addEventListener('scroll', () => { if (UI.sel) hideSelTool(); });
+/* ============================================================
+   ステップ3：カテゴリー・コードブック・行列
+   ============================================================ */
+$('#newCatAdd').onclick = () => {
+  const v = $('#newCatName').value.trim(); if (!v) return;
+  P.categories.push({id:uid('k'), name:v, memo:''});
+  $('#newCatName').value = ''; renderStep3(); markDirty();
+};
+function renderCategories(){
+  const board = $('#catBoard');
+  const groups = P.categories.map(k => ({k:k, codes:P.codes.filter(c => c.categoryId === k.id)}));
+  const un = P.codes.filter(c => !c.categoryId || !P.categories.some(k => k.id === c.categoryId));
+  const chip = c => '<span class="chip" draggable="true" data-drag="' + c.id + '" style="border-color:' + c.color + '">'
+    + '<span class="sw" style="background:' + c.color + '"></span>' + esc(c.name)
+    + '<span class="n">' + codingsOf(c.id).length + '</span>'
+    + '<button class="link" data-move="' + c.id + '" title="カテゴリーを選ぶ" style="font-size:10px">▾</button></span>';
+  board.innerHTML = groups.map(g =>
+    '<div class="card" data-drop="' + g.k.id + '" style="box-shadow:none">'
+    + '<header style="padding:6px 9px"><input type="text" value="' + esc(g.k.name) + '" data-kname="' + g.k.id + '" style="border:none; background:transparent; font-family:var(--serif); font-size:14px; padding:0">'
+    + '<span class="num muted small">' + g.codes.length + '</span><button class="btn ghost sm" data-kdel="' + g.k.id + '">×</button></header>'
+    + '<div class="body" style="padding:8px; min-height:44px; display:flex; flex-wrap:wrap; gap:5px">'
+    + (g.codes.map(chip).join('') || '<span class="hint">ここにコードをドラッグします</span>') + '</div></div>').join('')
+    + '<div class="card" data-drop="__none" style="box-shadow:none; background:#f7f8f7">'
+    + '<header style="padding:6px 9px"><h4 style="font-size:13px; margin-right:auto">未分類</h4><span class="num muted small">' + un.length + '</span></header>'
+    + '<div class="body" style="padding:8px; display:flex; flex-wrap:wrap; gap:5px">' + (un.map(chip).join('') || '<span class="hint">すべて分類されています</span>') + '</div></div>';
+
+  $$('[data-kname]', board).forEach(i => i.oninput = () => { P.categories.find(k => k.id === i.dataset.kname).name = i.value; markDirty(); renderConcepts(); });
+  $$('[data-kdel]', board).forEach(b => b.onclick = () => {
+    const id = b.dataset.kdel;
+    P.categories = P.categories.filter(k => k.id !== id);
+    P.codes.forEach(c => { if (c.categoryId === id) c.categoryId = null; });
+    P.map.nodes = P.map.nodes.filter(n => n.ref !== id);
+    renderStep3(); markDirty();
+  });
+  $$('[data-drag]', board).forEach(el => {
+    el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', el.dataset.drag); e.dataTransfer.effectAllowed = 'move'; });
+  });
+  $$('[data-drop]', board).forEach(z => {
+    z.addEventListener('dragover', e => { e.preventDefault(); z.style.outline = '2px solid var(--indigo)'; });
+    z.addEventListener('dragleave', () => z.style.outline = 'none');
+    z.addEventListener('drop', e => {
+      e.preventDefault(); z.style.outline = 'none';
+      const id = e.dataTransfer.getData('text/plain'); const c = codeById(id); if (!c) return;
+      c.categoryId = z.dataset.drop === '__none' ? null : z.dataset.drop;
+      renderStep3(); markDirty();
+    });
+  });
+  $$('[data-move]', board).forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const c = codeById(b.dataset.move);
+    modal('「' + c.name + '」を入れるカテゴリー',
+      '<select id="mvSel"><option value="">未分類</option>' + P.categories.map(k => '<option value="' + k.id + '"' + (k.id === c.categoryId ? ' selected' : '') + '>' + esc(k.name) + '</option>').join('') + '</select>',
+      [{label:'入れる', primary:true, onClick:(close, card) => { c.categoryId = card.querySelector('#mvSel').value || null; close(); renderStep3(); markDirty(); }}]);
+  });
+}
+function renderCodebook(){
+  const box = $('#codebook');
+  if (!P.codes.length) { box.innerHTML = '<div class="empty"><strong>コードブックは空です</strong>コードを作ると、定義・適用条件・除外条件をここで整理できます。</div>'; return; }
+  box.innerHTML = '<table><thead><tr><th style="min-width:110px">コード</th><th>種類</th><th>定義</th><th>適用条件</th><th>除外条件</th><th>引用例</th><th>数</th></tr></thead><tbody>'
+    + P.codes.map(c => '<tr>'
+      + '<td><div class="row tw" style="gap:5px"><span class="sw" style="background:' + c.color + '"></span><input type="text" data-cb="name" data-id="' + c.id + '" value="' + esc(c.name) + '" style="border:none; padding:0"></div>'
+      + '<div class="muted" style="font-size:11px">' + esc((P.categories.find(k => k.id === c.categoryId) || {name:'未分類'}).name) + '</div></td>'
+      + '<td><select data-cb="kind" data-id="' + c.id + '" style="padding:2px"><option value="descriptive"' + (c.kind === 'descriptive' ? ' selected' : '') + '>記述</option><option value="analytic"' + (c.kind === 'analytic' ? ' selected' : '') + '>分析</option></select></td>'
+      + ['def','include','exclude','example'].map(f => '<td><textarea data-cb="' + f + '" data-id="' + c.id + '" style="min-height:44px; font-size:12px; padding:3px">' + esc(c[f] || '') + '</textarea></td>').join('')
+      + '<td class="num">' + codingsOf(c.id).length + '</td></tr>').join('') + '</tbody></table>';
+  $$('[data-cb]', box).forEach(el => {
+    const h = () => { const c = codeById(el.dataset.id); if (!c) return; c[el.dataset.cb] = el.value; markDirty(); if (el.dataset.cb === 'name' || el.dataset.cb === 'kind') { renderCodeList(); renderReader(); } };
+    el.oninput = h; el.onchange = h;
+  });
+}
+$('#cbCsv').onclick = () => {
+  const rows = [['コード','種類','カテゴリー','定義','適用条件','除外条件','引用例','抽出数','資料数']];
+  P.codes.forEach(c => {
+    const l = codingsOf(c.id);
+    rows.push([c.name, c.kind === 'analytic' ? '分析的' : '記述的', (P.categories.find(k => k.id === c.categoryId) || {name:''}).name,
+      c.def, c.include, c.exclude, c.example, l.length, new Set(l.map(x => x.docId)).size]);
+  });
+  dl('コードブック.csv', toCsv(rows), 'text/csv');
+};
+$('#cbMd').onclick = () => {
+  let m = '# コードブック — ' + P.name + '\n\n';
+  const groups = P.categories.concat([{id:null, name:'未分類'}]);
+  groups.forEach(k => {
+    const cs = P.codes.filter(c => (c.categoryId || null) === k.id);
+    if (!cs.length) return;
+    m += '## ' + k.name + '\n\n';
+    cs.forEach(c => {
+      m += '### ' + c.name + '（' + (c.kind === 'analytic' ? '分析的' : '記述的') + '／' + codingsOf(c.id).length + '件）\n';
+      m += '- 定義：' + (c.def || '—') + '\n- 適用条件：' + (c.include || '—') + '\n- 除外条件：' + (c.exclude || '—') + '\n';
+      if (c.example) m += '- 引用例：「' + c.example.replace(/\n/g, ' ') + '」\n';
+      m += '\n';
+    });
+  });
+  dl('コードブック.md', m, 'text/markdown');
+};
+/* --- 行列 --- */
+function colDefs(){
+  const kind = $('#mxCol').value || 'doc';
+  if (kind === 'doc') return {label:'資料', cols:P.docs.map(d => ({key:d.id, name:d.name, docs:[d.id]}))};
+  const vals = {};
+  P.docs.forEach(d => { const v = (d.attrs[kind] || '（未記入）').trim() || '（未記入）'; (vals[v] = vals[v] || []).push(d.id); });
+  return {label:kind, cols:Object.keys(vals).sort().map(v => ({key:v, name:v, docs:vals[v]}))};
+}
+function rowDefs(){
+  const kindR = $('#mxRow').value;
+  if (kindR === 'word' || kindR === 'bunsetsu') {
+    const idx = unitIndex(kindR);
+    const top = +($('#mxTop') ? $('#mxTop').value : 40) || 40;
+    return idx.rank.slice(0, top).map(e => ({key:e[0], name:e[0], unit:kindR, total:e[1]}));
+  }
+  if (kindR === 'category') {
+    const rows = P.categories.map(k => ({key:k.id, name:k.name, codes:P.codes.filter(c => c.categoryId === k.id).map(c => c.id)}));
+    const un = P.codes.filter(c => !c.categoryId).map(c => c.id);
+    if (un.length) rows.push({key:'__none', name:'未分類', codes:un});
+    return rows;
+  }
+  return P.codes.map(c => ({key:c.id, name:c.name, codes:[c.id], color:c.color}));
+}
+function cellVal(row, col){
+  const mode = $('#mxVal').value;
+  if (row.unit) {
+    const idx = unitIndex(row.unit);
+    let n = 0, dn = 0;
+    col.docs.forEach(id => { const m = idx.byDoc.get(id), c = m ? (m.get(row.key) || 0) : 0; n += c; if (c) dn++; });
+    return mode === 'binary' ? (n ? 1 : 0) : mode === 'docs' ? dn : n;
+  }
+  const list = P.codings.filter(g => row.codes.indexOf(g.codeId) >= 0 && col.docs.indexOf(g.docId) >= 0);
+  if (mode === 'binary') return list.length ? 1 : 0;
+  if (mode === 'docs') return new Set(list.map(g => g.docId)).size;
+  return list.length;
+}
+function renderMatrix(){
+  const sel = $('#mxCol');
+  if (!sel.dataset.built || sel.dataset.keys !== P.attrKeys.join('|')) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="doc">資料</option>' + P.attrKeys.map(k => '<option value="' + esc(k) + '">属性：' + esc(k) + '</option>').join('');
+    sel.dataset.built = '1'; sel.dataset.keys = P.attrKeys.join('|');
+    if (cur && sel.querySelector('[value="' + cur.replace(/"/g,'') + '"]')) sel.value = cur;
+  }
+  const box = $('#matrix'), cols = colDefs(), rows = rowDefs();
+  if (!rows.length || !cols.cols.length) {
+    box.innerHTML = '<div class="empty">' + ($('#mxRow').value === 'code' || $('#mxRow').value === 'category'
+      ? '資料とコードがそろうと、交差集計の表ができます。'
+      : '語が集まっていません。最小出現を下げるか、資料を追加してください。') + '</div>';
+    return;
+  }
+  let max = 1;
+  const grid = rows.map(r => cols.cols.map(c => { const v = cellVal(r, c); if (v > max) max = v; return v; }));
+  let h = '<table class="mx"><thead><tr><th>' + mxRowLabel() + ' \\ ' + esc(cols.label) + '</th>'
+    + cols.cols.map(c => '<th>' + esc(c.name) + '</th>').join('') + '<th>計</th></tr></thead><tbody>';
+  rows.forEach((r, i) => {
+    const tot = grid[i].reduce((a, b) => a + b, 0);
+    h += '<tr><td>' + (r.color ? '<span class="sw" style="background:' + r.color + '; display:inline-block; margin-right:5px"></span>' : '') + esc(r.name) + '</td>'
+      + grid[i].map((v, j) => '<td class="c" data-r="' + i + '" data-c="' + j + '" style="background:' + (v ? 'rgba(31,61,92,' + (0.06 + 0.5 * v / max).toFixed(3) + ')' : 'transparent') + '; color:' + (v / max > 0.6 ? '#fff' : 'inherit') + '">' + (v || '') + '</td>').join('')
+      + '<td class="c num" style="font-weight:600">' + tot + '</td></tr>';
+  });
+  box.innerHTML = h + '</tbody></table>';
+  $$('.mx td.c[data-r]', box).forEach(td => td.onclick = () => {
+    const r = rows[+td.dataset.r], c = cols.cols[+td.dataset.c];
+    const list = r.codes ? P.codings.filter(g => r.codes.indexOf(g.codeId) >= 0 && c.docs.indexOf(g.docId) >= 0) : [];
+    const cell = $('#mxCell');
+    cell.style.display = 'block';
+    cell.innerHTML = '<div class="row" style="margin-bottom:6px"><strong>' + esc(r.name) + ' × ' + esc(c.name) + '</strong><span class="pill">' + (r.unit ? cellVal(r, c) : list.length) + ' 件</span>'
+      + '<button class="btn ghost sm" id="mxClose" style="margin-left:auto">閉じる</button></div>'
+      + (list.length ? list.slice(0, 40).map(g => '<div class="seg-quote"><button data-jump2="' + g.id + '" style="background:none; border:none; text-align:left; padding:0; cursor:pointer">'
+        + esc(g.text.slice(0, 180)) + '</button><div class="meta"><span>' + esc((docById(g.docId) || {name:''}).name) + '</span><span>' + esc((codeById(g.codeId) || {name:''}).name) + '</span></div></div>').join('')
+        : (r.unit ? unitCellHtml(r, c)
+          : '<p class="hint">この組み合わせの抽出はありません。少数派の意見や、語られなかったことに注目する手がかりになります。</p>'));
+    if (r.unit) bindUnitCell(r, c, cell);
+    const sk = r.key + '||' + c.key;
+    cell.insertAdjacentHTML('beforeend', '<label class="f">このセルの要約（フレームワーク行列）</label>'
+      + '<textarea id="mxSum" style="min-height:56px" placeholder="この属性・資料において、この視点で語られていたことの要約">' + esc((P.summaries || {})[sk] || '') + '</textarea>');
+    $('#mxSum').oninput = e => { P.summaries = P.summaries || {}; P.summaries[sk] = e.target.value; markDirty(); };
+    $('#mxClose').onclick = () => cell.style.display = 'none';
+    $$('[data-jump2]', cell).forEach(b => b.onclick = () => jumpTo(b.dataset.jump2));
+  });
+}
+['#mxRow','#mxCol','#mxVal','#mxTop','#mxMin','#mxStem'].forEach(s => $(s).onchange = renderMatrix);
+$('#mxTop').oninput = renderMatrix; $('#mxMin').oninput = renderMatrix;
+$('#mxCsv').onclick = () => {
+  const cols = colDefs(), rows = rowDefs();
+  const out = [[mxRowLabel()].concat(cols.cols.map(c => c.name), ['計'])];
+  rows.forEach(r => { const vs = cols.cols.map(c => cellVal(r, c)); out.push([r.name].concat(vs, [vs.reduce((a, b) => a + b, 0)])); });
+  dl((mxRowLabel() === '抽出語' ? '抽出語×資料の行列' : mxRowLabel() === '文節' ? '文節×資料の行列' : '行列コーディング') + '.csv', toCsv(out), 'text/csv');
+};
+function renderStep3(){ renderCategories(); renderCodebook(); renderMatrix(); renderConcepts(); }
+
+/* ============================================================
+   ステップ4：語の取り出し
+   ============================================================ */
+const STOP = new Set(('これ それ あれ この その あの ここ そこ どこ わけ ため よう こと もの とき ところ ひと 場合 とおり 一つ 二つ 自分 みたいな とても すごく やはり やっぱり あと なんか ちょっと 少し まあ ある いる する なる できる いう 思う 言う ない よい いい どう なに 何 私 僕 俺 あなた 彼 彼女 我々 そして しかし ただ また では です ます ので から まで など ような ように という といった')
+  .split(/\s+/));
+const POS_LIST = [['名詞','名詞'],['動詞','動詞'],['形容詞','形容詞'],['副詞','副詞'],['その他','その他']];
+$('#posBox').innerHTML = POS_LIST.map((p, i) => '<label class="chk" style="color:var(--ink2)"><input type="checkbox" value="' + p[0] + '"' + (i < 3 ? ' checked' : '') + '>' + p[1] + '</label>').join('');
+function posOn(){ return $$('#posBox input:checked').map(i => i.value); }
+function stopSet(){
+  const extra = $('#stopExtra').value.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean);
+  const s = new Set(STOP);
+  DIC.stop.forEach(x => s.add(x));
+  extra.forEach(x => s.add(x));
+  return s;
+}
+function simpleTokens(text){
+  const re = /[一-龥々〆ヵヶ]+|[ァ-ヴー]{2,}|[ぁ-ん]{3,}|[A-Za-z][A-Za-z'\u2019-]+|[0-9]+(?:[.,][0-9]+)*[%％]?/g;
+  const out = []; let m;
+  while ((m = re.exec(text))) {
+    const t = m[0];
+    let pos = '名詞';
+    if (/^[ぁ-ん]+$/.test(t)) pos = 'その他';
+    else if (/^[0-9]/.test(t)) pos = '名詞';
+    if (/^[一-龥々]+$/.test(t) && t.length > 6) continue;
+    out.push({s:t, b:t, pos:pos, i:m.index});
+  }
+  return out;
+}
+function kuroTokens(text){
+  const raw = UI.tokenizer.tokenize(text);
+  const out = [];
+  raw.forEach(t => {
+    const d1 = t.pos_detail_1 || '';
+    if (d1 === '非自立' || d1 === '代名詞' || d1 === '接尾' || d1 === '数') return;
+    if (t.pos === '記号' || t.pos === '助詞' || t.pos === '助動詞' || t.pos === '接続詞' || t.pos === 'フィラー' || t.pos === '感動詞') return;
+    let pos = t.pos;
+    if (['名詞','動詞','形容詞','副詞'].indexOf(pos) < 0) pos = 'その他';
+    out.push({s:t.surface_form, b:(t.basic_form && t.basic_form !== '*') ? t.basic_form : t.surface_form, pos:pos, i:(t.word_position || 1) - 1});
+  });
+  return out;
+}
+function baseTokens(text){ return UI.tokenizer ? kuroTokens(text) : simpleTokens(text); }
+function tokenize(text){
+  let out;
+  if (DIC.termRe) {
+    out = []; let last = 0, m;
+    DIC.termRe.lastIndex = 0;
+    while ((m = DIC.termRe.exec(text))) {
+      if (!m[0].length) { DIC.termRe.lastIndex++; continue; }
+      if (m.index > last) { const off = last; baseTokens(text.slice(last, m.index)).forEach(t => { t.i += off; out.push(t); }); }
+      out.push({s:m[0], b:m[0], pos:'名詞', i:m.index});
+      last = m.index + m[0].length;
+    }
+    const tail = last;
+    baseTokens(text.slice(last)).forEach(t => { t.i += tail; out.push(t); });
+  } else out = baseTokens(text);
+  if (DIC.syn.size) out.forEach(t => {
+    let r = DIC.syn.get(t.b) || DIC.syn.get(t.s);
+    if (!r && t.b.length > 2) {
+      for (let k = 1; k <= 2 && !r; k++) {
+        const stem = t.b.slice(0, t.b.length - k);
+        if (stem.length > 1 && /^[ぁ-ん]+$/.test(t.b.slice(t.b.length - k))) r = DIC.syn.get(stem);
+      }
+    }
+    if (r) t.b = r;
+  });
+  return out;
+}
+function sentencesWithPos(text){
+  const out = [], re = /[^。．.!?！？\n]+[。．.!?！？]?/g;
+  let m;
+  while ((m = re.exec(text))) { if (m[0].trim().length > 1) out.push({s:m.index, e:m.index + m[0].length, t:m[0]}); }
+  return out;
+}
+function scopeDocs(){
+  const v = $('#tokScope').value;
+  return v && v !== '__all' ? P.docs.filter(d => d.id === v) : P.docs;
+}
+function sentences(text){ return text.split(/[。．.!?！？\n]+/).map(s => s.trim()).filter(s => s.length > 1); }
+function wordsOfSentence(s){
+  const stop = stopSet(), pos = posOn(), minLen = +$('#minLen').value || 1;
+  return tokenize(s).filter(t => pos.indexOf(t.pos) >= 0 && !stop.has(t.b) && !stop.has(t.s) && t.b.length >= minLen).map(t => t.b);
+}
+function freqTable(){
+  const f = new Map();
+  scopeDocs().forEach(d => sentences(d.text).forEach(s => wordsOfSentence(s).forEach(w => f.set(w, (f.get(w) || 0) + 1))));
+  const min = +$('#minFreq').value || 1;
+  return Array.from(f.entries()).filter(e => e[1] >= min).sort((a, b) => b[1] - a[1]);
+}
+$('#loadKuromoji').onclick = async () => {
+  const btn = $('#loadKuromoji');
+  if (UI.kuroState === 'loading') return;
+  UI.kuroState = 'loading'; btn.disabled = true; $('#tokStat').textContent = '高精度モードを読み込み中…';
+  const CDN = ['https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/', 'https://unpkg.com/kuromoji@0.1.2/'];
+  try {
+    let lastErr = null, done = false;
+    for (let i = 0; i < CDN.length && !done; i++) {
+      try {
+        if (!window.kuromoji) await loadScript(CDN[i] + 'build/kuromoji.js');
+        await new Promise((res, rej) => {
+          const to = setTimeout(() => rej(new Error('時間切れ（辞書の取得が終わりません）')), 45000);
+          window.kuromoji.builder({dicPath:CDN[i] + 'dict/'}).build((err, tk) => {
+            clearTimeout(to);
+            if (err) rej(err); else { UI.tokenizer = tk; res(); }
+          });
+        });
+        done = true;
+      } catch (e) {
+        lastErr = e;
+        if (i < CDN.length - 1) $('#tokStat').textContent = '別の配布元から読み込み直しています…';
+      }
+    }
+    if (!done) throw lastErr || new Error('読み込めませんでした');
+    UI.kuroState = 'ready';
+    $('#tokStat').textContent = '高精度モード（kuromoji.js・品詞と原形を利用）';
+    btn.textContent = '高精度モード：読み込み済み';
+    toast('高精度モードになりました');
+  } catch (e) {
+    UI.kuroState = 'none'; btn.disabled = false;
+    $('#tokStat').textContent = '簡易モード（文字種ベース）';
+    toast(GAS ? '高精度モードを読み込めませんでした。Apps Script の画面内では止まることがあります。簡易モードのままでも文節・語の抽出は動きます。'
+      : '辞書を読み込めませんでした。オフラインでは簡易モードで分析できます。', true);
+  }
+};
+function renderScope(){
+  const sel = $('#tokScope'), cur = sel.value;
+  sel.innerHTML = '<option value="__all">全資料</option>' + P.docs.map(d => '<option value="' + d.id + '">' + esc(d.name) + '</option>').join('');
+  if (cur) sel.value = cur;
+}
+/* --- ワードクラウド --- */
+$('#wcRun').onclick = drawCloud;
+function drawCloud(){
+  const cv = $('#wcCanvas'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  const useLL = $('#wcWeight') && $('#wcWeight').value === 'll' && DIC.ref;
+  const data = (useLL ? featureTable().filter(x => x.ll > 0).map(x => [x.w, Math.round(x.ll * 10) / 10, x.n])
+    : freqTable()).slice(0, +$('#wcN').value || 80);
+  if (!data.length) { ctx.fillStyle = '#6e7d88'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('語が見つかりません。最小出現数を下げてみてください。', W/2, H/2); $('#wcTable').innerHTML = ''; return; }
+  const maxF = data[0][1], minF = data[data.length-1][1];
+  const boxes = [];
+  const hit = r => boxes.some(b => !(r.x2 < b.x || r.x > b.x2 || r.y2 < b.y || r.y > b.y2));
+  data.forEach((e, i) => {
+    const size = Math.round(13 + 52 * Math.pow((e[1] - minF) / Math.max(1, maxF - minF), 0.62));
+    ctx.font = '600 ' + size + 'px "Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif';
+    const w = ctx.measureText(e[0]).width, h = size * 1.12;
+    let placed = false, a = 0, rad = 0;
+    for (let k = 0; k < 4000 && !placed; k++) {
+      a += 0.35; rad = 2.2 * a;
+      const x = W/2 + rad * Math.cos(a) - w/2, y = H/2 + rad * 0.62 * Math.sin(a) - h/2;
+      if (x < 3 || y < 3 || x + w > W - 3 || y + h > H - 3) { if (rad > Math.max(W, H)) break; continue; }
+      const r = {x:x - 2, y:y - 2, x2:x + w + 2, y2:y + h + 2};
+      if (!hit(r)) { boxes.push(r); ctx.fillStyle = shade(PALETTE[i % PALETTE.length]); ctx.textBaseline = 'top'; ctx.fillText(e[0], x, y); placed = true; }
+    }
+  });
+  $('#wcTable').innerHTML = '<table><thead><tr><th>#</th><th>語</th><th>' + (useLL ? '特徴度（対数尤度比）</th><th>出現数' : '出現数') + '</th></tr></thead><tbody>'
+    + data.slice(0, 60).map((e, i) => '<tr><td class="num muted">' + (i+1) + '</td><td>' + esc(e[0]) + '</td><td class="num">' + e[1] + '</td>'
+      + (useLL ? '<td class="num muted">' + e[2] + '</td>' : '') + '</tr>').join('') + '</tbody></table>'
+    + (useLL ? '<p class="hint">' + esc(DIC.refName) + ' と比べて出現が多い順です。値が大きいほど、この語りに特徴的な語といえます。</p>' : '');
+}
+function shade(hex){
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round((n >> 16) * 0.72), g = Math.round(((n >> 8) & 255) * 0.66), b = Math.round((n & 255) * 0.66);
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+$('#wcPng').onclick = () => saveDataUrl('ワードクラウド.png', $('#wcCanvas').toDataURL('image/png'));
+
+/* --- ワードツリー --- */
+$('#wtRun').onclick = () => {
+  const w = $('#wtWord').value.trim();
+  const out = $('#wtOut');
+  if (!w) { toast('中心にする語を入れてください', true); return; }
+  const depth = clamp(+$('#wtDepth').value || 4, 1, 8), after = $('#wtDir').value === 'after';
+  const root = {n:0, kids:new Map()};
+  scopeDocs().forEach(d => sentences(d.text).forEach(s => {
+    const ws = tokenize(s).map(t => t.s);
+    ws.forEach((x, i) => {
+      if (x !== w && ws[i] && ws[i].indexOf(w) < 0) return;
+      if (x !== w) return;
+      let seq = after ? ws.slice(i + 1, i + 1 + depth) : ws.slice(Math.max(0, i - depth), i).reverse();
+      let node = root; root.n++;
+      seq.forEach(t => {
+        if (!node.kids.has(t)) node.kids.set(t, {n:0, kids:new Map()});
+        node = node.kids.get(t); node.n++;
+      });
+    });
+  }));
+  if (!root.n) { out.innerHTML = '<div class="empty"><strong>「' + esc(w) + '」が見つかりません</strong>表記ゆれ（漢字・かな）を確かめてください。</div>'; return; }
+  const render = (node, lvl) => {
+    const kids = Array.from(node.kids.entries()).sort((a, b) => b[1].n - a[1].n).slice(0, lvl === 0 ? 12 : 6);
+    if (!kids.length) return '';
+    return '<ul>' + kids.map(k => '<li><span class="w" style="font-size:' + (12 + Math.min(12, k[1].n * 2)) + 'px">' + esc(k[0])
+      + '</span> <span class="c">' + k[1].n + '</span>' + render(k[1], lvl + 1) + '</li>').join('') + '</ul>';
+  };
+  out.innerHTML = '<div style="padding:6px"><span class="pill">' + root.n + ' 回出現</span> <strong style="font-size:18px; font-family:var(--serif)">' + esc(w) + '</strong> '
+    + '<span class="muted small">' + (after ? 'のあとに続く語' : 'の前にある語') + '</span>' + render(root, 0) + '</div>';
+};
+
+/* --- 共起ネットワーク / Code Map --- */
+function buildNetwork(){
+  const mode = $('#netMode').value, N = clamp(+$('#netN').value || 40, 5, 120), minE = +$('#netMinE').value || 1;
+  let units = [], labelOf = x => x, colorOf = () => '#1f3d5c';
+  if (mode === 'word') {
+    scopeDocs().forEach(d => sentences(d.text).forEach(s => { const ws = Array.from(new Set(wordsOfSentence(s))); if (ws.length > 1) units.push(ws); }));
+  } else {
+    scopeDocs().forEach(d => paragraphs(d.text).forEach(p => {
+      const set = Array.from(new Set(P.codings.filter(c => c.docId === d.id && c.start < p.e && c.end > p.s).map(c => c.codeId)));
+      if (set.length > 1) units.push(set);
+    }));
+    labelOf = id => (codeById(id) || {name:'?'}).name;
+    colorOf = id => (codeById(id) || {color:'#1f3d5c'}).color;
+  }
+  const cnt = new Map();
+  units.forEach(u => u.forEach(x => cnt.set(x, (cnt.get(x) || 0) + 1)));
+  const top = Array.from(cnt.entries()).sort((a, b) => b[1] - a[1]).slice(0, N);
+  const keep = new Set(top.map(e => e[0]));
+  const pair = new Map();
+  units.forEach(u => {
+    const f = u.filter(x => keep.has(x));
+    for (let i = 0; i < f.length; i++) for (let j = i + 1; j < f.length; j++) {
+      const k = f[i] < f[j] ? f[i] + '\u0001' + f[j] : f[j] + '\u0001' + f[i];
+      pair.set(k, (pair.get(k) || 0) + 1);
+    }
+  });
+  const nodes = top.map((e, i) => ({id:e[0], label:labelOf(e[0]), n:e[1], color:colorOf(e[0]),
+    x:500 + 260 * Math.cos(i * 2.39), y:310 + 240 * Math.sin(i * 2.39), vx:0, vy:0, deg:0}));
+  const index = new Map(nodes.map(n => [n.id, n]));
+  let links = [];
+  pair.forEach((v, k) => {
+    if (v < minE) return;
+    const ab = k.split('\u0001'), a = index.get(ab[0]), b = index.get(ab[1]);
+    if (!a || !b) return;
+    links.push({a:a, b:b, w:v, j:v / (a.n + b.n - v)});
+  });
+  links.sort((x, y) => y.j - x.j);
+  links = links.slice(0, Math.max(30, nodes.length * 3));
+  links.forEach(l => { l.a.deg++; l.b.deg++; });
+  return {nodes:nodes, links:links, mode:mode};
+}
+function layout(g, steps){
+  const W = 1000, H = 620, k = Math.sqrt((W * H) / Math.max(1, g.nodes.length)) * 0.55;
+  for (let it = 0; it < steps; it++) {
+    const t = 1 - it / steps;
+    g.nodes.forEach(a => {
+      let fx = 0, fy = 0;
+      g.nodes.forEach(b => {
+        if (a === b) return;
+        let dx = a.x - b.x, dy = a.y - b.y, d2 = dx*dx + dy*dy;
+        if (d2 < 1) { dx = Math.random() - .5; dy = Math.random() - .5; d2 = 1; }
+        const f = (k * k) / d2;
+        fx += dx * f; fy += dy * f;
+      });
+      fx += (W/2 - a.x) * 0.012; fy += (H/2 - a.y) * 0.012;
+      a.vx = fx; a.vy = fy;
+    });
+    g.links.forEach(l => {
+      const dx = l.b.x - l.a.x, dy = l.b.y - l.a.y, d = Math.max(1, Math.hypot(dx, dy));
+      const f = (d * d) / k * (0.3 + l.j) * 0.05;
+      const ux = dx / d * f, uy = dy / d * f;
+      l.a.vx += ux; l.a.vy += uy; l.b.vx -= ux; l.b.vy -= uy;
+    });
+    g.nodes.forEach(a => {
+      if (a.fixed) return;
+      a.x = clamp(a.x + clamp(a.vx, -30, 30) * t * 0.5, 40, W - 40);
+      a.y = clamp(a.y + clamp(a.vy, -30, 30) * t * 0.5, 30, H - 30);
+    });
+  }
+}
+function drawNet(){
+  const g = UI.netData, svg = $('#netSvg');
+  if (!g || !g.nodes.length) { svg.innerHTML = '<text x="500" y="300" text-anchor="middle" fill="#6e7d88" font-size="16">共起する組み合わせが見つかりません。条件をゆるめてください。</text>'; return; }
+  const maxDeg = Math.max.apply(null, g.nodes.map(n => n.deg)) || 1;
+  const maxN = Math.max.apply(null, g.nodes.map(n => n.n)) || 1;
+  let h = '<rect x="0" y="0" width="1000" height="620" fill="#ffffff"/>';
+  g.links.forEach(l => {
+    h += '<line x1="' + l.a.x.toFixed(1) + '" y1="' + l.a.y.toFixed(1) + '" x2="' + l.b.x.toFixed(1) + '" y2="' + l.b.y.toFixed(1)
+      + '" stroke="#7b93a8" stroke-opacity="' + (0.25 + l.j).toFixed(2) + '" stroke-width="' + (0.6 + l.j * 7).toFixed(2) + '"/>';
+  });
+  g.nodes.forEach((n, i) => {
+    const r = 6 + 16 * Math.sqrt(n.n / maxN);
+    const op = 0.35 + 0.6 * (n.deg / maxDeg);
+    const col = g.mode === 'code' ? n.color : '#1f3d5c';
+    h += '<g data-n="' + i + '" style="cursor:grab">'
+      + '<circle cx="' + n.x.toFixed(1) + '" cy="' + n.y.toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + col + '" fill-opacity="' + op.toFixed(2) + '" stroke="#122536" stroke-width="1"/>'
+      + '<text x="' + n.x.toFixed(1) + '" y="' + (n.y - r - 4).toFixed(1) + '" text-anchor="middle" font-size="' + (11 + 7 * (n.n / maxN)).toFixed(1)
+      + '" font-family="sans-serif" fill="#141d24" stroke="#fff" stroke-width="3" paint-order="stroke">' + esc(n.label) + '</text></g>';
+  });
+  svg.innerHTML = h;
+  const pt = e => { const r = svg.getBoundingClientRect(); return {x:(e.clientX - r.left) / (r.width || 1) * 1000, y:(e.clientY - r.top) / (r.height || 1) * 620}; };
+  svg.onpointerdown = e => {
+    const gEl = e.target.closest('[data-n]'); if (!gEl) return;
+    UI.netDrag = g.nodes[+gEl.dataset.n]; UI.netDrag.fixed = true;
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+  };
+  svg.onpointermove = e => { if (!UI.netDrag) return; const p = pt(e); UI.netDrag.x = p.x; UI.netDrag.y = p.y; drawNet(); };
+  svg.onpointerup = () => { UI.netDrag = null; };
+  svg.onpointercancel = () => { UI.netDrag = null; };
+}
+$('#netRun').onclick = () => { UI.netData = buildNetwork(); layout(UI.netData, 260); drawNet(); };
+$('#netPng').onclick = () => svgToPng($('#netSvg'), '共起ネットワーク.png');
+function svgToPng(svg, name){
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('width', '2000'); clone.setAttribute('height', '1240');
+  const s = new XMLSerializer().serializeToString(clone);
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas'); cv.width = 2000; cv.height = 1240;
+    const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, 2000, 1240); cx.drawImage(img, 0, 0);
+    saveDataUrl(name, cv.toDataURL('image/png'));
+  };
+  img.onerror = () => toast('画像に変換できませんでした', true);
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+}
+
+/* --- カテゴリー関連図 --- */
+function renderMapAdd(){
+  const sel = $('#mapAdd');
+  sel.innerHTML = '<optgroup label="カテゴリー">' + P.categories.map(k => '<option value="k:' + k.id + '">' + esc(k.name) + '</option>').join('') + '</optgroup>'
+    + '<optgroup label="コード">' + P.codes.map(c => '<option value="c:' + c.id + '">' + esc(c.name) + '</option>').join('') + '</optgroup>'
+    + '<optgroup label="その他"><option value="free">自由に書く節点…</option></optgroup>';
+}
+$('#mapAddBtn').onclick = () => {
+  const v = $('#mapAdd').value; if (!v) { toast('置くものを選んでください', true); return; }
+  if (v === 'free') {
+    modal('節点を作る', '<label class="f">ラベル</label><input type="text" id="mnLabel">',
+      [{label:'置く', primary:true, onClick:(close, card) => { const t = card.querySelector('#mnLabel').value.trim(); close(); if (t) pushNode(t, null, 'free'); }}]);
+    return;
+  }
+  const parts = v.split(':'), isCat = parts[0] === 'k';
+  const o = isCat ? P.categories.find(k => k.id === parts[1]) : codeById(parts[1]);
+  if (o) pushNode(o.name, o.id, isCat ? 'cat' : 'code');
+};
+function pushNode(label, ref, type){
+  if (ref && P.map.nodes.some(n => n.ref === ref)) { toast('すでに図にあります', true); return; }
+  P.map.nodes.push({id:uid('n'), label:label, ref:ref, type:type,
+    x:120 + Math.random() * 700, y:100 + Math.random() * 380});
+  drawMap(); markDirty();
+}
+$('#mapLinkMode').onclick = () => {
+  UI.mapLink.on = !UI.mapLink.on; UI.mapLink.first = null;
+  $('#mapLinkMode').setAttribute('aria-pressed', UI.mapLink.on);
+  $('#mapLinkMode').textContent = UI.mapLink.on ? '矢印：始点を選ぶ' : '矢印を引く';
+};
+$('#mapClear').onclick = () => modal('関連図を消す', '<p>置いた節点と矢印をすべて消します。コードやカテゴリー自体は残ります。</p>',
+  [{label:'消す', primary:true, onClick:close => { P.map = {nodes:[], links:[]}; close(); drawMap(); markDirty(); }}]);
+$('#mapPng').onclick = () => svgToPng($('#mapSvg'), 'カテゴリー関連図.png');
+function drawMap(){
+  const svg = $('#mapSvg'), M = P.map;
+  if (!M.nodes.length) {
+    svg.innerHTML = '<rect width="1000" height="620" fill="#fff"/><text x="500" y="300" text-anchor="middle" fill="#6e7d88" font-size="15">上の選択欄からカテゴリーやコードを選び、「図に置く」を押します。</text>';
+    return;
+  }
+  const byId = new Map(M.nodes.map(n => [n.id, n]));
+  let h = '<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
+    + '<path d="M0,0 L10,5 L0,10 z" fill="#3d4c57"/></marker></defs><rect width="1000" height="620" fill="#fff"/>';
+  M.links.forEach((l, i) => {
+    const a = byId.get(l.a), b = byId.get(l.b); if (!a || !b) return;
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    h += '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" stroke="#3d4c57" stroke-width="1.6" marker-end="url(#ar)"/>';
+    if (l.label) h += '<text x="' + mx + '" y="' + (my - 5) + '" text-anchor="middle" font-size="12" font-family="sans-serif" fill="#3d4c57" stroke="#fff" stroke-width="3" paint-order="stroke" data-l="' + i + '" style="cursor:pointer">' + esc(l.label) + '</text>';
+    else h += '<circle cx="' + mx + '" cy="' + my + '" r="7" fill="#fff" stroke="#c7d0d1" data-l="' + i + '" style="cursor:pointer"/>';
+  });
+  M.nodes.forEach(n => {
+    const w = Math.max(70, n.label.length * 13 + 18), hh = 34;
+    const fill = n.type === 'cat' ? '#e8eef4' : n.type === 'code' ? '#fdf6e0' : '#fff';
+    const stroke = UI.mapLink.first === n.id ? '#98392c' : '#1f3d5c';
+    h += '<g data-m="' + n.id + '" style="cursor:grab">'
+      + '<rect x="' + (n.x - w/2) + '" y="' + (n.y - hh/2) + '" width="' + w + '" height="' + hh + '" rx="' + (n.type === 'cat' ? 3 : 16)
+      + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (UI.mapLink.first === n.id ? 2.5 : 1.2) + '"/>'
+      + '<text x="' + n.x + '" y="' + (n.y + 4.5) + '" text-anchor="middle" font-size="13" font-family="sans-serif" fill="#141d24">' + esc(n.label) + '</text></g>';
+  });
+  svg.innerHTML = h;
+  const pt = e => { const r = svg.getBoundingClientRect(); return {x:(e.clientX - r.left) / (r.width || 1) * 1000, y:(e.clientY - r.top) / (r.height || 1) * 620}; };
+  svg.onpointerdown = e => {
+    const lEl = e.target.closest('[data-l]');
+    if (lEl) { editLink(+lEl.dataset.l); return; }
+    const gEl = e.target.closest('[data-m]'); if (!gEl) return;
+    const n = byId.get(gEl.dataset.m);
+    if (UI.mapLink.on) {
+      if (!UI.mapLink.first) { UI.mapLink.first = n.id; $('#mapLinkMode').textContent = '矢印：終点を選ぶ'; drawMap(); }
+      else if (UI.mapLink.first !== n.id) {
+        const a = UI.mapLink.first; UI.mapLink.first = null; $('#mapLinkMode').textContent = '矢印：始点を選ぶ';
+        modal('関係を書く', '<label class="f">矢印につけることば（例：促す、制約する、きっかけになる）</label><input type="text" id="lkLabel">',
+          [{label:'引く', primary:true, onClick:(close, card) => { P.map.links.push({a:a, b:n.id, label:card.querySelector('#lkLabel').value.trim()}); close(); drawMap(); markDirty(); }}]);
+      }
+      return;
+    }
+    UI.mapDrag = n; UI.mapMoved = false;
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+  };
+  svg.onpointermove = e => {
+    if (!UI.mapDrag) return;
+    const p = pt(e); UI.mapDrag.x = clamp(p.x, 50, 950); UI.mapDrag.y = clamp(p.y, 25, 595);
+    UI.mapMoved = true; drawMap();
+  };
+  svg.onpointerup = () => { if (UI.mapDrag && UI.mapMoved) markDirty(); UI.mapDrag = null; };
+  svg.onpointercancel = () => { UI.mapDrag = null; };
+}
+function editLink(i){
+  const l = P.map.links[i]; if (!l) return;
+  modal('矢印を編集', '<label class="f">ことば</label><input type="text" id="lkE" value="' + esc(l.label || '') + '">',
+    [{label:'削除', onClick:close => { P.map.links.splice(i, 1); close(); drawMap(); markDirty(); }},
+     {label:'保存', primary:true, onClick:(close, card) => { l.label = card.querySelector('#lkE').value.trim(); close(); drawMap(); markDirty(); }}]);
+}
+
+/* --- ストーリーライン --- */
+function renderConcepts(){
+  const box = $('#conceptChips');
+  const items = P.categories.map(k => ({n:k.name, t:'カテゴリー'})).concat(P.codes.map(c => ({n:c.name, t:'コード', col:c.color})));
+  if (!items.length) { box.innerHTML = '<span class="hint">カテゴリーとコードを作ると、ここに並びます。</span>'; return; }
+  const txt = $('#storyBox').value;
+  box.innerHTML = items.map(i => '<button class="chip' + (txt.indexOf(i.n) >= 0 ? ' on' : '') + '" data-ins="' + esc(i.n) + '">'
+    + (i.col ? '<span class="sw" style="background:' + i.col + '"></span>' : '<span class="sw" style="background:#e8eef4"></span>') + esc(i.n) + '</button>').join('');
+  $$('[data-ins]', box).forEach(b => b.onclick = () => {
+    const ta = $('#storyBox'), v = '〈' + b.dataset.ins + '〉';
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    ta.value = ta.value.slice(0, s) + v + ta.value.slice(e);
+    ta.focus(); ta.selectionStart = ta.selectionEnd = s + v.length;
+    P.storyline = ta.value; renderConcepts(); storyStat(); markDirty();
+  });
+}
+function storyStat(){
+  const t = $('#storyBox').value;
+  const all = P.categories.map(k => k.name).concat(P.codes.map(c => c.name));
+  const used = all.filter(n => n && t.indexOf(n) >= 0).length;
+  $('#storyStat').textContent = t.length + ' 字 ／ 概念 ' + used + '/' + all.length + ' を使用';
+}
+$('#storyBox').oninput = () => { P.storyline = $('#storyBox').value; storyStat(); renderConcepts(); markDirty(); };
+
+/* ============================================================
+   ステップ5：メモ・省察
+   ============================================================ */
+const MEMO_LABEL = {code:'コードメモ', theory:'理論メモ', method:'方法論メモ'};
+function newMemo(type, refId, title){
+  const m = {id:uid('m'), type:type, title:title || (MEMO_LABEL[type] + ' ' + (P.memos.filter(x => x.type === type).length + 1)),
+    body:'', ref:refId || '', ts:new Date().toISOString()};
+  P.memos.push(m); UI.memoId = m.id; renderMemos(); markDirty();
+  return m;
+}
+$$('[data-newmemo]').forEach(b => b.onclick = () => { newMemo(b.dataset.newmemo); go(5); setTimeout(() => $('#memoTitle').focus(), 40); });
+function renderMemos(){
+  ['code','theory','method'].forEach(t => {
+    const box = $('[data-memolist="' + t + '"]');
+    const list = P.memos.filter(m => m.type === t);
+    box.innerHTML = list.length ? '<ul class="list">' + list.map(m =>
+      '<li' + (m.id === UI.memoId ? ' style="background:var(--indigo-l)"' : '') + '><button class="t" data-mopen="' + m.id + '" style="background:none; border:none; text-align:left; cursor:pointer; padding:0">'
+      + esc(m.title) + '<div class="muted small" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">' + esc((m.body || '').slice(0, 40)) + '</div></button></li>').join('') + '</ul>'
+      : '<div class="empty">＋ で書き始めます。</div>';
+    $$('[data-mopen]', box).forEach(b => b.onclick = () => { UI.memoId = b.dataset.mopen; renderMemos(); });
+  });
+  const m = P.memos.find(x => x.id === UI.memoId);
+  $('#memoEditWho').textContent = m ? MEMO_LABEL[m.type] : '未選択';
+  $('#memoTitle').value = m ? m.title : '';
+  $('#memoBody').value = m ? m.body : '';
+  $('#memoTitle').disabled = $('#memoBody').disabled = $('#memoRef').disabled = !m;
+  $('#memoRef').innerHTML = '<option value="">（関連づけない）</option>'
+    + '<optgroup label="コード">' + P.codes.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('') + '</optgroup>'
+    + '<optgroup label="資料">' + P.docs.map(d => '<option value="' + d.id + '">' + esc(d.name) + '</option>').join('') + '</optgroup>';
+  if (m) $('#memoRef').value = m.ref || '';
+}
+$('#memoTitle').oninput = () => { const m = P.memos.find(x => x.id === UI.memoId); if (m) { m.title = $('#memoTitle').value; renderMemos(); markDirty(); } };
+$('#memoBody').oninput = () => { const m = P.memos.find(x => x.id === UI.memoId); if (m) { m.body = $('#memoBody').value; markDirty(); } };
+$('#memoRef').onchange = () => { const m = P.memos.find(x => x.id === UI.memoId); if (m) { m.ref = $('#memoRef').value; markDirty(); } };
+$('#memoDel').onclick = () => {
+  if (!UI.memoId) return;
+  P.memos = P.memos.filter(m => m.id !== UI.memoId); UI.memoId = null; renderMemos(); markDirty();
+};
+['rf1','rf2','rf3'].forEach((k, i) => $('#' + k).oninput = () => { P.reflexivity['q' + (i+1)] = $('#' + k).value; markDirty(); });
+
+/* ============================================================
+   保存・書き出し・マージ
+   ============================================================ */
+$('#btnSave').onclick = () => { P.name = $('#projName').textContent.trim() || '無題のプロジェクト'; dl(P.name + '.qda.json', JSON.stringify(exportProject()), 'application/json'); saveLocal(); };
+$('#btnOpen').onclick = () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = async () => { if (inp.files[0]) { try { await importJson(await readText(inp.files[0]), inp.files[0].name); } catch (e) { toast(e.message, true); } } };
+  inp.click();
+};
+$('#btnMerge').onclick = () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = async () => {
+    if (!inp.files[0]) return;
+    try { const o = JSON.parse(await readText(inp.files[0])); if (!o.docs) throw new Error('プロジェクトファイルではありません'); mergeProject(o); }
+    catch (e) { toast(e.message, true); }
+  };
+  inp.click();
+};
+function mergeProject(o){
+  const docMap = new Map();
+  (o.docs || []).forEach(d => {
+    const same = P.docs.find(x => x.name === d.name && x.text === d.text) || P.docs.find(x => x.text === d.text);
+    if (same) docMap.set(d.id, same.id);
+    else { const nd = addDoc(d.name + '（統合）', d.text, d.attrs || {}); nd.memo = d.memo || ''; docMap.set(d.id, nd.id); }
+  });
+  const codeMap = new Map();
+  (o.codes || []).forEach(c => {
+    const ex = P.codes.find(x => x.name === c.name);
+    if (ex) { codeMap.set(c.id, ex.id); ['def','include','exclude','example'].forEach(f => { if (!ex[f] && c[f]) ex[f] = c[f]; }); }
+    else { const nc = ensureCode(c.name, c.kind); nc.def = c.def || ''; nc.include = c.include || ''; nc.exclude = c.exclude || ''; nc.example = c.example || ''; codeMap.set(c.id, nc.id); }
+  });
+  (o.categories || []).forEach(k => {
+    let ex = P.categories.find(x => x.name === k.name);
+    if (!ex) { ex = {id:uid('k'), name:k.name, memo:k.memo || ''}; P.categories.push(ex); }
+    (o.codes || []).filter(c => c.categoryId === k.id).forEach(c => {
+      const nc = codeById(codeMap.get(c.id)); if (nc && !nc.categoryId) nc.categoryId = ex.id;
+    });
+  });
+  /* コーダー間の一致（同じ資料・同じコード・50%以上の重なり） */
+  let inc = 0, agree = 0, added = 0;
+  const before = P.codings.slice(), incoming = [];
+  (o.codings || []).forEach(g => {
+    const did = docMap.get(g.docId), cid = codeMap.get(g.codeId);
+    if (!did || !cid) return;
+    inc++;
+    const hit = before.some(x => x.docId === did && x.codeId === cid
+      && Math.max(0, Math.min(x.end, g.end) - Math.max(x.start, g.start)) >= 0.5 * Math.min(x.end - x.start, g.end - g.start));
+    if (hit) agree++;
+    incoming.push({docId:did, codeId:cid, start:g.start, end:g.end});
+    if (addCoding(did, cid, g.start, g.end, g.kind, g.mode, g.memo)) added++;
+  });
+  (o.memos || []).forEach(m => { if (!P.memos.some(x => x.title === m.title && x.body === m.body)) P.memos.push(Object.assign({}, m, {id:uid('m')})); });
+  const rate = inc ? Math.round(agree / inc * 100) : 0;
+  let kp = null;
+  try {
+    const paras = [];
+    P.docs.forEach(d => paragraphs(d.text).forEach(p => { if (p.t.trim()) paras.push({d:d.id, s:p.s, e:p.e}); }));
+    const ids = Array.from(new Set(before.map(x => x.codeId).concat(incoming.map(x => x.codeId))));
+    if (paras.length && ids.length) {
+      const sets = src => paras.map(p => new Set(src.filter(x => x.docId === p.d && x.start < p.e && x.end > p.s).map(x => x.codeId)));
+      kp = kappaBetween(sets(before), sets(incoming), ids);
+      if (kp) { P.reliability = {po:kp.po, kappa:kp.kappa, n:kp.n, date:new Date().toISOString(), codes:ids.length}; }
+    }
+  } catch (e) {}
+  renderAll(); markDirty();
+  modal('マージしました',
+    '<p>取り込んだ抽出 ' + inc + ' 件のうち、' + added + ' 件を追加しました。</p>'
+    + '<p><strong>コーダー間の一致：' + rate + '%</strong>（同じ資料・同じコードで、範囲が半分以上重なったもの ' + agree + ' 件）</p>'
+    + (kp ? '<p><strong>段落を単位とした一致率 ' + Math.round(kp.po * 100) + '%、Cohenのκ = ' + kp.kappa.toFixed(2) + '</strong>（' + kappaLabel(kp.kappa) + '）</p>' : '')
+    + '<p class="hint">一致率の低いコードは、定義や適用条件があいまいなことが多い箇所です。コードブックを見直す手がかりにしてください。</p>', []);
+}
+$('#expCodings').onclick = () => {
+  const rows = [['資料','コード','カテゴリー','種類','手続き','開始','終了','抽出テキスト','メモ'].concat(P.attrKeys)];
+  P.codings.forEach(g => {
+    const d = docById(g.docId) || {name:'', attrs:{}}, c = codeById(g.codeId) || {name:''};
+    rows.push([d.name, c.name, (P.categories.find(k => k.id === c.categoryId) || {name:''}).name,
+      g.kind === 'analytic' ? '分析的' : '記述的', g.mode === 'deductive' ? '演繹的' : '帰納的',
+      g.start, g.end, g.text.replace(/\n/g, ' '), g.memo].concat(P.attrKeys.map(k => d.attrs[k] || '')));
+  });
+  dl('コーディング一覧.csv', toCsv(rows), 'text/csv');
+};
+function buildReport(){
+  const n = P.codings.length;
+  let m = '# ' + P.name + '\n\n分析レポート（' + new Date().toLocaleDateString('ja-JP') + '）\n\n';
+  m += '## 1. データ\n\n資料 ' + P.docs.length + ' 件、総文字数 ' + P.docs.reduce((s, d) => s + d.text.length, 0).toLocaleString() + ' 字。\n\n';
+  m += '| 資料 | 文字数 | 抽出 |' + P.attrKeys.map(k => ' ' + k + ' |').join('') + '\n|---|---|---|' + P.attrKeys.map(() => '---|').join('') + '\n';
+  P.docs.forEach(d => { m += '| ' + d.name + ' | ' + d.text.length + ' | ' + P.codings.filter(c => c.docId === d.id).length + ' |' + P.attrKeys.map(k => ' ' + (d.attrs[k] || '') + ' |').join('') + '\n'; });
+  m += '\n## 2. コーディング\n\n抽出 ' + n + ' 件、コード ' + P.codes.length + ' 件（記述的 ' + P.codes.filter(c => c.kind !== 'analytic').length
+    + '／分析的 ' + P.codes.filter(c => c.kind === 'analytic').length + '）、帰納的 '
+    + P.codings.filter(c => c.mode !== 'deductive').length + ' 件・演繹的 ' + P.codings.filter(c => c.mode === 'deductive').length + ' 件。\n\n';
+  P.categories.concat([{id:null, name:'未分類'}]).forEach(k => {
+    const cs = P.codes.filter(c => (c.categoryId || null) === k.id);
+    if (!cs.length) return;
+    m += '### ' + k.name + '\n\n';
+    cs.forEach(c => {
+      m += '- **' + c.name + '**（' + codingsOf(c.id).length + '件）' + (c.def ? '：' + c.def : '') + '\n';
+      if (c.example) m += '  - 例「' + c.example.replace(/\n/g, ' ') + '」\n';
+    });
+    m += '\n';
+  });
+  const sk = Object.keys(P.summaries || {}).filter(k => (P.summaries[k] || '').trim());
+  if (sk.length) {
+    m += '### フレームワーク行列の要約\n\n';
+    sk.forEach(k => { const p = k.split('||'); m += '- ' + p[0] + ' × ' + p[1] + '：' + P.summaries[k].replace(/\n/g, ' ') + '\n'; });
+    m += '\n';
+  }
+  m += '## 3. ストーリーライン\n\n' + (P.storyline || '（未記入）') + '\n\n';
+  m += '## 4. メモ\n\n';
+  ['code','theory','method'].forEach(t => {
+    const list = P.memos.filter(x => x.type === t);
+    if (!list.length) return;
+    m += '### ' + MEMO_LABEL[t] + '\n\n';
+    list.forEach(x => { m += '**' + x.title + '**\n\n' + (x.body || '') + '\n\n'; });
+  });
+  const usedDic = (P.dicts || []).filter(d => d.on);
+  if (usedDic.length) {
+    m += '## 5. 使用した辞書・言語資源\n\n';
+    usedDic.forEach(d => { m += '- ' + d.name + '（' + DIC_KIND[d.kind] + '・' + d.count.toLocaleString() + '語）' + (d.credit ? '：' + d.credit : '') + '\n'; });
+    m += '\n';
+  }
+  m += '## ' + (usedDic.length ? '6' : '5') + '. 省察（リフレキシビティ）\n\n';
+  m += '**なぜこのテーマか**\n\n' + (P.reflexivity.q1 || '（未記入）') + '\n\n';
+  m += '**どの立場から解釈しているか**\n\n' + (P.reflexivity.q2 || '（未記入）') + '\n\n';
+  m += '**別の読み方の可能性**\n\n' + (P.reflexivity.q3 || '（未記入）') + '\n';
+  try { m += '\n---\n\n## 付録A. 結果の読み取り（自動生成）\n\n' + narrative(analyzeAll()) + '\n'; } catch (e) {}
+  try { m += '\n---\n\n## 付録B. 論文での記述例（自動生成の下書き）\n\n' + paperDraft(analyzeAll()) + '\n'; } catch (e) {}
+  return m;
+}
+$('#expReport').onclick = () => dl(P.name + '_レポート.md', buildReport(), 'text/markdown');
+$('#storyReport').onclick = () => dl(P.name + '_レポート.md', buildReport(), 'text/markdown');
+
+/* ============================================================
+   辞書ライブラリ — 公開コーパス由来の辞書を取り込んで自動処理に使う
+   ============================================================ */
+const DIC_KIND = {stop:'ストップワード', syn:'同義語・表記ゆれ', term:'複合語', coding:'コーディング辞書',
+  polarity:'極性辞書', ref:'参照コーパス', sem:'意味分類'};
+const RAW = 'https://raw.githubusercontent.com/';
+const BCCWJ_REG = [['OT','教科書'],['OW','白書'],['PN','新聞'],['OM','雑誌'],['OL','国会会議録'],['OC','Yahoo!知恵袋'],['OY','ブログ'],['LB','書籍']];
+const PRESETS = [
+  {id:'stopwords-ja', name:'日本語ストップワード', kind:'stop', format:'lines',
+   url:RAW + 'stopwords-iso/stopwords-ja/master/stopwords-ja.txt', size:'約1KB・133語',
+   about:'「あそこ」「いう」のような機能語のまとめ。頻度・共起・ワードクラウドから自動で外します。',
+   credit:'stopwords-iso / stopwords-ja（MIT License）'},
+  {id:'sudachi-syn', name:'Sudachi 同義語辞書', kind:'syn', format:'sudachi',
+   url:RAW + 'WorksApplications/SudachiDict/develop/src/main/text/synonyms.txt', size:'約3MB・約6万語',
+   about:'「あいまい／曖昧」のような表記ゆれを代表表記にまとめて数えます。「同義語まで」にすると「不明確」「あやふや」も同じ語として扱います。',
+   credit:'SudachiDict（Apache License 2.0／Works Applications）',
+   levels:[['form','表記ゆれのみ'],['syn','同義語まで']]},
+  {id:'pn-noun', name:'日本語評価極性辞書（名詞編）', kind:'polarity', format:'pn',
+   url:RAW + 'YoshiteruIwasaki/rikyu/master/src/rikyu/resources/pn.csv.m3.120408.trim', size:'約680KB・13,314語',
+   about:'名詞の評価極性。語りの評価的な部分に自動でコードを付け、資料ごと・属性ごとに集計できます。',
+   credit:'日本語評価極性辞書（名詞編）ver.1.0 東北大学 乾・岡崎研究室／東山昌彦・乾健太郎・松本裕治 (2008)'},
+  {id:'pn-wago', name:'日本語評価極性辞書（用言編）', kind:'polarity', format:'pn',
+   url:RAW + 'YoshiteruIwasaki/rikyu/master/src/rikyu/resources/wago.121808.pn', size:'約93KB・5,277語',
+   about:'動詞・形容詞の評価極性。「あきれる」「報われる」など述語側の評価を拾います。名詞編と併用できます。',
+   credit:'日本語評価極性辞書（用言編）ver.1.0 東北大学 乾・岡崎研究室／小林のぞみ・乾健太郎・松本裕治ほか (2005)'},
+  {id:'bccwj', name:'BCCWJ 短単位語彙表（分類語彙表番号つき）', kind:'ref', format:'bccwj',
+   url:RAW + 'masayu-a/BCCWJ-WSD-frequency/main/registers/bccwj_{R}_suw_wsd_freq.txt', size:'2〜12MB・約3万語',
+   about:'『現代日本語書き言葉均衡コーパス』の語彙頻度表。ふつうの日本語と比べて「この語りに特徴的な語」を対数尤度比で取り出せます。同時に分類語彙表の意味分類辞書も作られ、意味カテゴリーでの自動コーディングに使えます。',
+   credit:'国立国語研究所 (2024)『現代日本語書き言葉均衡コーパス』短単位語彙表（分類語彙表番号つき）BCCWJ-WSD-frequency version 2024.10／浅田宗磨・古宮嘉那子・浅原正幸 (2024)。CC BY-NC-ND 4.0（非営利・改変不可）',
+   levels:BCCWJ_REG.map(r => [r[0], r[1]]), levelLabel:'比べる文章の種類'}
+];
+const DIC = {stop:new Set(), syn:new Map(), terms:[], termRe:null, coding:new Map(), pol:new Map(),
+  ref:null, refName:'', refTotal:0, sem:new Map(), on:{}};
+
+function rebuildDic(){
+  DIC.stop = new Set(); DIC.syn = new Map(); DIC.terms = []; DIC.termRe = null;
+  DIC.coding = new Map(); DIC.pol = new Map(); DIC.sem = new Map();
+  DIC.ref = null; DIC.refName = ''; DIC.on = {};
+  (P.dicts || []).forEach(d => {
+    if (!d.on || !d.entries || !d.entries.length) return;
+    DIC.on[d.kind] = (DIC.on[d.kind] || 0) + 1;
+    if (d.kind === 'stop') d.entries.forEach(w => DIC.stop.add(w));
+    else if (d.kind === 'term') d.entries.forEach(w => DIC.terms.push(w));
+    else if (d.kind === 'syn') d.entries.forEach(e => { if (e[0] !== e[1]) DIC.syn.set(e[0], e[1]); });
+    else if (d.kind === 'polarity') d.entries.forEach(e => { if (!DIC.pol.has(e[0])) DIC.pol.set(e[0], e[1]); });
+    else if (d.kind === 'sem') d.entries.forEach(e => { if (!DIC.sem.has(e[0])) DIC.sem.set(e[0], e[1]); if (e[0].length > 1) DIC.terms.push(e[0]); });
+    else if (d.kind === 'ref') {
+      if (!DIC.ref) { DIC.ref = new Map(); DIC.refName = d.name; }
+      d.entries.forEach(e => { if (!DIC.ref.has(e[0])) DIC.ref.set(e[0], e[1]); });
+    } else if (d.kind === 'coding') d.entries.forEach(e => {
+      if (!DIC.coding.has(e[0])) DIC.coding.set(e[0], e[1]);
+      if (e[0].length > 1) DIC.terms.push(e[0]);
+    });
+  });
+  DIC.terms = Array.from(new Set(DIC.terms)).filter(t => t && t.length > 1).sort((a, b) => b.length - a.length).slice(0, 4000);
+  DIC.termRe = null;
+  if (DIC.terms.length) {
+    try { DIC.termRe = new RegExp(DIC.terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g'); } catch (e) {}
+  }
+  const st = $('#dicStatus');
+  if (st) {
+    const on = [];
+    if (DIC.stop.size) on.push('ストップワード ' + DIC.stop.size.toLocaleString() + '語');
+    if (DIC.syn.size) on.push('表記ゆれ統合 ' + DIC.syn.size.toLocaleString() + '語');
+    if (DIC.terms.length) on.push('複合語 ' + DIC.terms.length.toLocaleString() + '語');
+    if (DIC.pol.size) on.push('極性 ' + DIC.pol.size.toLocaleString() + '語');
+    if (DIC.ref) on.push('参照コーパス ' + DIC.refName);
+    if (DIC.sem.size) on.push('意味分類 ' + DIC.sem.size.toLocaleString() + '語');
+    st.innerHTML = on.length ? '辞書を適用中：' + on.map(t => '<span class="badge">' + esc(t) + '</span>').join(' ')
+      : '<span class="muted">辞書は未適用です。「辞書」タブから公開辞書を取り込めます。</span>';
+  }
+  const wm = $('#wcWeight');
+  if (wm) { const o = wm.querySelector('[value="ll"]'); if (o) o.disabled = !DIC.ref; if (!DIC.ref && wm.value === 'll') wm.value = 'freq'; }
+}
+
+/* ---------------- 取得と解析 ---------------- */
+async function fetchDict(url, onp){
+  let r;
+  try { r = await fetch(url); }
+  catch (e) { throw new Error('通信できませんでした（オフラインか、取得先がCORSに未対応です）'); }
+  if (!r.ok) throw new Error('取得できませんでした（' + r.status + '）');
+  if (!r.body || !onp) return await r.text();
+  const total = +(r.headers.get('content-length') || 0);
+  const reader = r.body.getReader(), chunks = []; let got = 0;
+  for (;;) {
+    const x = await reader.read();
+    if (x.done) break;
+    chunks.push(x.value); got += x.value.length;
+    onp(total ? Math.round(got / total * 100) + '%' : Math.round(got / 1048576 * 10) / 10 + 'MB');
+  }
+  const buf = new Uint8Array(got); let at = 0;
+  chunks.forEach(c => { buf.set(c, at); at += c.length; });
+  return new TextDecoder('utf-8').decode(buf);
+}
+function parseSudachi(text, level){
+  const rep = new Map(), pairs = [], rows = [];
+  text.split('\n').forEach(l => {
+    if (!l.trim()) return;
+    const f = l.split(',');
+    if (f.length < 9) return;
+    const w = (f[8] || '').trim();
+    if (w) rows.push({k:level === 'syn' ? f[0] : f[0] + '-' + f[3], abbr:f[5], form:f[6], w:w});
+  });
+  rows.forEach(r => { if (!rep.has(r.k) && r.abbr === '0' && r.form === '0') rep.set(r.k, r.w); });
+  rows.forEach(r => { const h = rep.get(r.k); if (h && h !== r.w) pairs.push([r.w, h]); });
+  return pairs;
+}
+function parsePolarity(text){
+  const out = [], seen = new Set();
+  text.split('\n').forEach(l => {
+    l = l.trim(); if (!l || l[0] === '#') return;
+    const f = l.split(/[\t,]/).map(x => x.trim().replace(/^"|"$/g, '')).filter(x => x !== '');
+    if (f.length < 2) return;
+    let val = null, word = null;
+    f.forEach(x => {
+      if (val === null && /^[+-]?[01](\.0+)?$/.test(x)) val = Math.sign(+x);
+      else if (val === null && /^(ポジ|ネガ)/.test(x)) val = x.indexOf('ポジ') === 0 ? 1 : -1;
+      else if (val === null && /^[pne]$/.test(x)) val = x === 'p' ? 1 : x === 'n' ? -1 : 0;
+      else if (word === null) word = x;
+    });
+    if (word === null) word = f[0];
+    if (!word || !val) return;
+    word = word.replace(/\s+/g, '');
+    if (!word || seen.has(word)) return;
+    seen.add(word); out.push([word, val]);
+  });
+  return out;
+}
+function parseBccwj(text){
+  const ref = [], sem = [], seenR = new Set(), seenS = new Set();
+  const rows = text.split('\n');
+  for (let i = 1; i < rows.length; i++) {
+    const f = rows[i].split('\t');
+    if (f.length < 13) continue;
+    const lemma = f[2].trim(), pos = f[3] || '', pmw = parseFloat(f[12]);
+    if (!lemma || !isFinite(pmw)) continue;
+    if (/^(助詞|助動詞|補助記号|記号|空白)/.test(pos)) continue;
+    if (!seenR.has(lemma)) { seenR.add(lemma); ref.push([lemma, Math.round(pmw * 100) / 100]); }
+    const div = (f[8] || '').trim(), sec = (f[9] || '').trim();
+    if (sec && !seenS.has(lemma)) { seenS.add(lemma); sem.push([lemma, (div ? div + '・' : '') + sec]); }
+  }
+  return {ref:ref, sem:sem};
+}
+function parseLines(text, kind){
+  const out = [], seen = new Set();
+  text.split('\n').forEach(l => {
+    l = l.replace(/\r/g, '').trim();
+    if (!l || l[0] === '#') return;
+    const f = l.split(/[\t,]/).map(x => x.trim().replace(/^"|"$/g, '')).filter(x => x !== '');
+    if (!f.length) return;
+    if (kind === 'coding' || kind === 'sem') { if (f.length >= 2) out.push([f[0], f[1]]); }
+    else if (kind === 'syn') { for (let i = 1; i < f.length; i++) out.push([f[i], f[0]]); }
+    else if (kind === 'ref') { if (f.length >= 2 && isFinite(+f[1])) out.push([f[0], +f[1]]); }
+    else if (!seen.has(f[0])) { seen.add(f[0]); out.push(f[0]); }
+  });
+  return out;
+}
+function guessKind(text){
+  const lines = text.split('\n').filter(l => l.trim()).slice(0, 60);
+  if (!lines.length) return 'stop';
+  if (lines.some(l => l.split(',').length >= 9 && /^\d{6}$/.test(l.split(',')[0]))) return 'syn';
+  let poli = 0, two = 0;
+  lines.forEach(l => {
+    const f = l.split(/[\t,]/).map(x => x.trim());
+    if (f.length >= 2) two++;
+    if (f.some(x => /^[+-]?1$/.test(x) || /^(ポジ|ネガ)/.test(x) || /^[pn]$/.test(x))) poli++;
+  });
+  if (poli > lines.length * 0.5) return 'polarity';
+  if (two > lines.length * 0.6) return 'coding';
+  return 'stop';
+}
+function parseDict(text, kind, format, level){
+  if (format === 'sudachi') return parseSudachi(text, level || 'form');
+  if (format === 'pn' || kind === 'polarity') return parsePolarity(text);
+  return parseLines(text, kind);
+}
+const HEAVY = 8000;
+function addDict(o){
+  const d = Object.assign({id:uid('x'), on:true, level:'', credit:'', url:'', format:'lines'}, o);
+  d.count = d.entries.length;
+  d.persist = d.entries.length <= HEAVY && !d.noSave;
+  P.dicts = P.dicts || [];
+  const same = P.dicts.findIndex(x => x.name === d.name && x.kind === d.kind);
+  if (same >= 0) { d.id = P.dicts[same].id; P.dicts[same] = d; } else P.dicts.push(d);
+  return d;
+}
+async function loadPreset(pr, level){
+  const btn = $('[data-pget="' + pr.id + '"]');
+  const label = btn ? btn.textContent : '';
+  const prog = t => { if (btn) btn.textContent = '取得中 ' + t; };
+  if (btn) { btn.disabled = true; btn.textContent = '取得中…'; }
+  try {
+    const url = pr.url.replace('{R}', level || 'OT');
+    const text = await fetchDict(url, prog);
+    if (pr.format === 'bccwj') {
+      const r = parseBccwj(text);
+      if (!r.ref.length) throw new Error('中身を読み取れませんでした');
+      const rn = (BCCWJ_REG.find(x => x[0] === (level || 'OT')) || ['', ''])[1];
+      addDict({name:'BCCWJ 参照頻度（' + rn + '）', kind:'ref', entries:r.ref, url:url, format:'bccwj',
+        level:level, credit:pr.credit, preset:pr.id, noSave:true});
+      addDict({name:'分類語彙表 意味分類（' + rn + '）', kind:'sem', entries:r.sem, url:url, format:'bccwj',
+        level:level, credit:pr.credit, preset:pr.id + '-sem', noSave:true, on:false});
+      toast('参照頻度 ' + r.ref.length.toLocaleString() + ' 語と意味分類 ' + r.sem.length.toLocaleString() + ' 語を取り込みました');
+    } else {
+      const entries = parseDict(text, pr.kind, pr.format, level);
+      if (!entries.length) throw new Error('中身を読み取れませんでした');
+      addDict({name:pr.name + (pr.levels && pr.id === 'sudachi-syn' ? '（' + (level === 'syn' ? '同義語まで' : '表記ゆれ') + '）' : ''),
+        kind:pr.kind, entries:entries, url:url, format:pr.format, level:level || '', credit:pr.credit, preset:pr.id});
+      toast(entries.length.toLocaleString() + ' 語を取り込みました');
+    }
+    rebuildDic(); markDirty();
+  } catch (e) {
+    toast(pr.name + '：' + e.message, true);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '取り込む'; }
+  renderDicts(); renderPresets();
+}
+function renderPresets(){
+  const box = $('#presetList'); if (!box) return;
+  box.innerHTML = PRESETS.map(pr => {
+    const got = (P.dicts || []).find(d => d.preset === pr.id);
+    return '<div class="preset"><div class="row tw" style="align-items:flex-start; gap:10px">'
+      + '<div style="flex:1"><h4>' + esc(pr.name) + ' <span class="badge">' + DIC_KIND[pr.kind] + '</span></h4>'
+      + '<div class="hint">' + esc(pr.about) + '</div>'
+      + '<div class="cred">' + esc(pr.size) + '／' + esc(pr.credit) + '</div></div>'
+      + '<div style="display:grid; gap:4px; justify-items:end; flex:none">'
+      + (pr.levels ? (pr.levelLabel ? '<span class="meta">' + esc(pr.levelLabel) + '</span>' : '')
+          + '<select data-plevel="' + pr.id + '" style="width:auto; font-size:12px; padding:2px">'
+          + pr.levels.map(l => '<option value="' + l[0] + '">' + esc(l[1]) + '</option>').join('') + '</select>' : '')
+      + '<button class="btn sm" data-pget="' + pr.id + '">' + (got ? '取り込み直す' : '取り込む') + '</button>'
+      + (got ? '<span class="meta">' + got.count.toLocaleString() + ' 語</span>' : '') + '</div></div></div>';
+  }).join('');
+  $$('[data-pget]', box).forEach(b => b.onclick = () => {
+    const pr = PRESETS.find(p => p.id === b.dataset.pget);
+    const lv = box.querySelector('[data-plevel="' + pr.id + '"]');
+    loadPreset(pr, lv ? lv.value : null);
+  });
+}
+function renderDicts(){
+  const box = $('#dicList'); if (!box) return;
+  const list = P.dicts || [];
+  $('#dicCount').textContent = list.length ? list.length + ' 件' : '';
+  box.innerHTML = list.length ? list.map(d =>
+    '<div class="dicrow"><div><strong>' + esc(d.name) + '</strong> <span class="badge">' + DIC_KIND[d.kind] + '</span>'
+    + '<div class="meta">' + d.count.toLocaleString() + ' 語'
+    + (d.entries && d.entries.length ? (d.persist ? '' : '／プロジェクトには保存しません（開き直したら再取得）') : '／未取得（「再取得」を押すと読み込みます）') + '</div>'
+    + (d.credit ? '<div class="cred">' + esc(d.credit) + '</div>' : '') + '</div>'
+    + '<div style="display:grid; gap:3px; justify-items:end">'
+    + '<label class="chk" style="color:var(--ink2)"><input type="checkbox" data-don="' + d.id + '"' + (d.on ? ' checked' : '') + '>使う</label>'
+    + '<div class="row" style="gap:4px"><button class="btn ghost sm" data-dprev="' + d.id + '">中身</button>'
+    + (d.url ? '<button class="btn ghost sm" data-dref="' + d.id + '">再取得</button>' : '')
+    + '<button class="btn ghost sm" data-ddel="' + d.id + '">×</button></div></div></div>').join('')
+    : '<div class="empty"><strong>辞書はまだありません</strong>左の公開辞書から取り込むか、手持ちの語彙リストをドロップします。</div>';
+  $$('[data-don]', box).forEach(i => i.onchange = () => {
+    P.dicts.find(d => d.id === i.dataset.don).on = i.checked;
+    rebuildDic(); markDirty(); renderPolTable(); renderDicSelects();
+  });
+  $$('[data-ddel]', box).forEach(b => b.onclick = () => {
+    P.dicts = P.dicts.filter(d => d.id !== b.dataset.ddel);
+    rebuildDic(); renderDicts(); renderPresets(); markDirty();
+  });
+  $$('[data-dref]', box).forEach(b => b.onclick = () => {
+    const d = P.dicts.find(x => x.id === b.dataset.dref);
+    const pr = PRESETS.find(p => p.id === (d.preset || '').replace(/-sem$/, ''));
+    if (pr) loadPreset(pr, d.level);
+    else refetch(d, b);
+  });
+  $$('[data-dprev]', box).forEach(b => b.onclick = () => {
+    const d = P.dicts.find(x => x.id === b.dataset.dprev);
+    const val = e => d.kind === 'polarity' ? (e[1] > 0 ? 'ポジ' : 'ネガ') : d.kind === 'ref' ? e[1] + '/百万語' : e[1];
+    const sample = d.entries.slice(0, 140).map(e => Array.isArray(e)
+      ? esc(e[0]) + ' <span class="muted">→ ' + esc(String(val(e))) + '</span>' : esc(e)).join('、');
+    modal(d.name, '<p class="hint">' + d.count.toLocaleString() + ' 語のうち先頭140語</p>'
+      + '<p style="font-size:13px; line-height:2">' + sample + '</p>'
+      + (d.credit ? '<div class="sep"></div><p class="hint">' + esc(d.credit) + '</p>' : ''), []);
+  });
+  renderDicSelects(); renderPolTable();
+}
+async function refetch(d, btn){
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '取得中'; }
+    d.entries = parseDict(await fetchDict(d.url), d.kind, d.format, d.level);
+    d.count = d.entries.length; rebuildDic(); renderDicts(); markDirty(); toast('取り込み直しました');
+  } catch (e) { toast(e.message, true); if (btn) { btn.disabled = false; btn.textContent = '再取得'; } }
+}
+function renderDicSelects(){
+  const sel = $('#dcDict'); if (!sel) return;
+  const cur = sel.value;
+  const usable = (P.dicts || []).filter(d => ['coding','polarity','term','sem'].indexOf(d.kind) >= 0);
+  sel.innerHTML = usable.length ? usable.map(d => '<option value="' + d.id + '">' + esc(d.name) + '（' + DIC_KIND[d.kind] + '）</option>').join('')
+    : '<option value="">（コーディングに使える辞書がありません）</option>';
+  if (cur && sel.querySelector('[value="' + cur + '"]')) sel.value = cur;
+}
+
+/* ---------------- 取り込み口 ---------------- */
+$('#dicUrlGo').onclick = async () => {
+  const url = $('#dicUrl').value.trim(); if (!url) return;
+  try {
+    const text = await fetchDict(url);
+    let kind = $('#dicUrlKind').value;
+    if (kind === 'auto') kind = guessKind(text);
+    const entries = parseDict(text, kind, kind === 'syn' && /^\d{6},/.test(text.trim()) ? 'sudachi' : 'lines');
+    if (!entries.length) throw new Error('中身を読み取れませんでした');
+    addDict({name:decodeURIComponent(url.split('/').pop()) || '辞書', kind:kind, entries:entries, url:url, credit:'取得元：' + url});
+    rebuildDic(); renderDicts(); markDirty(); $('#dicUrl').value = '';
+    toast(entries.length.toLocaleString() + ' 語を取り込みました');
+  } catch (e) { toast(e.message + '　ファイルを保存してドロップすると読み込めます', true); }
+};
+$('#dicPasteGo').onclick = () => {
+  const t = $('#dicPaste').value.trim(); if (!t) return;
+  const kind = guessKind(t), entries = parseDict(t, kind, 'lines');
+  if (!entries.length) { toast('語を読み取れませんでした', true); return; }
+  addDict({name:$('#dicPasteName').value.trim() || '自作の辞書', kind:kind, entries:entries, credit:'自作'});
+  rebuildDic(); renderDicts(); markDirty();
+  $('#dicPaste').value = ''; $('#dicPasteName').value = '';
+  toast(entries.length + ' 語の辞書を作りました');
+};
+$('#dicDz').onclick = () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.multiple = true; inp.accept = '.txt,.csv,.tsv,.dic,.json';
+  inp.onchange = () => Array.prototype.forEach.call(inp.files, importDictFile);
+  inp.click();
+};
+async function importDictFile(file){
+  try {
+    const text = await readText(file);
+    const kind = guessKind(text);
+    const opts = Object.keys(DIC_KIND).map(k => '<option value="' + k + '"' + (k === kind ? ' selected' : '') + '>' + DIC_KIND[k] + '</option>').join('');
+    modal(file.name + ' を辞書にする',
+      '<p class="hint" style="margin-top:0">自動判定：' + DIC_KIND[kind] + '。種類を変えると読み取り方も変わります。</p>'
+      + '<label class="f">辞書の名前</label><input type="text" id="dfName" value="' + esc(file.name.replace(/\.[^.]+$/, '')) + '">'
+      + '<label class="f">種類</label><select id="dfKind">' + opts + '</select>'
+      + '<label class="f">出典・ライセンスのメモ（レポートに載ります）</label><input type="text" id="dfCred" placeholder="例：〇〇コーパス由来、CC BY 4.0">',
+      [{label:'辞書にする', primary:true, onClick:(close, card) => {
+        const k = card.querySelector('#dfKind').value;
+        const ent = parseDict(text, k, /^\d{6},/.test(text.trim()) ? 'sudachi' : 'lines');
+        if (!ent.length) { toast('語を読み取れませんでした', true); return; }
+        addDict({name:card.querySelector('#dfName').value.trim() || file.name, kind:k, entries:ent,
+          credit:card.querySelector('#dfCred').value.trim() || ('ファイル：' + file.name)});
+        rebuildDic(); renderDicts(); markDirty(); close();
+        toast(ent.length.toLocaleString() + ' 語を取り込みました');
+      }}]);
+  } catch (e) { toast(file.name + '：' + e.message, true); }
+}
+
+/* ---------------- 辞書による自動コーディング ---------------- */
+function tokenPositions(doc){
+  const out = [];
+  sentencesWithPos(doc.text).forEach(sn => {
+    tokenize(sn.t).forEach(t => {
+      if (t.i == null) return;
+      out.push({s:sn.s + t.i, e:sn.s + t.i + t.s.length, surface:t.s, base:t.b, sent:sn});
+    });
+  });
+  return out;
+}
+$('#dcGo').onclick = () => {
+  const d = (P.dicts || []).find(x => x.id === $('#dcDict').value);
+  if (!d) { toast('使える辞書がありません', true); return; }
+  const unit = $('#dcUnit').value, onlyCur = $('#dcScope').checked;
+  const docs = onlyCur && curDoc() ? [curDoc()] : P.docs;
+  if (!docs.length) { toast('資料がありません', true); return; }
+  const map = new Map();
+  if (d.kind === 'polarity') d.entries.forEach(e => map.set(e[0], e[1] > 0 ? '評価：ポジティブ' : '評価：ネガティブ'));
+  else if (d.kind === 'term') d.entries.forEach(w => map.set(w, w));
+  else d.entries.forEach(e => map.set(e[0], e[1]));
+  let cat = null;
+  if ($('#dcCat').checked) {
+    cat = P.categories.find(k => k.name === d.name);
+    if (!cat) { cat = {id:uid('k'), name:d.name, memo:'辞書「' + d.name + '」による自動コーディング'}; P.categories.push(cat); }
+  }
+  let n = 0; const hits = new Set();
+  docs.forEach(doc => {
+    tokenPositions(doc).forEach(t => {
+      const name = map.has(t.base) ? map.get(t.base) : map.get(t.surface);
+      if (!name) return;
+      const c = ensureCode(String(name), d.kind === 'polarity' || d.kind === 'sem' ? 'analytic' : 'descriptive');
+      if (!c) return;
+      if (cat && !c.categoryId) c.categoryId = cat.id;
+      if (!c.def) c.def = '辞書「' + d.name + '」による自動コーディング';
+      let s = t.s, e = t.e;
+      if (unit === 'sentence') { s = t.sent.s; e = t.sent.e; }
+      else if (unit === 'bunsetsu') { const b = bunsetsuRange(doc, t.s, t.e); if (b) { s = b.s; e = b.e; } }
+      else if (unit === 'para') { s = doc.text.lastIndexOf('\n', t.s - 1) + 1; const nx = doc.text.indexOf('\n', t.e); e = nx < 0 ? doc.text.length : nx; }
+      if (addCoding(doc.id, c.id, s, e, c.kind, 'deductive')) { n++; hits.add(t.surface); }
+    });
+  });
+  renderAll(); markDirty();
+  n ? toast(n + ' 件にコードを付けました（' + hits.size + ' 種類の語が一致）')
+    : toast('辞書に載っている語が本文に見つかりませんでした', true);
+};
+function polarityRows(){
+  if (!DIC.pol.size) return null;
+  return P.docs.map(d => {
+    let p = 0, ng = 0;
+    tokenPositions(d).forEach(t => {
+      const v = DIC.pol.has(t.base) ? DIC.pol.get(t.base) : DIC.pol.get(t.surface);
+      if (v > 0) p++; else if (v < 0) ng++;
+    });
+    return {name:d.name, p:p, n:ng, attrs:d.attrs};
+  });
+}
+function renderPolTable(){
+  const box = $('#polTable'); if (!box) return;
+  if (!DIC.pol.size) { box.innerHTML = '<div class="empty"><strong>極性辞書が未取り込みです</strong>取り込むと、資料ごとの評価の傾きをここで集計します。</div>'; return; }
+  if (!P.docs.length) { box.innerHTML = '<div class="empty">資料がありません。</div>'; return; }
+  const rows = polarityRows();
+  box.innerHTML = '<table><thead><tr><th>資料</th><th>ポジ</th><th>ネガ</th><th>差</th><th>傾き</th></tr></thead><tbody>'
+    + rows.map(r => {
+      const tot = r.p + r.n, ratio = tot ? (r.p - r.n) / tot : 0, w = Math.round(Math.abs(ratio) * 60);
+      return '<tr><td>' + esc(r.name) + '</td><td class="num">' + r.p + '</td><td class="num">' + r.n + '</td>'
+        + '<td class="num">' + (r.p - r.n > 0 ? '+' : '') + (r.p - r.n) + '</td>'
+        + '<td><span style="display:inline-block; height:9px; width:' + w + 'px; background:'
+        + (ratio >= 0 ? '#3f6b52' : '#98392c') + '"></span></td></tr>';
+    }).join('') + '</tbody></table>'
+    + '<p class="hint" style="padding:8px 10px">語を数えた目安です。否定表現や皮肉は反映されないので、必ず本文に戻って確かめてください。</p>';
+}
+$('#polCsv').onclick = () => {
+  const rows = polarityRows();
+  if (!rows) { toast('極性辞書が未取り込みです', true); return; }
+  const out = [['資料','ポジティブ語数','ネガティブ語数','差','極性比'].concat(P.attrKeys)];
+  rows.forEach(r => {
+    const t = r.p + r.n;
+    out.push([r.name, r.p, r.n, r.p - r.n, t ? ((r.p - r.n) / t).toFixed(3) : ''].concat(P.attrKeys.map(k => r.attrs[k] || '')));
+  });
+  dl('極性の集計.csv', toCsv(out), 'text/csv');
+};
+function expandCodingsToBunsetsu(){
+  let n = 0;
+  P.codings.forEach(g => {
+    const d = docById(g.docId); if (!d) return;
+    const b = bunsetsuRange(d, g.start, g.end);
+    if (!b) return;
+    const s = Math.min(g.start, b.s), e = Math.max(g.end, b.e);
+    if (s !== g.start || e !== g.end) { g.start = s; g.end = e; g.text = d.text.slice(s, e); n++; }
+  });
+  P.codings = P.codings.filter((g, i, a) => a.findIndex(x => x.docId === g.docId && x.codeId === g.codeId && x.start === g.start && x.end === g.end) === i);
+  renderAll(); markDirty();
+  return n;
+}
+$('#dcExpand').onclick = () => {
+  if (!P.codings.length) { toast('抽出がありません', true); return; }
+  modal('抽出の範囲を文節に広げる',
+    '<p>いま付いている抽出' + P.codings.length + '件を、それぞれが含まれる文節の範囲まで広げます。'
+    + '語だけを拾った抽出が「安全神話という」のようなまとまりになり、重複は1件にまとめられます。</p>'
+    + '<p class="hint">元に戻せないので、先に「保存」でファイルに残しておくと安心です。</p>',
+    [{label:'広げる', primary:true, onClick:close => { const n = expandCodingsToBunsetsu(); close(); toast(n + ' 件を文節の範囲に広げました'); }}]);
+};
+$('#toDic').onclick = () => go(7);
+
+/* ---------------- 参照コーパスとの比較（特徴語） ---------------- */
+function logLike(a, n1, pmw){
+  const e = Math.max(1e-9, n1 * pmw / 1e6);
+  const g = 2 * (a * Math.log(a / e) - (a - e));
+  return (a >= e ? 1 : -1) * Math.max(0, g);
+}
+function featureTable(){
+  const f = freqTable();
+  if (!DIC.ref) return f.map(e => ({w:e[0], n:e[1], ll:null}));
+  const total = f.reduce((s, e) => s + e[1], 0) || 1;
+  return f.map(e => ({w:e[0], n:e[1], ll:logLike(e[1], total, DIC.ref.get(e[0]) || 0.05)}))
+    .sort((a, b) => b.ll - a.ll);
+}
+
+/* ============================================================
+   統計・信頼性・追加の可視化・コードクエリ
+   ============================================================ */
+function gammaln(x){
+  const c = [76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y = x, t = x + 5.5;
+  t -= (x + 0.5) * Math.log(t);
+  let s = 1.000000000190015;
+  for (let j = 0; j < 6; j++) s += c[j] / ++y;
+  return -t + Math.log(2.5066282746310005 * s / x);
+}
+function gammaQ(a, x){
+  if (x <= 0) return 1;
+  if (x < a + 1) {
+    let ap = a, sum = 1 / a, del = sum;
+    for (let n = 0; n < 300; n++) { ap++; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-12) break; }
+    return 1 - sum * Math.exp(-x + a * Math.log(x) - gammaln(a));
+  }
+  let b = x + 1 - a, c = 1e30, d = 1 / b, h = d;
+  for (let i = 1; i < 300; i++) {
+    const an = -i * (i - a);
+    b += 2; d = an * d + b; if (Math.abs(d) < 1e-30) d = 1e-30;
+    c = b + an / c; if (Math.abs(c) < 1e-30) c = 1e-30;
+    d = 1 / d; const del = d * c; h *= del;
+    if (Math.abs(del - 1) < 1e-12) break;
+  }
+  return Math.exp(-x + a * Math.log(x) - gammaln(a)) * h;
+}
+const chiP = (x, df) => (df <= 0 || !isFinite(x)) ? 1 : gammaQ(df / 2, x / 2);
+const pText = p => p < 0.001 ? 'p < .001' : 'p = ' + p.toFixed(3).replace(/^0/, '');
+
+/* --- 段落を単位としたコード出現行列 --- */
+function unitMatrix(docs){
+  const units = [];
+  (docs || P.docs).forEach(d => {
+    paragraphs(d.text).forEach(p => {
+      if (!p.t.trim()) return;
+      const set = new Set(P.codings.filter(c => c.docId === d.id && c.start < p.e && c.end > p.s).map(c => c.codeId));
+      units.push({docId:d.id, s:p.s, e:p.e, set:set});
+    });
+  });
+  return units;
+}
+/* --- カイ二乗検定と調整済み残差 --- */
+function chiSquare(grid){
+  const R = grid.length, C = R ? grid[0].length : 0;
+  const rs = grid.map(r => r.reduce((a, b) => a + b, 0));
+  const cs = [];
+  for (let j = 0; j < C; j++) { let t = 0; for (let i = 0; i < R; i++) t += grid[i][j]; cs.push(t); }
+  const N = rs.reduce((a, b) => a + b, 0);
+  if (!N) return null;
+  let x2 = 0, minE = Infinity;
+  const res = [], exp = [];
+  for (let i = 0; i < R; i++) {
+    res.push([]); exp.push([]);
+    for (let j = 0; j < C; j++) {
+      const e = rs[i] * cs[j] / N;
+      exp[i].push(e); minE = Math.min(minE, e);
+      if (e > 0) {
+        x2 += Math.pow(grid[i][j] - e, 2) / e;
+        res[i].push((grid[i][j] - e) / Math.sqrt(e * (1 - rs[i] / N) * (1 - cs[j] / N)));
+      } else res[i].push(0);
+    }
+  }
+  const df = (R - 1) * (C - 1);
+  const p = chiP(x2, df);
+  const cramer = Math.sqrt(x2 / (N * Math.max(1, Math.min(R, C) - 1)));
+  return {x2:x2, df:df, p:p, N:N, res:res, exp:exp, cramer:cramer, minE:minE};
+}
+/* --- コーダー間信頼性（段落単位・Cohenのκ） --- */
+function kappaBetween(setsA, setsB, codeIds){
+  let a = 0, b = 0, c = 0, d = 0;
+  setsA.forEach((sa, i) => {
+    const sb = setsB[i];
+    codeIds.forEach(id => {
+      const x = sa.has(id), y = sb.has(id);
+      if (x && y) a++; else if (x && !y) b++; else if (!x && y) c++; else d++;
+    });
+  });
+  const n = a + b + c + d;
+  if (!n) return null;
+  const po = (a + d) / n;
+  const pe = ((a + b) * (a + c) + (c + d) * (b + d)) / (n * n);
+  const k = pe < 1 ? (po - pe) / (1 - pe) : 1;
+  return {po:po, kappa:k, n:n, both:a, onlyA:b, onlyB:c};
+}
+function kappaLabel(k){
+  return k < 0.2 ? 'わずかな一致' : k < 0.4 ? '低い一致' : k < 0.6 ? '中程度の一致' : k < 0.8 ? 'かなりの一致' : 'ほぼ完全な一致';
+}
+
+/* --- 階層クラスター分析（コードのデンドログラム） --- */
+function buildClusters(maxN){
+  const units = unitMatrix();
+  const codes = P.codes.map(c => ({id:c.id, name:c.name, color:c.color, n:units.filter(u => u.set.has(c.id)).length}))
+    .filter(c => c.n > 0).sort((a, b) => b.n - a.n).slice(0, maxN || 30);
+  if (codes.length < 3) return null;
+  const co = (a, b) => units.filter(u => u.set.has(a) && u.set.has(b)).length;
+  const dist = (x, y) => {
+    const both = co(x.id, y.id);
+    const uni = x.n + y.n - both;
+    return uni ? 1 - both / uni : 1;
+  };
+  let nodes = codes.map(c => ({leaf:c, items:[c], h:0}));
+  const D = new Map();
+  for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) D.set(i + '_' + j, dist(codes[i], codes[j]));
+  const pd = (A, B) => {
+    let s = 0, n = 0;
+    A.items.forEach(x => B.items.forEach(y => {
+      const i = codes.indexOf(x), j = codes.indexOf(y);
+      s += D.get(Math.min(i, j) + '_' + Math.max(i, j)); n++;
+    }));
+    return n ? s / n : 1;
+  };
+  while (nodes.length > 1) {
+    let best = null;
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const d = pd(nodes[i], nodes[j]);
+      if (!best || d < best.d) best = {i:i, j:j, d:d};
+    }
+    const A = nodes[best.i], B = nodes[best.j];
+    const merged = {left:A, right:B, items:A.items.concat(B.items), h:best.d};
+    nodes = nodes.filter((x, k) => k !== best.i && k !== best.j);
+    nodes.push(merged);
+  }
+  return nodes[0];
+}
+function drawDendro(){
+  const svg = $('#dendroSvg'), root = buildClusters(+$('#dendN').value || 30);
+  if (!root) { svg.innerHTML = '<text x="500" y="200" text-anchor="middle" fill="#6e7d88" font-size="15">コードを3つ以上、段落に付けると樹形図ができます。</text>'; return; }
+  const leaves = [];
+  (function walk(n){ if (n.leaf) leaves.push(n); else { walk(n.left); walk(n.right); } })(root);
+  const H = Math.max(240, leaves.length * 26 + 40), W = 1000, x0 = 300, x1 = W - 40;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('height', Math.min(760, H));
+  let h = '<rect width="' + W + '" height="' + H + '" fill="#fff"/>';
+  const pos = new Map();
+  leaves.forEach((n, i) => { pos.set(n, 20 + i * ((H - 40) / Math.max(1, leaves.length - 1))); });
+  const X = d => x0 + (x1 - x0) * Math.min(1, d);
+  (function draw(n){
+    if (n.leaf) {
+      const y = pos.get(n);
+      h += '<text x="' + (x0 - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-family="sans-serif" fill="#141d24">'
+        + esc(n.leaf.name) + '</text><rect x="' + (x0 - 4) + '" y="' + (y - 4) + '" width="8" height="8" fill="' + n.leaf.color + '"/>';
+      return y;
+    }
+    const a = draw(n.left), b = draw(n.right), x = X(n.h), y = (a + b) / 2;
+    pos.set(n, y);
+    const xa = n.left.leaf ? x0 : X(n.left.h), xb = n.right.leaf ? x0 : X(n.right.h);
+    h += '<path d="M' + xa + ',' + a + ' L' + x + ',' + a + ' L' + x + ',' + b + ' L' + xb + ',' + b
+      + '" fill="none" stroke="#3d4c57" stroke-width="1.3"/>';
+    return y;
+  })(root);
+  for (let t = 0; t <= 1; t += 0.25) {
+    h += '<line x1="' + X(t) + '" y1="14" x2="' + X(t) + '" y2="' + (H - 6) + '" stroke="#e2e7e6"/>'
+      + '<text x="' + X(t) + '" y="10" text-anchor="middle" font-size="9" font-family="monospace" fill="#6e7d88">' + t.toFixed(2) + '</text>';
+  }
+  svg.innerHTML = h;
+}
+$('#dendRun').onclick = drawDendro;
+$('#dendPng').onclick = () => svgToPng($('#dendroSvg'), 'コードの樹形図.png');
+
+/* --- 資料ポートレイト --- */
+function renderPortrait(){
+  const box = $('#portrait');
+  if (!P.docs.length || !P.codings.length) { box.innerHTML = '<div class="empty">コーディングを進めると、資料のどこに何が現れるかが帯で見えます。</div>'; return; }
+  const BINS = 110;
+  box.innerHTML = P.docs.map(d => {
+    const list = P.codings.filter(c => c.docId === d.id);
+    const L = Math.max(1, d.text.length);
+    let cells = '';
+    for (let i = 0; i < BINS; i++) {
+      const a = i / BINS * L, b = (i + 1) / BINS * L;
+      const hit = list.filter(c => c.start < b && c.end > a);
+      const col = hit.length ? (codeById(hit[0].codeId) || {color:'#ccc'}).color : '#eef0ef';
+      const nm = hit.map(c => (codeById(c.codeId) || {name:''}).name).join(' / ');
+      cells += '<span title="' + esc(nm) + '" data-pj="' + (hit[0] ? hit[0].id : '') + '" style="flex:1; height:22px; background:'
+        + col + '; cursor:' + (hit.length ? 'pointer' : 'default') + '"></span>';
+    }
+    return '<div style="margin-bottom:10px"><div class="row small" style="justify-content:space-between"><strong>' + esc(d.name)
+      + '</strong><span class="muted num">' + list.length + ' 件 ／ ' + d.text.length.toLocaleString() + ' 字</span></div>'
+      + '<div style="display:flex; gap:1px; border:1px solid var(--rule2)">' + cells + '</div></div>';
+  }).join('')
+  + '<div class="row" style="gap:6px; margin-top:6px">' + P.codes.slice(0, 14).map(c =>
+      '<span class="chip"><span class="sw" style="background:' + c.color + '"></span>' + esc(c.name) + '</span>').join('') + '</div>';
+  $$('[data-pj]', box).forEach(s => { if (s.dataset.pj) s.onclick = () => jumpTo(s.dataset.pj); });
+}
+
+/* --- コードクエリ --- */
+function codeOpts(){ return P.codes.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join(''); }
+function renderQueryPickers(){
+  const a = $('#cqA'), b = $('#cqB');
+  if (!a) return;
+  const ka = a.value, kb = b.value;
+  a.innerHTML = codeOpts(); b.innerHTML = codeOpts();
+  if (ka) a.value = ka;
+  if (kb) b.value = kb;
+}
+$('#cqRun').onclick = () => {
+  const A = $('#cqA').value, B = $('#cqB').value, rel = $('#cqRel').value, near = +$('#cqNear').value || 100;
+  const out = $('#cqOut');
+  if (!A || !B) { out.innerHTML = '<p class="hint">コードを2つ選んでください。</p>'; return; }
+  const la = P.codings.filter(c => c.codeId === A), lb = P.codings.filter(c => c.codeId === B);
+  let hits = [];
+  if (rel === 'overlap') hits = la.filter(x => lb.some(y => y.docId === x.docId && x.start < y.end && x.end > y.start));
+  else if (rel === 'inside') hits = la.filter(x => lb.some(y => y.docId === x.docId && y.start >= x.start && y.end <= x.end));
+  else if (rel === 'near') hits = la.filter(x => lb.some(y => y.docId === x.docId && Math.max(x.start - y.end, y.start - x.end) <= near && !(x.start < y.end && x.end > y.start)));
+  else if (rel === 'not') hits = la.filter(x => !lb.some(y => y.docId === x.docId && x.start < y.end && x.end > y.start));
+  else {
+    const units = unitMatrix();
+    hits = la.filter(x => units.some(u => u.docId === x.docId && u.s <= x.start && u.e >= x.start && u.set.has(B)));
+  }
+  const an = (codeById(A) || {}).name, bn = (codeById(B) || {}).name;
+  out.innerHTML = '<div class="row small" style="margin-bottom:6px"><span class="pill">' + hits.length + ' 件</span>'
+    + '<span class="muted">' + esc(an) + ' ／ ' + esc(bn) + '</span>'
+    + (hits.length ? '<button class="btn ghost sm" id="cqCode" style="margin-left:auto">この結果に新しいコードを付ける</button>' : '') + '</div>'
+    + (hits.length ? hits.slice(0, 60).map(x => '<div class="seg-quote"><button data-cqj="' + x.id + '" style="background:none; border:none; text-align:left; padding:0; cursor:pointer">'
+        + esc(x.text.slice(0, 150)) + '</button><div class="meta"><span>' + esc((docById(x.docId) || {name:''}).name) + '</span></div></div>').join('')
+      : '<p class="hint">該当する箇所はありませんでした。関係やコードの組み合わせを変えて確かめてください。</p>');
+  $$('[data-cqj]', out).forEach(b2 => b2.onclick = () => jumpTo(b2.dataset.cqj));
+  const cc = $('#cqCode');
+  if (cc) cc.onclick = () => modal('検索結果にコードを付ける', '<label class="f">コード名</label><input type="text" id="cqName" value="'
+    + esc(an + '×' + bn) + '">', [{label:'付ける', primary:true, onClick:(close, card) => {
+      const c = ensureCode(card.querySelector('#cqName').value.trim(), 'analytic');
+      let n = 0;
+      hits.forEach(x => { if (addCoding(x.docId, c.id, x.start, x.end, 'analytic', 'deductive')) n++; });
+      close(); renderAll(); markDirty(); toast(n + ' 件にコードを付けました');
+    }}]);
+};
+
+/* --- コードの統合 --- */
+function mergeCodes(fromId, toId){
+  if (fromId === toId) return;
+  P.codings.forEach(g => { if (g.codeId === fromId) g.codeId = toId; });
+  P.codings = P.codings.filter((g, i, arr) => arr.findIndex(x => x.docId === g.docId && x.codeId === g.codeId && x.start === g.start && x.end === g.end) === i);
+  P.codes = P.codes.filter(c => c.id !== fromId);
+  P.map.nodes = P.map.nodes.filter(n => n.ref !== fromId);
+  if (UI.codeId === fromId) UI.codeId = toId;
+  renderAll(); markDirty();
+}
+
+/* ============================================================
+   単語・文節を単位とした処理と、抽出語×資料の行列
+   ============================================================ */
+const BUN = {cache:new Map(), sig:''};
+function bunsetsuSig(){ return (UI.tokenizer ? 'k' : 's'); }
+function bunsetsuList(text){
+  const out = [];
+  if (UI.tokenizer) {
+    const toks = UI.tokenizer.tokenize(text);
+    let cur = null;
+    const head = t => {
+      const d = t.pos_detail_1 || '';
+      if (t.pos === '助詞' || t.pos === '助動詞' || t.pos === '記号' || t.pos === '補助記号') return false;
+      if (d === '非自立' || d === '接尾') return false;
+      return ['名詞','動詞','形容詞','副詞','連体詞','接続詞','感動詞','接頭詞','フィラー'].indexOf(t.pos) >= 0;
+    };
+    toks.forEach(t => {
+      const s = (t.word_position || 1) - 1, e = s + t.surface_form.length;
+      if (/^[、。，．！？\s「」『』（）()・…\n]+$/.test(t.surface_form)) { if (cur) { out.push(cur); cur = null; } return; }
+      if (!cur || head(t)) { if (cur) out.push(cur); cur = {s:s, e:e, t:t.surface_form}; }
+      else { cur.e = e; cur.t += t.surface_form; }
+    });
+    if (cur) out.push(cur);
+  } else {
+    const content = ch => /[一-龥々〆ヵヶァ-ヴーA-Za-z0-9０-９]/.test(ch);
+    const kana = ch => /[ぁ-ん]/.test(ch);
+    let cur = null;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (/[\s、。，．！？「」『』（）()\[\]・…〜~\-—：:；;\n]/.test(ch)) { if (cur) { out.push(cur); cur = null; } continue; }
+      if (cur && content(ch) && i > 0 && kana(text[i - 1]) && !/^[ぁ-ん]+$/.test(ch)) { out.push(cur); cur = null; }
+      if (!cur) cur = {s:i, e:i + 1, t:ch};
+      else { cur.e = i + 1; cur.t += ch; }
+    }
+    if (cur) out.push(cur);
+  }
+  return out.filter(b => b.t.trim().length > 0);
+}
+function docBunsetsu(doc){
+  const sig = bunsetsuSig() + ':' + doc.text.length;
+  const hit = BUN.cache.get(doc.id);
+  if (hit && hit.sig === sig) return hit.list;
+  const list = bunsetsuList(doc.text);
+  BUN.cache.set(doc.id, {sig:sig, list:list});
+  return list;
+}
+function bunsetsuAt(doc, pos){
+  const list = docBunsetsu(doc);
+  for (let i = 0; i < list.length; i++) if (list[i].s <= pos && list[i].e > pos) return list[i];
+  return null;
+}
+function bunsetsuRange(doc, s, e){
+  const a = bunsetsuAt(doc, s), b = bunsetsuAt(doc, Math.max(s, e - 1));
+  if (!a && !b) return null;
+  return {s:(a || b).s, e:(b || a).e};
+}
+/* --- 抽出語／文節の頻度索引 --- */
+const MXI = {kind:'', sig:'', data:null};
+function unitSig(kind){
+  return [kind, P.docs.length, P.docs.reduce((s, d) => s + d.text.length, 0), UI.tokenizer ? 1 : 0,
+    DIC.stop.size, DIC.syn.size, DIC.terms.length, posOn().join(''), $('#stopExtra').value,
+    $('#minLen').value, $('#mxMin') ? $('#mxMin').value : '', ($('#mxStem') && $('#mxStem').checked) ? 1 : 0].join('|');
+}
+function bunStem(t){
+  if (!$('#mxStem') || !$('#mxStem').checked) return t;
+  const st = t.replace(/[ぁ-んゝ]+$/, '');
+  return st.length >= 2 ? st : t;
+}
+function unitIndex(kind){
+  const sig = unitSig(kind);
+  if (MXI.kind === kind && MXI.sig === sig && MXI.data) return MXI.data;
+  const byDoc = new Map(), total = new Map();
+  const minN = +($('#mxMin') ? $('#mxMin').value : 2) || 1;
+  P.docs.forEach(d => {
+    const m = new Map();
+    if (kind === 'word') {
+      sentencesWithPos(d.text).forEach(sn => wordsOfSentence(sn.t).forEach(wd => m.set(wd, (m.get(wd) || 0) + 1)));
+    } else {
+      const stop = stopSet();
+      docBunsetsu(d).forEach(b => {
+        const t = bunStem(b.t.trim());
+        if (t.length < 2 || !/[一-龥々ァ-ヴA-Za-z0-9]/.test(t) || stop.has(t)) return;
+        m.set(t, (m.get(t) || 0) + 1);
+      });
+    }
+    byDoc.set(d.id, m);
+    m.forEach((v, k) => total.set(k, (total.get(k) || 0) + v));
+  });
+  const rank = Array.from(total.entries()).filter(e => e[1] >= minN).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja'));
+  MXI.kind = kind; MXI.sig = sig; MXI.data = {byDoc:byDoc, rank:rank};
+  return MXI.data;
+}
+function mxRowLabel(){
+  const v = $('#mxRow').value;
+  return v === 'category' ? 'カテゴリー' : v === 'word' ? '抽出語' : v === 'bunsetsu' ? '文節' : 'コード';
+}
+/* --- セルの中身（語・文節） --- */
+function unitOccurrences(term, docIds, kind){
+  const out = [];
+  docIds.forEach(id => {
+    const d = docById(id); if (!d) return;
+    if (kind === 'bunsetsu') {
+      docBunsetsu(d).forEach(b => { if (bunStem(b.t.trim()) === term) out.push({doc:d, s:b.s, e:b.e}); });
+    } else {
+      sentencesWithPos(d.text).forEach(sn => tokenize(sn.t).forEach(t => {
+        if ((t.b === term || t.s === term) && t.i != null) out.push({doc:d, s:sn.s + t.i, e:sn.s + t.i + t.s.length});
+      }));
+    }
+  });
+  return out;
+}
+function unitCellHtml(row, col){
+  const occ = unitOccurrences(row.key, col.docs, row.unit);
+  if (!occ.length) return '<p class="hint">この組み合わせでは現れていません。語られなかったことにも意味があります。</p>';
+  return '<div class="row" style="margin-bottom:6px"><button class="btn ghost sm" id="mxUnitCode">この'
+    + (row.unit === 'word' ? '語' : '文節') + 'にコードを付ける</button></div>'
+    + occ.slice(0, 30).map(o => {
+      const a = Math.max(0, o.s - 26), b = Math.min(o.doc.text.length, o.e + 30);
+      return '<div class="seg-quote" style="border-color:#9fc3ea"><span class="muted">…' + esc(o.doc.text.slice(a, o.s)) + '</span>'
+        + '<span class="kw">' + esc(o.doc.text.slice(o.s, o.e)) + '</span>'
+        + '<span class="muted">' + esc(o.doc.text.slice(o.e, b)) + '…</span>'
+        + '<div class="meta"><span>' + esc(o.doc.name) + '</span><span>' + o.s + ' 字</span></div></div>';
+    }).join('');
+}
+function bindUnitCell(row, col, cell){
+  const btn = cell.querySelector('#mxUnitCode');
+  if (!btn) return;
+  btn.onclick = () => {
+    modal('この' + (row.unit === 'word' ? '語' : '文節') + 'にコードを付ける',
+      '<label class="f">コード名</label><input type="text" id="muName" value="' + esc(row.key) + '">'
+      + '<label class="f">付ける範囲</label><select id="muUnit">'
+      + (row.unit === 'word' ? '<option value="bunsetsu">その語を含む文節</option><option value="self">語そのもの</option>'
+        : '<option value="self">文節そのもの</option>')
+      + '<option value="sentence">その文</option></select>'
+      + '<label class="chk" style="color:var(--ink2); margin-top:8px"><input type="checkbox" id="muAll">すべての資料に付ける（この列だけでなく）</label>',
+      [{label:'付ける', primary:true, onClick:(close, card) => {
+        const name = card.querySelector('#muName').value.trim();
+        const mode = card.querySelector('#muUnit').value;
+        const all = card.querySelector('#muAll').checked;
+        const c = ensureCode(name, 'descriptive');
+        if (!c) { close(); return; }
+        const ids = all ? P.docs.map(d => d.id) : col.docs;
+        let n = 0;
+        unitOccurrences(row.key, ids, row.unit).forEach(o => {
+          let s = o.s, e = o.e;
+          if (mode === 'bunsetsu') { const b = bunsetsuRange(o.doc, o.s, o.e); if (b) { s = b.s; e = b.e; } }
+          else if (mode === 'sentence') { s = sentStart(o.doc.text, o.s); e = sentEnd(o.doc.text, o.e); }
+          if (addCoding(o.doc.id, c.id, s, e, 'descriptive', 'deductive')) n++;
+        });
+        close(); renderAll(); markDirty(); toast(n + ' 件にコードを付けました');
+      }}]);
+  };
+}
+
+/* ============================================================
+   結果の読み取りと論文での記述例
+   ============================================================ */
+function pct(a, b){ return b ? Math.round(a / b * 100) : 0; }
+function jp(n){ return (n || 0).toLocaleString('ja-JP'); }
+function quoteOf(codeId, max){
+  const g = codingsOf(codeId).slice().sort((a, b) => a.text.length - b.text.length)
+    .filter(x => x.text.trim().length > 12)[0] || codingsOf(codeId)[0];
+  if (!g) return null;
+  const d = docById(g.docId) || {name:'', attrs:{}};
+  const at = P.attrKeys.map(k => d.attrs[k]).filter(v => v && d.name.indexOf(v) < 0).join('・');
+  let t = g.text.replace(/\s+/g, ' ').trim();
+  if (t.length > (max || 60)) t = t.slice(0, max || 60) + '…';
+  return {text:t, who:d.name + (at ? '、' + at : ''), id:g.id};
+}
+function coPairs(limit){
+  const units = unitMatrix(), out = [];
+  const cnt = new Map();
+  P.codes.forEach(c => cnt.set(c.id, units.filter(u => u.set.has(c.id)).length));
+  for (let i = 0; i < P.codes.length; i++) for (let j = i + 1; j < P.codes.length; j++) {
+    const a = P.codes[i], b = P.codes[j];
+    const both = units.filter(u => u.set.has(a.id) && u.set.has(b.id)).length;
+    if (!both) continue;
+    const uni = cnt.get(a.id) + cnt.get(b.id) - both;
+    out.push({a:a.name, b:b.name, n:both, j:uni ? both / uni : 0});
+  }
+  return out.sort((x, y) => y.j - x.j).slice(0, limit || 5);
+}
+function attrTest(){
+  if (!P.attrKeys.length || P.docs.length < 3) return null;
+  const best = [];
+  P.attrKeys.forEach(key => {
+    const vals = {};
+    P.docs.forEach(d => { const v = (d.attrs[key] || '').trim(); if (v) (vals[v] = vals[v] || []).push(d.id); });
+    const cols = Object.keys(vals);
+    if (cols.length < 2) return;
+    const rows = (P.categories.length ? P.categories.map(k => ({name:k.name, codes:P.codes.filter(c => c.categoryId === k.id).map(c => c.id)}))
+      : P.codes.slice(0, 12).map(c => ({name:c.name, codes:[c.id]}))).filter(r => r.codes.length);
+    if (rows.length < 2) return;
+    const grid = rows.map(r => cols.map(v => P.codings.filter(g => r.codes.indexOf(g.codeId) >= 0 && vals[v].indexOf(g.docId) >= 0).length));
+    const t = chiSquare(grid);
+    if (!t) return;
+    const cells = [];
+    t.res.forEach((row, i) => row.forEach((z, j) => { if (Math.abs(z) >= 1.96) cells.push({row:rows[i].name, col:cols[j], z:z, o:grid[i][j], e:t.exp[i][j]}); }));
+    cells.sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+    best.push({key:key, cols:cols, rows:rows.map(r => r.name), test:t, cells:cells});
+  });
+  return best.sort((a, b) => a.test.p - b.test.p)[0] || null;
+}
+function analyzeAll(){
+  const A = {};
+  A.docN = P.docs.length;
+  A.chars = P.docs.reduce((s, d) => s + d.text.length, 0);
+  A.codeN = P.codes.length;
+  A.segN = P.codings.length;
+  A.desc = P.codes.filter(c => c.kind !== 'analytic').length;
+  A.anal = P.codes.filter(c => c.kind === 'analytic').length;
+  A.ind = P.codings.filter(c => c.mode !== 'deductive').length;
+  A.ded = P.codings.filter(c => c.mode === 'deductive').length;
+  A.top = P.codes.map(c => ({c:c, n:codingsOf(c.id).length, d:new Set(codingsOf(c.id).map(x => x.docId)).size}))
+    .filter(x => x.n).sort((a, b) => b.n - a.n);
+  A.shared = A.top.filter(x => x.d === A.docN && A.docN > 1);
+  A.rare = A.top.filter(x => x.d === 1 && A.docN > 1);
+  A.cats = P.categories.map(k => {
+    const codes = P.codes.filter(c => c.categoryId === k.id);
+    return {k:k, codes:codes, n:codes.reduce((s, c) => s + codingsOf(c.id).length, 0),
+      docs:new Set(P.codings.filter(g => codes.some(c => c.id === g.codeId)).map(g => g.docId)).size};
+  }).sort((a, b) => b.n - a.n);
+  A.uncat = P.codes.filter(c => !c.categoryId).length;
+  A.pairs = coPairs(5);
+  A.attr = attrTest();
+  A.rel = P.reliability || null;
+  A.memoN = P.memos.length;
+  A.dicts = (P.dicts || []).filter(d => d.on);
+  if (DIC.ref) { try { A.feature = featureTable().filter(x => x.ll > 3.84).slice(0, 8); } catch (e) {} }
+  if (DIC.pol.size) { try { A.pol = polarityRows(); } catch (e) {} }
+  return A;
+}
+function narrative(A){
+  const L = [];
+  if (!A.docN) return '資料がまだありません。ステップ01でデータを読み込むと、ここに結果の読み取りが自動で作られます。';
+  L.push('■ データの概要');
+  let s = '資料は' + jp(A.docN) + '件、総字数は' + jp(A.chars) + '字（1資料あたり平均' + jp(Math.round(A.chars / A.docN)) + '字）である。';
+  P.attrKeys.forEach(k => {
+    const v = {};
+    P.docs.forEach(d => { const x = (d.attrs[k] || '未記入').trim() || '未記入'; v[x] = (v[x] || 0) + 1; });
+    s += '属性〈' + k + '〉の内訳は' + Object.keys(v).map(x => x + '' + v[x] + '件').join('、') + 'であった。';
+  });
+  L.push(s);
+  if (!A.segN) { L.push('\n■ コーディング\nまだ抽出がありません。本文をなぞってコードを付けるか、辞書による自動コーディングを行うと、以下に結果がまとまります。'); return L.join('\n'); }
+  L.push('\n■ コーディングの状況');
+  L.push('コードは' + jp(A.codeN) + '件（記述的' + jp(A.desc) + '件、分析的' + jp(A.anal) + '件）、抽出されたセグメントは' + jp(A.segN)
+    + '件（1資料あたり平均' + (A.segN / A.docN).toFixed(1) + '件）である。手続きの内訳は帰納的コーディング' + jp(A.ind) + '件、演繹的コーディング' + jp(A.ded) + '件であった。');
+  const t3 = A.top.slice(0, 5);
+  if (t3.length) L.push('出現の多いコードは' + t3.map(x => '〈' + x.c.name + '〉' + x.n + '件（' + x.d + '資料）').join('、') + 'であった。');
+  if (A.shared.length) L.push('すべての資料に共通して現れたのは' + A.shared.slice(0, 5).map(x => '〈' + x.c.name + '〉').join('、')
+    + 'であり、対象者に広く共有された経験を示している可能性がある。');
+  if (A.rare.length) L.push('一方、1資料にのみ現れたコードが' + A.rare.length + '件あった（例：'
+    + A.rare.slice(0, 4).map(x => '〈' + x.c.name + '〉').join('、') + '）。少数の語りとして、なぜその人にだけ現れたのかを検討する価値がある。');
+  if (A.cats.length) {
+    L.push('\n■ カテゴリーの構成');
+    L.push('コードは' + A.cats.length + '個のカテゴリーに集約された。'
+      + A.cats.slice(0, 4).map(c => '〈' + c.k.name + '〉はコード' + c.codes.length + '件・抽出' + c.n + '件（' + c.docs + '資料）').join('、') + 'である。');
+    const big = A.cats[0];
+    if (big && big.n) L.push('最も厚く記述されたのは〈' + big.k.name + '〉であり、全抽出の' + pct(big.n, A.segN) + '%を占める。');
+    if (A.uncat) L.push('なお、未分類のコードが' + A.uncat + '件残っている。カテゴリー化を進めると、抽象度の高い記述に近づく。');
+  } else L.push('\n■ カテゴリーの構成\nカテゴリーはまだ作られていない。ステップ03で類似するコードをまとめると、抽象度を一段上げた記述ができる。');
+  if (A.pairs.length) {
+    L.push('\n■ コード間の関係');
+    const p = A.pairs[0];
+    L.push('同じ段落に現れる度合い（Jaccard係数）が最も高いのは〈' + p.a + '〉と〈' + p.b + '〉で、共起' + p.n + '回、係数は'
+      + p.j.toFixed(2) + 'であった。' + (A.pairs[1] ? '次いで〈' + A.pairs[1].a + '〉と〈' + A.pairs[1].b + '〉（' + A.pairs[1].j.toFixed(2) + '）が続く。' : ''));
+    L.push('共起は因果関係を示すものではないが、' + p.a + 'が語られる文脈で' + p.b + 'が併せて言及されやすいことを意味しており、両者をつなぐ語りの筋を原文で確かめる手がかりになる。');
+  }
+  if (A.attr && A.attr.test) {
+    const t = A.attr.test;
+    L.push('\n■ 属性による違い');
+    L.push('属性〈' + A.attr.key + '〉と' + (P.categories.length ? 'カテゴリー' : 'コード') + 'の交差集計では、χ²(' + t.df + ') = '
+      + t.x2.toFixed(2) + '、' + pText(t.p) + '、Cramer\u2019s V = ' + t.cramer.toFixed(2) + 'であった。'
+      + (t.p < 0.05 ? '偏りは統計的に有意である。' : '統計的に有意な偏りは認められなかった。'));
+    if (A.attr.cells.length) L.push('調整済み残差が±1.96を超えたのは' + A.attr.cells.slice(0, 4).map(c =>
+      '〈' + c.row + '〉×' + c.col + '（' + (c.z > 0 ? '+' : '') + c.z.toFixed(2) + '、実測' + c.o + '／期待' + c.e.toFixed(1) + '）').join('、')
+      + 'であり、' + (A.attr.cells[0].z > 0 ? A.attr.cells[0].col + 'で〈' + A.attr.cells[0].row + '〉が相対的に多く語られていた。' : A.attr.cells[0].col + 'では〈' + A.attr.cells[0].row + '〉が相対的に少なかった。'));
+    if (t.minE < 5) L.push('ただし期待度数が5未満のセルを含むため、この検定結果は参考値として扱い、質的な読み取りを優先すべきである。');
+  }
+  if (A.feature && A.feature.length) {
+    L.push('\n■ 語彙の特徴');
+    L.push('参照コーパス（' + DIC.refName + '）と比べて出現が際立つ語は' + A.feature.slice(0, 6).map(f => '「' + f.w + '」（対数尤度比' + f.ll.toFixed(1) + '）').join('、')
+      + 'であった。これらはこの語りに固有の関心の所在を示唆する。');
+  }
+  if (A.pol && A.pol.length) {
+    const tot = A.pol.reduce((s, r) => ({p:s.p + r.p, n:s.n + r.n}), {p:0, n:0});
+    const most = A.pol.slice().sort((a, b) => (b.p - b.n) - (a.p - a.n));
+    L.push('\n■ 評価表現の傾き');
+    L.push('極性辞書に一致した語はポジティブ' + jp(tot.p) + '語、ネガティブ' + jp(tot.n) + '語で、全体としては'
+      + (tot.p > tot.n ? '肯定的' : tot.p < tot.n ? '否定的' : '中立的') + 'な評価語が優勢であった。資料別では「' + most[0].name + '」が最も肯定寄り、「'
+      + most[most.length - 1].name + '」が最も否定寄りであった。語の数え上げであるため、否定表現や皮肉は反映されない点に注意が必要である。');
+  }
+  L.push('\n■ 分析の記録と信頼性');
+  L.push((A.memoN ? '分析過程のメモは' + jp(A.memoN) + '件記録されている。' : '分析過程のメモはまだ記録されていない。分析中に浮かんだ着想や方針を書き残すと、解釈の根拠を後からたどれるようになる。')
+    + (A.rel ? '第二コーダーとの照合では、段落を単位とした一致率' + Math.round(A.rel.po * 100) + '%、Cohenのκ = ' + A.rel.kappa.toFixed(2)
+      + '（' + kappaLabel(A.rel.kappa) + '）であった。' : '複数のコーダーによる照合はまだ行われていない。「マージ」から別のコーダーの結果を取り込むと、一致率とκが算出される。'));
+  if (A.dicts.length) L.push('語の処理には' + A.dicts.map(d => d.name).join('、') + 'を用いた。');
+  L.push('\n■ 読み取りにあたって');
+  L.push('以上は数量的な要約であり、それ自体が結論ではない。件数の多さは重要さの証明ではなく、少数の語りにこそ現象の鍵があることも多い。各記述は必ず元の文脈に戻って確かめ、ストーリーラインとして言葉で組み立て直すことが必要である。');
+  return L.join('\n');
+}
+function paperDraft(A){
+  if (!A.docN) return '資料を読み込み、コーディングを進めると、論文に書ける形の記述例がここに作られます。';
+  const soft = '質的データ分析支援ツール';
+  const L = [];
+  L.push('【方法：データと分析手続きの記述例】');
+  L.push('　本研究では、' + jp(A.docN) + '件の' + (P.docs.length && /インタビュー|逐語/.test(P.docs.map(d => d.name).join('')) ? 'インタビュー逐語録' : 'テキストデータ')
+    + '（総字数' + jp(A.chars) + '字）を分析対象とした。分析にあたっては、まず全体を繰り返し通読して文脈の理解を図ったうえで、'
+    + soft + 'を用いて意味のまとまりごとに切片化し、コーディングを行った。コーディングは、具体的な事象やテーマに振り分ける記述的コーディングと、'
+    + '抽象度の高い概念に振り分ける分析的コーディングの二層で進め、データから立ち上げる帰納的コーディング（' + jp(A.ind) + '件）と、'
+    + '既存の枠組みを適用する演繹的コーディング（' + jp(A.ded) + '件）を併用した。その結果、' + jp(A.codeN) + '個のコードと' + jp(A.segN) + '件のセグメントが得られた。'
+    + (A.cats.length ? '続いて、類似性と相違点にもとづいてコードを比較し、' + A.cats.length + '個のカテゴリーに集約した。' : '')
+    + '各コードについては、ラベル名・定義・適用条件・除外条件・引用例を記したコードブックを作成し、分類の一貫性を確保した。'
+    + '分析の過程では、コードメモ・理論メモ・方法論メモを継続的に記録し' + (A.memoN ? '（計' + jp(A.memoN) + '件）' : '') + '、解釈の根拠を追跡できるようにした。');
+  if (A.rel) L.push('　コーディングの信頼性を確認するため、第二コーダーが独立に同一データをコーディングし、段落を単位として照合した。'
+    + '一致率は' + Math.round(A.rel.po * 100) + '%、Cohenのκ係数は' + A.rel.kappa.toFixed(2) + '（' + kappaLabel(A.rel.kappa) + '）であり、'
+    + '不一致箇所については両者で協議し、コードの定義と適用条件を修正したうえで再コーディングを行った。');
+  else L.push('　（信頼性について書く場合の例）第二コーダーが独立に同一データをコーディングし、段落を単位として一致を算出した。'
+    + '不一致箇所は協議のうえコードブックを修正し、再コーディングを行った。');
+  L.push('　なお、研究者自身の立場が解釈に与える影響を自覚するため、分析の各段階で省察を記録した'
+    + (P.reflexivity && P.reflexivity.q1 ? '（' + String(P.reflexivity.q1).replace(/\s+/g, ' ').slice(0, 60) + '…）' : '') + '。');
+  L.push('\n【結果：カテゴリーの記述例】');
+  (A.cats.length ? A.cats.slice(0, 3) : A.top.slice(0, 3).map(x => ({k:{name:x.c.name}, codes:[x.c], n:x.n, docs:x.d}))).forEach((c, i) => {
+    const sub = c.codes.slice(0, 4).map(x => '〈' + x.name + '〉').join('、');
+    const q = c.codes.length ? quoteOf(c.codes[0].id) : null;
+    L.push('　（' + (i + 1) + '）' + c.k.name + '　本カテゴリーは' + sub + 'などのコードから構成され、' + jp(c.n) + '件のセグメント（'
+      + c.docs + '資料）が該当した。' + (q ? '対象者は「' + q.text + '」（' + q.who + '）と語っており、' : '')
+      + 'ここでは〔ここに解釈を記述する：何が、どのような条件のもとで、どのように生じているか〕。');
+  });
+  if (A.pairs.length) L.push('　カテゴリー間の関係をみると、〈' + A.pairs[0].a + '〉と〈' + A.pairs[0].b + '〉は同一段落での共起が' + A.pairs[0].n
+    + '回（Jaccard係数' + A.pairs[0].j.toFixed(2) + '）と最も強く結びついていた。すなわち、〔前者〕が語られる場面では〔後者〕が併せて言及されており、'
+    + '両者は〔　　　〕という一連のプロセスとして理解できる。');
+  if (A.attr && A.attr.test && A.attr.test.p < 0.05) {
+    const c = A.attr.cells[0];
+    L.push('　属性〈' + A.attr.key + '〉別にみると、' + (P.categories.length ? 'カテゴリー' : 'コード') + 'の分布に偏りが認められた（χ²(' + A.attr.test.df + ') = '
+      + A.attr.test.x2.toFixed(2) + ', ' + pText(A.attr.test.p) + ', V = ' + A.attr.test.cramer.toFixed(2) + '）。'
+      + (c ? '調整済み残差の検討から、' + c.col + 'において〈' + c.row + '〉が' + (c.z > 0 ? '有意に多く' : '有意に少なく') + '（残差' + c.z.toFixed(2) + '）、' : '')
+      + '〔この差が何を意味するかを、原データの語りに即して記述する〕。');
+  }
+  if (P.storyline && P.storyline.trim()) {
+    L.push('\n【ストーリーライン（記入済みの内容）】');
+    L.push('　' + P.storyline.replace(/\s*\n\s*/g, ' ').trim());
+  } else {
+    L.push('\n【ストーリーラインの書き出し例】');
+    L.push('　' + (A.cats[0] ? '〈' + A.cats[0].k.name + '〉' : '〈中心となるカテゴリー〉') + 'を背景として、'
+      + (A.cats[1] ? '〈' + A.cats[1].k.name + '〉' : '〈条件となるカテゴリー〉') + 'が働くとき、対象者は'
+      + (A.cats[2] ? '〈' + A.cats[2].k.name + '〉' : '〈中心的な現象〉') + 'を経験し、その結果として〔帰結〕が生じていた。');
+  }
+  L.push('\n【限界と今後の課題の記述例】');
+  L.push('　本研究の対象は' + jp(A.docN) + '件と限られており、得られた知見の一般化には慎重であるべきである。'
+    + 'また、コーディングは研究者の解釈を含む作業であり、' + (A.rel ? 'κ係数による確認を行ったとはいえ' : '複数コーダーによる確認を経ていないため')
+    + '、別の解釈可能性は残る。'
+    + (A.dicts.length ? '語彙の処理には' + A.dicts.map(d => d.credit || d.name).join('、') + 'を用いたが、辞書に依存した自動処理は文脈や否定表現を反映しない点に留意が必要である。' : ''));
+  L.push('\n【引用の示し方の例】');
+  const q1 = A.top[0] ? quoteOf(A.top[0].c.id, 80) : null;
+  L.push(q1 ? '　「' + q1.text + '」（' + q1.who + '）' : '　「（語りの引用）」（対象者ID、属性）');
+  L.push('　※ 引用は文意を変えない範囲で整え、個人が特定される情報は伏せる。省略は〔中略〕、補いは〔　〕で示す。');
+  return L.join('\n');
+}
+function renderStep7(){
+  const A = analyzeAll();
+  UI.lastAnalysis = A;
+  $('#interpOut').textContent = narrative(A);
+  $('#paperOut').textContent = paperDraft(A);
+  $('#interpStat').textContent = A.segN ? '資料' + A.docN + '／コード' + A.codeN + '／抽出' + A.segN + ' から作成' : '';
+}
+function copyText(el, btn){
+  const t = el.textContent;
+  const done = () => { const o = btn.textContent; btn.textContent = 'コピーしました'; setTimeout(() => btn.textContent = o, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => fallback());
+  else fallback();
+  function fallback(){
+    const ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { toast('コピーできませんでした', true); }
+    ta.remove();
+  }
+}
+$('#interpRun').onclick = renderStep7;
+$('#interpCopy').onclick = e => copyText($('#interpOut'), e.target);
+$('#paperCopy').onclick = e => copyText($('#paperOut'), e.target);
+$('#interpMd').onclick = () => {
+  const A = analyzeAll();
+  dl(P.name + '_結果の読み取りと記述例.md',
+    '# ' + P.name + '　結果の読み取り\n\n' + narrative(A) + '\n\n---\n\n# 論文での記述例\n\n' + paperDraft(A) + '\n', 'text/markdown');
+};
+/* --- 行列の検定 --- */
+$('#mxTestBtn').onclick = () => {
+  const cols = colDefs(), rows = rowDefs(), box = $('#mxTest');
+  if (rows.length < 2 || cols.cols.length < 2) { box.style.display = 'block'; box.innerHTML = '<p class="hint">行と列が2つ以上ないと検定できません。</p>'; return; }
+  const grid = rows.map(r => cols.cols.map(c => cellVal(r, c)));
+  const t = chiSquare(grid);
+  box.style.display = 'block';
+  if (!t) { box.innerHTML = '<p class="hint">度数が0のため検定できません。</p>'; return; }
+  const cells = [];
+  t.res.forEach((row, i) => row.forEach((z, j) => { if (Math.abs(z) >= 1.96) cells.push({r:rows[i].name, c:cols.cols[j].name, z:z, o:grid[i][j], e:t.exp[i][j]}); }));
+  cells.sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+  box.innerHTML = '<div class="row" style="margin-bottom:6px"><strong>カイ二乗検定</strong>'
+    + '<span class="pill">χ²(' + t.df + ') = ' + t.x2.toFixed(2) + '</span><span class="pill">' + pText(t.p) + '</span>'
+    + '<span class="pill">Cramer\u2019s V = ' + t.cramer.toFixed(2) + '</span>'
+    + '<button class="btn ghost sm" id="mxTestX" style="margin-left:auto">閉じる</button></div>'
+    + (t.minE < 5 ? '<p class="hint" style="margin-top:0">期待度数5未満のセルがあります。参考値として扱ってください。</p>' : '')
+    + (cells.length ? '<table><thead><tr><th>行</th><th>列</th><th>実測</th><th>期待</th><th>調整済み残差</th></tr></thead><tbody>'
+        + cells.slice(0, 12).map(c => '<tr><td>' + esc(c.r) + '</td><td>' + esc(c.c) + '</td><td class="num">' + c.o + '</td><td class="num">'
+        + c.e.toFixed(1) + '</td><td class="num" style="color:' + (c.z > 0 ? '#3f6b52' : '#98392c') + '">' + (c.z > 0 ? '+' : '') + c.z.toFixed(2) + '</td></tr>').join('')
+        + '</tbody></table><p class="hint">残差が+1.96以上なら期待より多く、−1.96以下なら少ないセルです。</p>'
+        : '<p class="hint">±1.96を超えるセルはありませんでした。</p>');
+  $('#mxTestX').onclick = () => box.style.display = 'none';
+};
+
+/* ============================================================
+   画面の切り替えと初期化
+   ============================================================ */
+function go(step){
+  UI.step = step;
+  $$('#steps button').forEach(b => b.setAttribute('aria-current', +b.dataset.step === step));
+  $$('.step').forEach(s => s.classList.toggle('on', s.id === 'step' + step));
+  hideSelTool();
+  if (step === 1) { renderDocTable(); renderMemoDoc(); }
+  if (step === 2) { renderTabs(); renderReader(); renderCodeList(); renderInspector(); renderRetrieval(); }
+  if (step === 3) renderStep3();
+  if (step === 4) { renderScope(); renderMapAdd(); renderConcepts(); storyStat(); if (UI.viz === 'map') drawMap(); }
+  if (step === 5) renderMemos();
+  if (step === 6) renderStep7();
+  if (step === 7) { renderPresets(); renderDicts(); rebuildDic(); }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+$$('#steps button').forEach(b => b.onclick = () => go(+b.dataset.step));
+$$('#vtabs button').forEach(b => b.onclick = () => {
+  UI.viz = b.dataset.v;
+  $$('#vtabs button').forEach(x => x.setAttribute('aria-current', x === b));
+  $$('.vpane').forEach(p => p.classList.toggle('on', p.id === 'v-' + UI.viz));
+  if (UI.viz === 'map') drawMap();
+  if (UI.viz === 'dendro') drawDendro();
+  if (UI.viz === 'portrait') renderPortrait();
+});
+$('#projName').addEventListener('input', () => { P.name = $('#projName').textContent.trim(); markDirty(); });
+$('#projName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#projName').blur(); } });
+$('#autosave').onchange = () => { if ($('#autosave').checked) saveLocal(); };
+
+function renderAll(){
+  updateStat();
+  renderDocTable(); renderMemoDoc();
+  renderTabs(); renderReader(); renderCodeList(); renderInspector(); renderRetrieval();
+  renderStep3(); renderScope(); renderMapAdd(); renderMemos(); storyStat();
+  renderPresets(); renderDicts(); renderQueryPickers();
+  if (UI.viz === 'map') drawMap();
+}
+function bindProject(){
+  $('#projName').textContent = P.name || '無題のプロジェクト';
+  $('#storyBox').value = P.storyline || '';
+  $('#rf1').value = P.reflexivity.q1 || ''; $('#rf2').value = P.reflexivity.q2 || ''; $('#rf3').value = P.reflexivity.q3 || '';
+  if (!UI.docId && P.docs[0]) UI.docId = P.docs[0].id;
+}
+/* ============================================================
+   Google Apps Script（ウェブアプリ）で動かすための橋渡し
+   ============================================================ */
+const GAS = !!(typeof google !== 'undefined' && google.script && google.script.run);
+function gasCall(fn){
+  const args = Array.prototype.slice.call(arguments, 1);
+  return new Promise((res, rej) => {
+    const r = google.script.run
+      .withSuccessHandler(res)
+      .withFailureHandler(e => rej(new Error((e && e.message) || 'サーバー側の処理に失敗しました')));
+    r[fn].apply(r, args);
+  });
+}
+if (GAS) {
+  /* 保存・書き出しはマイドライブへ */
+  dl = function(name, content, type){
+    toast('Google ドライブに保存しています…');
+    gasCall('saveToDrive', name, String(content), type || 'text/plain').then(
+      f => modal('ドライブに保存しました',
+        '<p>「' + esc(f.name) + '」を、マイドライブの「' + esc(f.folder) + '」フォルダに保存しました。</p>'
+        + '<p><a href="' + esc(f.url) + '" target="_blank" rel="noopener">ファイルを開く</a></p>', []),
+      e => toast(e.message, true));
+  };
+  saveDataUrl = function(name, dataUrl){
+    const i = dataUrl.indexOf(',');
+    toast('画像をドライブに保存しています…');
+    gasCall('saveBase64', name, dataUrl.slice(i + 1), 'image/png').then(
+      f => modal('ドライブに保存しました',
+        '<p>「' + esc(f.name) + '」を、マイドライブの「' + esc(f.folder) + '」フォルダに保存しました。</p>'
+        + '<p><a href="' + esc(f.url) + '" target="_blank" rel="noopener">画像を開く</a></p>', []),
+      e => toast(e.message, true));
+  };
+  /* 自動保存はドライブの1ファイルを上書き（間隔は長めに） */
+  markDirty = function(){
+    updateStat();
+    if ($('#autosave').checked) { clearTimeout(saveTimer); saveTimer = setTimeout(saveLocal, 5000); }
+  };
+  saveLocal = async function(){
+    try {
+      const s = JSON.stringify(exportProject());
+      if (s.length > 20000000) { toast('データが大きいため自動保存を省きました', true); return; }
+      await gasCall('saveState', s);
+    } catch (e) { toast('自動保存できませんでした（' + e.message + '）', true); }
+  };
+  loadLocal = async function(){
+    try {
+      const s = await gasCall('loadState');
+      if (s) { const o = JSON.parse(s); if (o && o.docs) { P = normalize(o); return true; } }
+    } catch (e) {}
+    return false;
+  };
+  /* 外部の辞書はサーバー（UrlFetchApp）経由で取得＝CORSの制約を受けない */
+  fetchDict = async function(url, onp){
+    if (onp) onp('サーバー経由');
+    const t = await gasCall('proxyFetch', url);
+    if (t == null || t === '') throw new Error('中身が空でした');
+    return t;
+  };
+  /* ドライブから開く */
+  window.openFromDrive = function(){
+    gasCall('listProjects').then(list => {
+      modal('ドライブから開く', list.length
+        ? '<ul class="list">' + list.map(f => '<li><button class="t" data-df="' + f.id
+            + '" style="background:none; border:none; text-align:left; cursor:pointer; padding:0">' + esc(f.name)
+            + '<div class="muted small">' + esc(f.date) + '</div></button></li>').join('') + '</ul>'
+        : '<p class="hint">「QDA Workbench」フォルダに .qda.json がまだありません。「保存」を押すとここに並びます。</p>', []);
+      $$('[data-df]').forEach(b => b.onclick = () => {
+        gasCall('readProject', b.dataset.df).then(txt => { closeModal(); importJson(txt, 'ドライブのファイル'); },
+          e => toast(e.message, true));
+      });
+    }, e => toast(e.message, true));
+  };
+  document.addEventListener('DOMContentLoaded', addDriveButton);
+  setTimeout(addDriveButton, 0);
+}
+function addDriveButton(){
+  if (!GAS || $('#btnDrive') || !$('.acts')) return;
+  const b = document.createElement('button');
+  b.className = 'btn ghost sm'; b.id = 'btnDrive'; b.textContent = 'ドライブから開く';
+  b.onclick = () => window.openFromDrive();
+  $('.acts').insertBefore(b, $('#btnSave'));
+  const badge = document.createElement('span');
+  badge.className = 'chk'; badge.style.opacity = '.8'; badge.textContent = 'Drive に保存';
+  $('.acts').appendChild(badge);
+}
+
+(async function boot(){
+  const restored = await loadLocal();
+  bindProject(); rebuildDic(); renderAll(); go(restored && P.docs.length ? 2 : 1);
+  if (restored && P.docs.length) { $('#autosave').checked = true; toast('前回の続きを開きました'); }
+})();
+</script>
+</body>
+</html>

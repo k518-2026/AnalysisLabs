@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QDA-Lite — データ分析ラボ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #1e3a5f;
+            --secondary: #3a5a80;
+            --accent: #007bb5;
+            --bg-main: #f4f7f6;
+            --bg-panel: #ffffff;
+            --text-main: #333333;
+            --text-muted: #555555;
+            --border: #d1d9e6;
+            --highlight-default: #ffeeba;
+            --success: #2e7d32;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+            position: sticky;
+            top: 0;
+        }
+        .header-title h1 { font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+        .header-controls button {
+            background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3);
+            padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .header-controls button:hover { background: rgba(255,255,255,0.2); }
+
+        /* Workspace & Panels */
+        .workspace { display: flex; flex: 1; align-items: stretch; }
+        .panel { background: var(--bg-panel); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+        .panel-header {
+            padding: 1rem; background: #f8fafc; border-bottom: 1px solid var(--border);
+            font-weight: bold; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 60px; z-index: 5;
+        }
+        .panel-guide { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.4; font-weight: normal; }
+        .panel-content { flex: 1; padding: 1rem; }
+
+        /* Left Panel */
+        .left-panel { width: 22%; min-width: 250px; }
+        .memo-box { margin-bottom: 1.5rem; }
+        .memo-box label { display: block; margin-bottom: 0.5rem; font-size: 0.95rem; font-weight: bold; color: var(--secondary); }
+        .memo-box textarea {
+            width: 100%; height: 120px; padding: 0.8rem; border: 1px solid var(--border);
+            border-radius: 4px; resize: vertical; font-family: inherit; line-height: 1.5;
+        }
+        .demographics-box { background: #f9f9f9; padding: 1rem; border-radius: 4px; border: 1px solid var(--border); }
+        .demographics-box select, .demographics-box input[type="text"] {
+            width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box;
+        }
+
+        /* Center Panel */
+        .center-panel { flex: 1; position: relative; background: #eef2f5; display: flex; flex-direction: column; }
+        
+        .toolbar {
+            background: #fff; padding: 1rem; border-bottom: 1px solid var(--border);
+            display: flex; gap: 1rem; align-items: stretch; flex-wrap: wrap;
+        }
+        
+        .drop-zone {
+            border: 2px dashed var(--accent); border-radius: 8px; padding: 1.5rem; text-align: center;
+            background: #fff; transition: all 0.2s ease; cursor: pointer; flex: 1; min-width: 250px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .drop-zone.drag-active { background: #e3f2fd; border-color: #1565c0; transform: scale(1.02); }
+        .drop-zone-text { color: var(--accent); font-weight: bold; font-size: 1.05rem; margin-bottom: 0.5rem; }
+        
+        .auto-coding-zone {
+            border: 1px solid var(--success); background: #f0f8f1; border-radius: 8px; padding: 1rem;
+            flex: 1.5; min-width: 320px; display: flex; flex-direction: column; justify-content: center;
+        }
+        
+        .document-container {
+            max-width: 800px; margin: 1.5rem auto; padding: 2.5rem; background: white;
+            min-height: calc(100% - 150px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 4px;
+            line-height: 2; font-size: 1.05rem; width: 90%;
+        }
+        .document-content p { margin-bottom: 1.5rem; padding: 0.2rem; }
+        
+        /* Highlight Tooltip */
+        #selection-tooltip {
+            position: fixed; background: var(--accent); color: white; padding: 0.5rem 1rem;
+            border-radius: 4px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 0.9rem; display: none; z-index: 100; transform: translate(-50%, -100%); margin-top: -10px;
+        }
+        #selection-tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px;
+            border-width: 5px; border-style: solid; border-color: var(--accent) transparent transparent transparent;
+        }
+        mark.qda-highlight {
+            background-color: var(--highlight-default); color: inherit; padding: 0.2rem 0;
+            border-radius: 2px; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        mark.qda-highlight:hover { opacity: 0.8; outline: 1px dashed #333; }
+
+        /* Right Panel */
+        .right-panel { width: 40%; min-width: 400px; border-right: none; display: flex; flex-direction: column; }
+        .tabs { display: flex; border-bottom: 1px solid var(--border); background: #f8fafc; }
+        .tab-btn {
+            flex: 1; padding: 0.8rem; text-align: center; cursor: pointer; font-weight: bold;
+            border: none; background: none; border-bottom: 3px solid transparent; color: var(--text-muted);
+        }
+        .tab-btn.active { border-bottom-color: var(--accent); color: var(--accent); }
+        .tab-content { display: none; padding: 1rem; flex: 1; }
+        .tab-content.active { display: block; }
+
+        /* Code List Styles */
+        .category-group { margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+        .category-header {
+            background: #eef2f5; padding: 0.8rem; font-weight: bold; color: var(--primary);
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);
+        }
+        .code-list { display: flex; flex-direction: column; padding: 0.5rem; gap: 0.5rem; }
+        .code-item { border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.8rem; background: #fff; cursor: grab; }
+        .code-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
+        .code-header-left { display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 0.95rem; }
+        .code-color-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .code-desc { font-size: 0.8rem; color: var(--text-muted); background: var(--bg-main); padding: 0.5rem; border-left: 3px solid var(--border); }
+        
+        /* Matrix Styles */
+        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+        .matrix-table th, .matrix-table td { border: 1px solid var(--border); padding: 0.8rem; text-align: center; }
+        .matrix-table th { background-color: #f8fafc; color: var(--primary); }
+        .matrix-controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+
+        /* Summary Output Styles */
+        .summary-box {
+            background: #fff; border: 1px solid var(--border); border-left: 5px solid var(--success);
+            padding: 1rem; border-radius: 4px; margin-top: 1.5rem; display: none; font-size: 0.9rem; line-height: 1.6;
+        }
+        .summary-box h4 { margin-top: 0; color: var(--success); margin-bottom: 0.5rem; font-size: 1rem; }
+        .paper-example-box {
+            background: #fdfdfd; border: 1px solid var(--border); border-left: 5px solid var(--primary);
+            padding: 1rem; border-radius: 4px; margin-top: 1rem; display: none; font-size: 0.9rem; line-height: 1.6;
+        }
+        .paper-example-box h4 { margin-top: 0; color: var(--primary); margin-bottom: 0.5rem; font-size: 1rem; }
+        .paper-text { font-family: "Mincho", "MS Mincho", serif; padding: 1rem; border: 1px dashed #ccc; background: #fff;}
+
+        /* Buttons */
+        .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+        .btn-cancel { background: #e2e8f0; color: #333; }
+        .btn-save { background: var(--accent); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-outline { background: white; border: 1px solid var(--accent); color: var(--accent); }
+        
+        /* URL Input Field */
+        .url-input-wrapper { display: flex; flex-direction: column; margin-bottom: 0.5rem; gap: 0.5rem; }
+        .url-input-wrapper select, .url-input-wrapper input { padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; width: 100%; box-sizing: border-box;}
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; }
+        .modal h2 { margin-top: 0; color: var(--primary); margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box;}
+        .form-group textarea { resize: vertical; height: 80px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; }
+        .palette { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+        .color-option { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+        .color-option.selected { border-color: #333; }
+        .badge { background: var(--accent); color: white; padding: 0.1rem 0.5rem; border-radius: 12px; font-size: 0.75rem;}
+        
+        /* Loader & Progress */
+        .loader { display: none; margin-left: 5px; border: 2px solid #f3f3f3; border-top: 2px solid #fff; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #progress-text { font-size: 0.8rem; color: var(--success); margin-top: 0.5rem; font-weight: bold; display: none; }
+        
+        .dict-badge {
+            display: inline-block; background: #e2e8f0; color: #333; padding: 0.2rem 0.5rem; 
+            border-radius: 4px; font-size: 0.75rem; margin-right: 0.5rem; margin-bottom: 0.5rem;
+        }
+    </style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-text);--primary:var(--al-cat-deep);--secondary:var(--al-cat);--accent:var(--al-cat);--bg-main:var(--al-bg);--bg-panel:var(--al-surface);--text-main:var(--al-ink);--text-muted:var(--al-ink-2);--border:var(--al-line);}body{font-family:var(--al-sans)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#text">質的・テキスト</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>QDA-Lite</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+    <header>
+        <div class="header-title">
+            <i class="fas fa-microscope"></i>
+            <h1>QDA-Lite (全体スクロール対応版)</h1>
+        </div>
+        <div class="header-controls">
+            <button onclick="exportProject()"><i class="fas fa-download"></i> プロジェクト保存 (JSON)</button>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <!-- Left Panel -->
+        <div class="panel left-panel">
+            <div class="panel-header"><div><i class="fas fa-book-open"></i> メモ＆対象者管理</div></div>
+            <div class="panel-content">
+                <div class="demographics-box memo-box">
+                    <label><i class="fas fa-user-tag"></i> 対象者（ケース）の追加</label>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">分析する対象者名や属性を追加します。</div>
+                    <div style="display:flex; gap:0.5rem; margin-bottom: 1rem;">
+                        <input type="text" id="new-subject-input" placeholder="例: 生徒A（不登校傾向）">
+                        <button class="btn btn-sm btn-outline" onclick="addSubject()">追加</button>
+                    </div>
+
+                    <label style="font-size: 0.85rem; margin-bottom:0.2rem;">現在の対象者 (コーディング記録先)</label>
+                    <select id="attr-value">
+                        <option value="未設定">-- 対象者を選択してください --</option>
+                        <option value="生徒A（通常学級）">生徒A（通常学級）</option>
+                        <option value="生徒B（特別支援）">生徒B（特別支援）</option>
+                    </select>
+                </div>
+                <div class="memo-box">
+                    <label>📝 理論メモ</label>
+                    <textarea id="theory-memo" placeholder="仮説や解釈を記録"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Panel -->
+        <div class="panel center-panel">
+            <div class="toolbar">
+                <!-- Data Upload -->
+                <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()">
+                    <i class="fas fa-file-upload" style="font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem;"></i>
+                    <div class="drop-zone-text">テキスト(.txt)をドラッグ＆ドロップ</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">またはクリックして選択</div>
+                    <input type="file" id="file-input" accept=".txt" style="display:none;">
+                </div>
+
+                <!-- Auto Coding Zone -->
+                <div class="auto-coding-zone">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                        <span style="font-weight:bold; color:var(--success);"><i class="fas fa-layer-group"></i> 感情極性・分類辞書の追加と抽出</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        目的に合った辞書を選択して「辞書を追加」を押してください。<br>複数の辞書を組み合わせて読み込むことができます。
+                    </div>
+                    <div class="url-input-wrapper">
+                        <select id="dict-preset-select" onchange="toggleCustomUrl()">
+                            <option value="basic_sentiment">① 基本感情極性辞書（ポジティブ/ネガティブ/中立）</option>
+                            <option value="plutchik_emotion">② プルチックの感情の輪（喜び・怒り・悲しみ等 8分類）</option>
+                            <option value="academic_emotion">③ 学習・教育の感情辞書（集中・混乱・退屈など）</option>
+                            <option value="custom">④ カスタムURLから取得 (CSV形式)</option>
+                        </select>
+                        <input type="url" id="api-url" placeholder="https://... (CSVのURLを入力)" style="display:none;">
+                    </div>
+                    <div>
+                        <button id="fetch-btn" class="btn btn-sm btn-outline" style="border-color:var(--success); color:var(--success);" onclick="loadExternalDictionary()">
+                            <i class="fas fa-plus-circle"></i> 辞書を追加読み込み
+                            <div id="fetch-loader" class="loader" style="border-top-color: var(--success);"></div>
+                        </button>
+                        <div id="progress-text"></div>
+                    </div>
+
+                    <!-- 読み込み済み辞書のバッジ表示 -->
+                    <div id="loaded-dicts-info" style="margin-top: 0.5rem; display:none;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.2rem;">現在読み込まれている分類項目:</div>
+                        <div id="dict-badges-container"></div>
+                    </div>
+
+                    <!-- 辞書読み込み後に表示される選択エリア -->
+                    <div id="dict-options-zone" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--success);">
+                        <div style="font-size: 0.85rem; font-weight:bold; margin-bottom: 0.5rem; color: var(--primary);">現在の対象者に抽出する項目を選択:</div>
+                        
+                        <div id="dynamic-checkbox-container" style="display:flex; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.85rem; flex-wrap: wrap;">
+                            <!-- Checkboxes will be injected here -->
+                        </div>
+                        
+                        <button class="btn btn-sm btn-success" onclick="executeAutoCoding()">
+                            <i class="fas fa-magic"></i> 選択項目でコーディング実行
+                        </button>
+                        <button class="btn btn-sm btn-cancel" onclick="clearDictionaries()" style="margin-left: 0.5rem; font-size:0.75rem;">辞書リセット</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="flex:1;">
+                <div class="document-container" id="doc-container">
+                    <div class="document-content" id="editor">
+                        <div class="empty-state">
+                            <i class="fas fa-file-alt" style="font-size: 3rem; color: #cbd5e1; margin-bottom:1rem;"></i><br>
+                            データが読み込まれていません。<br>上部のエリアにテキストファイルをドラッグ＆ドロップしてください。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel (Tabs for Codebook & Matrix) -->
+        <div class="panel right-panel">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('codebook')"><i class="fas fa-tags"></i> コードブック</button>
+                <button class="tab-btn" onclick="switchTab('matrix')"><i class="fas fa-table"></i> マトリクス分析</button>
+            </div>
+            
+            <!-- Codebook Tab -->
+            <div id="tab-codebook" class="tab-content active" style="display: block;">
+                <div style="margin-bottom: 1rem; text-align: right;">
+                    <button class="btn btn-sm btn-outline" onclick="openCategoryModal()"><i class="fas fa-folder-plus"></i> カテゴリー追加</button>
+                </div>
+                <div id="category-container"></div>
+            </div>
+
+            <!-- Matrix Tab -->
+            <div id="tab-matrix" class="tab-content" style="display: none;">
+                <div class="matrix-controls">
+                    <button class="btn btn-sm btn-save" onclick="generateMatrix()"><i class="fas fa-sync"></i> 集計表を更新</button>
+                    <button class="btn btn-sm btn-outline" onclick="generateSummary()"><i class="fas fa-pen-nib"></i> 特徴を文章化</button>
+                </div>
+                <div id="matrix-container" style="overflow-x: auto;">
+                    <p style="color:var(--text-muted); font-size:0.9rem; text-align:center;">「集計表を更新」ボタンを押してください。</p>
+                </div>
+
+                <!-- Analysis Summary Output -->
+                <div id="summary-box" class="summary-box">
+                    <h4><i class="fas fa-lightbulb"></i> 読み取れるデータの特徴</h4>
+                    <div id="summary-content"></div>
+                </div>
+
+                <!-- Paper Example Output -->
+                <div id="paper-example-box" class="paper-example-box">
+                    <h4><i class="fas fa-file-signature"></i> 論文・レポートへの記述例</h4>
+                    <div id="paper-example-content" class="paper-text"></div>
+                    <p style="font-size:0.75rem; color:#888; margin-top:0.5rem; margin-bottom:0;">※この文章は機械的に生成されたテンプレートです。文脈を手直ししてください。</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="selection-tooltip" onmousedown="handleTooltipClick(event)"><i class="fas fa-plus"></i> コード付与</div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="code-modal">
+        <div class="modal">
+            <h2>新しいコードを作成</h2>
+            <div class="form-group"><label>カテゴリー</label><select id="code-category-select"></select></div>
+            <div class="form-group"><label>ラベル名</label><input type="text" id="code-name"></div>
+            <div class="form-group"><label>定義</label><textarea id="code-desc"></textarea></div>
+            <div class="form-group"><label>カラー</label><div class="palette" id="color-palette"></div></div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('code-modal')">キャンセル</button>
+                <button class="btn btn-save" onclick="saveCode()">保存して適用</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="category-modal">
+        <div class="modal">
+            <h2>カテゴリー作成</h2>
+            <div class="form-group"><label>カテゴリー名</label><input type="text" id="category-name"></div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('category-modal')">キャンセル</button>
+                <button class="btn btn-save" onclick="saveCategory()">作成</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const appState = {
+            categories: [
+                { id: 'cat_uncategorized', name: '手動分類コード' }
+            ],
+            codes: [], currentDocAttr: "未設定",
+            colors: ['#ffeeba', '#b8e0d2', '#d6cbd3', '#eca1a6', '#bdcebe', '#ffb3ba', '#bae1ff'],
+            selectedRange: null, selectedColor: '#ffeeba', codingRecords: [],
+            loadedDictText: "" // Stores concatenated CSV text from multiple loaded dicts
+        };
+
+        function initPalette() {
+            const container = document.getElementById('color-palette');
+            appState.colors.forEach(color => {
+                const div = document.createElement('div'); div.className = 'color-option'; div.style.backgroundColor = color;
+                if(color === appState.selectedColor) div.classList.add('selected');
+                div.onclick = () => { document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected')); div.classList.add('selected'); appState.selectedColor = color; };
+                container.appendChild(div);
+            });
+        }
+        initPalette();
+
+        document.getElementById('attr-value').addEventListener('change', (e) => { appState.currentDocAttr = e.target.value; });
+
+        function addSubject() {
+            const input = document.getElementById('new-subject-input');
+            const name = input.value.trim();
+            if(name) {
+                const select = document.getElementById('attr-value');
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.innerText = name;
+                select.appendChild(opt);
+                select.value = name; 
+                appState.currentDocAttr = name;
+                input.value = '';
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+            if(tabName === 'codebook') {
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                document.getElementById('tab-codebook').style.display = 'block'; renderCodebook();
+            } else {
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('tab-matrix').style.display = 'block';
+            }
+        }
+
+        /* --- 1. Drag & Drop & File Read --- */
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt.files && dt.files.length > 0) handleFile(dt.files[0]);
+        });
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files.length > 0) handleFile(e.target.files[0]);
+            this.value = '';
+        });
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.txt')) {
+                alert('【エラー】テキストファイル（.txt）のみ対応しています。'); return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const html = e.target.result.split(/\r?\n/).filter(p => p.trim() !== '').map(p => `<p>${p}</p>`).join('');
+                document.getElementById('editor').innerHTML = html || '<p>テキストが空です。</p>';
+                
+                dropZone.style.padding = "1rem";
+                dropZone.querySelector('.fas').style.fontSize = "1.5rem";
+                dropZone.querySelector('.drop-zone-text').style.fontSize = "0.9rem";
+                window.getSelection().removeAllRanges();
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        /* --- 2. Multiple Dictionaries Loading --- */
+        function toggleCustomUrl() {
+            const select = document.getElementById('dict-preset-select');
+            const urlInput = document.getElementById('api-url');
+            if (select.value === 'custom') {
+                urlInput.style.display = 'block';
+            } else {
+                urlInput.style.display = 'none';
+            }
+        }
+
+        // Hardcoded dictionaries for reliable prototype functionality
+        const dictPresets = {
+            "basic_sentiment": `キーワード,分類
+嬉しい,ポジティブ
+楽しい,ポジティブ
+素晴らしい,ポジティブ
+良い,ポジティブ
+好き,ポジティブ
+安心,ポジティブ
+賛成,ポジティブ
+期待,ポジティブ
+便利,ポジティブ
+悲しい,ネガティブ
+苦しい,ネガティブ
+悪い,ネガティブ
+嫌い,ネガティブ
+不満,ネガティブ
+不安,ネガティブ
+反対,ネガティブ
+怒り,ネガティブ
+失敗,ネガティブ
+最悪,ネガティブ
+面倒,ネガティブ
+複雑,ネガティブ
+システム,ニュートラル
+画面,ニュートラル
+マニュアル,ニュートラル
+業務,ニュートラル
+作業,ニュートラル
+現場,ニュートラル`,
+
+            "plutchik_emotion": `キーワード,分類
+嬉しい,喜び(Joy)
+楽しい,喜び(Joy)
+喜ぶ,喜び(Joy)
+ワクワク,喜び(Joy)
+信じる,信頼(Trust)
+頼る,信頼(Trust)
+安心,信頼(Trust)
+尊敬,信頼(Trust)
+納得,信頼(Trust)
+怖い,恐れ(Fear)
+恐怖,恐れ(Fear)
+不安,恐れ(Fear)
+恐れる,恐れ(Fear)
+怯える,恐れ(Fear)
+驚く,驚き(Surprise)
+びっくり,驚き(Surprise)
+予想外,驚き(Surprise)
+意外,驚き(Surprise)
+悲しい,悲しみ(Sadness)
+泣く,悲しみ(Sadness)
+辛い,悲しみ(Sadness)
+落ち込む,悲しみ(Sadness)
+憂鬱,悲しみ(Sadness)
+嫌い,嫌悪(Disgust)
+気持ち悪い,嫌悪(Disgust)
+不快,嫌悪(Disgust)
+うんざり,嫌悪(Disgust)
+怒る,怒り(Anger)
+腹立つ,怒り(Anger)
+ムカつく,怒り(Anger)
+イライラ,怒り(Anger)
+憤り,怒り(Anger)
+期待,期待(Anticipation)
+楽しみ,期待(Anticipation)
+希望,期待(Anticipation)
+待つ,期待(Anticipation)`,
+
+            "academic_emotion": `キーワード,分類
+集中,エンゲージメント(学習)
+没頭,エンゲージメント(学習)
+興味,エンゲージメント(学習)
+面白い,エンゲージメント(学習)
+夢中,エンゲージメント(学習)
+わからない,混乱(学習)
+混乱,混乱(学習)
+疑問,混乱(学習)
+なぜ,混乱(学習)
+どうして,混乱(学習)
+イライラ,フラストレーション(学習)
+難しい,フラストレーション(学習)
+できない,フラストレーション(学習)
+焦る,フラストレーション(学習)
+つまずく,フラストレーション(学習)
+つまらない,退屈(学習)
+退屈,退屈(学習)
+飽きる,退屈(学習)
+眠い,退屈(学習)
+だるい,退屈(学習)`
+        };
+
+        async function loadExternalDictionary() {
+            const preset = document.getElementById('dict-preset-select').value;
+            const url = document.getElementById('api-url').value.trim();
+            
+            if (preset === 'custom' && !url) {
+                return alert('カスタムURLを入力してください。');
+            }
+
+            const btn = document.getElementById('fetch-btn');
+            const loader = document.getElementById('fetch-loader');
+            const progress = document.getElementById('progress-text');
+            
+            btn.disabled = true;
+            loader.style.display = 'inline-block';
+            progress.style.display = 'block';
+            progress.style.color = 'var(--success)';
+            progress.innerText = '辞書データを取得・追加中...';
+
+            try {
+                let newDictText = "";
+
+                if (preset === 'custom') {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                    newDictText = await response.text();
+                } else {
+                    // Use preset
+                    await new Promise(resolve => setTimeout(resolve, 600)); // Simulate loading
+                    newDictText = dictPresets[preset];
+                }
+                
+                // Append to existing loaded dictionary
+                if (appState.loadedDictText) {
+                    appState.loadedDictText += "\n" + newDictText;
+                } else {
+                    appState.loadedDictText = newDictText;
+                }
+                
+                // Parse distinct categories
+                updateDynamicCheckboxes();
+
+                document.getElementById('dict-options-zone').style.display = 'block';
+                document.getElementById('loaded-dicts-info').style.display = 'block';
+                progress.innerText = '辞書の追加が完了しました。';
+                progress.style.color = '#333';
+                
+            } catch (error) {
+                alert("【通信エラー】\n辞書の取得に失敗しました。\n詳細: " + error.message);
+                progress.style.display = 'none';
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        function updateDynamicCheckboxes() {
+            if(!appState.loadedDictText) return;
+
+            const delimiter = appState.loadedDictText.includes('\t') ? '\t' : ',';
+            const lines = appState.loadedDictText.split(/\r?\n/).filter(line => line.trim() !== '');
+            const uniqueItems = new Set();
+            
+            lines.forEach((line, index) => {
+                if(line.includes('キーワード') || line.includes('keyword') || line.includes('単語')) return;
+                const parts = line.split(delimiter);
+                if (parts.length >= 2) {
+                    const item = parts[1].trim();
+                    if(item) uniqueItems.add(item);
+                }
+            });
+            
+            const chkContainer = document.getElementById('dynamic-checkbox-container');
+            const badgesContainer = document.getElementById('dict-badges-container');
+            
+            chkContainer.innerHTML = '';
+            badgesContainer.innerHTML = '';
+
+            Array.from(uniqueItems).sort().forEach(item => {
+                // For checkboxes
+                const label = document.createElement('label');
+                label.style.cursor = 'pointer';
+                label.style.border = '1px solid #ccc';
+                label.style.padding = '0.2rem 0.5rem';
+                label.style.borderRadius = '4px';
+                label.style.background = '#fafafa';
+                
+                label.innerHTML = `<input type="checkbox" value="${item}" checked style="margin-right:0.3rem;">${item}`;
+                chkContainer.appendChild(label);
+
+                // For info badge
+                const badge = document.createElement('span');
+                badge.className = 'dict-badge';
+                badge.innerText = item;
+                badgesContainer.appendChild(badge);
+            });
+        }
+
+        function clearDictionaries() {
+            if(confirm("読み込んである辞書をすべてクリアしますか？（※付与済みのコードは消えません）")) {
+                appState.loadedDictText = "";
+                document.getElementById('dict-options-zone').style.display = 'none';
+                document.getElementById('loaded-dicts-info').style.display = 'none';
+                document.getElementById('progress-text').innerText = '';
+            }
+        }
+
+        function executeAutoCoding() {
+            if(!appState.loadedDictText) return;
+
+            const editor = document.getElementById('editor');
+            const paragraphs = Array.from(editor.querySelectorAll('p'));
+            
+            if (paragraphs.length === 0 || editor.innerText.includes('データが読み込まれていません')) {
+                alert('【手順エラー】先に左側のエリアへテキストファイルをドラッグ＆ドロップして、分析対象の文章を読み込んでください。'); return;
+            }
+
+            if (appState.currentDocAttr === "未設定") {
+                alert('【注意】現在の対象者が「未設定」です。\n左側のパネルで対象者を選択または追加してから実行すると、マトリクス分析が正確に行えます。');
+            }
+
+            const selectedItems = Array.from(document.querySelectorAll('#dynamic-checkbox-container input:checked')).map(cb => cb.value);
+            if(selectedItems.length === 0) {
+                alert('抽出する項目を少なくとも1つ選択してください。'); return;
+            }
+
+            const delimiter = appState.loadedDictText.includes('\t') ? '\t' : ',';
+            const lines = appState.loadedDictText.split(/\r?\n/).filter(line => line.trim() !== '');
+            const fullText = editor.innerText;
+            
+            let wordsByItem = {};
+            selectedItems.forEach(item => wordsByItem[item] = []);
+
+            lines.forEach((line, index) => {
+                if(line.includes('キーワード') || line.includes('keyword') || line.includes('単語')) return;
+                const parts = line.split(delimiter);
+                if (parts.length >= 2) {
+                    const word = parts[0].trim(); 
+                    const item = parts[1].trim(); 
+                    if (word.length >= 2 && fullText.includes(word) && selectedItems.includes(item)) {
+                        wordsByItem[item].push(word);
+                    }
+                }
+            });
+
+            let matchCount = 0;
+            
+            selectedItems.forEach((item, index) => {
+                const words = wordsByItem[item];
+                if(words.length === 0) return;
+                
+                let catName = `${item}`;
+                let cat = appState.categories.find(c => c.name === catName);
+                if(!cat) {
+                    cat = { id: 'cat_' + Date.now() + index, name: catName };
+                    appState.categories.push(cat);
+                }
+                
+                // Deterministic pseudo-random color assignment based on name
+                const colorIndex = (index + item.length) % appState.colors.length;
+                let colorHex = appState.colors[colorIndex];
+                
+                // Basic overrides
+                if(item.includes('ポジ') || item.includes('喜び')) colorHex = '#b8e0d2';
+                else if(item.includes('ネガ') || item.includes('悲') || item.includes('怒')) colorHex = '#eca1a6';
+                else if(item.includes('ニュー') || item.includes('中立')) colorHex = '#d6cbd3';
+
+                words.forEach(word => {
+                    const codeName = `${item}: ${word}`;
+                    let code = appState.codes.find(c => c.name === codeName && c.categoryId === cat.id);
+                    if (!code) {
+                        code = { id: 'code_' + Date.now() + Math.random(), categoryId: cat.id, name: codeName, description: `自動抽出`, color: colorHex };
+                        appState.codes.push(code);
+                    }
+                    const regex = new RegExp(`(${word})`, 'g');
+                    paragraphs.forEach(p => {
+                        if (p.textContent.includes(word)) {
+                            const tokens = p.innerHTML.split(/(<[^>]*>)/);
+                            let modified = false;
+                            for(let i=0; i<tokens.length; i++) {
+                                if(!tokens[i].startsWith('<')) {
+                                    if(regex.test(tokens[i])) {
+                                        tokens[i] = tokens[i].replace(regex, `<mark class="qda-highlight" data-code-id="${code.id}" title="${codeName}">$1</mark>`);
+                                        modified = true; matchCount++;
+                                        appState.codingRecords.push({ codeId: code.id, attrValue: appState.currentDocAttr });
+                                    }
+                                }
+                            }
+                            if(modified) p.innerHTML = tokens.join('');
+                        }
+                    });
+                });
+            });
+
+            renderCodebook();
+            
+            if (matchCount > 0) {
+                alert(`対象者「${appState.currentDocAttr}」への自動コーディングが完了しました。\n選択された項目に基づき、合計 ${matchCount} 箇所をハイライトしました。`);
+            } else {
+                alert('選択した項目に該当する単語がテキスト内に見つかりませんでした。');
+            }
+        }
+
+        /* --- 3. Selection & Manual Coding --- */
+        const editor = document.getElementById('editor');
+        const tooltip = document.getElementById('selection-tooltip');
+
+        document.addEventListener('selectionchange', () => {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0 && selection.toString().trim().length > 0) {
+                if (selection.anchorNode && editor.contains(selection.anchorNode)) {
+                    const rect = selection.getRangeAt(0).getBoundingClientRect();
+                    if(rect.width > 0 && rect.height > 0) {
+                        tooltip.style.display = 'block'; tooltip.style.left = rect.left + (rect.width/2) + 'px'; tooltip.style.top = (rect.top-40) + 'px';
+                        appState.selectedRange = selection.getRangeAt(0); return;
+                    }
+                }
+            }
+            tooltip.style.display = 'none';
+        });
+
+        function handleTooltipClick(e) {
+            e.preventDefault(); 
+            if(appState.selectedRange) {
+                document.getElementById('code-category-select').innerHTML = appState.categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
+                document.getElementById('code-modal').style.display = 'flex';
+            }
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; window.getSelection().removeAllRanges(); }
+        function openCategoryModal() { document.getElementById('category-name').value = ''; document.getElementById('category-modal').style.display = 'flex'; }
+        
+        function saveCategory() {
+            const name = document.getElementById('category-name').value.trim();
+            if(name) { appState.categories.push({ id: 'cat_' + Date.now(), name: name }); closeModal('category-modal'); renderCodebook(); }
+        }
+
+        function saveCode() {
+            const codeId = 'code_' + Date.now();
+            try {
+                const range = appState.selectedRange;
+                if(range.startContainer.parentNode.closest('p') !== range.endContainer.parentNode.closest('p')) throw new Error();
+                
+                const mark = document.createElement('mark'); mark.className = 'qda-highlight';
+                mark.style.backgroundColor = appState.selectedColor; mark.setAttribute('data-code-id', codeId);
+                mark.appendChild(range.extractContents()); range.insertNode(mark);
+                
+                appState.codes.push({ id: codeId, categoryId: document.getElementById('code-category-select').value, name: document.getElementById('code-name').value, description: document.getElementById('code-desc').value, color: appState.selectedColor });
+                appState.codingRecords.push({ codeId: codeId, attrValue: appState.currentDocAttr });
+                
+                closeModal('code-modal'); renderCodebook();
+            } catch (e) { alert("段落またぎエラー"); closeModal('code-modal'); }
+        }
+
+        /* --- 4. Rendering & Matrix --- */
+        let draggedCodeId = null;
+        function renderCodebook() {
+            const container = document.getElementById('category-container'); container.innerHTML = '';
+            appState.categories.forEach(cat => {
+                const catGroup = document.createElement('div'); catGroup.className = 'category-group';
+                catGroup.addEventListener('dragover', (e) => e.preventDefault());
+                catGroup.addEventListener('drop', (e) => {
+                    e.preventDefault(); if(draggedCodeId) {
+                        const code = appState.codes.find(c => c.id === draggedCodeId);
+                        if(code && code.categoryId !== cat.id) { code.categoryId = cat.id; renderCodebook(); }
+                    }
+                });
+                const codesInCat = appState.codes.filter(c => c.categoryId === cat.id);
+                catGroup.innerHTML = `<div class="category-header"><span><i class="fas fa-folder-open" style="color:var(--accent);"></i> ${cat.name}</span><span class="badge">${codesInCat.length}</span></div>`;
+                
+                const list = document.createElement('div'); list.className = 'code-list';
+                if(codesInCat.length === 0) list.innerHTML = `<div style="font-size:0.8rem; color:#999; text-align:center; padding:0.5rem;">ドラッグして分類</div>`;
+                codesInCat.forEach(code => {
+                    const item = document.createElement('div'); item.className = 'code-item'; item.draggable = true;
+                    item.addEventListener('dragstart', () => draggedCodeId = code.id); item.addEventListener('dragend', () => draggedCodeId = null);
+                    item.innerHTML = `<div class="code-header"><div class="code-header-left"><span class="code-color-dot" style="background-color: ${code.color}"></span><span>${code.name}</span></div><span style="font-size:0.75rem; color:var(--text-muted);"><i class="fas fa-link"></i> ${appState.codingRecords.filter(r => r.codeId === code.id).length}</span></div><div class="code-desc">${code.description}</div>`;
+                    list.appendChild(item);
+                });
+                catGroup.appendChild(list); container.appendChild(catGroup);
+            });
+        }
+
+        function generateMatrix() {
+            const uniqueAttrs = [...new Set(appState.codingRecords.map(r => r.attrValue))].sort();
+            let html = '<table class="matrix-table"><tr><th>カテゴリー / コード</th>' + uniqueAttrs.map(a => `<th>${a}</th>`).join('') + '<th>合計</th></tr>';
+            appState.categories.forEach(cat => {
+                const codes = appState.codes.filter(c => c.categoryId === cat.id);
+                if(codes.length > 0) {
+                    let catTotal = 0; html += `<tr style="background-color:#fcfcfc;"><td style="font-weight:bold; text-align:left;"><i class="fas fa-folder" style="color:var(--accent);"></i> ${cat.name}</td>`;
+                    uniqueAttrs.forEach(attr => {
+                        let attrSum = codes.reduce((sum, code) => sum + appState.codingRecords.filter(r => r.codeId === code.id && r.attrValue === attr).length, 0);
+                        catTotal += attrSum; html += `<td>${attrSum}</td>`;
+                    }); html += `<td><strong>${catTotal}</strong></td></tr>`;
+                    codes.forEach(code => {
+                        html += `<tr><td style="text-align:left; padding-left:2rem; font-size:0.85rem;"><span class="code-color-dot" style="background-color: ${code.color}"></span> ${code.name}</td>`;
+                        let codeTotal = 0;
+                        uniqueAttrs.forEach(attr => {
+                            const count = appState.codingRecords.filter(r => r.codeId === code.id && r.attrValue === attr).length;
+                            codeTotal += count; html += `<td class="matrix-cell" ${count>0?'style="color:var(--accent);"':'style="color:#ccc;"'}>${count}</td>`;
+                        }); html += `<td>${codeTotal}</td></tr>`;
+                    });
+                }
+            });
+            document.getElementById('matrix-container').innerHTML = html + '</table>';
+            
+            document.getElementById('summary-box').style.display = 'none';
+            document.getElementById('paper-example-box').style.display = 'none';
+        }
+
+        /* --- 5. Generate Summary and Paper Example --- */
+        function generateSummary() {
+            const uniqueAttrs = [...new Set(appState.codingRecords.map(r => r.attrValue))].sort();
+            if (uniqueAttrs.length === 0) {
+                alert("集計するデータがありません。先にコーディングを行ってください。");
+                return;
+            }
+
+            let attrCatTotals = {};
+            uniqueAttrs.forEach(attr => {
+                attrCatTotals[attr] = {};
+                appState.categories.forEach(cat => {
+                    const codesInCat = appState.codes.filter(c => c.categoryId === cat.id);
+                    let sum = codesInCat.reduce((acc, code) => acc + appState.codingRecords.filter(r => r.codeId === code.id && r.attrValue === attr).length, 0);
+                    if (sum > 0) {
+                        attrCatTotals[attr][cat.name] = sum;
+                    }
+                });
+            });
+
+            let summaryHtml = "<p>マトリクス表の集計結果から、以下の特徴が読み取れます。</p><ul style='margin-bottom:0;'>";
+            let paperHtml = "対象者の属性に応じた認識の差異を明らかにするため、付与されたコードの交差集計を行った（表1）。集計の結果、以下の傾向が確認された。<br><br>";
+
+            let comparisons = [];
+
+            uniqueAttrs.forEach(attr => {
+                const cats = attrCatTotals[attr];
+                const sortedCats = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+                
+                if (sortedCats.length > 0) {
+                    const topCat = sortedCats[0];
+                    summaryHtml += `<li><strong>「${attr}」の群：</strong>「${topCat[0]}」に関する言及が最も多く（${topCat[1]}回）見られます。`;
+                    if (sortedCats.length > 1) {
+                        summaryHtml += `次いで「${sortedCats[1][0]}」（${sortedCats[1][1]}回）が続いています。</li>`;
+                    } else {
+                        summaryHtml += `</li>`;
+                    }
+
+                    comparisons.push(`[${attr}]の群においては「${topCat[0]}」に関する記述が${topCat[1]}件と特徴的な頻度を示した`);
+                } else {
+                    summaryHtml += `<li><strong>「${attr}」の群：</strong>コーディングされたデータがありません。</li>`;
+                }
+            });
+            summaryHtml += "</ul>";
+            
+            if (comparisons.length > 0) {
+                paperHtml += comparisons.join('。これに対し、') + '。';
+                paperHtml += `<br><br>これらの結果から、${uniqueAttrs[0]}は〇〇を重視している（あるいは課題を抱えている）一方で、他の群は異なる関心領域を持っていることが推察される。今後はこの差異が生じる背景について、インタビューの文脈に立ち返り詳細な質的検討を進める。`;
+            } else {
+                paperHtml = "比較する十分なデータがありません。";
+            }
+
+            document.getElementById('summary-content').innerHTML = summaryHtml;
+            document.getElementById('paper-example-content').innerHTML = paperHtml;
+            
+            document.getElementById('summary-box').style.display = 'block';
+            document.getElementById('paper-example-box').style.display = 'block';
+        }
+
+        renderCodebook();
+        function exportProject() { /* JSON export logic */ }
+    </script>
+</body>
+</html>

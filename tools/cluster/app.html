@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>クラスター分析ラボ — データ分析ラボ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14202B;
+  --paper:#F2F3F0;
+  --panel:#FFFFFF;
+  --rule:#D8DBD6;
+  --rule-soft:#E8EAE6;
+  --teal:#1B6E63;
+  --teal-soft:#E4EFEC;
+  --amber:#C08A2E;
+  --muted:#69737D;
+  --danger:#9B3B3B;
+  --shadow:0 1px 2px rgba(20,32,43,.06), 0 8px 24px rgba(20,32,43,.05);
+  --mincho:"Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --gothic:"Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --mono:"IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--gothic);
+  font-size:15px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--mincho);font-weight:700;letter-spacing:.02em;margin:0}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* ---------- header ---------- */
+header{
+  border-bottom:1px solid var(--rule);
+  background:linear-gradient(180deg,#FFFFFF 0%,#FAFAF8 100%);
+}
+.head-inner{max-width:1360px;margin:0 auto;padding:26px 28px 22px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:22px}
+.brand h1{font-size:29px;line-height:1.3}
+.brand .eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:6px;
+}
+.brand p{margin:6px 0 0;color:var(--muted);font-size:13.5px;max-width:56ch}
+.head-note{
+  margin-left:auto;font-size:12px;color:var(--muted);border-left:2px solid var(--rule);
+  padding-left:14px;max-width:30ch;line-height:1.7;
+}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1360px;margin:0 auto;padding:24px 28px 80px;display:grid;grid-template-columns:352px 1fr;gap:26px;align-items:start}
+.side{position:sticky;top:20px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;box-shadow:var(--shadow)}
+.card > .card-head{
+  display:flex;align-items:baseline;gap:10px;padding:13px 16px;border-bottom:1px solid var(--rule-soft);
+}
+.card-head .num{font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.1em}
+.card-head h2{font-size:15.5px}
+.card-body{padding:16px}
+
+/* ---------- controls ---------- */
+label.field{display:block;margin-bottom:13px}
+label.field > span{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;letter-spacing:.04em}
+select,input[type=text],input[type=number],textarea{
+  width:100%;padding:7px 9px;border:1px solid var(--rule);border-radius:2px;background:#fff;
+}
+textarea{font-family:var(--mono);font-size:12px;line-height:1.6;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:9px 15px;border:1px solid var(--ink);background:var(--ink);color:#fff;
+  border-radius:2px;cursor:pointer;letter-spacing:.04em;transition:background .15s,color .15s,border-color .15s;
+}
+.btn:hover{background:#233442;border-color:#233442}
+.btn.primary{background:var(--teal);border-color:var(--teal)}
+.btn.primary:hover{background:#155A51;border-color:#155A51}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.btn.ghost:hover{background:#F4F5F2;border-color:var(--muted)}
+.btn.small{padding:5px 10px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-run{width:100%;padding:12px;font-size:15px}
+
+/* ---------- dropzone ---------- */
+.drop{
+  border:1px dashed var(--rule);border-radius:3px;padding:22px 16px;text-align:center;
+  background:#FBFBF9;cursor:pointer;transition:border-color .15s,background .15s;
+}
+.drop:hover{border-color:var(--teal);background:var(--teal-soft)}
+.drop.over{border-color:var(--teal);background:var(--teal-soft);border-style:solid}
+.drop .big{font-family:var(--mincho);font-size:15px}
+.drop .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.samples{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{
+  font-size:12px;padding:4px 10px;border:1px solid var(--rule);border-radius:100px;
+  background:#fff;cursor:pointer;color:var(--muted);
+}
+.chip:hover{border-color:var(--teal);color:var(--teal)}
+.filestat{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:10px}
+
+/* ---------- variable picker ---------- */
+.varbox{max-height:210px;overflow:auto;border:1px solid var(--rule-soft);border-radius:2px;padding:6px}
+.varbox label{display:flex;align-items:center;gap:8px;padding:3px 5px;border-radius:2px;font-size:13.5px;cursor:pointer}
+.varbox label:hover{background:#F5F6F3}
+.varbox input{accent-color:var(--teal)}
+.varbox .nonnum{color:var(--muted);font-family:var(--mono);font-size:10.5px;margin-left:auto}
+.mini-actions{display:flex;gap:8px;margin-top:8px}
+
+/* ---------- results ---------- */
+.tabs{display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--rule);margin-bottom:0}
+.tab{
+  padding:10px 15px;border:1px solid transparent;border-bottom:none;background:transparent;
+  cursor:pointer;color:var(--muted);font-size:13.5px;border-radius:3px 3px 0 0;margin-bottom:-1px;
+}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected=true]{background:var(--panel);border-color:var(--rule);border-bottom-color:var(--panel);color:var(--ink);font-weight:500}
+.panelbox{background:var(--panel);border:1px solid var(--rule);border-top:none;border-radius:0 0 3px 3px;box-shadow:var(--shadow);padding:22px}
+.tabpanel[hidden]{display:none}
+
+.empty{padding:70px 24px;text-align:center;color:var(--muted)}
+.empty .glyph{font-family:var(--mincho);font-size:34px;color:var(--rule);display:block;margin-bottom:10px}
+
+.sec-title{font-family:var(--mincho);font-size:17px;margin:0 0 4px}
+.sec-note{font-size:12.5px;color:var(--muted);margin:0 0 16px}
+.divider{height:1px;background:var(--rule-soft);margin:26px 0 20px;border:none}
+
+.metrics{display:flex;flex-wrap:wrap;gap:26px;margin-bottom:18px}
+.metric .k{font-size:11px;color:var(--muted);letter-spacing:.08em}
+.metric .v{font-family:var(--mono);font-size:22px;line-height:1.3}
+.metric .v small{font-size:12px;color:var(--muted)}
+
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--rule-soft);padding:6px 9px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{
+  border-bottom:1px solid var(--rule);font-weight:500;font-size:11.5px;color:var(--muted);
+  letter-spacing:.06em;position:sticky;top:0;background:var(--panel);
+}
+td.num,th.num{font-family:var(--mono)}
+.scroll{overflow:auto;max-height:460px;border:1px solid var(--rule-soft);border-radius:2px}
+.scroll table{font-size:12.5px}
+
+.cbadge{
+  display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;
+}
+.cdot{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 4px}
+.legend .item{display:flex;align-items:center;gap:6px;font-size:12.5px}
+
+svg{display:block;max-width:100%;height:auto;font-family:var(--gothic)}
+.plot{border:1px solid var(--rule-soft);border-radius:2px;background:#FCFCFA;overflow:hidden}
+
+.cutbar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 14px;margin-bottom:14px;
+  background:var(--teal-soft);border:1px solid #CADFD9;border-radius:2px;font-size:13px;
+}
+.cutbar strong{font-family:var(--mono);font-size:16px;color:var(--teal)}
+.cutbar input[type=range]{flex:1;min-width:150px;accent-color:var(--teal)}
+
+.narrative p{margin:0 0 13px}
+.narrative .quote{
+  border-left:2px solid var(--teal);padding:2px 0 2px 16px;margin:0 0 16px;
+  font-family:var(--mincho);font-size:14.5px;line-height:2;
+}
+pre{
+  font-family:var(--mono);font-size:12px;line-height:1.65;background:#12202B;color:#E6EAE4;
+  padding:16px;border-radius:2px;overflow:auto;max-height:460px;margin:0;
+}
+.codehead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px}
+
+.warn{
+  border-left:3px solid var(--amber);background:#FBF6EA;padding:10px 14px;font-size:12.5px;
+  margin-bottom:14px;border-radius:0 2px 2px 0;
+}
+.err{border-left-color:var(--danger);background:#FBEFEF}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+/* 書き出しパネル（Apps Script用） */
+#modal{position:fixed;inset:0;background:rgba(20,32,43,.44);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+#modal.on{display:flex}
+#modal .sheet{background:var(--panel);border:1px solid var(--rule);border-radius:3px;box-shadow:0 20px 60px rgba(20,32,43,.3);width:min(760px,100%);max-height:88vh;display:flex;flex-direction:column}
+#modal .sheet-head{padding:16px 20px 12px;border-bottom:1px solid var(--rule-soft)}
+#modal .sheet-head h2{font-size:17px}
+#modal .sheet-head p{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+#modal .sheet-body{padding:16px 20px;overflow:auto}
+#modal textarea{font-family:var(--mono);font-size:11.5px;line-height:1.55;height:260px;white-space:pre;background:#FBFBF9}
+#modal .sheet-foot{padding:13px 20px;border-top:1px solid var(--rule-soft);display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+#modal .sheet-foot .spacer{margin-left:auto}
+#modal .fname{font-family:var(--mono);font-size:12px;color:var(--teal)}
+
+/* 保存結果の通知 */
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);
+  background:var(--ink);color:#fff;padding:12px 18px;border-radius:3px;font-size:13.5px;
+  box-shadow:0 8px 28px rgba(20,32,43,.28);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+  max-width:min(560px,92vw);z-index:99;line-height:1.6;
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#toast a{color:#9FD8CD;margin-left:8px}
+#toast.bad{background:#7E2F2F}
+#toast .x{margin-left:12px;cursor:pointer;opacity:.6}
+#toast .x:hover{opacity:1}
+
+@media (max-width:1080px){
+  .wrap{grid-template-columns:1fr;padding:20px 16px 60px}
+  .side{position:static}
+  .head-inner{padding:20px 16px}
+  .head-note{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-structure);--paper:var(--al-bg);--panel:var(--al-surface);--ink:var(--al-ink);--muted:var(--al-ink-2);--rule:var(--al-line);--rule-soft:var(--al-line-2);--teal:var(--al-cat);--teal-soft:var(--al-cat-soft);--mincho:var(--al-serif);--gothic:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#structure">構造と測定</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>クラスター分析ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<header>
+  <div class="head-inner">
+    <div class="brand">
+      <div class="eyebrow">Cluster Analysis</div>
+      <h1>クラスター分析ラボ</h1>
+      <p>データを読み込み、似たものどうしをまとめます。階層的クラスター分析とk-means法の両方を、ブラウザーの中だけで実行します。データが外部に送られることはありません。</p>
+    </div>
+    <div class="head-note">樹形図の切断線はドラッグできます。動かすとクラスター数と色分けがその場で切り替わります。</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- ======================= SIDEBAR ======================= -->
+  <div class="side">
+
+    <div class="card">
+      <div class="card-head"><span class="num">01</span><h2>データを読み込む</h2></div>
+      <div class="card-body">
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="ファイルを選ぶ">
+          <div class="big">ファイルをここにドロップ</div>
+          <div class="sub">クリックして選択も可（CSV / TSV / TXT）</div>
+        </div>
+        <input type="file" id="file" accept=".csv,.tsv,.txt" hidden>
+        <div class="samples">
+          <button class="chip" data-sample="flower">サンプル：花の計測</button>
+          <button class="chip" data-sample="survey">サンプル：学習者調査</button>
+          <button class="chip" data-sample="city">サンプル：地域指標</button>
+          <button class="chip" id="pasteToggle">貼り付けて入力</button>
+        </div>
+        <div id="pasteWrap" hidden style="margin-top:12px">
+          <textarea id="pasteArea" rows="6" placeholder="表計算ソフトからコピーした範囲をそのまま貼り付け"></textarea>
+          <button class="btn ghost small" id="pasteLoad" style="margin-top:8px">この内容を読み込む</button>
+        </div>
+        <div class="filestat" id="filestat">まだデータがありません</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="num">02</span><h2>分析の設定</h2></div>
+      <div class="card-body">
+        <label class="field">
+          <span>ケース名にする列</span>
+          <select id="labelCol"><option value="-1">行番号を使う</option></select>
+        </label>
+
+        <label class="field" style="margin-bottom:6px"><span>分析に使う変数</span></label>
+        <div class="varbox" id="varbox"><div class="hint" style="padding:6px">データを読み込むと変数が並びます</div></div>
+        <div class="mini-actions">
+          <button class="btn ghost small" id="varAll">すべて選ぶ</button>
+          <button class="btn ghost small" id="varNone">すべて外す</button>
+        </div>
+
+        <hr class="divider" style="margin:18px 0 14px">
+
+        <label class="field">
+          <span>変数のそろえ方</span>
+          <select id="scaling">
+            <option value="z">標準化する（平均0・標準偏差1）</option>
+            <option value="range">0〜1の範囲にそろえる</option>
+            <option value="none">そのまま使う</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>手法</span>
+          <select id="algo">
+            <option value="hier">階層的クラスター分析</option>
+            <option value="kmeans">k-means法（非階層）</option>
+          </select>
+        </label>
+
+        <div id="hierOpts">
+          <div class="row2">
+            <label class="field">
+              <span>距離</span>
+              <select id="metric">
+                <option value="euclid">ユークリッド</option>
+                <option value="sqeuclid">平方ユークリッド</option>
+                <option value="manhattan">マンハッタン</option>
+                <option value="corr">相関にもとづく距離</option>
+                <option value="cosine">コサイン距離</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>結合法</span>
+              <select id="linkage">
+                <option value="ward">ウォード法</option>
+                <option value="average">群平均法</option>
+                <option value="complete">最遠隣法</option>
+                <option value="single">最近隣法</option>
+                <option value="mcquitty">McQuitty法</option>
+                <option value="centroid">重心法</option>
+                <option value="median">メディアン法</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div id="kmOpts" hidden>
+          <label class="field">
+            <span>初期値を変えて試す回数</span>
+            <select id="restarts">
+              <option value="10">10回</option>
+              <option value="25" selected>25回</option>
+              <option value="100">100回</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>クラスター数</span>
+          <input type="number" id="kInput" min="2" max="20" value="3">
+        </label>
+
+        <button class="btn primary btn-run" id="run">分析する</button>
+        <div class="hint" id="runHint"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= RESULTS ======================= -->
+  <div>
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" aria-selected="true" data-panel="p-tree">樹形図</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-map">布置図</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-prof">クラスターの特徴</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-case">ケース一覧</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-eval">分け方の検討</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-read">結果の読み取り</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-out">書き出し</button>
+    </div>
+    <div class="panelbox">
+      <div id="p-tree" class="tabpanel" role="tabpanel">
+        <div class="empty"><span class="glyph">樹</span>データを読み込んで「分析する」を押すと、ここに結果が出ます。</div>
+      </div>
+      <div id="p-map" class="tabpanel" role="tabpanel" hidden></div>
+      <div id="p-prof" class="tabpanel" role="tabpanel" hidden></div>
+      <div id="p-case" class="tabpanel" role="tabpanel" hidden></div>
+      <div id="p-eval" class="tabpanel" role="tabpanel" hidden></div>
+      <div id="p-read" class="tabpanel" role="tabpanel" hidden></div>
+      <div id="p-out" class="tabpanel" role="tabpanel" hidden></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="sheet">
+  <div class="sheet-head">
+    <h2 id="modalTitle">書き出し</h2>
+    <p>この画面はGoogleのサンドボックス内で動いているため、直接ダウンロードが行えないことがあります。下のいずれかの方法で受け取ってください。</p>
+  </div>
+  <div class="sheet-body">
+    <p style="margin:0 0 8px;font-size:13px">ファイル名：<span class="fname" id="modalName"></span></p>
+    <textarea id="modalText" readonly spellcheck="false"></textarea>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn primary" id="modalCopy">内容をコピー</button>
+    <button class="btn ghost" id="modalTab">新しいタブで開く</button>
+    <button class="btn ghost" id="modalDl">ダウンロードを試す</button>
+    <button class="btn ghost spacer" id="modalClose">閉じる</button>
+  </div>
+</div></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   実行環境（Google Apps Script かどうか）と共通ユーティリティ
+   ========================================================= */
+const IN_GAS = (typeof google !== 'undefined' && google.script && typeof google.script.run !== 'undefined');
+
+let toastTimer = null;
+function notice(msg, url, bad){
+  const el = document.querySelector('#toast');
+  if(!el) return;
+  el.innerHTML = esc(msg) + (url ? ` <a href="${url}" target="_blank" rel="noopener">ファイルを開く</a>` : '') +
+                 ' <span class="x" role="button" tabindex="0" aria-label="閉じる">\u00d7</span>';
+  el.className = 'on' + (bad ? ' bad' : '');
+  el.querySelector('.x').addEventListener('click', ()=>{ el.className = ''; });
+  clearTimeout(toastTimer);
+  if(!url) toastTimer = setTimeout(()=>{ el.className = ''; }, 5200);
+}
+
+/* クリップボード：iframeの中では navigator.clipboard が使えないことがあるため代替を用意 */
+function copyText(text){
+  if(navigator.clipboard && window.isSecureContext){
+    return navigator.clipboard.writeText(text).catch(()=>legacyCopy(text));
+  }
+  return legacyCopy(text);
+}
+function legacyCopy(text){
+  return new Promise((res, rej) => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    let ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    ok ? res() : rej(new Error('copy failed'));
+  });
+}
+
+/* =========================================================
+   定数
+   ========================================================= */
+const PALETTE = ['#1B6E63','#C08A2E','#3A5A8C','#8C4A5E','#5F7A2E','#6B4A6E','#B0603A','#2F8FA8','#7A6A3A','#44557A','#8A7A4A','#3F7A5A'];
+const cc = i => PALETTE[i % PALETTE.length];
+const METRIC_JA = {euclid:'ユークリッド距離', sqeuclid:'平方ユークリッド距離', manhattan:'マンハッタン距離', corr:'相関にもとづく距離', cosine:'コサイン距離'};
+const LINK_JA = {ward:'ウォード法', average:'群平均法', complete:'最遠隣法', single:'最近隣法', mcquitty:'McQuitty法', centroid:'重心法', median:'メディアン法'};
+const LINK_R = {ward:'ward.D2', average:'average', complete:'complete', single:'single', mcquitty:'mcquitty', centroid:'centroid', median:'median'};
+const SCALE_JA = {z:'各変数を標準化（平均0・標準偏差1）', range:'各変数を0〜1に変換', none:'変換なし'};
+
+/* =========================================================
+   状態
+   ========================================================= */
+const S = {
+  header:[], rows:[], numeric:[], labelCol:-1, vars:[],
+  labels:[], X:null, D:null, n:0, p:0,
+  result:null, source:'—'
+};
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fx = (v,d=2) => (v===null||v===undefined||!isFinite(v)) ? '—' : v.toFixed(d);
+
+/* =========================================================
+   CSV / TSV 読み込み
+   ========================================================= */
+function decodeBuffer(buf){
+  let t = new TextDecoder('utf-8').decode(buf);
+  if(t.indexOf('\uFFFD') >= 0){
+    try{ t = new TextDecoder('shift_jis').decode(buf); }catch(e){}
+  }
+  return t.replace(/^\uFEFF/,'');
+}
+
+function parseTable(text){
+  const lines = text.replace(/\r\n?/g,'\n').split('\n').filter(l => l.trim() !== '');
+  if(!lines.length) throw new Error('中身が空のようです。');
+  const head = lines[0];
+  const tabs = (head.match(/\t/g)||[]).length, commas = (head.match(/,/g)||[]).length, semis = (head.match(/;/g)||[]).length;
+  const sep = tabs >= commas && tabs >= semis ? '\t' : (semis > commas ? ';' : ',');
+  const split = line => {
+    const out=[]; let cur='', q=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(q){
+        if(ch === '"'){ if(line[i+1] === '"'){cur+='"';i++;} else q=false; }
+        else cur+=ch;
+      }else{
+        if(ch === '"') q=true;
+        else if(ch === sep){ out.push(cur); cur=''; }
+        else cur+=ch;
+      }
+    }
+    out.push(cur);
+    return out.map(s => s.trim());
+  };
+  const header = split(lines[0]).map((h,i) => h === '' ? '列'+(i+1) : h);
+  const rows = lines.slice(1).map(split).map(r => {
+    while(r.length < header.length) r.push('');
+    return r.slice(0, header.length);
+  });
+  if(!rows.length) throw new Error('見出し行しかありません。データ行を入れてください。');
+  return {header, rows};
+}
+
+const toNum = v => {
+  if(v === null || v === undefined) return NaN;
+  const s = String(v).replace(/[,\s　]/g,'').replace(/[０-９．－]/g, c => String.fromCharCode(c.charCodeAt(0)-0xFEE0));
+  if(s === '' || s === '.' || s === '-') return NaN;
+  return Number(s);
+};
+
+function ingest(text, source){
+  const {header, rows} = parseTable(text);
+  const numeric = header.map((_,j) => {
+    let ok=0, tot=0;
+    for(const r of rows){ if(String(r[j]).trim() !== ''){ tot++; if(isFinite(toNum(r[j]))) ok++; } }
+    return tot > 0 && ok/tot >= 0.8;
+  });
+  S.header = header; S.rows = rows; S.numeric = numeric; S.source = source;
+  S.labelCol = numeric.findIndex(x => !x);
+  S.vars = header.map((_,j) => numeric[j]);
+  S.result = null;
+  renderVarUI();
+  $('#filestat').textContent = `${source}／${rows.length}ケース × ${header.length}列（数値変数 ${numeric.filter(Boolean).length}）`;
+  $('#runHint').textContent = '';
+  showEmpty('設定を確認して「分析する」を押してください。');
+}
+
+function renderVarUI(){
+  const sel = $('#labelCol');
+  sel.innerHTML = '<option value="-1">行番号を使う</option>' +
+    S.header.map((h,j) => `<option value="${j}"${j===S.labelCol?' selected':''}>${esc(h)}</option>`).join('');
+  $('#varbox').innerHTML = S.header.map((h,j) =>
+    `<label><input type="checkbox" data-v="${j}" ${S.vars[j]?'checked':''} ${S.numeric[j]?'':'disabled'}>
+      <span>${esc(h)}</span>${S.numeric[j]?'':'<span class="nonnum">文字列</span>'}</label>`).join('');
+  $$('#varbox input').forEach(cb => cb.addEventListener('change', e => {
+    S.vars[+e.target.dataset.v] = e.target.checked;
+  }));
+}
+
+/* =========================================================
+   行列の作成
+   ========================================================= */
+function buildMatrix(){
+  const cols = S.header.map((_,j)=>j).filter(j => S.vars[j] && S.numeric[j]);
+  if(cols.length < 2) throw new Error('分析に使う数値変数を2つ以上えらんでください。');
+  const keep = [], labels = [];
+  S.rows.forEach((r,i) => {
+    if(cols.every(j => isFinite(toNum(r[j])))){
+      keep.push(cols.map(j => toNum(r[j])));
+      labels.push(S.labelCol >= 0 ? String(r[S.labelCol] || ('#'+(i+1))) : '#'+(i+1));
+    }
+  });
+  if(keep.length < 4) throw new Error('欠損のないケースが足りません（4件以上必要）。');
+  const n = keep.length, p = cols.length;
+  const X = keep;
+  const mode = $('#scaling').value;
+  const stats = [];
+  for(let j=0;j<p;j++){
+    const col = X.map(r => r[j]);
+    const mean = col.reduce((a,b)=>a+b,0)/n;
+    const sd = Math.sqrt(col.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(n-1)) || 1;
+    const mn = Math.min(...col), mx = Math.max(...col);
+    stats.push({mean, sd, mn, mx, range:(mx-mn)||1});
+  }
+  for(let i=0;i<n;i++) for(let j=0;j<p;j++){
+    if(mode === 'z') X[i][j] = (X[i][j]-stats[j].mean)/stats[j].sd;
+    else if(mode === 'range') X[i][j] = (X[i][j]-stats[j].mn)/stats[j].range;
+  }
+  return {X, labels, n, p, varNames: cols.map(j => S.header[j]), cols, stats};
+}
+
+/* 生データ（変換前）も別に取り出す */
+function rawMatrix(cols){
+  const out = [];
+  S.rows.forEach(r => { if(cols.every(j => isFinite(toNum(r[j])))) out.push(cols.map(j => toNum(r[j]))); });
+  return out;
+}
+
+/* =========================================================
+   距離行列
+   ========================================================= */
+function distanceMatrix(X, n, p, metric){
+  const D = new Float64Array(n*n);
+  let pre = null;
+  if(metric === 'corr' || metric === 'cosine'){
+    pre = X.map(row => {
+      let v = row.slice();
+      if(metric === 'corr'){ const m = v.reduce((a,b)=>a+b,0)/p; v = v.map(x=>x-m); }
+      const nr = Math.sqrt(v.reduce((a,b)=>a+b*b,0)) || 1e-12;
+      return v.map(x=>x/nr);
+    });
+  }
+  for(let i=0;i<n;i++){
+    for(let j=i+1;j<n;j++){
+      let d = 0;
+      if(metric === 'manhattan'){ for(let k=0;k<p;k++) d += Math.abs(X[i][k]-X[j][k]); }
+      else if(metric === 'corr' || metric === 'cosine'){
+        let dot = 0; for(let k=0;k<p;k++) dot += pre[i][k]*pre[j][k];
+        d = 1 - Math.max(-1, Math.min(1, dot));
+      }
+      else{
+        let s = 0; for(let k=0;k<p;k++){ const t = X[i][k]-X[j][k]; s += t*t; }
+        d = metric === 'sqeuclid' ? s : Math.sqrt(s);
+      }
+      D[i*n+j] = D[j*n+i] = d;
+    }
+  }
+  return D;
+}
+
+/* =========================================================
+   階層的クラスター分析（Lance–Williams）
+   ========================================================= */
+function hclust(D0, n, method){
+  const sq = (method === 'ward' || method === 'centroid' || method === 'median');
+  const D = new Float64Array(n*n);
+  for(let i=0;i<n*n;i++) D[i] = sq ? D0[i]*D0[i] : D0[i];
+  const size = new Int32Array(n).fill(1);
+  const active = new Uint8Array(n).fill(1);
+  const nodeId = new Int32Array(n); for(let i=0;i<n;i++) nodeId[i] = i;
+  const nn = new Int32Array(n), nnd = new Float64Array(n);
+
+  const findNN = i => {
+    let best = -1, bd = Infinity;
+    for(let j=0;j<n;j++){ if(j!==i && active[j]){ const d = D[i*n+j]; if(d < bd){ bd = d; best = j; } } }
+    nn[i] = best; nnd[i] = bd;
+  };
+  for(let i=0;i<n;i++) if(active[i]) findNN(i);
+
+  const merges = [];
+  const left = new Int32Array(n-1), right = new Int32Array(n-1), heights = new Float64Array(n-1), csize = new Int32Array(n-1);
+
+  for(let step=0; step<n-1; step++){
+    let a = -1, bd = Infinity;
+    for(let i=0;i<n;i++) if(active[i] && nnd[i] < bd){ bd = nnd[i]; a = i; }
+    let b = nn[a];
+    if(b < 0){ break; }
+    if(b < a){ const t=a; a=b; b=t; }
+    const dab = D[a*n+b], na = size[a], nb = size[b];
+    left[step] = nodeId[a]; right[step] = nodeId[b];
+    heights[step] = sq ? Math.sqrt(Math.max(0,dab)) : dab;
+    csize[step] = na + nb;
+
+    for(let k=0;k<n;k++){
+      if(!active[k] || k===a || k===b) continue;
+      const dak = D[a*n+k], dbk = D[b*n+k], nk = size[k];
+      let d;
+      switch(method){
+        case 'single':   d = Math.min(dak,dbk); break;
+        case 'complete': d = Math.max(dak,dbk); break;
+        case 'average':  d = (na*dak + nb*dbk)/(na+nb); break;
+        case 'mcquitty': d = 0.5*dak + 0.5*dbk; break;
+        case 'centroid': d = (na*dak + nb*dbk)/(na+nb) - (na*nb*dab)/((na+nb)*(na+nb)); break;
+        case 'median':   d = 0.5*dak + 0.5*dbk - 0.25*dab; break;
+        case 'ward':
+        default:         d = ((na+nk)*dak + (nb+nk)*dbk - nk*dab)/(na+nb+nk); break;
+      }
+      D[a*n+k] = D[k*n+a] = d;
+    }
+    active[b] = 0; size[a] = na + nb; nodeId[a] = n + step;
+    // 距離が変わったのは a の行だけ。影響を受ける最近傍だけ更新する。
+    for(let i=0;i<n;i++){
+      if(!active[i] || i === a) continue;
+      if(nn[i] === a || nn[i] === b) findNN(i);
+      else if(D[a*n+i] < nnd[i]){ nn[i] = a; nnd[i] = D[a*n+i]; }
+    }
+    findNN(a);
+    nnd[b] = Infinity; nn[b] = -1;
+    merges.push({l:left[step], r:right[step], h:heights[step], size:csize[step]});
+  }
+  // 単調性の確保（重心法・メディアン法で反転が起きうる）
+  return {merges, n};
+}
+
+function treeOrder(tree){
+  const {merges, n} = tree;
+  const children = {};
+  merges.forEach((m,i) => children[n+i] = [m.l, m.r]);
+  const order = [], stack = [n + merges.length - 1];
+  while(stack.length){
+    const v = stack.pop();
+    if(v < n) order.push(v);
+    else { const ch = children[v]; stack.push(ch[1]); stack.push(ch[0]); }
+  }
+  return order;
+}
+
+function cutTree(tree, k){
+  const {merges, n} = tree;
+  const parent = new Int32Array(n + merges.length).fill(-1);
+  const steps = n - k;
+  for(let i=0;i<steps;i++){ parent[merges[i].l] = n+i; parent[merges[i].r] = n+i; }
+  const root = x => { while(parent[x] >= 0) x = parent[x]; return x; };
+  const map = new Map(); const lab = new Int32Array(n);
+  for(let i=0;i<n;i++){ const r = root(i); if(!map.has(r)) map.set(r, map.size); lab[i] = map.get(r); }
+  return lab;
+}
+
+/* =========================================================
+   k-means（k-means++）
+   ========================================================= */
+function kmeans(X, n, p, k, restarts){
+  let best = null;
+  for(let t=0;t<restarts;t++){
+    const cent = [];
+    cent.push(X[Math.floor(Math.random()*n)].slice());
+    const d2 = new Float64Array(n).fill(Infinity);
+    while(cent.length < k){
+      const c = cent[cent.length-1];
+      let sum = 0;
+      for(let i=0;i<n;i++){
+        let s=0; for(let j=0;j<p;j++){ const t2 = X[i][j]-c[j]; s += t2*t2; }
+        if(s < d2[i]) d2[i] = s;
+        sum += d2[i];
+      }
+      let r = Math.random()*sum, idx = n-1;
+      for(let i=0;i<n;i++){ r -= d2[i]; if(r <= 0){ idx = i; break; } }
+      cent.push(X[idx].slice());
+    }
+    const lab = new Int32Array(n).fill(-1);
+    let wss = 0;
+    for(let it=0; it<200; it++){
+      let moved = false; wss = 0;
+      for(let i=0;i<n;i++){
+        let bi = 0, bd = Infinity;
+        for(let c=0;c<k;c++){
+          let s=0; for(let j=0;j<p;j++){ const t2 = X[i][j]-cent[c][j]; s += t2*t2; }
+          if(s < bd){ bd = s; bi = c; }
+        }
+        wss += bd;
+        if(lab[i] !== bi){ lab[i] = bi; moved = true; }
+      }
+      const sums = Array.from({length:k}, () => new Float64Array(p));
+      const cnts = new Int32Array(k);
+      for(let i=0;i<n;i++){ cnts[lab[i]]++; for(let j=0;j<p;j++) sums[lab[i]][j] += X[i][j]; }
+      for(let c=0;c<k;c++){
+        if(cnts[c] === 0){ const r = Math.floor(Math.random()*n); cent[c] = X[r].slice(); moved = true; }
+        else for(let j=0;j<p;j++) cent[c][j] = sums[c][j]/cnts[c];
+      }
+      if(!moved) break;
+    }
+    if(!best || wss < best.wss) best = {lab: Int32Array.from(lab), cent: cent.map(c=>Array.from(c)), wss};
+  }
+  // クラスター番号をサイズ順に並べ替え
+  const cnt = new Int32Array(k); best.lab.forEach(l => cnt[l]++);
+  const order = Array.from({length:k},(_,i)=>i).sort((a,b)=>cnt[b]-cnt[a]);
+  const remap = new Int32Array(k); order.forEach((o,i) => remap[o] = i);
+  const lab2 = Int32Array.from(best.lab, l => remap[l]);
+  const cent2 = []; order.forEach((o,i) => cent2[i] = best.cent[o]);
+  return {lab: lab2, cent: cent2, wss: best.wss};
+}
+
+/* =========================================================
+   シルエット
+   ========================================================= */
+function silhouette(D, n, lab, k){
+  const cnt = new Int32Array(k); for(let i=0;i<n;i++) cnt[lab[i]]++;
+  const s = new Float64Array(n);
+  for(let i=0;i<n;i++){
+    const sums = new Float64Array(k);
+    for(let j=0;j<n;j++) if(j!==i) sums[lab[j]] += D[i*n+j];
+    const own = lab[i];
+    const a = cnt[own] > 1 ? sums[own]/(cnt[own]-1) : 0;
+    let b = Infinity;
+    for(let c=0;c<k;c++) if(c!==own && cnt[c]>0) b = Math.min(b, sums[c]/cnt[c]);
+    s[i] = (cnt[own] <= 1 || !isFinite(b)) ? 0 : (b-a)/Math.max(a,b);
+  }
+  const byC = Array.from({length:k}, () => []);
+  for(let i=0;i<n;i++) byC[lab[i]].push(s[i]);
+  const mean = arr => arr.length ? arr.reduce((x,y)=>x+y,0)/arr.length : 0;
+  return {sil:s, overall: mean(Array.from(s)), perCluster: byC.map(mean)};
+}
+
+/* =========================================================
+   PCA（Jacobi法）— 布置図用
+   ========================================================= */
+function jacobi(Ain, n){
+  const A = Ain.map(r => r.slice());
+  let V = Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => i===j?1:0));
+  for(let sweep=0; sweep<80; sweep++){
+    let off = 0;
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) off += A[i][j]*A[i][j];
+    if(off < 1e-14) break;
+    for(let ip=0; ip<n-1; ip++) for(let iq=ip+1; iq<n; iq++){
+      if(Math.abs(A[ip][iq]) < 1e-15) continue;
+      const theta = (A[iq][iq]-A[ip][ip])/(2*A[ip][iq]);
+      const t = Math.sign(theta || 1)/(Math.abs(theta)+Math.sqrt(theta*theta+1));
+      const c = 1/Math.sqrt(t*t+1), s = t*c;
+      for(let k=0;k<n;k++){
+        const aki = A[k][ip], akq = A[k][iq];
+        A[k][ip] = c*aki - s*akq; A[k][iq] = s*aki + c*akq;
+      }
+      for(let k=0;k<n;k++){
+        const aik = A[ip][k], aqk = A[iq][k];
+        A[ip][k] = c*aik - s*aqk; A[iq][k] = s*aik + c*aqk;
+      }
+      for(let k=0;k<n;k++){
+        const vki = V[k][ip], vkq = V[k][iq];
+        V[k][ip] = c*vki - s*vkq; V[k][iq] = s*vki + c*vkq;
+      }
+    }
+  }
+  const vals = A.map((r,i) => r[i]);
+  const idx = vals.map((v,i)=>i).sort((a,b)=>vals[b]-vals[a]);
+  return {values: idx.map(i => vals[i]), vectors: idx.map(i => V.map(r => r[i]))};
+}
+
+function pca2(X, n, p){
+  const mean = new Float64Array(p);
+  for(let i=0;i<n;i++) for(let j=0;j<p;j++) mean[j] += X[i][j]/n;
+  const C = Array.from({length:p}, () => new Float64Array(p));
+  for(let i=0;i<n;i++) for(let a=0;a<p;a++) for(let b=a;b<p;b++){
+    const v = (X[i][a]-mean[a])*(X[i][b]-mean[b])/(n-1);
+    C[a][b] += v; if(a!==b) C[b][a] += v;
+  }
+  const {values, vectors} = jacobi(C.map(r=>Array.from(r)), p);
+  const tot = values.reduce((a,b)=>a+Math.max(0,b),0) || 1;
+  const scores = X.map(row => [0,1].map(d => {
+    let s = 0; for(let j=0;j<p;j++) s += (row[j]-mean[j])*(vectors[d]?vectors[d][j]:0);
+    return s;
+  }));
+  return {scores, exp:[values[0]/tot, (values[1]||0)/tot], load: vectors.slice(0,2), mean};
+}
+
+/* =========================================================
+   分析の実行
+   ========================================================= */
+function run(){
+  try{
+    if(!S.rows.length) throw new Error('先にデータを読み込んでください。');
+    const cols = S.header.map((_,j)=>j).filter(j => S.vars[j] && S.numeric[j]);
+    const M = buildMatrix();
+    const raw = rawMatrix(cols);
+    const {X, labels, n, p, varNames} = M;
+    if(n > 2500) throw new Error('ケース数が多すぎます（2500件まで）。行を絞ってお試しください。');
+    let k = Math.max(2, Math.min(20, parseInt($('#kInput').value)||3));
+    if(k >= n) throw new Error('クラスター数がケース数以上になっています。');
+
+    const algo = $('#algo').value;
+    const metric = $('#metric').value, linkage = $('#linkage').value;
+    const D = distanceMatrix(X, n, p, algo === 'kmeans' ? 'euclid' : metric);
+
+    let tree = null, lab, wss = null;
+    if(algo === 'hier'){
+      tree = hclust(D, n, linkage);
+      lab = cutTree(tree, k);
+    }else{
+      const km = kmeans(X, n, p, k, parseInt($('#restarts').value));
+      lab = km.lab; wss = km.wss;
+    }
+    const sil = silhouette(D, n, lab, k);
+    const pc = pca2(X, n, p);
+
+    S.result = {X, raw, labels, n, p, varNames, cols, D, tree, lab, k, sil, pc, algo, metric, linkage,
+                scaling:$('#scaling').value, wss, restarts:parseInt($('#restarts').value)};
+    renderAll();
+    $('#runHint').textContent = `${n}ケース × ${p}変数を${k}群に分けました`;
+  }catch(e){
+    showEmpty(e.message, true);
+    $('#runHint').textContent = '';
+  }
+}
+
+function recut(k){
+  const R = S.result; if(!R || !R.tree) return;
+  R.k = k;
+  R.lab = cutTree(R.tree, k);
+  R.sil = silhouette(R.D, R.n, R.lab, k);
+  $('#kInput').value = k;
+  renderAll();
+}
+
+function showEmpty(msg, isErr){
+  $('#p-tree').innerHTML = isErr
+    ? `<div class="warn err">${esc(msg)}</div>`
+    : `<div class="empty"><span class="glyph">樹</span>${esc(msg)}</div>`;
+  ['p-map','p-prof','p-case','p-eval','p-read','p-out'].forEach(id => $('#'+id).innerHTML = '');
+  selectTab('p-tree');
+}
+
+/* =========================================================
+   描画：樹形図
+   ========================================================= */
+function renderTree(){
+  const R = S.result, box = $('#p-tree');
+  if(R.algo !== 'hier'){
+    box.innerHTML = `<h3 class="sec-title">樹形図</h3>
+      <p class="sec-note">k-means法では樹形図はつくられません。手法を「階層的クラスター分析」に切り替えると表示されます。</p>`;
+    return;
+  }
+  const {tree, n, labels, lab, k} = R;
+  const order = treeOrder(tree);
+  const pos = new Float64Array(n + tree.merges.length);
+  const hgt = new Float64Array(n + tree.merges.length);
+  order.forEach((leaf, i) => pos[leaf] = i);
+  tree.merges.forEach((m,i) => {
+    pos[n+i] = (pos[m.l] + pos[m.r]) / 2;
+    hgt[n+i] = Math.max(m.h, Math.max(hgt[m.l]||0, hgt[m.r]||0));
+  });
+  const maxH = Math.max(...tree.merges.map(m=>m.h), 1e-9);
+  const heights = tree.merges.map(m=>m.h);
+  const cutH = k >= n ? 0 : (n-k-1 >= 0 ? (heights[n-k-1] + (heights[n-k]||heights[n-k-1]*1.05))/2 : maxH*1.05);
+
+  const showLab = n <= 70;
+  const W = Math.max(660, Math.min(1500, n * (showLab ? 15 : 7) + 120));
+  const H = 430, padT = 18, padB = showLab ? 108 : 34, padL = 62, padR = 16;
+  const plotH = H - padT - padB, plotW = W - padL - padR;
+  const xOf = i => padL + (n<=1?plotW/2:(i/(n-1))*plotW);
+  const yOf = h => padT + plotH - (h/(maxH*1.05))*plotH;
+
+  // 葉→クラスターの色
+  const leafColor = new Array(n);
+  for(let i=0;i<n;i++) leafColor[i] = cc(lab[i]);
+  const nodeColor = new Array(n + tree.merges.length);
+  for(let i=0;i<n;i++) nodeColor[i] = leafColor[i];
+  tree.merges.forEach((m,i) => {
+    nodeColor[n+i] = (m.h <= cutH && nodeColor[m.l] === nodeColor[m.r]) ? nodeColor[m.l] : '#A8AEB2';
+  });
+
+  let paths = '';
+  tree.merges.forEach((m,i) => {
+    const x1 = xOf(pos[m.l]), x2 = xOf(pos[m.r]);
+    const y1 = yOf(m.l < n ? 0 : hgt[m.l]), y2 = yOf(m.r < n ? 0 : hgt[m.r]);
+    const y = yOf(m.h);
+    const col = nodeColor[n+i];
+    paths += `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} L${x1.toFixed(1)},${y.toFixed(1)} L${x2.toFixed(1)},${y.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)}" fill="none" stroke="${col}" stroke-width="${col==='#A8AEB2'?1.1:1.6}"/>`;
+  });
+
+  let ticks = '';
+  for(let t=0;t<=4;t++){
+    const v = maxH*1.05*t/4, y = yOf(v);
+    ticks += `<line x1="${padL-5}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#E8EAE6" stroke-width="1"/>
+      <text x="${padL-9}" y="${y+4}" text-anchor="end" font-size="10" font-family="var(--mono)" fill="#69737D">${v.toFixed(v<10?2:0)}</text>`;
+  }
+
+  let leafTxt = '';
+  if(showLab) order.forEach((leaf,i) => {
+    const x = xOf(i);
+    leafTxt += `<text x="${x}" y="${padT+plotH+7}" transform="rotate(90 ${x} ${padT+plotH+7})" font-size="10.5" fill="${leafColor[leaf]}">${esc(labels[leaf].slice(0,14))}</text>`;
+  });
+
+  const cutY = yOf(cutH);
+  const svg = `<svg id="dendro" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="樹形図">
+    ${ticks}
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+plotH}" stroke="#D8DBD6"/>
+    <text x="14" y="${padT+plotH/2}" transform="rotate(-90 14 ${padT+plotH/2})" text-anchor="middle" font-size="11" fill="#69737D">結合距離</text>
+    ${paths}
+    <g id="cutg" style="cursor:ns-resize">
+      <line x1="${padL}" y1="${cutY}" x2="${W-padR}" y2="${cutY}" stroke="#14202B" stroke-width="1.4" stroke-dasharray="7 4"/>
+      <rect x="${padL}" y="${cutY-9}" width="${plotW}" height="18" fill="transparent"/>
+      <rect x="${W-padR-58}" y="${cutY-11}" width="56" height="20" rx="2" fill="#14202B"/>
+      <text x="${W-padR-30}" y="${cutY+3}" text-anchor="middle" font-size="11" font-family="var(--mono)" fill="#fff">${k} 群</text>
+    </g>
+  </svg>`;
+
+  const sizes = new Int32Array(k); R.lab.forEach(l => sizes[l]++);
+  box.innerHTML = `
+    <h3 class="sec-title">樹形図</h3>
+    <p class="sec-note">${LINK_JA[R.linkage]}／${METRIC_JA[R.metric]}／${SCALE_JA[R.scaling]}。縦軸は結合されたときの距離です。</p>
+    <div class="cutbar">
+      <span>クラスター数</span><strong id="kOut">${k}</strong>
+      <input type="range" id="kRange" min="2" max="${Math.min(20,R.n-1)}" value="${k}" aria-label="クラスター数">
+      <span style="color:var(--muted);font-size:12px">切断線を上下にドラッグしても変えられます</span>
+    </div>
+    <div class="plot" style="overflow-x:auto">${svg}</div>
+    <div class="legend">${Array.from({length:k},(_,c)=>
+      `<span class="item"><span class="cdot" style="background:${cc(c)}"></span>第${c+1}クラスター（${sizes[c]}件）</span>`).join('')}</div>
+    ${n > 70 ? '<p class="hint">ケース名は70件以下のときに表示されます。</p>' : ''}`;
+
+  $('#kRange').addEventListener('input', e => { $('#kOut').textContent = e.target.value; });
+  $('#kRange').addEventListener('change', e => recut(parseInt(e.target.value)));
+
+  // 切断線のドラッグ
+  const svgEl = $('#dendro'), g = $('#cutg');
+  let dragging = false;
+  const kFromY = y => {
+    const h = Math.max(0, (padT + plotH - y) / plotH * maxH * 1.05);
+    let cnt = heights.filter(x => x > h).length + 1;
+    return Math.max(2, Math.min(Math.min(20, n-1), cnt));
+  };
+  const localY = ev => {
+    const r = svgEl.getBoundingClientRect();
+    const cy = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+    return (cy - r.top) / r.height * H;
+  };
+  const move = ev => {
+    if(!dragging) return;
+    ev.preventDefault();
+    const nk = kFromY(localY(ev));
+    $('#kOut').textContent = nk; $('#kRange').value = nk;
+    const y = yOf(Math.max(0,(padT+plotH-localY(ev))/plotH*maxH*1.05));
+    g.setAttribute('transform', `translate(0 ${localY(ev)-cutY})`);
+  };
+  const up = ev => {
+    if(!dragging) return;
+    dragging = false; g.removeAttribute('transform');
+    recut(parseInt($('#kRange').value));
+  };
+  g.addEventListener('mousedown', e => { dragging = true; e.preventDefault(); });
+  g.addEventListener('touchstart', e => { dragging = true; }, {passive:true});
+  window.addEventListener('mousemove', move);
+  window.addEventListener('touchmove', move, {passive:false});
+  window.addEventListener('mouseup', up);
+  window.addEventListener('touchend', up);
+}
+
+/* =========================================================
+   描画：布置図
+   ========================================================= */
+function renderMap(){
+  const R = S.result;
+  const {pc, lab, k, labels, n, varNames} = R;
+  const xs = pc.scores.map(s=>s[0]), ys = pc.scores.map(s=>s[1]);
+  const W = 720, H = 500, pad = 52;
+  const mnx = Math.min(...xs), mxx = Math.max(...xs), mny = Math.min(...ys), mxy = Math.max(...ys);
+  const rx = (mxx-mnx)||1, ry = (mxy-mny)||1;
+  const X = v => pad + (v-mnx+rx*0.06)/(rx*1.12)*(W-pad*2);
+  const Y = v => H-pad - (v-mny+ry*0.06)/(ry*1.12)*(H-pad*2);
+
+  const cx = new Float64Array(k), cy = new Float64Array(k), cn = new Int32Array(k);
+  for(let i=0;i<n;i++){ cx[lab[i]] += xs[i]; cy[lab[i]] += ys[i]; cn[lab[i]]++; }
+  for(let c=0;c<k;c++){ cx[c]/=cn[c]||1; cy[c]/=cn[c]||1; }
+
+  let pts = '';
+  for(let i=0;i<n;i++){
+    pts += `<circle cx="${X(xs[i]).toFixed(1)}" cy="${Y(ys[i]).toFixed(1)}" r="${n>400?2.6:4}" fill="${cc(lab[i])}" fill-opacity=".72" stroke="#fff" stroke-width=".7"><title>${esc(labels[i])}（第${lab[i]+1}クラスター）</title></circle>`;
+  }
+  let cents = '';
+  for(let c=0;c<k;c++){
+    cents += `<g><line x1="${X(cx[c])-8}" y1="${Y(cy[c])}" x2="${X(cx[c])+8}" y2="${Y(cy[c])}" stroke="${cc(c)}" stroke-width="2"/>
+      <line x1="${X(cx[c])}" y1="${Y(cy[c])-8}" x2="${X(cx[c])}" y2="${Y(cy[c])+8}" stroke="${cc(c)}" stroke-width="2"/>
+      <text x="${X(cx[c])+11}" y="${Y(cy[c])-7}" font-size="12" font-weight="700" fill="${cc(c)}">${c+1}</text></g>`;
+  }
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="クラスターの布置図">
+    <line x1="${pad}" y1="${Y(0)}" x2="${W-pad}" y2="${Y(0)}" stroke="#E1E4DF"/>
+    <line x1="${X(0)}" y1="${pad}" x2="${X(0)}" y2="${H-pad}" stroke="#E1E4DF"/>
+    <rect x="${pad}" y="${pad}" width="${W-pad*2}" height="${H-pad*2}" fill="none" stroke="#E8EAE6"/>
+    ${pts}${cents}
+    <text x="${W/2}" y="${H-14}" text-anchor="middle" font-size="11.5" fill="#69737D">第1主成分（${(pc.exp[0]*100).toFixed(1)}%）</text>
+    <text x="16" y="${H/2}" transform="rotate(-90 16 ${H/2})" text-anchor="middle" font-size="11.5" fill="#69737D">第2主成分（${(pc.exp[1]*100).toFixed(1)}%）</text>
+  </svg>`;
+
+  const loadRows = varNames.map((v,j) =>
+    `<tr><td>${esc(v)}</td><td class="num">${fx(pc.load[0][j],3)}</td><td class="num">${fx(pc.load[1]?pc.load[1][j]:NaN,3)}</td></tr>`).join('');
+
+  $('#p-map').innerHTML = `
+    <h3 class="sec-title">布置図</h3>
+    <p class="sec-note">分析に使った変数を主成分分析で2次元に圧縮し、クラスターごとに色分けしています。＋印は各クラスターの中心です。2軸で ${( (pc.exp[0]+pc.exp[1])*100 ).toFixed(1)}% の情報を表しています。</p>
+    <div class="plot">${svg}</div>
+    <div class="legend">${Array.from({length:k},(_,c)=>
+      `<span class="item"><span class="cdot" style="background:${cc(c)}"></span>第${c+1}クラスター</span>`).join('')}</div>
+    <hr class="divider">
+    <h3 class="sec-title">軸の意味</h3>
+    <p class="sec-note">各変数が2つの軸にどれだけ効いているかです。絶対値の大きい変数が、その軸の向きを決めています。</p>
+    <div class="scroll"><table><thead><tr><th>変数</th><th class="num">第1主成分</th><th class="num">第2主成分</th></tr></thead><tbody>${loadRows}</tbody></table></div>`;
+}
+
+/* =========================================================
+   描画：クラスターの特徴
+   ========================================================= */
+function clusterStats(){
+  const R = S.result;
+  const {raw, lab, k, n, p, varNames} = R;
+  const gmean = new Float64Array(p), gsd = new Float64Array(p);
+  for(let j=0;j<p;j++){
+    let s=0; for(let i=0;i<n;i++) s += raw[i][j];
+    gmean[j] = s/n;
+    let v=0; for(let i=0;i<n;i++) v += (raw[i][j]-gmean[j])**2;
+    gsd[j] = Math.sqrt(v/(n-1)) || 1;
+  }
+  const cells = Array.from({length:k}, () => ({n:0, mean:new Float64Array(p), sd:new Float64Array(p), z:new Float64Array(p)}));
+  for(let i=0;i<n;i++){ const c = lab[i]; cells[c].n++; for(let j=0;j<p;j++) cells[c].mean[j] += raw[i][j]; }
+  for(let c=0;c<k;c++) for(let j=0;j<p;j++) cells[c].mean[j] /= (cells[c].n||1);
+  for(let i=0;i<n;i++){ const c = lab[i]; for(let j=0;j<p;j++) cells[c].sd[j] += (raw[i][j]-cells[c].mean[j])**2; }
+  for(let c=0;c<k;c++) for(let j=0;j<p;j++){
+    cells[c].sd[j] = cells[c].n>1 ? Math.sqrt(cells[c].sd[j]/(cells[c].n-1)) : 0;
+    cells[c].z[j] = (cells[c].mean[j]-gmean[j])/gsd[j];
+  }
+  // 一元配置分散分析のF値（記述用）
+  const F = new Float64Array(p);
+  for(let j=0;j<p;j++){
+    let ssb=0, ssw=0;
+    for(let c=0;c<k;c++) ssb += cells[c].n * (cells[c].mean[j]-gmean[j])**2;
+    for(let i=0;i<n;i++) ssw += (raw[i][j]-cells[lab[i]].mean[j])**2;
+    F[j] = (ssw>0 && n-k>0) ? (ssb/(k-1))/(ssw/(n-k)) : NaN;
+  }
+  return {cells, gmean, gsd, F, varNames, k, p, n};
+}
+
+function heatColor(z){
+  const t = Math.max(-2.2, Math.min(2.2, z))/2.2;
+  const mix = (a,b,f)=>a.map((v,i)=>Math.round(v+(b[i]-v)*f));
+  const base=[252,252,250], hi=[27,110,99], lo=[192,138,46];
+  const c = t>=0 ? mix(base,hi,t) : mix(base,lo,-t);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function renderProfile(){
+  const R = S.result, st = clusterStats();
+  const {cells, gmean, F, varNames, k, p} = st;
+  let head = `<tr><th>変数</th><th class="num">全体平均</th>` +
+    Array.from({length:k},(_,c)=>`<th class="num"><span class="cbadge"><span class="cdot" style="background:${cc(c)}"></span>第${c+1}群</span></th>`).join('') +
+    `<th class="num">F値</th></tr>`;
+  let body = varNames.map((v,j) => `<tr><td>${esc(v)}</td><td class="num">${fx(gmean[j])}</td>` +
+    Array.from({length:k},(_,c)=>`<td class="num" style="background:${heatColor(cells[c].z[j])}">${fx(cells[c].mean[j])}<br><span style="font-size:10.5px;color:#69737D">SD ${fx(cells[c].sd[j])}</span></td>`).join('') +
+    `<td class="num">${fx(F[j],2)}</td></tr>`).join('');
+  const sizes = Array.from({length:k},(_,c)=>cells[c].n);
+  const sizeRow = `<tr><td><strong>ケース数</strong></td><td class="num">${st.n}</td>` +
+    sizes.map(s=>`<td class="num"><strong>${s}</strong>（${(s/st.n*100).toFixed(1)}%）</td>`).join('') + `<td></td></tr>`;
+
+  $('#p-prof').innerHTML = `
+    <h3 class="sec-title">クラスターの特徴</h3>
+    <p class="sec-note">元の単位のままの平均値です。背景色は全体平均からのずれ（緑＝高い、黄＝低い）を表します。F値は変数ごとの分かれ具合の目安です（値が大きいほどクラスター間の差が大きい）。</p>
+    <div class="scroll"><table><thead>${head}</thead><tbody>${sizeRow}${body}</tbody></table></div>
+    <p class="hint">F値は同じデータから作ったクラスターに対する値なので、有意性検定としては使えません。あくまで特徴づけの目安です。</p>`;
+}
+
+/* =========================================================
+   描画：ケース一覧
+   ========================================================= */
+function renderCases(){
+  const R = S.result;
+  const {labels, lab, sil, raw, varNames, n} = R;
+  const idx = Array.from({length:n},(_,i)=>i).sort((a,b)=> lab[a]-lab[b] || sil.sil[b]-sil.sil[a]);
+  const rows = idx.map(i =>
+    `<tr><td>${esc(labels[i])}</td>
+      <td><span class="cbadge"><span class="cdot" style="background:${cc(lab[i])}"></span>第${lab[i]+1}群</span></td>
+      <td class="num">${fx(sil.sil[i],3)}</td>` +
+      varNames.map((_,j)=>`<td class="num">${fx(raw[i][j])}</td>`).join('') + `</tr>`).join('');
+  $('#p-case').innerHTML = `
+    <h3 class="sec-title">ケース一覧</h3>
+    <p class="sec-note">クラスター順に並べています。シルエット値は所属のなじみ具合で、1に近いほどそのクラスターらしく、負の値は別のクラスターに近いことを示します。</p>
+    <div class="scroll"><table><thead><tr><th>ケース</th><th>所属</th><th class="num">シルエット</th>${varNames.map(v=>`<th class="num">${esc(v)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+/* =========================================================
+   描画：分け方の検討
+   ========================================================= */
+function renderEval(){
+  const R = S.result;
+  const kmax = Math.min(10, R.n-1);
+  const stats = [];
+  for(let k=2;k<=kmax;k++){
+    let lab;
+    if(R.algo === 'hier') lab = cutTree(R.tree, k);
+    else lab = kmeans(R.X, R.n, R.p, k, 10).lab;
+    // 群内平方和
+    const cent = Array.from({length:k}, () => new Float64Array(R.p));
+    const cnt = new Int32Array(k);
+    for(let i=0;i<R.n;i++){ cnt[lab[i]]++; for(let j=0;j<R.p;j++) cent[lab[i]][j] += R.X[i][j]; }
+    for(let c=0;c<k;c++) for(let j=0;j<R.p;j++) cent[c][j] /= (cnt[c]||1);
+    let wss = 0;
+    for(let i=0;i<R.n;i++) for(let j=0;j<R.p;j++) wss += (R.X[i][j]-cent[lab[i]][j])**2;
+    const s = silhouette(R.D, R.n, lab, k);
+    stats.push({k, wss, sil:s.overall});
+  }
+  R.kstats = stats;
+  const W=680,H=250,pad=48;
+  const plot = (vals, fmt, color, label) => {
+    const mn = Math.min(...vals), mx = Math.max(...vals), rg = (mx-mn)||1;
+    const X = i => pad + i/(vals.length-1)*(W-pad*1.4);
+    const Y = v => H-pad - (v-mn)/(rg*1.15)*(H-pad*1.6);
+    const pts = vals.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const dots = vals.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="4" fill="${color}"><title>k=${stats[i].k}：${fmt(v)}</title></circle>
+      <text x="${X(i)}" y="${Y(v)-11}" text-anchor="middle" font-size="10" font-family="var(--mono)" fill="#69737D">${fmt(v)}</text>`).join('');
+    const xlab = stats.map((s,i)=>`<text x="${X(i)}" y="${H-pad+18}" text-anchor="middle" font-size="11" fill="#69737D">${s.k}</text>`).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${label}">
+      <line x1="${pad-10}" y1="${H-pad}" x2="${W-14}" y2="${H-pad}" stroke="#D8DBD6"/>
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8"/>${dots}${xlab}
+      <text x="${W/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="#69737D">クラスター数 k</text></svg>`;
+  };
+  const best = stats.reduce((a,b)=> b.sil > a.sil ? b : a);
+  $('#p-eval').innerHTML = `
+    <h3 class="sec-title">いくつに分けるか</h3>
+    <p class="sec-note">k=2から${kmax}まで試した結果です。群内平方和は折れ曲がる手前、シルエットは高いところが目安になります。ただし解釈のしやすさが最優先です。</p>
+    <div class="metrics">
+      <div class="metric"><div class="k">シルエットが最大になる k</div><div class="v">${best.k} <small>（${fx(best.sil,3)}）</small></div></div>
+      <div class="metric"><div class="k">いま選んでいる k</div><div class="v">${R.k} <small>（${fx(R.sil.overall,3)}）</small></div></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:18px">
+      <div style="flex:1;min-width:320px">
+        <p class="sec-note" style="margin-bottom:6px"><strong>群内平方和</strong>（小さいほどまとまりが良い）</p>
+        <div class="plot">${plot(stats.map(s=>s.wss), v=>v.toFixed(0), '#3A5A8C', '群内平方和')}</div>
+      </div>
+      <div style="flex:1;min-width:320px">
+        <p class="sec-note" style="margin-bottom:6px"><strong>平均シルエット</strong>（大きいほど分離が良い）</p>
+        <div class="plot">${plot(stats.map(s=>s.sil), v=>v.toFixed(2), '#1B6E63', '平均シルエット')}</div>
+      </div>
+    </div>
+    <hr class="divider">
+    <h3 class="sec-title">クラスターごとのなじみ具合</h3>
+    <div class="scroll" style="max-height:none"><table><thead><tr><th>クラスター</th><th class="num">ケース数</th><th class="num">平均シルエット</th><th>分布</th></tr></thead><tbody>
+    ${Array.from({length:R.k},(_,c)=>{
+      const cn = Array.from(R.lab).filter(l=>l===c).length;
+      const s = R.sil.perCluster[c];
+      const w = Math.max(0, Math.min(100, s*100));
+      return `<tr><td><span class="cbadge"><span class="cdot" style="background:${cc(c)}"></span>第${c+1}群</span></td>
+        <td class="num">${cn}</td><td class="num">${fx(s,3)}</td>
+        <td style="text-align:left"><span style="display:inline-block;height:9px;width:${w*1.6}px;background:${cc(c)};border-radius:1px"></span></td></tr>`;
+    }).join('')}
+    </tbody></table></div>
+    <div class="warn" style="margin-top:16px">目安として、平均シルエットが0.5を超えればまとまりは明確、0.25〜0.5は弱い構造、0.25未満だとクラスターの分かれ目がはっきりしないと読みます。</div>`;
+}
+
+/* =========================================================
+   描画：結果の読み取り
+   ========================================================= */
+function renderRead(){
+  const R = S.result, st = clusterStats();
+  const {cells, gmean, F, varNames, k} = st;
+  const p = varNames.length;
+  const sizes = Array.from({length:k},(_,c)=>cells[c].n);
+  const pct = c => (sizes[c]/st.n*100).toFixed(1);
+
+  const methodShort = R.algo === 'hier'
+    ? `${LINK_JA[R.linkage]}（距離：${METRIC_JA[R.metric]}）による階層的クラスター分析`
+    : `k-means法（初期値を${R.restarts}通り試行）`;
+  const scaleShort = R.scaling === 'z' ? '標準化（平均0、標準偏差1）' :
+                     R.scaling === 'range' ? '0〜1の範囲への変換' : '変換なし';
+  const silTxt = R.sil.overall >= 0.5 ? 'クラスターのまとまりは明確です'
+    : R.sil.overall >= 0.25 ? 'まとまりは弱いながらも認められます'
+    : '分離は弱く、はっきりした群構造とは言いにくい状態です';
+  const silTxtP = R.sil.overall >= 0.5 ? '明確な群構造が認められた'
+    : R.sil.overall >= 0.25 ? '弱いながらも群構造が認められた'
+    : '群構造は明確ではなかった';
+
+  /* --- 各クラスターの特徴を言葉にする --- */
+  const traits = c => varNames.map((v,j) => ({v, z:cells[c].z[j], m:cells[c].mean[j], g:gmean[j]}))
+                              .sort((a,b)=>Math.abs(b.z)-Math.abs(a.z));
+  const deg = z => Math.abs(z) >= 1.0 ? 'とくに' : Math.abs(z) >= 0.6 ? '' : 'やや';
+  const featureRich = c => {
+    const t = traits(c);
+    const hi = t.filter(a=>a.z >= 0.35).slice(0,3), lo = t.filter(a=>a.z <= -0.35).slice(0,3);
+    const say = (arr, w) => arr.map(a=>`${a.v}が${deg(a.z)}${w}（M = ${fx(a.m)}／全体 ${fx(a.g)}）`).join('、');
+    const s = [];
+    if(hi.length) s.push(say(hi,'高く'));
+    if(lo.length) s.push(say(lo,'低い'));
+    return s.length ? s.join('、') : `どの変数も全体平均に近く（最大のずれでも ${fx(Math.abs(t[0].z),2)} 標準偏差）、際立った偏りがありません`;
+  };
+  const featurePlain = c => {
+    const t = traits(c);
+    const hi = t.filter(a=>a.z >= 0.35).slice(0,3), lo = t.filter(a=>a.z <= -0.35).slice(0,3);
+    const s = [];
+    if(hi.length) s.push(`${hi.map(a=>a.v).join('・')}が高く`);
+    if(lo.length) s.push(`${lo.map(a=>a.v).join('・')}が低い`);
+    return s.length ? s.join('、')+'という特徴' : '各変数が全体平均に近いという特徴';
+  };
+  const nameCands = c => {
+    const t = traits(c).filter(a=>Math.abs(a.z) >= 0.35);
+    if(!t.length) return ['平均型', '特徴が中庸な群'];
+    const w = a => a.z > 0 ? `${a.v}が高い` : `${a.v}が低い`;
+    const hi = t.filter(a=>a.z>0).slice(0,2).map(a=>a.v), lo = t.filter(a=>a.z<0).slice(0,2).map(a=>a.v);
+    const c1 = t[1] ? `${w(t[0])}・${w(t[1])}群` : `${w(t[0])}群`;
+    const c2 = (hi.length && lo.length) ? `${hi.join('・')}優位／${lo.join('・')}低調型`
+             : hi.length ? `${hi.join('・')}充実型` : `${lo.join('・')}低調型`;
+    return [c1, c2];
+  };
+  const reps = c => {
+    const idx = Array.from({length:R.n},(_,i)=>i).filter(i=>R.lab[i]===c)
+      .sort((a,b)=>R.sil.sil[b]-R.sil.sil[a]).slice(0,3);
+    return idx.map(i=>R.labels[i]);
+  };
+
+  /* --- クラスター数の根拠 --- */
+  const ks = R.kstats || [];
+  const bestSil = ks.length ? ks.reduce((a,b)=> b.sil > a.sil ? b : a) : null;
+  const here = ks.find(s => s.k === k);
+  let elbow = null;
+  if(ks.length >= 3){
+    let bd = -Infinity;
+    for(let i=1;i<ks.length-1;i++){
+      const drop = ks[i-1].wss - ks[i].wss, next = ks[i].wss - ks[i+1].wss;
+      const gain = drop - next;
+      if(gain > bd){ bd = gain; elbow = ks[i].k; }
+    }
+  }
+  let basis = `<p>k を 2 から ${ks.length?ks[ks.length-1].k:'—'} まで動かして比べた結果、平均シルエット係数が最大になるのは <strong>k = ${bestSil?bestSil.k:'—'}</strong>（${bestSil?fx(bestSil.sil,3):'—'}）、群内平方和の減り方が最も鈍るのは <strong>k = ${elbow||'—'}</strong> でした。`;
+  basis += (bestSil && bestSil.k === k)
+    ? `いま選んでいる ${k} クラスター解は、この指標と一致しています。</p>`
+    : `いま選んでいるのは ${k} クラスター解（平均シルエット ${here?fx(here.sil,3):fx(R.sil.overall,3)}）です。指標が示す値とは異なるので、採用するなら「解釈のしやすさ」や先行研究との対応を根拠として書き添えると説得力が出ます。</p>`;
+
+  /* --- 注意点 --- */
+  const negCnt = Array.from(R.sil.sil).filter(v=>v<0).length;
+  const minSize = Math.min(...sizes);
+  const cautions = [];
+  cautions.push('クラスター分析は探索的な手法です。同じデータでも距離や結合法を変えれば別の分類が出るため、「唯一の正解」ではなく「ひとつの見え方」として扱ってください。');
+  if(negCnt > 0) cautions.push(`シルエット値が負のケースが ${negCnt} 件（${(negCnt/R.n*100).toFixed(1)}%）あります。これらは所属クラスターより他のクラスターに近い位置にあり、境界的なケースです。ケース一覧タブで確認できます。`);
+  if(minSize < Math.max(5, R.n*0.05)) cautions.push(`最も小さいクラスターは ${minSize} 件です。少数のクラスターは外れ値の集まりである可能性があるため、中身を個別に確認することをおすすめします。`);
+  if(R.algo === 'hier' && R.linkage === 'single') cautions.push('最近隣法は、ケースが数珠つなぎに連結する「鎖効果」が起きやすい手法です。ウォード法や群平均法の結果とも見比べてください。');
+  if(R.algo === 'hier' && (R.linkage === 'centroid' || R.linkage === 'median')) cautions.push('重心法・メディアン法では、結合距離が途中で逆転することがあります（樹形図の枝が下がって見える場合）。その場合は解釈が難しくなるため、ウォード法などの併用を検討してください。');
+  if(R.algo === 'kmeans') cautions.push(`k-means法は初期値によって解が変わります。ここでは ${R.restarts} 通り試して最良解を採用していますが、報告の際は試行回数も書き添えてください。`);
+  if(R.scaling === 'none') cautions.push('変数を変換していないため、値の大きい変数が距離に強く影響します。単位が異なる変数を混ぜている場合は、標準化をお試しください。');
+  cautions.push('クラスターの特徴づけに使った F 値は、同じデータから作った分類に対する値です。有意差の証拠としては使えません。');
+
+  /* --- 論文での記述例 --- */
+  const clusterNames = Array.from({length:k},(_,c)=>nameCands(c)[0]);
+  const methodText =
+`　${varNames.join('・')}の${p}変数を用いて、${st.n}ケースを対象にクラスター分析を行った。変数間で測定単位が異なることを考慮し、分析に先立ち各変数を${scaleShort}した。` +
+(R.algo === 'hier'
+ ? `ケース間の非類似性は${METRIC_JA[R.metric]}によって算出し、${LINK_JA[R.linkage]}によりクラスターを形成した。クラスター数は、樹形図の形状、群内平方和の推移、および平均シルエット係数を総合的に参照して決定した。`
+ : `クラスターの形成にはk-means法を用いた。初期値依存の影響を抑えるため、初期値を${R.restarts}通り変えて分析を行い、群内平方和が最小となる解を採用した。クラスター数は、群内平方和の推移と平均シルエット係数を参照して決定した。`) +
+`統計解析にはR（${R.algo==='hier'?'hclust関数':'kmeans関数'}）を用いた。`;
+
+  const resultText =
+`　分析の結果、${k}クラスター解を採用した（平均シルエット係数 = ${fx(R.sil.overall,2)}）。各クラスターに含まれるケース数は、${Array.from({length:k},(_,c)=>`第${c+1}クラスター${sizes[c]}件（${pct(c)}%）`).join('、')}であった。各変数の平均値と標準偏差をTable 1に示す。` +
+'\n' + Array.from({length:k},(_,c)=>`　第${c+1}クラスターは、${featurePlain(c)}を示した。この特徴から、本クラスターを「${clusterNames[c]}」と命名した。`).join('\n');
+
+  const iMax = sizes.indexOf(Math.max(...sizes)), iMin = sizes.lastIndexOf(Math.min(...sizes));
+  const sizeSentence = (iMax === iMin || Math.max(...sizes) === Math.min(...sizes))
+    ? `各クラスターに含まれるケース数はおおむね同程度であり（${sizes.map((s,c)=>`第${c+1}クラスター${s}件`).join('、')}）、特定の類型に偏る傾向はみられなかった。`
+    : `最も多くのケースを含んだのは第${iMax+1}クラスター「${clusterNames[iMax]}」（${sizes[iMax]}件、${pct(iMax)}%）であり、本標本の中心的な特徴を示していると考えられる。一方、第${iMin+1}クラスター「${clusterNames[iMin]}」は${sizes[iMin]}件（${pct(iMin)}%）と少数であり、${featurePlain(iMin)}をもつ下位群として位置づけられる。`;
+  const discussionText =
+`　本研究では、${varNames.join('・')}にもとづいて${st.n}ケースを分類した結果、${k}つの類型が見いだされた。${sizeSentence}\n` +
+`　ただし、本分析にはいくつかの限界がある。第一に、クラスター分析は探索的手法であり、得られた類型は投入した変数、距離の定義、および結合法の選択に依存する。第二に、本手法はすべてのケースをいずれかのクラスターに割り当てるため、群の境界に位置するケースが含まれる（平均シルエット係数 = ${fx(R.sil.overall,2)}であり、${silTxtP}）。今後は、別の標本を用いた分類の再現性の検討、および得られた類型と外部変数との関連の検証が課題となる。`;
+
+  const tableRows = varNames.map((v,j) => {
+    const cellsTxt = Array.from({length:k},(_,c)=>`${fx(cells[c].mean[j])} (${fx(cells[c].sd[j])})`);
+    return [v, `${fx(gmean[j])} (${fx(st.gsd[j])})`, ...cellsTxt, fx(F[j],2)];
+  });
+  const tableHead = ['変数', `全体 (n = ${st.n})`, ...Array.from({length:k},(_,c)=>`第${c+1}クラスター (n = ${sizes[c]})`), 'F'];
+  const tableCaption = `Table 1　クラスターごとの各変数の平均値と標準偏差`;
+  const tableText = [tableCaption, tableHead.join('\t'), ...tableRows.map(r=>r.join('\t'))].join('\n')
+    + `\n注. 括弧内は標準偏差。F値は各変数のクラスター間の差の大きさを示す参考値であり、有意性検定として解釈すべきではない。`;
+
+  S.texts = {method:methodText, result:resultText, discussion:discussionText, table:tableText,
+             all:[methodText,'',resultText,'',discussionText].join('\n')};
+
+  /* --- 描画 --- */
+  const perC = Array.from({length:k},(_,c)=>{
+    const nm = nameCands(c);
+    return `<div style="border-left:3px solid ${cc(c)};padding:2px 0 2px 14px;margin-bottom:18px">
+      <p style="margin:0 0 6px"><strong style="color:${cc(c)}">第${c+1}クラスター</strong>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${sizes[c]}件・${pct(c)}%・平均シルエット ${fx(R.sil.perCluster[c],2)}</span></p>
+      <p style="margin:0 0 6px">${featureRich(c)}。</p>
+      <p style="margin:0 0 4px;font-size:13.5px">名前の候補：<strong>「${esc(nm[0])}」</strong>／<strong>「${esc(nm[1])}」</strong></p>
+      <p style="margin:0;font-size:12.5px;color:var(--muted)">代表的なケース（このクラスターらしさが強い順）：${reps(c).map(esc).join('、')}</p>
+    </div>`;
+  }).join('');
+
+  const block = (label, key, text) => `
+    <div style="margin-bottom:22px">
+      <div class="codehead">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--teal)">${label}</div>
+        <button class="btn ghost small" data-copy="${key}">コピー</button>
+      </div>
+      <div class="quote" style="white-space:pre-line">${esc(text)}</div>
+    </div>`;
+
+  $('#p-read').innerHTML = `
+    <h3 class="sec-title">結果の読み取り</h3>
+    <p class="sec-note">数値から自動で組み立てた解説です。名前の候補や解釈は手がかりなので、研究の文脈に合わせて言い換えてください。</p>
+
+    <div class="metrics">
+      <div class="metric"><div class="k">ケース数</div><div class="v">${st.n}</div></div>
+      <div class="metric"><div class="k">投入変数</div><div class="v">${p}</div></div>
+      <div class="metric"><div class="k">クラスター数</div><div class="v">${k}</div></div>
+      <div class="metric"><div class="k">平均シルエット</div><div class="v">${fx(R.sil.overall,3)}</div></div>
+    </div>
+
+    <div class="narrative">
+      <p>${st.n}ケースを${methodShort}で分析し、${k}つのクラスターに分けました。全体の平均シルエット係数は${fx(R.sil.overall,3)}で、${silTxt}。各クラスターの大きさは${Array.from({length:k},(_,c)=>`第${c+1}群 ${sizes[c]}件（${pct(c)}%）`).join('、')}です。</p>
+    </div>
+
+    <hr class="divider">
+    <h3 class="sec-title">なぜ${k}クラスターか</h3>
+    <div class="narrative">${basis}</div>
+
+    <hr class="divider">
+    <h3 class="sec-title">クラスターごとの解説</h3>
+    <p class="sec-note">かっこ内は元の単位での平均値です。「とくに」は全体平均から1標準偏差以上、「やや」は0.35〜0.6標準偏差のずれを表します。</p>
+    <div class="narrative">${perC}</div>
+
+    <hr class="divider">
+    <h3 class="sec-title">読み取るときの注意</h3>
+    <ul style="margin:0;padding-left:1.2em">
+      ${cautions.map(c=>`<li style="margin-bottom:7px">${c}</li>`).join('')}
+    </ul>
+
+    <hr class="divider">
+    <h3 class="sec-title">論文での記述例</h3>
+    <p class="sec-note">そのまま貼り付けず、書き方の型としてお使いください。数値は今の分析結果に合わせて入っています。</p>
+    <div style="margin-bottom:16px"><button class="btn ghost small" data-copy="all">方法・結果・考察をまとめてコピー</button></div>
+    <div class="narrative">
+      ${block('方法', 'method', methodText)}
+      ${block('結果', 'result', resultText)}
+      ${block('考察（限界と今後の課題）', 'discussion', discussionText)}
+    </div>
+
+    <div class="codehead">
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--teal)">表</div>
+        <p class="sec-note" style="margin:4px 0 0">${esc(tableCaption)}</p>
+      </div>
+      <button class="btn ghost small" data-copy="table">表をコピー（Excel・Wordに貼り付け可）</button>
+    </div>
+    <div class="scroll" style="max-height:none;margin-top:8px"><table>
+      <thead><tr>${tableHead.map((h,i)=>`<th${i?' class="num"':''}>${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody>${tableRows.map(r=>`<tr>${r.map((v,i)=>`<td${i?' class="num"':''}>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>
+    <p class="hint">注. 括弧内は標準偏差。F値はクラスター間の差の大きさを示す参考値であり、有意性検定として解釈すべきではありません。</p>`;
+
+  $$('#p-read [data-copy]').forEach(b => b.addEventListener('click', () => {
+    const t = S.texts[b.dataset.copy];
+    const old = b.textContent;
+    copyText(t).then(()=>{ b.textContent = 'コピーしました'; setTimeout(()=>{ b.textContent = old; }, 1600); })
+               .catch(()=> notice('コピーできませんでした。文章を選択して手動でコピーしてください。', null, true));
+  }));
+}
+
+/* =========================================================
+   描画：書き出し
+   ========================================================= */
+function buildAssignCSV(){
+  const R = S.result, st = clusterStats();
+  const head = ['ケース','クラスター','シルエット', ...R.varNames];
+  const lines = [head.join(',')];
+  for(let i=0;i<R.n;i++){
+    lines.push([`"${String(R.labels[i]).replace(/"/g,'""')}"`, R.lab[i]+1, R.sil.sil[i].toFixed(4), ...R.raw[i].map(v=>v)].join(','));
+  }
+  return lines.join('\n');
+}
+
+function buildRCode(){
+  const R = S.result;
+  /* Rの文字列として安全な形にする（引用符・バックスラッシュを退避） */
+  const q = s => '"' + String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"') + '"';
+  const chunk = (arr, per) => {
+    const out = [];
+    for(let i=0;i<arr.length;i+=per) out.push('  ' + arr.slice(i,i+per).join(', '));
+    return out.join(',\n');
+  };
+  const labBlock = chunk(R.labels.map(q), 6);
+  const valBlock = R.raw.map(row => '  ' + row.map(v => Number(v)).join(', ')).join(',\n');
+  const vnBlock  = R.varNames.map(q).join(', ');
+
+  const scale = R.scaling === 'z'
+      ? 'X <- scale(X0)'
+    : R.scaling === 'range'
+      ? 'X <- apply(X0, 2, function(v) if (max(v) == min(v)) v - min(v) else (v - min(v)) / (max(v) - min(v)))'
+      : 'X <- X0  # 変換なし';
+
+  const distCode = {
+    euclid:    'd <- dist(X, method = "euclidean")',
+    sqeuclid:  'd <- dist(X, method = "euclidean")^2   # 平方ユークリッド距離',
+    manhattan: 'd <- dist(X, method = "manhattan")',
+    corr:      'd <- as.dist(1 - cor(t(X)))            # 相関にもとづく距離',
+    cosine:    'nrm <- X / sqrt(rowSums(X^2))\nd <- as.dist(1 - nrm %*% t(nrm))       # コサイン距離'
+  }[R.metric];
+
+  const hierPart = `${distCode}
+hc <- hclust(d, method = "${LINK_R[R.linkage]}")
+cl <- cutree(hc, k = ${R.k})
+
+plot(hc, labels = lab, hang = -1, main = "デンドログラム", xlab = "", sub = "")
+rect.hclust(hc, k = ${R.k}, border = 2:${R.k + 1})`;
+
+  const kmPart = `set.seed(1234)
+km <- kmeans(X, centers = ${R.k}, nstart = ${R.restarts})
+cl <- km$cluster
+d  <- dist(X, method = "euclidean")`;
+
+  return `# ===== クラスター分析 =====
+# アプリが生成したコードです。データは下に埋め込んであります。
+# JASPのRコンソール、RStudio、R本体のいずれでもそのまま実行できます。
+
+## --- データ ---------------------------------------------------------
+lab <- c(
+${labBlock}
+)
+
+vals <- c(
+${valBlock}
+)
+
+X0 <- matrix(vals, ncol = ${R.p}, byrow = TRUE,
+             dimnames = list(lab, c(${vnBlock})))
+
+## --- 変数のそろえ方 -------------------------------------------------
+${scale}
+
+## --- クラスタリング -------------------------------------------------
+${R.algo === 'hier' ? hierPart : kmPart}
+
+## --- クラスターの大きさと特徴（元の単位の平均）----------------------
+print(table(cl))
+
+# 変数名や引数名に日本語を使うと、一部の環境（文字コード設定によっては）
+# 「invalid multibyte character」になるため、ここは半角英字にしています。
+prof <- aggregate(data.frame(X0, row.names = NULL, check.names = FALSE),
+                  by = list(Cluster = cl), FUN = mean)
+print(round(prof, 3))
+
+## --- シルエット（clusterパッケージが必要）---------------------------
+if (requireNamespace("cluster", quietly = TRUE)) {
+  sil <- cluster::silhouette(cl, d)
+  cat("平均シルエット:", round(mean(sil[, 3]), 3), "\\n")
+  plot(sil, col = 2:${R.k + 1}, main = "シルエットプロット")
+} else {
+  cat('シルエットには cluster パッケージが必要です: install.packages("cluster")\\n')
+}
+
+## --- 主成分による布置図 ---------------------------------------------
+pc <- prcomp(X)
+plot(pc$x[, 1:2], col = cl, pch = 19,
+     xlab = "第1主成分", ylab = "第2主成分", main = "クラスターの布置")
+legend("topright", legend = paste("Cluster", 1:${R.k}), col = 1:${R.k}, pch = 19)
+`;
+}
+function download(name, text, type){
+  const body = (type === 'text/csv') ? '\uFEFF' + text : text;
+  const mime = type || 'text/plain';
+  if(IN_GAS){
+    // Apps Scriptの画面はサンドボックス化されたiframeの中にあり、
+    // 直接のダウンロードが禁止されている場合がある。サーバーを介さずに受け取れる方法を並べて示す。
+    openExport(name, body, mime);
+    return;
+  }
+  saveBlob(name, body, mime);
+  notice(`${name} を保存しました`);
+}
+
+function saveBlob(name, body, mime){
+  const blob = new Blob([body], {type: mime + ';charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+
+/* 書き出しパネル（Apps Script で表示したとき用） */
+function openExport(name, body, mime){
+  const m = document.querySelector('#modal');
+  document.querySelector('#modalName').textContent = name;
+  document.querySelector('#modalText').value = body.replace(/^\uFEFF/, '');
+  m.className = 'on';
+  const copyBtn = document.querySelector('#modalCopy');
+  copyBtn.textContent = '内容をコピー';
+
+  copyBtn.onclick = () => {
+    copyText(body.replace(/^\uFEFF/, '')).then(()=>{
+      copyBtn.textContent = 'コピーしました';
+      setTimeout(()=>{ copyBtn.textContent = '内容をコピー'; }, 1800);
+    }).catch(()=>{
+      document.querySelector('#modalText').select();
+      notice('自動コピーができませんでした。選択されている文章をCtrl+C（⌘+C）でコピーしてください。', null, true);
+    });
+  };
+  document.querySelector('#modalTab').onclick = () => {
+    const url = URL.createObjectURL(new Blob([body], {type: mime + ';charset=utf-8'}));
+    const w = window.open(url, '_blank');
+    if(!w) notice('新しいタブを開けませんでした。ブラウザーのポップアップ設定をご確認ください。', null, true);
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  };
+  document.querySelector('#modalDl').onclick = () => {
+    saveBlob(name, body, mime);
+    notice('ダウンロードを試みました。始まらない場合は「コピー」か「新しいタブで開く」をお使いください。');
+  };
+  document.querySelector('#modalClose').onclick = closeExport;
+  m.onclick = e => { if(e.target === m) closeExport(); };
+  document.querySelector('#modalCopy').focus();
+}
+function closeExport(){ document.querySelector('#modal').className = ''; }
+
+function renderOut(){
+  const R = S.result;
+  const rcode = buildRCode();
+  $('#p-out').innerHTML = `
+    <h3 class="sec-title">書き出し</h3>
+    <p class="sec-note">分析結果を手元に残せます。すべてブラウザーの中で作られます。</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px">
+      <button class="btn" id="dlCsv">所属クラスターをCSVで保存</button>
+      <button class="btn ghost" id="dlR">Rコードを保存</button>
+      <button class="btn ghost" id="dlSvg">図をSVGで保存</button>
+      <span class="hint" style="align-self:center">${IN_GAS ? '受け取り方を選ぶ画面が開きます（コピー／新しいタブ／ダウンロード）' : 'このパソコンに保存されます'}</span>
+    </div>
+    <hr class="divider">
+    <div class="codehead">
+      <div><h3 class="sec-title">Rコード（データ埋め込み済み）</h3>
+      <p class="sec-note" style="margin:0">JASPのRコンソールやRStudioにそのまま貼り付けて実行できます。</p></div>
+      <button class="btn ghost small" id="copyR">コピー</button>
+    </div>
+    <pre>${esc(rcode)}</pre>`;
+  $('#dlCsv').addEventListener('click', ()=> download('clusters.csv', buildAssignCSV(), 'text/csv'));
+  $('#dlR').addEventListener('click', ()=> download('cluster_analysis.R', rcode, 'text/plain'));
+  $('#dlSvg').addEventListener('click', ()=>{
+    const svg = $('#p-tree svg') || $('#p-map svg');
+    if(!svg){ notice('保存できる図がありません。先に分析を実行してください。', null, true); return; }
+    download('cluster_plot.svg', '<?xml version="1.0" encoding="UTF-8"?>\n'+svg.outerHTML, 'image/svg+xml');
+  });
+  $('#copyR').addEventListener('click', e => {
+    copyText(rcode).then(()=>{ e.target.textContent='コピーしました'; setTimeout(()=>{ e.target.textContent='コピー'; }, 1600); })
+                   .catch(()=> notice('コピーできませんでした。コードを選択して手動でコピーしてください。', null, true));
+  });
+}
+
+function renderAll(){
+  renderTree(); renderMap(); renderProfile(); renderCases(); renderEval(); renderRead(); renderOut();
+}
+
+/* =========================================================
+   タブ
+   ========================================================= */
+function selectTab(id){
+  $$('#tabs .tab').forEach(t => t.setAttribute('aria-selected', t.dataset.panel === id));
+  $$('.tabpanel').forEach(p => p.hidden = (p.id !== id));
+}
+$$('#tabs .tab').forEach(t => t.addEventListener('click', () => selectTab(t.dataset.panel)));
+
+/* =========================================================
+   入力まわり
+   ========================================================= */
+const drop = $('#drop'), fileIn = $('#file');
+drop.addEventListener('click', ()=>fileIn.click());
+drop.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileIn.click(); } });
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) readFile(f); });
+fileIn.addEventListener('change', e => { const f = e.target.files[0]; if(f) readFile(f); });
+
+function readFile(f){
+  const r = new FileReader();
+  r.onload = () => { try{ ingest(decodeBuffer(r.result), f.name); }catch(err){ showEmpty(err.message, true); } };
+  r.readAsArrayBuffer(f);
+}
+
+$('#pasteToggle').addEventListener('click', ()=>{ const w=$('#pasteWrap'); w.hidden = !w.hidden; if(!w.hidden) $('#pasteArea').focus(); });
+$('#pasteLoad').addEventListener('click', ()=>{
+  try{ ingest($('#pasteArea').value, '貼り付けたデータ'); }catch(e){ showEmpty(e.message, true); }
+});
+$('#varAll').addEventListener('click', ()=>{ S.header.forEach((_,j)=>{ if(S.numeric[j]) S.vars[j]=true; }); renderVarUI(); });
+$('#varNone').addEventListener('click', ()=>{ S.vars = S.header.map(()=>false); renderVarUI(); });
+$('#labelCol').addEventListener('change', e => { S.labelCol = parseInt(e.target.value); });
+$('#algo').addEventListener('change', e => {
+  const km = e.target.value === 'kmeans';
+  $('#hierOpts').hidden = km; $('#kmOpts').hidden = !km;
+});
+$('#run').addEventListener('click', run);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeExport(); });
+
+/* =========================================================
+   サンプルデータ
+   ========================================================= */
+const SAMPLES = {
+  flower: (()=>{
+    const rows = [['個体','がく片長','がく片幅','花弁長','花弁幅']];
+    const groups = [[5.0,3.4,1.5,0.25],[5.9,2.8,4.3,1.35],[6.6,3.0,5.6,2.05]];
+    const nm = ['A','B','C'];
+    let id = 1;
+    groups.forEach((g,gi)=>{
+      for(let i=0;i<16;i++){
+        const j = () => (Math.random()+Math.random()+Math.random()-1.5)*0.55;
+        rows.push([nm[gi]+String(id++).padStart(2,'0'),
+          (g[0]+j()).toFixed(1), (g[1]+j()*0.6).toFixed(1), (g[2]+j()*0.9).toFixed(1), (g[3]+Math.max(-0.2,j()*0.35)).toFixed(1)]);
+      }
+    });
+    return rows.map(r=>r.join(',')).join('\n');
+  })(),
+  survey: (()=>{
+    const rows = [['学習者','学習時間','語彙力','読解力','不安','動機づけ']];
+    const arche = [[5.5,78,74,2.1,4.4],[2.0,52,55,3.6,2.9],[3.4,63,66,2.9,3.8],[0.9,38,44,4.2,2.2]];
+    let id=1;
+    arche.forEach(a=>{
+      for(let i=0;i<11;i++){
+        const j=(s)=> (Math.random()-0.5)*s;
+        rows.push(['S'+String(id++).padStart(2,'0'),
+          Math.max(0,(a[0]+j(1.4))).toFixed(1), Math.round(a[1]+j(11)), Math.round(a[2]+j(11)),
+          Math.min(5,Math.max(1,a[3]+j(0.8))).toFixed(1), Math.min(5,Math.max(1,a[4]+j(0.8))).toFixed(1)]);
+      }
+    });
+    return rows.map(r=>r.join(',')).join('\n');
+  })(),
+  city: (()=>{
+    const names=['あさひ市','いずみ市','うみべ町','えのき市','おかだ市','かすみ市','きたやま町','くすの市','けやき市','こまち市',
+      'さくら市','しおり町','すずかけ市','せせらぎ市','そらの市','たかね市','ちどり町','つばき市','てらだ市','とみおか市',
+      'なぎさ市','にしの市','ぬまた町','ねぎし市','のづみ市','はやま市','ひばり町','ふじみ市','へいわ市','ほたる市'];
+    const rows=[['自治体','人口密度','高齢化率','平均所得','商業施設数','緑地率']];
+    const arche=[[4200,21,412,86,12],[880,33,338,31,28],[210,42,286,9,46]];
+    names.forEach((nm,i)=>{
+      const a=arche[i%3], j=(s)=>(Math.random()-0.5)*s;
+      rows.push([nm, Math.round(a[0]+j(a[0]*0.4)), (a[1]+j(6)).toFixed(1), Math.round(a[2]+j(60)), Math.max(1,Math.round(a[3]+j(a[3]*0.5))), (a[4]+j(9)).toFixed(1)]);
+    });
+    return rows.map(r=>r.join(',')).join('\n');
+  })()
+};
+$$('.chip[data-sample]').forEach(b => b.addEventListener('click', ()=>{
+  const key = b.dataset.sample;
+  ingest(SAMPLES[key], b.textContent.replace('サンプル：','サンプル ')); 
+  $('#kInput').value = key === 'survey' ? 4 : 3;
+  run();
+}));
+</script>
+</body>
+</html>

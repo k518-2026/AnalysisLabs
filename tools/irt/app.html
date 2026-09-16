@@ -1,0 +1,2536 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>項目反応理論ラボ — データ分析ラボ</title>
+<style>
+:root{
+  --ink:#15302A;          /* 墨緑 */
+  --ink-2:#3D5A50;
+  --ink-3:#6B8177;
+  --paper:#E4E7DF;        /* 生成りの灰緑 */
+  --surface:#F7F9F4;
+  --surface-2:#EDF0E8;
+  --line:rgba(21,48,42,.16);
+  --line-2:rgba(21,48,42,.30);
+  --person:#B8860B;       /* 山吹＝人 */
+  --person-soft:rgba(184,134,11,.16);
+  --item:#3F6484;         /* 藍鼠＝項目 */
+  --item-soft:rgba(63,100,132,.14);
+  --alert:#8E3A46;        /* 臙脂＝注意 */
+  --alert-soft:rgba(142,58,70,.12);
+  --ok:#2F6B4F;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP","Times New Roman",serif;
+  --gothic:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP",Meiryo,sans-serif;
+  --mono:"SFMono-Regular",Menlo,Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--gothic);
+  font-size:14px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--person);outline-offset:2px}
+
+/* ---------- 見出し ---------- */
+.masthead{max-width:1180px;margin:0 auto;padding:34px 22px 12px}
+.masthead h1{
+  font-family:var(--mincho);font-weight:600;font-size:30px;letter-spacing:.32em;
+  margin:0;line-height:1.3;
+}
+.masthead .sub{
+  font-size:12.5px;color:var(--ink-2);letter-spacing:.09em;margin-top:8px;max-width:44em;
+}
+.masthead .sub b{font-weight:600;color:var(--ink)}
+
+/* ---------- ものさし（署名要素） ---------- */
+.ruler-wrap{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,var(--paper) 78%,rgba(228,231,223,0));padding-top:6px}
+.ruler{max-width:1180px;margin:0 auto;padding:0 22px}
+.ruler-inner{
+  background:var(--surface);border:1px solid var(--line);border-radius:2px;
+  padding:6px 10px 2px;position:relative;
+}
+.ruler-legend{
+  display:flex;gap:14px;align-items:baseline;font-size:10.5px;letter-spacing:.12em;
+  color:var(--ink-3);padding:0 2px 2px;
+}
+.ruler-legend .k{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.ruler-legend .sw{width:9px;height:9px;border-radius:1px;display:inline-block}
+.ruler-legend .sw.p{background:var(--person)}
+.ruler-legend .sw.i{background:var(--item)}
+.ruler-legend .st{margin-left:auto;font-family:var(--mono);color:var(--ink-2)}
+#rulerSvg{display:block;width:100%;height:76px}
+
+/* ---------- 手順タブ ---------- */
+.steps{max-width:1180px;margin:14px auto 0;padding:0 22px;position:sticky;top:96px;z-index:39}
+.steps-inner{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line-2);background:var(--paper)}
+.step-tab{
+  appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+  padding:9px 14px 8px;cursor:pointer;color:var(--ink-3);letter-spacing:.08em;font-size:12.5px;
+  display:flex;align-items:baseline;gap:7px;transition:color .18s,border-color .18s;
+}
+.step-tab .n{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);opacity:.75}
+.step-tab:hover{color:var(--ink)}
+.step-tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--person);font-weight:600}
+.step-tab[aria-selected="true"] .n{color:var(--person);opacity:1}
+.step-tab[disabled]{opacity:.38;cursor:not-allowed}
+
+/* ---------- 版面 ---------- */
+main{max-width:1180px;margin:0 auto;padding:20px 22px 90px}
+.panel{display:none}
+.panel.on{display:block;animation:rise .28s ease}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.panel.on{animation:none}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:18px 20px;margin-bottom:16px}
+.card>h2{
+  font-family:var(--mincho);font-size:16px;font-weight:600;letter-spacing:.18em;margin:0 0 3px;
+}
+.card>.lead{font-size:12.5px;color:var(--ink-2);margin:0 0 14px}
+.card h3{font-size:13px;letter-spacing:.1em;margin:20px 0 8px;font-weight:600;
+  padding-bottom:4px;border-bottom:1px solid var(--line)}
+.card h3:first-of-type{margin-top:6px}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+
+/* ---------- 部品 ---------- */
+.btn{
+  appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--surface);
+  padding:8px 18px;border-radius:2px;cursor:pointer;letter-spacing:.12em;font-size:12.5px;
+  transition:background .18s,color .18s;
+}
+.btn:hover{background:#0C201B}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2)}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.gold{background:var(--person);border-color:var(--person);color:#fff}
+.btn.gold:hover{background:#9C7209}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.sm{padding:5px 12px;font-size:11.5px}
+.btnrow{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:12px}
+
+label.fld{display:block;margin-bottom:12px}
+label.fld>span{display:block;font-size:11.5px;letter-spacing:.1em;color:var(--ink-2);margin-bottom:4px}
+select,input[type=text],input[type=number],textarea{
+  width:100%;background:var(--surface);border:1px solid var(--line-2);border-radius:2px;
+  padding:7px 9px;
+}
+textarea{font-family:var(--mono);font-size:12px;line-height:1.6;resize:vertical}
+.hint{font-size:11.5px;color:var(--ink-3);margin-top:5px;line-height:1.6}
+
+.radios{display:flex;flex-direction:column;gap:8px}
+.radio{
+  display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:2px;
+  padding:10px 12px;cursor:pointer;background:var(--surface);transition:border-color .18s,background .18s;
+}
+.radio:hover{border-color:var(--line-2)}
+.radio.on{border-color:var(--person);background:rgba(184,134,11,.06)}
+.radio input{margin-top:5px;accent-color:var(--person)}
+.radio .t{font-weight:600;letter-spacing:.05em}
+.radio .d{font-size:11.5px;color:var(--ink-2);line-height:1.6}
+
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:6px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{
+  font-weight:600;font-size:11px;letter-spacing:.1em;color:var(--ink-2);
+  border-bottom:1px solid var(--line-2);text-align:right;position:sticky;top:0;background:var(--surface);
+}
+th:first-child,td:first-child{text-align:left}
+td.num,th.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+tbody tr:hover{background:var(--surface-2)}
+.scroll{overflow:auto;max-height:620px;border:1px solid var(--line);border-radius:2px;background:var(--surface)}
+.tag{display:inline-block;padding:1px 7px;border-radius:2px;font-size:10.5px;letter-spacing:.08em;font-family:var(--gothic)}
+.tag.ok{background:rgba(47,107,79,.13);color:var(--ok)}
+.tag.warn{background:var(--alert-soft);color:var(--alert)}
+.tag.mid{background:rgba(184,134,11,.16);color:#8A6608}
+.tag.flat{background:var(--surface-2);color:var(--ink-2)}
+
+.note{border-left:2px solid var(--item);background:var(--item-soft);padding:10px 14px;font-size:12.5px;margin:12px 0;border-radius:0 2px 2px 0}
+.note.warn{border-left-color:var(--alert);background:var(--alert-soft)}
+.note.gold{border-left-color:var(--person);background:var(--person-soft)}
+.note b{font-weight:600}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:1px;background:var(--surface);margin:6px 0 8px}
+.stat{background:var(--surface);padding:11px 13px;box-shadow:0 0 0 1px var(--line)}
+.stat .l{font-size:10.5px;letter-spacing:.1em;color:var(--ink-3)}
+.stat .v{font-family:var(--mono);font-size:19px;line-height:1.35;font-variant-numeric:tabular-nums}
+.stat .s{font-size:10.5px;color:var(--ink-2)}
+
+.figure{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:10px 12px 6px;margin-bottom:14px}
+.figure .cap{font-size:11.5px;color:var(--ink-2);letter-spacing:.06em;margin-bottom:6px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.figure .cap b{font-weight:600;color:var(--ink);letter-spacing:.1em}
+.figure svg{display:block;width:100%;height:auto}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{border:1px solid var(--line-2);background:var(--surface);border-radius:2px;padding:3px 10px;
+  font-size:11.5px;cursor:pointer;letter-spacing:.05em}
+.chip.on{background:var(--item);border-color:var(--item);color:#fff}
+
+pre.code{
+  background:#12241F;color:#D8E2DB;border-radius:2px;padding:14px 16px;overflow:auto;
+  font-family:var(--mono);font-size:11.5px;line-height:1.65;max-height:440px;white-space:pre;
+}
+.report{font-size:13.5px;line-height:2}
+.report h4{font-family:var(--mincho);font-size:14px;letter-spacing:.14em;margin:22px 0 6px;font-weight:600}
+.report p{margin:0 0 10px}
+.report .quote{background:var(--surface-2);border:1px solid var(--line);padding:14px 16px;border-radius:2px;
+  font-size:13px;line-height:2;white-space:pre-wrap}
+
+.emptystate{text-align:center;padding:52px 20px;color:var(--ink-3)}
+.emptystate .big{font-family:var(--mincho);font-size:17px;letter-spacing:.16em;color:var(--ink-2);margin-bottom:8px}
+
+.sheet{position:fixed;inset:0;background:rgba(21,48,42,.34);display:none;place-items:center;z-index:90;padding:20px}
+.sheet.on{display:grid}
+.sheet-box{background:var(--surface);border:1px solid var(--line-2);border-radius:2px;padding:16px 18px;width:min(720px,100%);max-height:80vh;overflow:auto}
+.sheet-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px}
+.sheet-head b{font-family:var(--mincho);letter-spacing:.12em}
+.progress{position:fixed;inset:0;background:rgba(228,231,223,.9);display:none;place-items:center;z-index:80}
+.progress.on{display:grid}
+.progress .box{background:var(--surface);border:1px solid var(--line-2);padding:26px 34px;border-radius:2px;text-align:center;min-width:260px}
+.progress .box .t{font-family:var(--mincho);letter-spacing:.2em;margin-bottom:12px}
+.bar{height:3px;background:var(--surface-2);overflow:hidden;border-radius:2px}
+.bar i{display:block;height:100%;width:34%;background:var(--person);animation:slide 1.1s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(320%)}}
+
+.legendrow{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--ink-2);margin-top:4px}
+.legendrow i{width:16px;height:2px;display:inline-block;vertical-align:middle;margin-right:5px}
+footer{max-width:1180px;margin:0 auto;padding:0 22px 44px;font-size:11.5px;color:var(--ink-3);letter-spacing:.06em}
+@media (max-width:640px){
+  .masthead h1{font-size:21px;letter-spacing:.2em}
+  .masthead{padding-top:22px}
+  .ruler-wrap{position:static}
+  .steps{top:0;padding-top:4px;background:var(--paper)}
+  .step-tab{padding:7px 9px;font-size:12px}
+  .ruler-legend{font-size:10px}
+  main{padding:16px 14px 70px}
+  .card{padding:14px}
+  .masthead,.ruler,.steps{padding-left:14px;padding-right:14px}
+}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-structure);--paper:var(--al-bg);--surface:var(--al-surface);--surface-2:var(--al-surface-2);--ink:var(--al-ink);--ink-2:var(--al-ink-2);--ink-3:var(--al-ink-3);--line:var(--al-line);--line-2:var(--al-line-strong);--mincho:var(--al-serif);--gothic:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#structure">構造と測定</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>項目反応理論ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<div class="masthead">
+  <h1>項目反応理論ラボ</h1>
+  <p class="sub">回答データから<b>項目の性質</b>と<b>受験者の特性値</b>を同じ物差しの上で推定します。1PL・2PL・3PL・段階反応モデルに対応。データはこの画面の中だけで処理され、どこにも送信されません。</p>
+</div>
+
+<div class="ruler-wrap">
+  <div class="ruler">
+    <div class="ruler-inner">
+      <div class="ruler-legend">
+        <span class="k"><i class="sw p"></i>人の分布</span>
+        <span class="k"><i class="sw i"></i>項目の位置</span>
+        <span class="st" id="rulerState">データ待ち</span>
+      </div>
+      <svg id="rulerSvg" viewBox="0 0 1000 76" preserveAspectRatio="none" aria-label="θ尺度"></svg>
+    </div>
+  </div>
+</div>
+
+<div class="steps">
+  <div class="steps-inner" role="tablist" id="stepbar"></div>
+</div>
+
+<main>
+  <!-- 1 データ -->
+  <section class="panel on" id="p0" role="tabpanel">
+    <div class="card">
+      <h2>回答データを読み込む</h2>
+      <p class="lead">1行が1人、1列が1項目の表を用意します。1行目は項目名。CSV・タブ区切りのどちらでも読み取ります。</p>
+      <div class="grid2">
+        <div>
+          <label class="fld"><span>ファイルから読み込む</span>
+            <input type="file" id="fileIn" accept=".csv,.txt,.tsv">
+          </label>
+          <div class="btnrow">
+            <button class="btn ghost sm" id="sampleBin">2値データの例を入れる</button>
+            <button class="btn ghost sm" id="samplePoly">5件法データの例を入れる</button>
+          </div>
+          <p class="hint">2値は 0／1（正答1）、多値は 1〜5 のような順序尺度。空欄・NA は欠測として扱います。</p>
+        </div>
+        <div>
+          <label class="fld"><span>貼り付ける</span>
+            <textarea id="rawText" rows="9" placeholder="ID,Q1,Q2,Q3&#10;s001,1,0,1&#10;s002,1,1,1"></textarea>
+          </label>
+          <div class="btnrow"><button class="btn" id="readBtn">この表を読み取る</button></div>
+        </div>
+      </div>
+      <div id="dataMsg"></div>
+    </div>
+    <div class="card" id="mapCard" style="display:none">
+      <h2>列の役割を決める</h2>
+      <p class="lead">分析に使う項目、受験者ID、群（DIF の比較に使用）を指定します。逆転項目にはチェックを入れてください。</p>
+      <div class="btnrow" style="margin-top:0">
+        <button class="btn ghost sm" id="allItems">すべて項目にする</button>
+        <button class="btn ghost sm" id="clearRev">逆転をすべて外す</button>
+      </div>
+      <div class="scroll" style="margin-top:10px"><table id="mapTable"></table></div>
+      <div id="mapMsg"></div>
+      <div class="btnrow"><button class="btn gold" id="toModel">モデルの設定へ進む</button></div>
+    </div>
+  </section>
+
+  <!-- 2 モデル -->
+  <section class="panel" id="p1" role="tabpanel">
+    <div class="card">
+      <h2>モデルを選ぶ</h2>
+      <p class="lead">どの項目の性質を自由に推定するかを決めます。データの型に合う候補を太字で示します。</p>
+      <div class="grid2">
+        <div>
+          <div class="radios" id="modelRadios"></div>
+        </div>
+        <div>
+          <label class="fld"><span>特性値の推定法</span>
+            <select id="thetaMethod">
+              <option value="EAP">EAP（事後期待値・全員に値が出る）</option>
+              <option value="MLE">最尤推定（満点・0点は推定不能）</option>
+            </select>
+          </label>
+          <label class="fld"><span>求積点の数</span>
+            <select id="nq">
+              <option value="31">31点（速い）</option>
+              <option value="41" selected>41点（標準）</option>
+              <option value="61">61点（精密・遅い）</option>
+            </select>
+          </label>
+          <label class="fld"><span>DIF を調べる群（任意）</span>
+            <select id="difGroup"><option value="">使わない</option></select>
+          </label>
+          <p class="hint" id="modelHint"></p>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn gold" id="runBtn">推定を実行する</button>
+        <span class="hint" id="runHint" style="margin-top:0"></span></div>
+    </div>
+  </section>
+
+  <!-- 3 項目 -->
+  <section class="panel" id="p2" role="tabpanel"><div id="itemsBody"></div></section>
+  <!-- 4 情報量 -->
+  <section class="panel" id="p3" role="tabpanel"><div id="infoBody"></div></section>
+  <!-- 5 特性値 -->
+  <section class="panel" id="p4" role="tabpanel"><div id="thetaBody"></div></section>
+  <!-- 6 診断 -->
+  <section class="panel" id="p5" role="tabpanel"><div id="diagBody"></div></section>
+  <!-- 7 レポート -->
+  <section class="panel" id="p6" role="tabpanel"><div id="reportBody"></div></section>
+</main>
+
+<footer>項目反応理論ラボ ／ 推定は周辺最尤法（EM アルゴリズム＋ガウス求積）、標準誤差は周辺尤度のヘッセ行列から算出。すべての計算はご使用の端末の中で完結します。</footer>
+
+<div class="progress" id="progress"><div class="box"><div class="t">推定中</div><div class="bar"><i></i></div><div class="hint" id="progressMsg" style="margin-top:10px"></div></div></div>
+
+<script>
+/* ============================================================
+   項目反応理論ラボ — 推定エンジン
+   外部ライブラリなし。DOM に依存しない純粋な数値計算のみ。
+   ============================================================ */
+var IRT = (function () {
+  "use strict";
+
+  /* ---------- 基本ユーティリティ ---------- */
+  function sigm(x) { return x >= 0 ? 1 / (1 + Math.exp(-x)) : Math.exp(x) / (1 + Math.exp(x)); }
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function sum(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
+  function mean(a) { return a.length ? sum(a) / a.length : NaN; }
+  function variance(a) { var m = mean(a), s = 0; for (var i = 0; i < a.length; i++) s += (a[i] - m) * (a[i] - m); return a.length > 1 ? s / (a.length - 1) : NaN; }
+  function sd(a) { return Math.sqrt(variance(a)); }
+  function corr(x, y) {
+    var n = 0, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+    for (var i = 0; i < x.length; i++) {
+      if (x[i] == null || y[i] == null || !isFinite(x[i]) || !isFinite(y[i])) continue;
+      n++; sx += x[i]; sy += y[i]; sxx += x[i] * x[i]; syy += y[i] * y[i]; sxy += x[i] * y[i];
+    }
+    if (n < 3) return NaN;
+    var cov = sxy / n - (sx / n) * (sy / n);
+    var vx = sxx / n - (sx / n) * (sx / n), vy = syy / n - (sy / n) * (sy / n);
+    if (vx <= 1e-12 || vy <= 1e-12) return NaN;
+    return cov / Math.sqrt(vx * vy);
+  }
+
+  /* ---------- 正規分布・カイ二乗分布 ---------- */
+  function normCdf(z) {
+    var t = 1 / (1 + 0.2316419 * Math.abs(z));
+    var d = 0.3989422804014327 * Math.exp(-z * z / 2);
+    var p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    return z > 0 ? 1 - p : p;
+  }
+  function logGamma(x) {
+    var c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    var y = x, tmp = x + 5.5; tmp -= (x + 0.5) * Math.log(tmp);
+    var ser = 1.000000000190015;
+    for (var j = 0; j < 6; j++) ser += c[j] / ++y;
+    return -tmp + Math.log(2.5066282746310005 * ser / x);
+  }
+  function gammaP(a, x) { // 下側不完全ガンマ（正規化）
+    if (x <= 0) return 0;
+    if (x < a + 1) {
+      var ap = a, del = 1 / a, s = del;
+      for (var n = 1; n < 500; n++) { ap++; del *= x / ap; s += del; if (Math.abs(del) < Math.abs(s) * 1e-12) break; }
+      return s * Math.exp(-x + a * Math.log(x) - logGamma(a));
+    } else {
+      var b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+      for (var i = 1; i < 500; i++) {
+        var an = -i * (i - a); b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300;
+        c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+        d = 1 / d; var dl = d * c; h *= dl; if (Math.abs(dl - 1) < 1e-12) break;
+      }
+      return 1 - Math.exp(-x + a * Math.log(x) - logGamma(a)) * h;
+    }
+  }
+  function chi2P(x, df) { if (df <= 0) return NaN; return 1 - gammaP(df / 2, x / 2); } // 上側確率
+
+  /* ---------- 行列 ---------- */
+  function matInv(A) {
+    var n = A.length, M = [], i, j, k;
+    for (i = 0; i < n; i++) { M.push(A[i].slice()); for (j = 0; j < n; j++) M[i].push(i === j ? 1 : 0); }
+    for (i = 0; i < n; i++) {
+      var p = i;
+      for (k = i + 1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[p][i])) p = k;
+      if (Math.abs(M[p][i]) < 1e-12) return null;
+      var t = M[i]; M[i] = M[p]; M[p] = t;
+      var pv = M[i][i];
+      for (j = 0; j < 2 * n; j++) M[i][j] /= pv;
+      for (k = 0; k < n; k++) {
+        if (k === i) continue;
+        var f = M[k][i]; if (f === 0) continue;
+        for (j = 0; j < 2 * n; j++) M[k][j] -= f * M[i][j];
+      }
+    }
+    var R = [];
+    for (i = 0; i < n; i++) R.push(M[i].slice(n));
+    return R;
+  }
+  function jacobiEigen(Ain) { // 対称行列の固有値・固有ベクトル（巡回ヤコビ法）
+    var n = Ain.length, A = Ain.map(function (r) { return r.slice(); }), V = [], i, j, p, q, k;
+    for (i = 0; i < n; i++) { V.push(new Array(n).fill(0)); V[i][i] = 1; }
+    for (var sweep = 0; sweep < 100; sweep++) {
+      var off = 0;
+      for (i = 0; i < n; i++) for (j = i + 1; j < n; j++) off += A[i][j] * A[i][j];
+      if (off < 1e-18) break;
+      for (p = 0; p < n - 1; p++) for (q = p + 1; q < n; q++) {
+        if (Math.abs(A[p][q]) < 1e-16) continue;
+        var theta = (A[q][q] - A[p][p]) / (2 * A[p][q]);
+        var t = (theta >= 0 ? 1 : -1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+        var c = 1 / Math.sqrt(t * t + 1), s = t * c, apq = A[p][q];
+        A[p][p] -= t * apq; A[q][q] += t * apq; A[p][q] = A[q][p] = 0;
+        for (k = 0; k < n; k++) {
+          if (k === p || k === q) continue;
+          var akp = A[k][p], akq = A[k][q];
+          A[k][p] = A[p][k] = c * akp - s * akq;
+          A[k][q] = A[q][k] = s * akp + c * akq;
+        }
+        for (k = 0; k < n; k++) {
+          var vkp = V[k][p], vkq = V[k][q];
+          V[k][p] = c * vkp - s * vkq; V[k][q] = s * vkp + c * vkq;
+        }
+      }
+    }
+    var vals = [];
+    for (i = 0; i < n; i++) vals.push({ value: A[i][i], vector: V.map(function (r) { return r[i]; }) });
+    vals.sort(function (a, b) { return b.value - a.value; });
+    return vals;
+  }
+  /* ---------- Nelder-Mead（最小化） ---------- */
+  function nelderMead(f, x0, opt) {
+    opt = opt || {};
+    var n = x0.length, maxIter = opt.maxIter || 200, tol = opt.tol || 1e-9, step = opt.step || 0.25;
+    var simplex = [{ x: x0.slice(), f: f(x0) }];
+    for (var i = 0; i < n; i++) {
+      var xx = x0.slice(); xx[i] += step * (Math.abs(xx[i]) > 1 ? Math.abs(xx[i]) : 1);
+      simplex.push({ x: xx, f: f(xx) });
+    }
+    var cmp = function (a, b) { return a.f - b.f; };
+    for (var it = 0; it < maxIter; it++) {
+      simplex.sort(cmp);
+      if (Math.abs(simplex[n].f - simplex[0].f) < tol * (Math.abs(simplex[0].f) + tol)) break;
+      var cen = new Array(n).fill(0), k;
+      for (i = 0; i < n; i++) for (k = 0; k < n; k++) cen[k] += simplex[i].x[k] / n;
+      var xr = [], worst = simplex[n];
+      for (k = 0; k < n; k++) xr.push(cen[k] + (cen[k] - worst.x[k]));
+      var fr = f(xr);
+      if (fr < simplex[0].f) {
+        var xe = [];
+        for (k = 0; k < n; k++) xe.push(cen[k] + 2 * (cen[k] - worst.x[k]));
+        var fe = f(xe);
+        simplex[n] = fe < fr ? { x: xe, f: fe } : { x: xr, f: fr };
+      } else if (fr < simplex[n - 1].f) {
+        simplex[n] = { x: xr, f: fr };
+      } else {
+        var xc = [];
+        for (k = 0; k < n; k++) xc.push(cen[k] + 0.5 * (worst.x[k] - cen[k]));
+        var fc = f(xc);
+        if (fc < worst.f) simplex[n] = { x: xc, f: fc };
+        else {
+          for (i = 1; i <= n; i++) {
+            var xs = [];
+            for (k = 0; k < n; k++) xs.push(simplex[0].x[k] + 0.5 * (simplex[i].x[k] - simplex[0].x[k]));
+            simplex[i] = { x: xs, f: f(xs) };
+          }
+        }
+      }
+    }
+    simplex.sort(cmp);
+    return simplex[0];
+  }
+
+  /* ---------- 求積点 ---------- */
+  function makeQuad(nq, lo, hi) {
+    nq = nq || 41; lo = (lo == null ? -4.5 : lo); hi = (hi == null ? 4.5 : hi);
+    var x = [], w = [], s = 0, i;
+    for (i = 0; i < nq; i++) {
+      var t = lo + (hi - lo) * i / (nq - 1);
+      x.push(t); var d = Math.exp(-t * t / 2); w.push(d); s += d;
+    }
+    for (i = 0; i < nq; i++) w[i] /= s;
+    return { n: nq, x: x, w: w };
+  }
+
+  /* ---------- モデル：カテゴリ確率 ---------- */
+  function catProbs(th, it) {
+    var K = it.K, p = new Array(K), k;
+    if (it.model === "GRM") {
+      var prev = 1;
+      for (k = 0; k < K - 1; k++) { var s = sigm(it.a * (th - it.b[k])); p[k] = prev - s; prev = s; }
+      p[K - 1] = prev;
+    } else {
+      var c = it.c || 0;
+      var S = sigm(it.a * (th - it.b));
+      var P = c + (1 - c) * S;
+      p[0] = 1 - P; p[1] = P;
+    }
+    for (k = 0; k < K; k++) if (!(p[k] > 1e-10)) p[k] = 1e-10;
+    return p;
+  }
+  function expectedScore(th, it) {
+    var p = catProbs(th, it), e = 0;
+    for (var k = 0; k < it.K; k++) e += k * p[k];
+    return e;
+  }
+  function scoreMoments(th, it) {
+    var p = catProbs(th, it), e = 0, v = 0, c4 = 0, k;
+    for (k = 0; k < it.K; k++) e += k * p[k];
+    for (k = 0; k < it.K; k++) { var d = k - e; v += d * d * p[k]; c4 += d * d * d * d * p[k]; }
+    return { e: e, v: v, c4: c4, p: p };
+  }
+  function itemInfo(th, it) { // 数値微分による項目情報量（全モデル共通）
+    var h = 1e-4;
+    var p0 = catProbs(th, it), pm = catProbs(th - h, it), pp = catProbs(th + h, it), I = 0;
+    for (var k = 0; k < it.K; k++) { var d = (pp[k] - pm[k]) / (2 * h); I += d * d / p0[k]; }
+    return I;
+  }
+  function testInfo(th, items) { var I = 0; for (var j = 0; j < items.length; j++) I += itemInfo(th, items[j]); return I; }
+
+  /* ---------- E ステップ ---------- */
+  function estep(X, items, quad, keepPost) {
+    var N = X.length, J = items.length, Q = quad.n, i, j, q, k;
+    var logP = [];
+    for (j = 0; j < J; j++) {
+      var t = [];
+      for (q = 0; q < Q; q++) {
+        var p = catProbs(quad.x[q], items[j]), lg = new Float64Array(items[j].K);
+        for (k = 0; k < items[j].K; k++) lg[k] = Math.log(p[k]);
+        t.push(lg);
+      }
+      logP.push(t);
+    }
+    var r = [], nn = [];
+    for (j = 0; j < J; j++) {
+      var rr = [];
+      for (q = 0; q < Q; q++) rr.push(new Float64Array(items[j].K));
+      r.push(rr); nn.push(new Float64Array(Q));
+    }
+    var ll = 0, lp = new Float64Array(Q), post = keepPost ? [] : null;
+    for (i = 0; i < N; i++) {
+      var row = X[i];
+      lp.fill(0);
+      for (j = 0; j < J; j++) { var x = row[j]; if (x == null) continue; var lj = logP[j]; for (q = 0; q < Q; q++) lp[q] += lj[q][x]; }
+      var mx = -Infinity;
+      for (q = 0; q < Q; q++) if (lp[q] > mx) mx = lp[q];
+      var s = 0;
+      for (q = 0; q < Q; q++) { lp[q] = Math.exp(lp[q] - mx) * quad.w[q]; s += lp[q]; }
+      ll += Math.log(s) + mx;
+      for (q = 0; q < Q; q++) lp[q] /= s;
+      if (post) post.push(Float64Array.from(lp));
+      for (j = 0; j < J; j++) {
+        var xv = row[j]; if (xv == null) continue;
+        var rj = r[j], nj = nn[j];
+        for (q = 0; q < Q; q++) { nj[q] += lp[q]; rj[q][xv] += lp[q]; }
+      }
+    }
+    return { r: r, n: nn, ll: ll, post: post };
+  }
+
+  /* ---------- M ステップ ---------- */
+  // 2PL：切片・傾き表現での重みつきロジスティック回帰（凹関数なので Newton 法が安定）
+  function mstep2PL(it, rj, nj, quad) {
+    var a = it.a, d = -it.a * it.b, q, Q = quad.n;
+    for (var iter = 0; iter < 30; iter++) {
+      var ga = 0, gd = 0, haa = 0, had = 0, hdd = 0;
+      for (q = 0; q < Q; q++) {
+        var n = nj[q]; if (n < 1e-12) continue;
+        var th = quad.x[q], P = sigm(a * th + d), w = rj[q][1] - n * P, v = n * P * (1 - P);
+        ga += w * th; gd += w; haa += v * th * th; had += v * th; hdd += v;
+      }
+      var det = haa * hdd - had * had;
+      if (!(Math.abs(det) > 1e-12)) break;
+      var da = (hdd * ga - had * gd) / det, dd = (haa * gd - had * ga) / det;
+      da = clamp(da, -1, 1); dd = clamp(dd, -1, 1);
+      a += da; d += dd;
+      a = clamp(a, 0.02, 8);
+      if (Math.abs(da) < 1e-8 && Math.abs(dd) < 1e-8) break;
+    }
+    it.a = a; it.b = clamp(-d / a, -12, 12);
+  }
+  // 1PL：識別力共通。ブロック座標上昇
+  function mstep1PL(items, r, n, quad) {
+    var J = items.length, a = items[0].a, j, q, iter;
+    for (iter = 0; iter < 40; iter++) {
+      var maxch = 0;
+      for (j = 0; j < J; j++) {
+        var d = -a * items[j].b;
+        for (var t = 0; t < 20; t++) {
+          var g = 0, h = 0;
+          for (q = 0; q < quad.n; q++) {
+            var nn = n[j][q]; if (nn < 1e-12) continue;
+            var P = sigm(a * quad.x[q] + d);
+            g += r[j][q][1] - nn * P; h += nn * P * (1 - P);
+          }
+          if (h < 1e-12) break;
+          var st = clamp(g / h, -1, 1); d += st;
+          if (Math.abs(st) < 1e-9) break;
+        }
+        var nb = clamp(-d / a, -12, 12);
+        maxch = Math.max(maxch, Math.abs(nb - items[j].b)); items[j].b = nb;
+      }
+      var ga = 0, ha = 0;
+      for (j = 0; j < J; j++) for (q = 0; q < quad.n; q++) {
+        var nq = n[j][q]; if (nq < 1e-12) continue;
+        var z = quad.x[q] - items[j].b, P = sigm(a * z);
+        ga += (r[j][q][1] - nq * P) * z; ha += nq * P * (1 - P) * z * z;
+      }
+      if (ha > 1e-12) { var stp = clamp(ga / ha, -0.5, 0.5); a = clamp(a + stp, 0.05, 6); maxch = Math.max(maxch, Math.abs(stp)); }
+      if (maxch < 1e-7) break;
+    }
+    for (j = 0; j < J; j++) items[j].a = a;
+  }
+  // 3PL：Nelder-Mead（弱い事前分布つき）
+  function mstep3PL(it, rj, nj, quad) {
+    var f = function (v) {
+      var a = clamp(Math.exp(v[0]), 0.05, 6), b = clamp(v[1], -8, 8), c = clamp(sigm(v[2]), 1e-4, 0.5);
+      var ll = 0;
+      for (var q = 0; q < quad.n; q++) {
+        var n = nj[q]; if (n < 1e-12) continue;
+        var P = c + (1 - c) * sigm(a * (quad.x[q] - b));
+        P = clamp(P, 1e-8, 1 - 1e-8);
+        ll += rj[q][1] * Math.log(P) + (n - rj[q][1]) * Math.log(1 - P);
+      }
+      ll += 4 * Math.log(c) + 16 * Math.log(1 - c);      // c ~ Beta(5,17)
+      ll += -v[0] * v[0] / 2;                             // log a ~ N(0,1)
+      return -ll;
+    };
+    var st = [Math.log(clamp(it.a, 0.05, 6)), it.b, Math.log(clamp(it.c || 0.15, 1e-3, 0.5) / (1 - clamp(it.c || 0.15, 1e-3, 0.5)))];
+    var res = nelderMead(f, st, { maxIter: 120, step: 0.2 });
+    it.a = clamp(Math.exp(res.x[0]), 0.05, 6);
+    it.b = clamp(res.x[1], -8, 8);
+    it.c = clamp(sigm(res.x[2]), 1e-4, 0.5);
+  }
+  // 段階反応モデル：a と境界母数（順序制約は増分の対数で表現）
+  function mstepGRM(it, rj, nj, quad) {
+    var K = it.K, m = K - 1;
+    var f = function (v) {
+      var a = clamp(Math.exp(v[0]), 0.05, 6), bs = [clamp(v[1], -8, 8)], i;
+      for (i = 2; i <= m; i++) bs.push(bs[i - 2] + Math.exp(clamp(v[i], -6, 3)));
+      var tmp = { model: "GRM", K: K, a: a, b: bs };
+      var ll = 0;
+      for (var q = 0; q < quad.n; q++) {
+        if (nj[q] < 1e-12) continue;
+        var p = catProbs(quad.x[q], tmp);
+        for (var k = 0; k < K; k++) if (rj[q][k] > 0) ll += rj[q][k] * Math.log(p[k]);
+      }
+      return -ll;
+    };
+    var st = [Math.log(clamp(it.a, 0.05, 6)), it.b[0]];
+    for (var i = 1; i < m; i++) st.push(Math.log(Math.max(it.b[i] - it.b[i - 1], 0.05)));
+    var res = nelderMead(f, st, { maxIter: 60 + 60 * m, step: 0.2, tol: 1e-10 });
+    it.a = clamp(Math.exp(res.x[0]), 0.05, 6);
+    var bs = [clamp(res.x[1], -8, 8)];
+    for (i = 2; i <= m; i++) bs.push(bs[i - 2] + Math.exp(clamp(res.x[i], -6, 3)));
+    it.b = bs;
+  }
+
+  /* ---------- 勾配（周辺尤度・Fisher の等式） ---------- */
+  function gradVector(X, items, quad, model) {
+    var es = estep(X, items, quad, false), r = es.r, n = es.n, J = items.length, g = [], j, q, k;
+    if (model === "1PL") {
+      var ga = 0, gb = new Array(J).fill(0);
+      for (j = 0; j < J; j++) for (q = 0; q < quad.n; q++) {
+        if (n[j][q] < 1e-12) continue;
+        var it = items[j], z = quad.x[q] - it.b, S = sigm(it.a * z), w = r[j][q][1] - n[j][q] * S;
+        ga += w * z; gb[j] += -it.a * w;
+      }
+      g.push(ga); for (j = 0; j < J; j++) g.push(gb[j]);
+    } else if (model === "GRM") {
+      for (j = 0; j < J; j++) {
+        var itg = items[j], K = itg.K, gA = 0, gB = new Array(K - 1).fill(0);
+        for (q = 0; q < quad.n; q++) {
+          if (n[j][q] < 1e-12) continue;
+          var th = quad.x[q], S = [1], dSa = [0], dSb = [0], i;
+          for (i = 0; i < K - 1; i++) {
+            var sv = sigm(itg.a * (th - itg.b[i]));
+            S.push(sv); dSa.push(sv * (1 - sv) * (th - itg.b[i])); dSb.push(-itg.a * sv * (1 - sv));
+          }
+          S.push(0); dSa.push(0);
+          var p = catProbs(th, itg);
+          for (k = 0; k < K; k++) gA += (r[j][q][k] / p[k]) * (dSa[k] - dSa[k + 1]);
+          for (i = 0; i < K - 1; i++) gB[i] += dSb[i + 1] * (r[j][q][i + 1] / p[i + 1] - r[j][q][i] / p[i]);
+        }
+        g.push(gA); for (k = 0; k < K - 1; k++) g.push(gB[k]);
+      }
+    } else { // 2PL / 3PL
+      for (j = 0; j < J; j++) {
+        var it2 = items[j], c = it2.c || 0, gA2 = 0, gB2 = 0, gC = 0;
+        for (q = 0; q < quad.n; q++) {
+          var nn = n[j][q]; if (nn < 1e-12) continue;
+          var th2 = quad.x[q], Sv = sigm(it2.a * (th2 - it2.b)), P = c + (1 - c) * Sv;
+          P = clamp(P, 1e-8, 1 - 1e-8);
+          var wgt = (r[j][q][1] - nn * P) / (P * (1 - P));
+          gA2 += wgt * (1 - c) * Sv * (1 - Sv) * (th2 - it2.b);
+          gB2 += wgt * (-(1 - c) * Sv * (1 - Sv) * it2.a);
+          gC += wgt * (1 - Sv);
+        }
+        g.push(gA2); g.push(gB2); if (model === "3PL") g.push(gC);
+      }
+    }
+    return g;
+  }
+  function packParams(items, model) {
+    var v = [], j, k;
+    if (model === "1PL") { v.push(items[0].a); for (j = 0; j < items.length; j++) v.push(items[j].b); return v; }
+    for (j = 0; j < items.length; j++) {
+      v.push(items[j].a);
+      if (model === "GRM") { for (k = 0; k < items[j].K - 1; k++) v.push(items[j].b[k]); }
+      else { v.push(items[j].b); if (model === "3PL") v.push(items[j].c); }
+    }
+    return v;
+  }
+  function unpackParams(v, items, model) {
+    var idx = 0, j, k;
+    if (model === "1PL") {
+      var a = v[idx++];
+      for (j = 0; j < items.length; j++) { items[j].a = a; items[j].b = v[idx++]; }
+      return;
+    }
+    for (j = 0; j < items.length; j++) {
+      items[j].a = v[idx++];
+      if (model === "GRM") { var bs = []; for (k = 0; k < items[j].K - 1; k++) bs.push(v[idx++]); items[j].b = bs; }
+      else { items[j].b = v[idx++]; if (model === "3PL") items[j].c = v[idx++]; }
+    }
+  }
+  function cloneItems(items) {
+    return items.map(function (it) {
+      return { name: it.name, model: it.model, K: it.K, a: it.a, b: (it.b instanceof Array ? it.b.slice() : it.b), c: it.c };
+    });
+  }
+  function standardErrors(X, items, quad, model) {
+    var v = packParams(items, model), P = v.length;
+    var work = cloneItems(items);
+    var H = [], p;
+    for (p = 0; p < P; p++) {
+      var h = 1e-4 * Math.max(1, Math.abs(v[p]));
+      var vp = v.slice(); vp[p] += h; unpackParams(vp, work, model);
+      var gp = gradVector(X, work, quad, model);
+      var vm = v.slice(); vm[p] -= h; unpackParams(vm, work, model);
+      var gm = gradVector(X, work, quad, model);
+      var col = [];
+      for (var q = 0; q < P; q++) col.push((gp[q] - gm[q]) / (2 * h));
+      H.push(col); // H[p] = ∂g/∂θ_p（列）
+    }
+    var Hs = [];
+    for (p = 0; p < P; p++) { var row = []; for (var q2 = 0; q2 < P; q2++) row.push(-(H[p][q2] + H[q2][p]) / 2); Hs.push(row); }
+    var inv = matInv(Hs);
+    var se = new Array(P).fill(NaN);
+    if (inv) for (p = 0; p < P; p++) { var d = inv[p][p]; se[p] = d > 0 ? Math.sqrt(d) : NaN; }
+    return se;
+  }
+
+  /* ---------- 推定本体 ---------- */
+  function fit(X, spec) {
+    var model = spec.model, quad = makeQuad(spec.nq || 41, -4.5, 4.5);
+    var J = spec.itemNames.length, N = X.length, j, q, k;
+    // 初期値（古典的統計量から）
+    var items = [];
+    for (j = 0; j < J; j++) {
+      var K = spec.K[j];
+      var vals = [], i;
+      for (i = 0; i < N; i++) if (X[i][j] != null) vals.push(X[i][j]);
+      var mv = mean(vals) / (K - 1);
+      mv = clamp(mv, 0.05, 0.95);
+      var b0 = -Math.log(mv / (1 - mv));
+      if (model === "GRM") {
+        var bs = [];
+        for (k = 0; k < K - 1; k++) bs.push(b0 - 1 + 2 * k / Math.max(1, K - 2));
+        bs.sort(function (a, b) { return a - b; });
+        items.push({ name: spec.itemNames[j], model: "GRM", K: K, a: 1, b: bs });
+      } else {
+        items.push({ name: spec.itemNames[j], model: model, K: 2, a: 1, b: clamp(b0, -3, 3), c: model === "3PL" ? 0.15 : 0 });
+      }
+    }
+    var prev = packParams(items, model), ll0 = -Infinity, iter, conv = false, es = null;
+    var maxIter = spec.maxIter || 500, tol = spec.tol || 1e-5;
+    for (iter = 1; iter <= maxIter; iter++) {
+      es = estep(X, items, quad, false);
+      if (model === "1PL") mstep1PL(items, es.r, es.n, quad);
+      else for (j = 0; j < J; j++) {
+        if (model === "2PL") mstep2PL(items[j], es.r[j], es.n[j], quad);
+        else if (model === "3PL") mstep3PL(items[j], es.r[j], es.n[j], quad);
+        else mstepGRM(items[j], es.r[j], es.n[j], quad);
+      }
+      var cur = packParams(items, model), ch = 0;
+      for (var p = 0; p < cur.length; p++) ch = Math.max(ch, Math.abs(cur[p] - prev[p]));
+      prev = cur;
+      if (ch < tol && Math.abs(es.ll - ll0) < 1e-6 * (Math.abs(es.ll) + 1)) { conv = true; break; }
+      ll0 = es.ll;
+    }
+    var final = estep(X, items, quad, true);
+    var se = null;
+    var cost = N * J * quad.n * 2 * packParams(items, model).length;
+    if (cost < 4e8) {
+      try { se = standardErrors(X, items, quad, model); } catch (e) { se = null; }
+    }
+    var npar = packParams(items, model).length;
+    return {
+      items: items, quad: quad, ll: final.ll, post: final.post, iterations: iter, converged: conv,
+      se: se, npar: npar,
+      aic: -2 * final.ll + 2 * npar, bic: -2 * final.ll + Math.log(N) * npar,
+      model: model
+    };
+  }
+
+  /* ---------- 特性値の推定 ---------- */
+  function abilityEAP(post, quad) {
+    var out = [];
+    for (var i = 0; i < post.length; i++) {
+      var m = 0, v = 0, q;
+      for (q = 0; q < quad.n; q++) m += post[i][q] * quad.x[q];
+      for (q = 0; q < quad.n; q++) v += post[i][q] * (quad.x[q] - m) * (quad.x[q] - m);
+      out.push({ theta: m, se: Math.sqrt(v) });
+    }
+    return out;
+  }
+  function loglikTheta(row, items, th) {
+    var ll = 0;
+    for (var j = 0; j < items.length; j++) {
+      var x = row[j]; if (x == null) continue;
+      ll += Math.log(catProbs(th, items[j])[x]);
+    }
+    return ll;
+  }
+  function abilityMLE(X, items) {
+    var out = [], i, j;
+    for (i = 0; i < X.length; i++) {
+      var row = X[i], nresp = 0, maxScore = 0, score = 0;
+      for (j = 0; j < items.length; j++) if (row[j] != null) { nresp++; maxScore += items[j].K - 1; score += row[j]; }
+      if (nresp === 0) { out.push({ theta: NaN, se: NaN, extreme: true }); continue; }
+      if (score === 0 || score === maxScore) { out.push({ theta: score === 0 ? -Infinity : Infinity, se: NaN, extreme: true }); continue; }
+      var best = -Infinity, bth = 0, t;
+      for (t = -6; t <= 6.0001; t += 0.05) { var l = loglikTheta(row, items, t); if (l > best) { best = l; bth = t; } }
+      var h = 0.01;
+      for (var s = 0; s < 30; s++) {
+        var l1 = loglikTheta(row, items, bth + h), l0 = loglikTheta(row, items, bth), lm = loglikTheta(row, items, bth - h);
+        var d1 = (l1 - lm) / (2 * h), d2 = (l1 - 2 * l0 + lm) / (h * h);
+        if (!(Math.abs(d2) > 1e-10)) break;
+        var st = clamp(-d1 / d2, -0.5, 0.5); bth = clamp(bth + st, -6, 6);
+        if (Math.abs(st) < 1e-7) break;
+      }
+      var info = 0;
+      for (j = 0; j < items.length; j++) if (row[j] != null) info += itemInfo(bth, items[j]);
+      out.push({ theta: bth, se: info > 0 ? 1 / Math.sqrt(info) : NaN, extreme: false });
+    }
+    return out;
+  }
+
+  /* ---------- 適合度・診断 ---------- */
+  function fitStats(X, items, theta) {
+    var N = X.length, J = items.length, i, j;
+    var itemStat = [], personStat = [];
+    var resid = []; // 標準化残差（N×J、欠測は null）
+    var iSumZ2 = new Array(J).fill(0), iN = new Array(J).fill(0), iNum = new Array(J).fill(0), iDen = new Array(J).fill(0);
+    var iC = new Array(J).fill(0), iV2 = new Array(J).fill(0);
+    for (i = 0; i < N; i++) {
+      var th = theta[i].theta, row = X[i], rrow = new Array(J).fill(null);
+      var pSumZ2 = 0, pN = 0, pNum = 0, pDen = 0, pC = 0, pV2 = 0;
+      if (!isFinite(th)) { resid.push(rrow); personStat.push({ outfit: NaN, infit: NaN, outfitZ: NaN, infitZ: NaN }); continue; }
+      for (j = 0; j < J; j++) {
+        var x = row[j]; if (x == null) continue;
+        var m = scoreMoments(th, items[j]);
+        if (m.v < 1e-8) continue;
+        var d = x - m.e, z2 = d * d / m.v;
+        rrow[j] = d / Math.sqrt(m.v);
+        iSumZ2[j] += z2; iN[j]++; iNum[j] += d * d; iDen[j] += m.v; iC[j] += m.c4 / (m.v * m.v); iV2[j] += m.c4 - m.v * m.v;
+        pSumZ2 += z2; pN++; pNum += d * d; pDen += m.v; pC += m.c4 / (m.v * m.v); pV2 += m.c4 - m.v * m.v;
+      }
+      resid.push(rrow);
+      personStat.push(mkFit(pSumZ2, pN, pNum, pDen, pC, pV2));
+    }
+    for (j = 0; j < J; j++) itemStat.push(mkFit(iSumZ2[j], iN[j], iNum[j], iDen[j], iC[j], iV2[j]));
+    return { item: itemStat, person: personStat, resid: resid };
+  }
+  function mkFit(sumZ2, n, num, den, c, v2) {
+    if (n < 2) return { outfit: NaN, infit: NaN, outfitZ: NaN, infitZ: NaN };
+    var outfit = sumZ2 / n, infit = num / den;
+    var qo = Math.sqrt(Math.max(c / (n * n) - 1 / n, 1e-8));
+    var qi = Math.sqrt(Math.max(v2 / (den * den), 1e-8));
+    var oz = (Math.pow(outfit, 1 / 3) - 1) * (3 / qo) + qo / 3;
+    var iz = (Math.pow(infit, 1 / 3) - 1) * (3 / qi) + qi / 3;
+    return { outfit: outfit, infit: infit, outfitZ: oz, infitZ: iz };
+  }
+  function itemChiSquare(X, items, theta, nGroup, npar) {
+    nGroup = nGroup || 10;
+    var idx = [], i, j;
+    for (i = 0; i < X.length; i++) if (isFinite(theta[i].theta)) idx.push(i);
+    idx.sort(function (a, b) { return theta[a].theta - theta[b].theta; });
+    var groups = [], sz = Math.floor(idx.length / nGroup);
+    for (var g = 0; g < nGroup; g++) groups.push(idx.slice(g * sz, g === nGroup - 1 ? idx.length : (g + 1) * sz));
+    var out = [];
+    for (j = 0; j < items.length; j++) {
+      var chi = 0, dfUsed = 0;
+      for (g = 0; g < nGroup; g++) {
+        var O = 0, E = 0, V = 0, n = 0;
+        for (var t = 0; t < groups[g].length; t++) {
+          var ii = groups[g][t], x = X[ii][j]; if (x == null) continue;
+          var m = scoreMoments(theta[ii].theta, items[j]);
+          O += x; E += m.e; V += m.v; n++;
+        }
+        if (n < 5 || V < 1e-8) continue;
+        chi += (O - E) * (O - E) / V; dfUsed++;
+      }
+      var df = Math.max(dfUsed - npar, 1);
+      out.push({ chi2: chi, df: df, p: chi2P(chi, df) });
+    }
+    return out;
+  }
+  function q3Matrix(resid, J) {
+    var M = [], j, k, cols = [];
+    for (j = 0; j < J; j++) cols.push(resid.map(function (r) { return r[j]; }));
+    for (j = 0; j < J; j++) { M.push(new Array(J).fill(NaN)); }
+    for (j = 0; j < J; j++) for (k = j + 1; k < J; k++) { var c = corr(cols[j], cols[k]); M[j][k] = c; M[k][j] = c; }
+    return M;
+  }
+  function residualPCA(resid, J) {
+    var cols = [], j, k;
+    for (j = 0; j < J; j++) cols.push(resid.map(function (r) { return r[j]; }));
+    var R = [];
+    for (j = 0; j < J; j++) { R.push(new Array(J).fill(0)); R[j][j] = 1; }
+    for (j = 0; j < J; j++) for (k = j + 1; k < J; k++) { var c = corr(cols[j], cols[k]); if (!isFinite(c)) c = 0; R[j][k] = c; R[k][j] = c; }
+    var eig = jacobiEigen(R);
+    return { eigen: eig, matrix: R };
+  }
+  function classicalStats(X, items) {
+    var N = X.length, J = items.length, i, j;
+    var total = [], counts = new Array(J).fill(0), sums = new Array(J).fill(0);
+    for (i = 0; i < N; i++) {
+      var s = 0, any = false;
+      for (j = 0; j < J; j++) { var x = X[i][j]; if (x == null) continue; s += x; any = true; sums[j] += x; counts[j]++; }
+      total.push(any ? s : null);
+    }
+    var out = [], itemVarSum = 0, cols = [];
+    for (j = 0; j < J; j++) {
+      var col = X.map(function (r) { return r[j]; });
+      cols.push(col);
+      var rest = [];
+      for (i = 0; i < N; i++) { var tv = total[i]; rest.push(tv == null || X[i][j] == null ? null : tv - X[i][j]); }
+      var vals = col.filter(function (v) { return v != null; });
+      var p = counts[j] ? sums[j] / counts[j] : NaN;
+      itemVarSum += variance(vals);
+      out.push({ mean: p, prop: p / (items[j].K - 1), sd: sd(vals), rit: corr(col, rest), n: counts[j] });
+    }
+    var tv2 = variance(total.filter(function (v) { return v != null; }));
+    var alpha = J > 1 ? (J / (J - 1)) * (1 - itemVarSum / tv2) : NaN;
+    // α if deleted
+    for (j = 0; j < J; j++) {
+      var svar = 0, tot2 = [];
+      for (var k = 0; k < J; k++) { if (k === j) continue; svar += variance(cols[k].filter(function (v) { return v != null; })); }
+      for (i = 0; i < N; i++) { var s2 = 0, any2 = false; for (k = 0; k < J; k++) { if (k === j) continue; var xv = X[i][k]; if (xv == null) continue; s2 += xv; any2 = true; } tot2.push(any2 ? s2 : null); }
+      var tvj = variance(tot2.filter(function (v) { return v != null; }));
+      out[j].alphaIfDropped = J > 2 ? ((J - 1) / (J - 2)) * (1 - svar / tvj) : NaN;
+    }
+    return { items: out, alpha: alpha, total: total, totalVar: tv2 };
+  }
+  // Mantel-Haenszel DIF（2値項目のみ）
+  function difMH(X, items, group, refLabel) {
+    var N = X.length, J = items.length, i, j;
+    var total = [];
+    for (i = 0; i < N; i++) { var s = 0, ok = true; for (j = 0; j < J; j++) { if (X[i][j] == null) { ok = false; break; } s += X[i][j]; } total.push(ok ? s : null); }
+    var out = [];
+    for (j = 0; j < J; j++) {
+      var strata = {};
+      for (i = 0; i < N; i++) {
+        if (total[i] == null || X[i][j] == null || group[i] == null) continue;
+        var st = total[i];
+        if (!strata[st]) strata[st] = { a: 0, b: 0, c: 0, d: 0 };
+        var isRef = (group[i] === refLabel);
+        if (isRef) { if (X[i][j] === 1) strata[st].a++; else strata[st].b++; }
+        else { if (X[i][j] === 1) strata[st].c++; else strata[st].d++; }
+      }
+      var num = 0, den = 0, sumA = 0, sumE = 0, sumV = 0;
+      for (var key in strata) {
+        var s2 = strata[key], T = s2.a + s2.b + s2.c + s2.d;
+        if (T < 2) continue;
+        num += s2.a * s2.d / T; den += s2.b * s2.c / T;
+        var n1 = s2.a + s2.b, n2 = s2.c + s2.d, m1 = s2.a + s2.c, m0 = s2.b + s2.d;
+        sumA += s2.a; sumE += n1 * m1 / T;
+        if (T > 1) sumV += n1 * n2 * m1 * m0 / (T * T * (T - 1));
+      }
+      var alpha = den > 0 ? num / den : NaN;
+      var delta = isFinite(alpha) && alpha > 0 ? -2.35 * Math.log(alpha) : NaN;
+      var chi = sumV > 0 ? Math.pow(Math.abs(sumA - sumE) - 0.5, 2) / sumV : NaN;
+      var p = isFinite(chi) ? chi2P(chi, 1) : NaN;
+      var cls = "A";
+      if (isFinite(delta)) {
+        var ad = Math.abs(delta);
+        if (ad >= 1.5 && isFinite(p) && p < 0.05) cls = "C";
+        else if (ad >= 1.0 && isFinite(p) && p < 0.05) cls = "B";
+        else cls = "A";
+      } else cls = "-";
+      out.push({ alpha: alpha, delta: delta, chi2: chi, p: p, cls: cls });
+    }
+    return out;
+  }
+
+
+  /* ---------- Lord-Wingersky 再帰と S-X² 適合度 ---------- */
+  function lwDist(items, quad, skip) { // 各求積点での合計得点分布
+    var Q = quad.n, J = items.length, q, j, k, u;
+    var out = [];
+    for (q = 0; q < Q; q++) {
+      var dist = [1], th = quad.x[q];
+      for (j = 0; j < J; j++) {
+        if (j === skip) continue;
+        var p = catProbs(th, items[j]), K = items[j].K;
+        var nd = new Float64Array(dist.length + K - 1);
+        for (k = 0; k < dist.length; k++) { if (dist[k] === 0) continue; for (u = 0; u < K; u++) nd[k + u] += dist[k] * p[u]; }
+        dist = nd;
+      }
+      out.push(dist);
+    }
+    return out;
+  }
+  function expectedScoreDist(items, quad) { // 周辺の合計得点分布（期待度数用）
+    var S = lwDist(items, quad, -1), maxS = S[0].length, res = new Float64Array(maxS);
+    for (var q = 0; q < quad.n; q++) for (var k = 0; k < maxS; k++) res[k] += quad.w[q] * S[q][k];
+    return res;
+  }
+  function sxSquare(X, items, quad, nparPerItem) {
+    var J = items.length, Q = quad.n, i, j, k, u, q;
+    var full = lwDist(items, quad, -1), maxS = full[0].length;
+    var Nk = new Float64Array(maxS), rows = [];
+    for (i = 0; i < X.length; i++) {
+      var s = 0, ok = true;
+      for (j = 0; j < J; j++) { if (X[i][j] == null) { ok = false; break; } s += X[i][j]; }
+      if (ok) { Nk[s]++; rows.push({ i: i, s: s }); }
+    }
+    var denom = new Float64Array(maxS);
+    for (k = 0; k < maxS; k++) { var d = 0; for (q = 0; q < Q; q++) d += quad.w[q] * full[q][k]; denom[k] = d; }
+    var out = [];
+    for (j = 0; j < J; j++) {
+      var K = items[j].K, ex = lwDist(items, quad, j);
+      // E[k][u]
+      var E = [];
+      for (k = 0; k < maxS; k++) {
+        var row = new Float64Array(K), tot = 0;
+        for (u = 0; u < K; u++) {
+          var m = k - u; if (m < 0 || m >= ex[0].length) continue;
+          var acc = 0;
+          for (q = 0; q < Q; q++) acc += quad.w[q] * catProbs(quad.x[q], items[j])[u] * ex[q][m];
+          row[u] = acc; tot += acc;
+        }
+        if (tot > 0) for (u = 0; u < K; u++) row[u] /= tot;
+        E.push(row);
+      }
+      // 観測度数
+      var O = [];
+      for (k = 0; k < maxS; k++) O.push(new Float64Array(K));
+      for (i = 0; i < rows.length; i++) O[rows[i].s][X[rows[i].i][j]]++;
+      // 期待度数が小さい得点群を統合
+      var groups = [], cur = null;
+      for (k = 1; k < maxS - 1; k++) { // 満点・0点は情報を持たない
+        if (Nk[k] === 0) continue;
+        if (!cur) cur = { n: 0, O: new Float64Array(K), E: new Float64Array(K), ks: [] };
+        cur.ks.push(k); cur.n += Nk[k];
+        for (u = 0; u < K; u++) { cur.O[u] += O[k][u]; cur.E[u] += Nk[k] * E[k][u]; }
+        var minE = Infinity;
+        for (u = 0; u < K; u++) minE = Math.min(minE, cur.E[u]);
+        if (minE >= 1) { groups.push(cur); cur = null; }
+      }
+      if (cur && groups.length) { // 端数は直前の群に統合
+        var lastg = groups[groups.length - 1];
+        lastg.n += cur.n; for (u = 0; u < K; u++) { lastg.O[u] += cur.O[u]; lastg.E[u] += cur.E[u]; }
+      } else if (cur) groups.push(cur);
+      var chi = 0, cells = 0;
+      for (var g = 0; g < groups.length; g++) {
+        for (u = 0; u < K; u++) {
+          var e = groups[g].E[u]; if (!(e > 0)) continue;
+          chi += (groups[g].O[u] - e) * (groups[g].O[u] - e) / e;
+        }
+        cells += K - 1;
+      }
+      var df = Math.max(cells - (nparPerItem[j] || 2), 1);
+      out.push({ chi2: chi, df: df, p: chi2P(chi, df), ratio: chi / df, groups: groups.length });
+    }
+    return out;
+  }
+  function reliability(theta) {
+    var t = [], s = [];
+    for (var i = 0; i < theta.length; i++) if (isFinite(theta[i].theta) && isFinite(theta[i].se)) { t.push(theta[i].theta); s.push(theta[i].se * theta[i].se); }
+    var vt = variance(t), ms = mean(s);
+    return { empirical: vt / (vt + ms), marginal: 1 - ms, varTheta: vt, meanSE2: ms };
+  }
+
+  /* ---------- データ生成（練習用） ---------- */
+  function rng(seed) { var s = seed || 20260817; return function () { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }; }
+  function rnorm(u) { var a = Math.max(u(), 1e-12), b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); }
+
+  return {
+    sigm: sigm, clamp: clamp, mean: mean, sd: sd, variance: variance, corr: corr,
+    normCdf: normCdf, chi2P: chi2P, matInv: matInv, jacobiEigen: jacobiEigen, nelderMead: nelderMead,
+    makeQuad: makeQuad, catProbs: catProbs, expectedScore: expectedScore, scoreMoments: scoreMoments,
+    itemInfo: itemInfo, testInfo: testInfo, estep: estep, fit: fit,
+    abilityEAP: abilityEAP, abilityMLE: abilityMLE, fitStats: fitStats, itemChiSquare: itemChiSquare,
+    q3Matrix: q3Matrix, sxSquare: sxSquare, lwDist: lwDist, expectedScoreDist: expectedScoreDist, reliability: reliability, residualPCA: residualPCA, classicalStats: classicalStats, difMH: difMH,
+    rng: rng, rnorm: rnorm, packParams: packParams, cloneItems: cloneItems
+  };
+})();
+if (typeof module !== "undefined") module.exports = IRT;
+/* ============================================================
+   項目反応理論ラボ — 画面
+   ============================================================ */
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  function n2(v, d) { d = d == null ? 2 : d; return (v == null || !isFinite(v)) ? "—" : v.toFixed(d); }
+  function pf(p) { if (p == null || !isFinite(p)) return "—"; return p < 0.001 ? "<.001" : p.toFixed(3).replace(/^0/, ""); }
+
+  var STEPS = ["データ", "モデル", "項目", "情報量", "特性値", "診断", "レポート"];
+  var S = {
+    headers: [], rows: [], roles: [], reverse: [], ready: false,
+    X: null, itemNames: [], K: [], catMaps: [], ids: [], group: null,
+    model: "2PL", res: null, theta: null, thetaEAP: null, thetaMLE: null,
+    fitstat: null, sx: null, classical: null, q3: null, pca: null, dif: null,
+    selItem: 0, totals: []
+  };
+
+  /* ================= 手順タブ ================= */
+  function buildSteps() {
+    var bar = $("stepbar");
+    bar.innerHTML = "";
+    STEPS.forEach(function (name, i) {
+      var b = el("button", "step-tab", '<span class="n">' + (i + 1) + '</span>' + name);
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", i === 0 ? "true" : "false");
+      if (i >= 2) b.disabled = true;
+      b.onclick = function () { go(i); };
+      bar.appendChild(b);
+    });
+  }
+  function go(i) {
+    var tabs = document.querySelectorAll(".step-tab");
+    if (tabs[i].disabled) return;
+    for (var k = 0; k < tabs.length; k++) tabs[k].setAttribute("aria-selected", k === i ? "true" : "false");
+    for (k = 0; k < STEPS.length; k++) { var p = $("p" + k); if (p) p.className = "panel" + (k === i ? " on" : ""); }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function unlock() {
+    var tabs = document.querySelectorAll(".step-tab");
+    for (var k = 0; k < tabs.length; k++) tabs[k].disabled = false;
+  }
+
+  /* ================= 作図の道具 ================= */
+  function svgChart(c) {
+    var W = c.w || 640, H = c.h || 330, m = c.m || { l: 54, r: 18, t: 14, b: 40 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b;
+    var xs = function (v) { return m.l + (v - c.xmin) / (c.xmax - c.xmin) * iw; };
+    var ys = function (v) { return m.t + ih - (v - c.ymin) / (c.ymax - c.ymin) * ih; };
+    var o = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="var(--mono)">'];
+    var xt = c.xticks || ticks(c.xmin, c.xmax, 8), yt = c.yticks || ticks(c.ymin, c.ymax, 5), i;
+    for (i = 0; i < yt.length; i++) o.push('<line x1="' + m.l + '" y1="' + ys(yt[i]).toFixed(1) + '" x2="' + (W - m.r) + '" y2="' + ys(yt[i]).toFixed(1) + '" stroke="rgba(21,48,42,.10)" stroke-width="1"/>');
+    for (i = 0; i < xt.length; i++) o.push('<line x1="' + xs(xt[i]).toFixed(1) + '" y1="' + m.t + '" x2="' + xs(xt[i]).toFixed(1) + '" y2="' + (m.t + ih) + '" stroke="rgba(21,48,42,.06)" stroke-width="1"/>');
+    (c.series || []).forEach(function (s) {
+      if (!s.data || !s.data.length) return;
+      var d = s.data.map(function (p, k) { return (k ? "L" : "M") + xs(p[0]).toFixed(1) + " " + ys(p[1]).toFixed(1); }).join(" ");
+      if (s.type === "area") {
+        o.push('<path d="' + d + " L" + xs(s.data[s.data.length - 1][0]).toFixed(1) + " " + ys(c.ymin).toFixed(1) + " L" + xs(s.data[0][0]).toFixed(1) + " " + ys(c.ymin).toFixed(1) + ' Z" fill="' + s.color + '" opacity="' + (s.opacity || .18) + '"/>');
+        o.push('<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="' + (s.width || 1.6) + '"/>');
+      } else if (s.type === "points") {
+        s.data.forEach(function (p) { o.push('<circle cx="' + xs(p[0]).toFixed(1) + '" cy="' + ys(p[1]).toFixed(1) + '" r="' + (s.r || 2.6) + '" fill="' + s.color + '" opacity="' + (s.opacity || .9) + '"/>'); });
+      } else if (s.type === "bars") {
+        var bw = s.barw || (iw / s.data.length * .74);
+        s.data.forEach(function (p) {
+          var y0 = ys(Math.max(c.ymin, 0)), y1 = ys(p[1]);
+          o.push('<rect x="' + (xs(p[0]) - bw / 2).toFixed(1) + '" y="' + Math.min(y0, y1).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.abs(y1 - y0).toFixed(1) + '" fill="' + s.color + '" opacity="' + (s.opacity || .5) + '"/>');
+        });
+      } else {
+        o.push('<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="' + (s.width || 1.6) + '" opacity="' + (s.opacity == null ? 1 : s.opacity) + '"' + (s.dash ? ' stroke-dasharray="' + s.dash + '"' : "") + ' stroke-linejoin="round"/>');
+      }
+    });
+    (c.hline || []).forEach(function (h) { o.push('<line x1="' + m.l + '" y1="' + ys(h.y).toFixed(1) + '" x2="' + (W - m.r) + '" y2="' + ys(h.y).toFixed(1) + '" stroke="' + (h.color || "var(--alert)") + '" stroke-width="1" stroke-dasharray="' + (h.dash || "4 3") + '" opacity=".7"/>'); });
+    (c.vline || []).forEach(function (h) { o.push('<line x1="' + xs(h.x).toFixed(1) + '" y1="' + m.t + '" x2="' + xs(h.x).toFixed(1) + '" y2="' + (m.t + ih) + '" stroke="' + (h.color || "var(--alert)") + '" stroke-width="1" stroke-dasharray="' + (h.dash || "4 3") + '" opacity=".75"/>'); });
+    (c.labels || []).forEach(function (t) {
+      o.push('<text x="' + xs(t.x).toFixed(1) + '" y="' + ys(t.y).toFixed(1) + '" font-size="' + (t.size || 10) + '" fill="' + (t.color || "var(--ink-2)") + '" text-anchor="' + (t.anchor || "middle") + '">' + esc(t.text) + "</text>");
+    });
+    o.push('<line x1="' + m.l + '" y1="' + (m.t + ih) + '" x2="' + (W - m.r) + '" y2="' + (m.t + ih) + '" stroke="var(--line-2)"/>');
+    o.push('<line x1="' + m.l + '" y1="' + m.t + '" x2="' + m.l + '" y2="' + (m.t + ih) + '" stroke="var(--line-2)"/>');
+    for (i = 0; i < xt.length; i++) o.push('<text x="' + xs(xt[i]).toFixed(1) + '" y="' + (m.t + ih + 15) + '" font-size="10" fill="var(--ink-3)" text-anchor="middle">' + fmtTick(xt[i]) + "</text>");
+    for (i = 0; i < yt.length; i++) o.push('<text x="' + (m.l - 7) + '" y="' + (ys(yt[i]) + 3.5).toFixed(1) + '" font-size="10" fill="var(--ink-3)" text-anchor="end">' + fmtTick(yt[i]) + "</text>");
+    if (c.xlabel) o.push('<text x="' + (m.l + iw / 2) + '" y="' + (H - 5) + '" font-size="10.5" fill="var(--ink-2)" text-anchor="middle">' + esc(c.xlabel) + "</text>");
+    if (c.ylabel) o.push('<text transform="translate(11,' + (m.t + ih / 2) + ') rotate(-90)" font-size="10.5" fill="var(--ink-2)" text-anchor="middle">' + esc(c.ylabel) + "</text>");
+    if (c.y2label) o.push('<text transform="translate(' + (W - 5) + ',' + (m.t + ih / 2) + ') rotate(-90)" font-size="10.5" fill="var(--ink-2)" text-anchor="middle">' + esc(c.y2label) + "</text>");
+    o.push("</svg>");
+    return o.join("");
+  }
+  function ticks(lo, hi, n) {
+    var span = hi - lo, step = Math.pow(10, Math.floor(Math.log(span / n) / Math.LN10)), err = span / n / step;
+    if (err > 5) step *= 10; else if (err > 2) step *= 5; else if (err > 1) step *= 2;
+    var out = [], v = Math.ceil(lo / step) * step;
+    for (; v <= hi + 1e-9; v += step) out.push(Math.abs(v) < 1e-10 ? 0 : v);
+    return out;
+  }
+  function fmtTick(v) { return Math.abs(v) >= 1000 ? v.toFixed(0) : (Math.abs(v % 1) < 1e-9 ? v.toFixed(0) : (Math.abs(v) < 1 ? String(+v.toFixed(3)) : String(+v.toFixed(2)))); }
+  function itemColor(i, n) { var h = 205 - 165 * (n > 1 ? i / (n - 1) : 0); return "hsl(" + h.toFixed(0) + ",34%,42%)"; }
+  function figure(title, right, svg, legend) {
+    return '<div class="figure"><div class="cap"><b>' + title + "</b><span>" + (right || "") + '</span></div>' + svg + (legend ? '<div class="legendrow">' + legend + "</div>" : "") + "</div>";
+  }
+
+  /* ================= ものさし ================= */
+  function drawRuler() {
+    var host = $("rulerSvg");
+    var W = Math.max(320, Math.round(host.getBoundingClientRect().width) || 1000), H = 76, svg = [], i;
+    host.setAttribute("viewBox", "0 0 " + W + " " + H);
+    host.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    var lo = -4, hi = 4, base = 50;
+    var pad = W < 520 ? 18 : 40;
+    var xs = function (t) { return pad + (t - lo) / (hi - lo) * (W - pad * 2); };
+    svg.push('<line x1="' + xs(lo) + '" y1="' + base + '" x2="' + xs(hi) + '" y2="' + base + '" stroke="var(--line-2)" stroke-width="1"/>');
+    for (i = -4; i <= 4; i += 0.5) {
+      var big = Math.abs(i % 1) < 1e-9;
+      svg.push('<line x1="' + xs(i).toFixed(1) + '" y1="' + base + '" x2="' + xs(i).toFixed(1) + '" y2="' + (base + (big ? 8 : 4)) + '" stroke="var(--line-2)" stroke-width="1"/>');
+      if (big) svg.push('<text x="' + xs(i).toFixed(1) + '" y="' + (base + 21) + '" font-size="10" fill="var(--ink-3)" text-anchor="middle" font-family="var(--mono)">' + (i > 0 ? "+" : "") + i + "</text>");
+    }
+    if (S.res && S.theta) {
+      var bins = new Array(48).fill(0), th = [], mx = 0;
+      S.theta.forEach(function (t) { if (isFinite(t.theta)) { th.push(t.theta); var b = Math.floor((IRT.clamp(t.theta, lo, hi - 1e-6) - lo) / (hi - lo) * 48); bins[b]++; } });
+      bins.forEach(function (v) { mx = Math.max(mx, v); });
+      var pts = "M" + xs(lo).toFixed(1) + " " + base;
+      for (i = 0; i < 48; i++) {
+        var x = xs(lo + (hi - lo) * (i + 0.5) / 48), y = base - 4 - (mx ? bins[i] / mx : 0) * 34;
+        pts += " L" + x.toFixed(1) + " " + y.toFixed(1);
+      }
+      pts += " L" + xs(hi).toFixed(1) + " " + base + " Z";
+      svg.push('<path d="' + pts + '" fill="var(--person)" opacity=".22"/><path d="' + pts + '" fill="none" stroke="var(--person)" stroke-width="1.3"/>');
+      S.res.items.forEach(function (it, j) {
+        var b = (it.model === "GRM") ? IRT.mean(it.b) : it.b;
+        if (!isFinite(b)) return;
+        var x = xs(IRT.clamp(b, lo, hi));
+        svg.push('<line x1="' + x.toFixed(1) + '" y1="' + (base + 1) + '" x2="' + x.toFixed(1) + '" y2="' + (base + 12) + '" stroke="var(--item)" stroke-width="1.6" opacity=".8"/>');
+      });
+      $("rulerState").textContent = (W < 520 ? "N=" + S.X.length + " " + S.model + " θ平均=" + n2(IRT.mean(th)) : "N=" + S.X.length + "  項目=" + S.res.items.length + "  " + S.model + "  θ平均=" + n2(IRT.mean(th)) + "  SD=" + n2(IRT.sd(th)));
+    } else {
+      svg.push('<text x="' + xs(0) + '" y="' + (base - 16) + '" font-size="11" fill="var(--ink-3)" text-anchor="middle" font-family="var(--gothic)">' + (W < 520 ? '推定すると人と項目がここに並びます' : '推定すると、ここに人と項目が同じ物差しの上に並びます') + '</text>');
+    }
+    host.innerHTML = svg.join("");
+    var wrap = document.querySelector(".ruler-wrap"), steps = document.querySelector(".steps");
+    if (wrap && steps) steps.style.top = (window.innerWidth > 640 ? wrap.offsetHeight : 0) + "px";
+  }
+
+  /* ================= データ読み込み ================= */
+  function splitLine(line, sep) {
+    var out = [], cur = "", q = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === sep) { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out.map(function (s) { return s.trim(); });
+  }
+  function readTable() {
+    var text = $("rawText").value.trim();
+    if (!text) { msg("dataMsg", "warn", "データがありません。表を貼り付けるか、右上のファイル選択か、例のデータをお使いください。"); return; }
+    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim() !== ""; });
+    var sep = (lines[0].split("\t").length > lines[0].split(",").length) ? "\t" : ",";
+    var head = splitLine(lines[0], sep);
+    var rows = [];
+    for (var i = 1; i < lines.length; i++) {
+      var r = splitLine(lines[i], sep);
+      while (r.length < head.length) r.push("");
+      rows.push(r.slice(0, head.length));
+    }
+    if (rows.length < 10) { msg("dataMsg", "warn", "行数が " + rows.length + " 件しかありません。項目反応理論の推定には最低でも 100 件程度を目安にしてください。"); }
+    else msg("dataMsg", "ok", rows.length + " 人 × " + head.length + " 列を読み取りました。次に列の役割を決めてください。");
+    S.headers = head; S.rows = rows;
+    S.roles = head.map(function (h, j) { return guessRole(h, j, rows); });
+    S.reverse = head.map(function () { return false; });
+    renderMap();
+    $("mapCard").style.display = "";
+  }
+  function colValues(rows, j) {
+    var v = [];
+    for (var i = 0; i < rows.length; i++) {
+      var s = rows[i][j];
+      if (s === "" || s == null || /^(na|nan|null|\.|-)$/i.test(s)) { v.push(null); continue; }
+      var x = Number(s);
+      v.push(isFinite(x) ? x : s);
+    }
+    return v;
+  }
+  function guessRole(h, j, rows) {
+    var v = colValues(rows, j), nums = v.filter(function (x) { return typeof x === "number"; });
+    if (/^(id|no|番号|氏名|名前|受験者|生徒|学生)/i.test(h)) return "id";
+    if (nums.length < v.filter(function (x) { return x != null; }).length * 0.9) return j === 0 ? "id" : "group";
+    var uniq = {}; nums.forEach(function (x) { uniq[x] = 1; });
+    var u = Object.keys(uniq).length;
+    if (u <= 1) return "skip";
+    if (u > 12) return "skip";
+    return "item";
+  }
+  function renderMap() {
+    var t = $("mapTable"), sample = S.rows.slice(0, 4);
+    var h = "<thead><tr><th>列</th><th>役割</th><th>逆転</th><th class='num'>値の種類</th><th>先頭の値</th></tr></thead><tbody>";
+    S.headers.forEach(function (name, j) {
+      var v = colValues(S.rows, j).filter(function (x) { return x != null; });
+      var uniq = {}; v.forEach(function (x) { uniq[x] = 1; });
+      var keys = Object.keys(uniq);
+      h += "<tr><td>" + esc(name) + "</td><td>" +
+        '<select data-role="' + j + '" style="width:auto;padding:3px 6px">' +
+        ["item:項目", "id:ID", "group:群", "skip:使わない"].map(function (o) {
+          var v2 = o.split(":");
+          return '<option value="' + v2[0] + '"' + (S.roles[j] === v2[0] ? " selected" : "") + ">" + v2[1] + "</option>";
+        }).join("") + "</select></td>" +
+        '<td style="text-align:left"><input type="checkbox" data-rev="' + j + '"' + (S.reverse[j] ? " checked" : "") + (S.roles[j] === "item" ? "" : " disabled") + "></td>" +
+        '<td class="num">' + keys.length + "</td><td>" + esc(sample.map(function (r) { return r[j]; }).join(" / ")) + "</td></tr>";
+    });
+    t.innerHTML = h + "</tbody>";
+    t.querySelectorAll("select[data-role]").forEach(function (s) {
+      s.onchange = function () { S.roles[+s.dataset.role] = s.value; renderMap(); };
+    });
+    t.querySelectorAll("input[data-rev]").forEach(function (c) {
+      c.onchange = function () { S.reverse[+c.dataset.rev] = c.checked; };
+    });
+    var nItem = S.roles.filter(function (r) { return r === "item"; }).length;
+    msg("mapMsg", nItem >= 3 ? "ok" : "warn", nItem + " 列を項目として扱います。" + (nItem < 3 ? "3 列以上を選んでください。" : ""));
+    var sel = $("difGroup");
+    sel.innerHTML = '<option value="">使わない</option>';
+    S.headers.forEach(function (n, j) { if (S.roles[j] === "group") sel.innerHTML += '<option value="' + j + '">' + esc(n) + "</option>"; });
+  }
+  function msg(id, kind, text) {
+    $(id).innerHTML = '<div class="note' + (kind === "warn" ? " warn" : (kind === "gold" ? " gold" : "")) + '">' + text + "</div>";
+  }
+
+  /* ================= 行列の構成 ================= */
+  function buildMatrix() {
+    var itemCols = [], j;
+    for (j = 0; j < S.headers.length; j++) if (S.roles[j] === "item") itemCols.push(j);
+    var idCol = S.roles.indexOf("id");
+    var gcol = $("difGroup").value === "" ? -1 : +$("difGroup").value;
+    var cols = itemCols.map(function (j) { return colValues(S.rows, j); });
+    var maps = [], K = [], warn = [];
+    cols.forEach(function (v, k) {
+      var uniq = {}, arr = [];
+      v.forEach(function (x) { if (x != null && typeof x === "number") uniq[x] = 1; });
+      arr = Object.keys(uniq).map(Number).sort(function (a, b) { return a - b; });
+      if (S.reverse[itemCols[k]]) arr = arr.slice();
+      var map = {};
+      arr.forEach(function (val, i) { map[val] = S.reverse[itemCols[k]] ? (arr.length - 1 - i) : i; });
+      maps.push({ map: map, cats: arr });
+      K.push(Math.max(arr.length, 2));
+      if (arr.length > 9) warn.push(S.headers[itemCols[k]]);
+    });
+    var X = [], ids = [], group = [];
+    for (var i = 0; i < S.rows.length; i++) {
+      var row = [], any = false;
+      for (var k = 0; k < cols.length; k++) {
+        var x = cols[k][i];
+        if (x == null || typeof x !== "number" || maps[k].map[x] == null) row.push(null);
+        else { row.push(maps[k].map[x]); any = true; }
+      }
+      if (!any) continue;
+      X.push(row);
+      ids.push(idCol >= 0 ? S.rows[i][idCol] : "行" + (i + 1));
+      group.push(gcol >= 0 ? S.rows[i][gcol] : null);
+    }
+    S.X = X; S.itemNames = itemCols.map(function (j) { return S.headers[j]; });
+    S.K = K; S.catMaps = maps; S.ids = ids; S.group = gcol >= 0 ? group : null;
+    S.totals = X.map(function (r) { var s = 0, ok = false; r.forEach(function (v) { if (v != null) { s += v; ok = true; } }); return ok ? s : null; });
+    return warn;
+  }
+
+  /* ================= モデル選択 ================= */
+  var MODELS = [
+    { id: "1PL", t: "1パラメータ（ラッシュ）モデル", d: "難易度だけを推定し、識別力はすべての項目で共通。項目数が少ないとき、標本が小さいとき、素点と特性値の順位を一致させたいときに。" },
+    { id: "2PL", t: "2パラメータ・ロジスティックモデル", d: "難易度と識別力を推定。2値データの標準的な選択肢。目安として 300 人以上。" },
+    { id: "3PL", t: "3パラメータ・ロジスティックモデル", d: "当て推量（下限）も推定。多肢選択式のテストで、低学力層の正答が偶然によると考えられるとき。500 人以上が望ましい。" },
+    { id: "GRM", t: "段階反応モデル", d: "3件法以上の順序尺度に。項目ごとに識別力と、隣り合うカテゴリの境界の位置を推定します。" }
+  ];
+  function setupModels() {
+    var box = $("modelRadios"), maxK = Math.max.apply(null, S.K || [2]);
+    box.innerHTML = "";
+    MODELS.forEach(function (m) {
+      var fits = (maxK > 2) ? (m.id === "GRM") : (m.id !== "GRM");
+      var lab = el("label", "radio");
+      lab.innerHTML = '<input type="radio" name="mdl" value="' + m.id + '"><span><span class="t">' + m.t +
+        (fits ? ' <span class="tag ok">データに適合</span>' : "") + '</span><br><span class="d">' + m.d + "</span></span>";
+      box.appendChild(lab);
+    });
+    var def = maxK > 2 ? "GRM" : "2PL";
+    S.model = def;
+    box.querySelectorAll('input[name="mdl"]').forEach(function (r) {
+      if (r.value === def) { r.checked = true; r.closest(".radio").classList.add("on"); }
+      r.onchange = function () {
+        S.model = r.value;
+        box.querySelectorAll(".radio").forEach(function (x) { x.classList.remove("on"); });
+        r.closest(".radio").classList.add("on");
+        updateHint();
+      };
+    });
+    updateHint();
+  }
+  function updateHint() {
+    var maxK = Math.max.apply(null, S.K || [2]), n = S.X ? S.X.length : 0, J = S.itemNames.length;
+    var t = "回答者 " + n + " 人、項目 " + J + " 個、カテゴリ数は最大 " + maxK + "。";
+    if (maxK > 2 && S.model !== "GRM") t += " 3件法以上のデータに 2値モデルは当てはめられません。段階反応モデルをお選びください。";
+    if (maxK === 2 && S.model === "GRM") t += " 2値データに段階反応モデルを当てはめると、結果は 2PL と一致します。";
+    if (S.model === "3PL" && n < 500) t += " 3PL は標本が小さいと下限の推定が不安定になります。";
+    $("modelHint").textContent = t;
+  }
+
+  /* ================= 実行 ================= */
+  function run() {
+    buildMatrix();
+    var maxK = Math.max.apply(null, S.K);
+    if (maxK > 2 && S.model !== "GRM") { alert("3件法以上のデータには段階反応モデルをお使いください。"); return; }
+    $("progress").classList.add("on");
+    $("progressMsg").textContent = "EM アルゴリズムを回しています";
+    setTimeout(function () {
+      try { compute(); }
+      catch (e) { alert("推定できませんでした：" + e.message); console.error(e); }
+      $("progress").classList.remove("on");
+    }, 60);
+  }
+  function compute() {
+    var t0 = Date.now();
+    var spec = { model: S.model, itemNames: S.itemNames, K: S.K, nq: +$("nq").value };
+    var res = IRT.fit(S.X, spec);
+    S.res = res;
+    S.thetaEAP = IRT.abilityEAP(res.post, res.quad);
+    S.thetaMLE = IRT.abilityMLE(S.X, res.items);
+    S.theta = $("thetaMethod").value === "MLE" ? S.thetaMLE : S.thetaEAP;
+    var forFit = S.thetaMLE.map(function (m, i) { return isFinite(m.theta) ? m : S.thetaEAP[i]; });
+    S.fitstat = IRT.fitStats(S.X, res.items, forFit);
+    var npar = res.items.map(function (it) { return S.model === "1PL" ? 1 : (S.model === "3PL" ? 3 : (S.model === "GRM" ? it.K : 2)); });
+    S.sx = IRT.sxSquare(S.X, res.items, res.quad, npar);
+    S.classical = IRT.classicalStats(S.X, res.items);
+    S.q3 = IRT.q3Matrix(S.fitstat.resid, res.items.length);
+    S.pca = IRT.residualPCA(S.fitstat.resid, res.items.length);
+    S.dif = null;
+    if (S.group && Math.max.apply(null, S.K) === 2) {
+      var labs = {};
+      S.group.forEach(function (g) { if (g != null && g !== "") labs[g] = (labs[g] || 0) + 1; });
+      var keys = Object.keys(labs).sort(function (a, b) { return labs[b] - labs[a]; });
+      if (keys.length >= 2) S.dif = { ref: keys[0], foc: keys[1], res: IRT.difMH(S.X, res.items, S.group, keys[0]), counts: labs };
+    }
+    S.elapsed = Date.now() - t0;
+    S.selItem = 0;
+    unlock(); drawRuler();
+    renderItems(); renderInfo(); renderTheta(); renderDiag(); renderReport();
+    go(2);
+  }
+
+  /* ================= 3 項目 ================= */
+  function renderItems() {
+    var res = S.res, its = res.items, J = its.length, poly = S.model === "GRM";
+    var h = '<div class="card"><h2>項目のパラメータ</h2><p class="lead">' +
+      (poly ? "識別力 a と、隣り合うカテゴリの境界 b。b が小さいほど低い特性値でも上のカテゴリを選びやすい項目です。"
+        : "識別力 a は曲線の傾き、困難度 b は正答率が 50%（3PL では下限との中点）になる特性値の位置。") +
+      "括弧内は標準誤差。</p>";
+    h += '<div class="stats">' +
+      stat("推定", S.model, res.converged ? "収束（" + res.iterations + " 回）" : "上限で打ち切り") +
+      stat("対数尤度", n2(res.ll, 1), "母数 " + res.npar + " 個") +
+      stat("AIC", n2(res.aic, 1), "BIC " + n2(res.bic, 1)) +
+      stat("平均識別力", n2(IRT.mean(its.map(function (i) { return i.a; }))), "範囲 " + n2(Math.min.apply(null, its.map(function (i) { return i.a; }))) + "〜" + n2(Math.max.apply(null, its.map(function (i) { return i.a; })))) +
+      stat("困難度の幅", n2(bMin(its)) + "〜" + n2(bMax(its)), "logit") +
+      stat("計算時間", (S.elapsed / 1000).toFixed(1) + " 秒", "端末内で処理") + "</div>";
+
+    // 表
+    var se = res.se, idx = 0, seMap = [];
+    if (se) {
+      if (S.model === "1PL") { var aSE = se[0]; idx = 1; its.forEach(function (it, j) { seMap.push({ a: aSE, b: [se[idx++]] }); }); }
+      else its.forEach(function (it, j) {
+        var o = { a: se[idx++], b: [] };
+        if (poly) { for (var k = 0; k < it.K - 1; k++) o.b.push(se[idx++]); }
+        else { o.b.push(se[idx++]); if (S.model === "3PL") o.c = se[idx++]; }
+        seMap.push(o);
+      });
+    }
+    var maxB = poly ? Math.max.apply(null, its.map(function (i) { return i.K - 1; })) : 1;
+    h += '<div class="scroll"><table><thead><tr><th>項目</th><th class="num">a</th>';
+    if (poly) { for (var k = 0; k < maxB; k++) h += '<th class="num">b' + (k + 1) + "</th>"; }
+    else { h += '<th class="num">b</th>'; if (S.model === "3PL") h += '<th class="num">c</th>'; }
+    h += '<th class="num">' + (poly ? "平均" : "通過率") + '</th><th class="num">I-T相関</th><th class="num">情報量の山</th><th>適合</th></tr></thead><tbody>';
+    its.forEach(function (it, j) {
+      var cs = S.classical.items[j], sm = seMap[j];
+      h += "<tr><td>" + esc(it.name) + '</td><td class="num">' + n2(it.a) + (sm ? ' <span style="color:var(--ink-3)">(' + n2(sm.a) + ")</span>" : "") + "</td>";
+      if (poly) {
+        for (var k = 0; k < maxB; k++) h += '<td class="num">' + (it.b[k] == null ? "—" : n2(it.b[k]) + (sm && sm.b[k] ? ' <span style="color:var(--ink-3)">(' + n2(sm.b[k]) + ")</span>" : "")) + "</td>";
+      } else {
+        h += '<td class="num">' + n2(it.b) + (sm ? ' <span style="color:var(--ink-3)">(' + n2(sm.b[0]) + ")</span>" : "") + "</td>";
+        if (S.model === "3PL") h += '<td class="num">' + n2(it.c) + (sm && sm.c ? ' <span style="color:var(--ink-3)">(' + n2(sm.c) + ")</span>" : "") + "</td>";
+      }
+      var peak = peakTheta(it);
+      h += '<td class="num">' + n2(poly ? cs.mean : cs.prop) + '</td><td class="num">' + n2(cs.rit) + '</td><td class="num">' + n2(peak) + "</td><td>" + fitTag(j) + "</td></tr>";
+    });
+    h += "</tbody></table></div>";
+    h += '<p class="hint">識別力の目安：0.65 未満はやや弱い、1.35 以上は強い。I-T相関（その項目を除く合計得点との相関）が .20 を下回る項目は内容を見直す候補です。</p></div>';
+
+    // 曲線
+    h += '<div class="card"><h2>項目特性曲線</h2><p class="lead">横軸は特性値 θ。曲線が左にあるほどやさしい項目、傾きが急なほど識別力の高い項目です。</p>';
+    h += figure(poly ? "全項目の期待得点曲線" : "全項目の項目特性曲線", "青＝やさしい項目／茶＝難しい項目", allCurves(), "");
+    h += '<h3>項目ごとに見る</h3><div class="chips" id="itemChips"></div><div id="itemDetail"></div></div>';
+    $("itemsBody").innerHTML = h;
+    var chips = $("itemChips");
+    its.forEach(function (it, j) {
+      var c = el("button", "chip" + (j === S.selItem ? " on" : ""), esc(it.name));
+      c.onclick = function () { S.selItem = j; renderItems(); };
+      chips.appendChild(c);
+    });
+    $("itemDetail").innerHTML = itemDetail(S.selItem);
+  }
+  function stat(l, v, s) { return '<div class="stat"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + (s || "") + "</div></div>"; }
+  function bMin(its) { return Math.min.apply(null, its.map(function (i) { return i.model === "GRM" ? Math.min.apply(null, i.b) : i.b; })); }
+  function bMax(its) { return Math.max.apply(null, its.map(function (i) { return i.model === "GRM" ? Math.max.apply(null, i.b) : i.b; })); }
+  function peakTheta(it) {
+    var best = -Infinity, bt = 0;
+    for (var t = -4; t <= 4.001; t += 0.05) { var v = IRT.itemInfo(t, it); if (v > best) { best = v; bt = t; } }
+    return bt;
+  }
+  function fitTag(j) {
+    var f = S.fitstat.item[j], sx = S.sx[j];
+    var bad = (sx && sx.p < 0.01) || f.infit > 1.33 || f.infit < 0.75 || f.outfit > 1.4;
+    var mid = (sx && sx.p < 0.05) || f.infit > 1.2 || f.infit < 0.85;
+    return bad ? '<span class="tag warn">要検討</span>' : (mid ? '<span class="tag mid">注意</span>' : '<span class="tag ok">良好</span>');
+  }
+  function allCurves() {
+    var its = S.res.items, poly = S.model === "GRM", ser = [];
+    var maxY = poly ? Math.max.apply(null, its.map(function (i) { return i.K - 1; })) : 1;
+    var order = its.map(function (it, j) { return { j: j, b: it.model === "GRM" ? IRT.mean(it.b) : it.b }; }).sort(function (a, b) { return a.b - b.b; });
+    order.forEach(function (o, rank) {
+      var it = its[o.j], data = [];
+      for (var t = -4; t <= 4.001; t += 0.08) data.push([t, poly ? IRT.expectedScore(t, it) : IRT.catProbs(t, it)[1]]);
+      ser.push({ data: data, color: itemColor(rank, its.length), width: 1.4, opacity: .85 });
+    });
+    return svgChart({ w: 660, h: 320, xmin: -4, xmax: 4, ymin: 0, ymax: maxY, series: ser, xlabel: "特性値 θ", ylabel: poly ? "期待得点" : "正答確率", hline: poly ? [] : [{ y: .5, color: "var(--line-2)", dash: "2 4" }] });
+  }
+  function itemDetail(j) {
+    var it = S.res.items[j], poly = S.model === "GRM", h = "";
+    var ser = [], legend = "";
+    if (poly) {
+      for (var k = 0; k < it.K; k++) {
+        var d = [];
+        for (var t = -4; t <= 4.001; t += 0.06) d.push([t, IRT.catProbs(t, it)[k]]);
+        ser.push({ data: d, color: itemColor(k, it.K), width: 1.8 });
+        legend += '<span><i style="background:' + itemColor(k, it.K) + '"></i>カテゴリ ' + (S.catMaps[j].cats[k] != null ? S.catMaps[j].cats[k] : k) + "</span>";
+      }
+      h += figure("カテゴリ反応曲線：" + esc(it.name), "a=" + n2(it.a), svgChart({ w: 640, h: 300, xmin: -4, xmax: 4, ymin: 0, ymax: 1, series: ser, xlabel: "特性値 θ", ylabel: "選択確率" }), legend);
+    } else {
+      var d1 = [], d2 = [];
+      for (var t2 = -4; t2 <= 4.001; t2 += 0.05) { d1.push([t2, IRT.catProbs(t2, it)[1]]); d2.push([t2, IRT.itemInfo(t2, it)]); }
+      var emp = empirical(j);
+      h += figure("項目特性曲線：" + esc(it.name), "a=" + n2(it.a) + "  b=" + n2(it.b) + (S.model === "3PL" ? "  c=" + n2(it.c) : ""),
+        svgChart({
+          w: 640, h: 300, xmin: -4, xmax: 4, ymin: 0, ymax: 1,
+          series: [{ data: d1, color: "var(--item)", width: 2.2 }, { type: "points", data: emp, color: "var(--person)", r: 3.4 }],
+          xlabel: "特性値 θ", ylabel: "正答確率", vline: [{ x: it.b, color: "var(--line-2)", dash: "3 3" }]
+        }),
+        '<span><i style="background:var(--item)"></i>モデルの予測</span><span><i style="background:var(--person)"></i>実際の通過率（θ を10等分した群）</span>');
+    }
+    var di = [];
+    for (var t3 = -4; t3 <= 4.001; t3 += 0.05) di.push([t3, IRT.itemInfo(t3, it)]);
+    var mx = Math.max.apply(null, di.map(function (p) { return p[1]; }));
+    h += figure("この項目の情報量", "山の位置 θ=" + n2(peakTheta(it)), svgChart({ w: 640, h: 210, xmin: -4, xmax: 4, ymin: 0, ymax: Math.max(mx * 1.15, 0.1), series: [{ type: "area", data: di, color: "var(--person)", opacity: .2, width: 1.8 }], xlabel: "特性値 θ", ylabel: "情報量" }));
+    var f = S.fitstat.item[j], sx = S.sx[j], cs = S.classical.items[j];
+    h += '<div class="note">この項目の適合：S-X² = ' + n2(sx.chi2, 1) + "（df=" + sx.df + ", p=" + pf(sx.p) + "）、infit = " + n2(f.infit) + "、outfit = " + n2(f.outfit) +
+      "。I-T相関 = " + n2(cs.rit) + "、この項目を除いた α = " + n2(cs.alphaIfDropped) + "。</div>";
+    return h;
+  }
+  function empirical(j) {
+    var idx = [], i;
+    for (i = 0; i < S.X.length; i++) if (S.X[i][j] != null && isFinite(S.theta[i].theta)) idx.push(i);
+    idx.sort(function (a, b) { return S.theta[a].theta - S.theta[b].theta; });
+    var G = 10, out = [], sz = Math.floor(idx.length / G);
+    if (sz < 2) return [];
+    for (var g = 0; g < G; g++) {
+      var part = idx.slice(g * sz, g === G - 1 ? idx.length : (g + 1) * sz);
+      var mt = 0, mp = 0;
+      part.forEach(function (i2) { mt += S.theta[i2].theta; mp += S.X[i2][j]; });
+      out.push([mt / part.length, mp / part.length]);
+    }
+    return out;
+  }
+
+  /* ================= 4 情報量 ================= */
+  function renderInfo() {
+    var its = S.res.items, h = '<div class="card"><h2>テストが測れる範囲</h2><p class="lead">情報量が大きい特性値ほど精度よく測れます。測定の標準誤差は情報量の平方根の逆数です。</p>';
+    var ti = [], se = [], tcc = [], maxI = 0, t;
+    for (t = -4; t <= 4.001; t += 0.05) {
+      var I = IRT.testInfo(t, its);
+      ti.push([t, I]); se.push([t, I > 0 ? 1 / Math.sqrt(I) : 3]); maxI = Math.max(maxI, I);
+      var e = 0; its.forEach(function (it) { e += IRT.expectedScore(t, it); });
+      tcc.push([t, e]);
+    }
+    var peak = ti.reduce(function (a, b) { return b[1] > a[1] ? b : a; })[0];
+    var seScaled = se.map(function (p) { return [p[0], Math.min(p[1], 2) / 2 * maxI]; });
+    var rel = IRT.reliability(S.thetaEAP);
+    var range = [];
+    ti.forEach(function (p) { if (p[1] >= 1 / (0.5 * 0.5)) range.push(p[0]); }); // SE≤0.5 の範囲
+    h += '<div class="stats">' +
+      stat("情報量の頂点", "θ=" + n2(peak), "最大 " + n2(maxI, 1)) +
+      stat("SE≤0.50 の範囲", range.length ? n2(range[0]) + "〜" + n2(range[range.length - 1]) : "なし", "この範囲の人を精度よく測れます") +
+      stat("経験的信頼性", n2(rel.empirical, 3), "EAP の分散と誤差から") +
+      stat("α係数", n2(S.classical.alpha, 3), "古典的テスト理論") + "</div>";
+    h += figure("テスト情報量と測定の標準誤差", "実線＝情報量／破線＝標準誤差",
+      svgChart({
+        w: 660, h: 320, xmin: -4, xmax: 4, ymin: 0, ymax: maxI * 1.12,
+        series: [{ type: "area", data: ti, color: "var(--person)", opacity: .16, width: 2 }, { data: seScaled, color: "var(--alert)", width: 1.6, dash: "5 4" }],
+        xlabel: "特性値 θ", ylabel: "テスト情報量", y2label: "標準誤差（0〜2）"
+      }),
+      '<span><i style="background:var(--person)"></i>情報量</span><span><i style="background:var(--alert)"></i>標準誤差（右目盛 0〜2）</span>');
+    h += '<div class="grid2">';
+    var maxScore = its.reduce(function (s, it) { return s + it.K - 1; }, 0);
+    h += figure("テスト特性曲線", "期待される合計得点", svgChart({ w: 460, h: 280, xmin: -4, xmax: 4, ymin: 0, ymax: maxScore, series: [{ data: tcc, color: "var(--item)", width: 2.2 }], xlabel: "特性値 θ", ylabel: "期待得点" }));
+    // 観測 vs 期待の得点分布
+    var dist = IRT.expectedScoreDist(its, S.res.quad), N = 0, obs = new Array(maxScore + 1).fill(0);
+    S.totals.forEach(function (s) { if (s != null) { obs[s]++; N++; } });
+    var expd = [], obsd = [];
+    for (var k = 0; k <= maxScore; k++) { expd.push([k, dist[k] * N]); obsd.push([k, obs[k]]); }
+    var my = Math.max(Math.max.apply(null, obs), Math.max.apply(null, Array.from(dist).map(function (v) { return v * N; }))) * 1.12;
+    h += figure("合計得点の分布：観測と期待", "棒＝観測／線＝モデルの予測",
+      svgChart({ w: 460, h: 280, xmin: -0.5, xmax: maxScore + 0.5, ymin: 0, ymax: my, series: [{ type: "bars", data: obsd, color: "var(--item)", opacity: .35 }, { data: expd, color: "var(--person)", width: 2 }], xlabel: "合計得点", ylabel: "人数" }));
+    h += "</div>";
+    // 項目情報量
+    var ser = [];
+    its.forEach(function (it, j) {
+      var d = [];
+      for (var t2 = -4; t2 <= 4.001; t2 += 0.06) d.push([t2, IRT.itemInfo(t2, it)]);
+      ser.push({ data: d, color: itemColor(j, its.length), width: 1.3, opacity: .85 });
+    });
+    var mi = 0; ser.forEach(function (s) { s.data.forEach(function (p) { mi = Math.max(mi, p[1]); }); });
+    h += figure("項目ごとの情報量", "山の重なりが薄い帯＝測りにくい範囲",
+      svgChart({ w: 660, h: 290, xmin: -4, xmax: 4, ymin: 0, ymax: mi * 1.1, series: ser, xlabel: "特性値 θ", ylabel: "項目情報量" }));
+    h += '<p class="hint">目盛の目安：情報量 4 で標準誤差 0.50、情報量 10 で 0.32。測りたい層に山が来ていない場合は、その層の難易度の項目を追加すると精度が上がります。</p></div>';
+    $("infoBody").innerHTML = h;
+  }
+
+  /* ================= 5 特性値 ================= */
+  function renderTheta() {
+    var th = S.theta, vals = th.map(function (t) { return t.theta; }).filter(isFinite);
+    var rel = IRT.reliability(S.thetaEAP);
+    var h = '<div class="card"><h2>受験者の特性値</h2><p class="lead">' +
+      ($("thetaMethod").value === "MLE" ? "最尤推定。満点・0点の人は値が定まらないため「—」になります。" : "EAP（事後期待値）。標準正規分布を事前分布として、全員に値が出ます。平均へやや縮小される点に注意してください。") + "</p>";
+    h += '<div class="stats">' +
+      stat("人数", vals.length + " 人", "有効な推定値") +
+      stat("θ 平均", n2(IRT.mean(vals)), "SD " + n2(IRT.sd(vals))) +
+      stat("平均標準誤差", n2(IRT.mean(th.map(function (t) { return t.se; }).filter(isFinite))), "1人あたりの測定誤差") +
+      stat("経験的信頼性", n2(rel.empirical, 3), "1 − 誤差分散/全分散") +
+      stat("素点との相関", n2(IRT.corr(S.totals, th.map(function (t) { return isFinite(t.theta) ? t.theta : null; })), 3), "合計得点と θ") + "</div>";
+    // ヒストグラム
+    var bins = 30, lo = -4, hi = 4, cnt = new Array(bins).fill(0);
+    vals.forEach(function (v) { cnt[Math.min(bins - 1, Math.max(0, Math.floor((v - lo) / (hi - lo) * bins)))]++; });
+    var bd = cnt.map(function (c, i) { return [lo + (hi - lo) * (i + 0.5) / bins, c]; });
+    var nd = [];
+    for (var t = -4; t <= 4.001; t += 0.05) nd.push([t, Math.exp(-t * t / 2) / Math.sqrt(2 * Math.PI) * vals.length * (hi - lo) / bins]);
+    var mh = Math.max(Math.max.apply(null, cnt), 1) * 1.15;
+    h += '<div class="grid2">';
+    h += figure("特性値の分布", "破線＝標準正規分布", svgChart({ w: 460, h: 280, xmin: -4, xmax: 4, ymin: 0, ymax: mh, series: [{ type: "bars", data: bd, color: "var(--person)", opacity: .45 }, { data: nd, color: "var(--ink-2)", width: 1.3, dash: "4 3" }], xlabel: "特性値 θ", ylabel: "人数" }));
+    h += figure("人と項目の対応（ワイトマップ）", "上＝人／下＝項目", wrightMap());
+    h += "</div>";
+    // 表
+    h += '<h3>一人ずつの推定値</h3><div class="scroll"><table><thead><tr><th>ID</th><th class="num">合計得点</th><th class="num">θ</th><th class="num">標準誤差</th><th class="num">95%区間</th><th class="num">パーセンタイル</th><th>適合</th></tr></thead><tbody>';
+    var order = th.map(function (t, i) { return i; }).sort(function (a, b) { return (th[b].theta || -99) - (th[a].theta || -99); });
+    var sorted = vals.slice().sort(function (a, b) { return a - b; });
+    order.slice(0, 500).forEach(function (i) {
+      var t2 = th[i], pf2 = S.fitstat.person[i];
+      var pct = isFinite(t2.theta) ? Math.round(100 * lowerCount(sorted, t2.theta) / sorted.length) : null;
+      h += "<tr><td>" + esc(S.ids[i]) + '</td><td class="num">' + (S.totals[i] == null ? "—" : S.totals[i]) + '</td><td class="num">' + (isFinite(t2.theta) ? n2(t2.theta) : "—") +
+        '</td><td class="num">' + n2(t2.se) + '</td><td class="num">' + (isFinite(t2.theta) && isFinite(t2.se) ? n2(t2.theta - 1.96 * t2.se) + "〜" + n2(t2.theta + 1.96 * t2.se) : "—") +
+        '</td><td class="num">' + (pct == null ? "—" : pct) + '</td><td>' + (pf2.outfit > 2 ? '<span class="tag warn">不規則</span>' : (pf2.outfit > 1.5 ? '<span class="tag mid">やや不規則</span>' : '<span class="tag flat">—</span>')) + "</td></tr>";
+    });
+    h += "</tbody></table></div>";
+    if (th.length > 500) h += '<p class="hint">上位 500 人のみ表示しています。全員分は CSV で書き出せます。</p>';
+    h += '<div class="btnrow"><button class="btn ghost sm" id="dlTheta">特性値を CSV で保存</button></div>';
+    h += '<p class="hint">「不規則」は outfit が 2 を超える回答パターン（やさしい項目を落として難しい項目に正答するなど）。個票を確認する手がかりになります。</p></div>';
+    $("thetaBody").innerHTML = h;
+    $("dlTheta").onclick = downloadTheta;
+  }
+  function lowerCount(sorted, v) { var lo = 0, hi = sorted.length; while (lo < hi) { var m = (lo + hi) >> 1; if (sorted[m] < v) lo = m + 1; else hi = m; } return lo; }
+  function wrightMap() {
+    var W = 460, H = 280, m = { l: 46, r: 16, t: 14, b: 34 };
+    var lo = -4, hi = 4, iw = W - m.l - m.r;
+    var xs = function (t) { return m.l + (t - lo) / (hi - lo) * iw; };
+    var mid = m.t + (H - m.t - m.b) * 0.52;
+    var o = ['<svg viewBox="0 0 ' + W + " " + H + '" xmlns="http://www.w3.org/2000/svg" font-family="var(--mono)">'];
+    var bins = 40, cnt = new Array(bins).fill(0), mx = 0;
+    S.theta.forEach(function (t) { if (isFinite(t.theta)) cnt[Math.min(bins - 1, Math.max(0, Math.floor((t.theta - lo) / (hi - lo) * bins)))]++; });
+    cnt.forEach(function (c) { mx = Math.max(mx, c); });
+    var bw = iw / bins;
+    cnt.forEach(function (c, i) {
+      if (!c) return;
+      var hgt = (c / mx) * (mid - m.t - 6);
+      o.push('<rect x="' + (xs(lo + (hi - lo) * i / bins) + .5).toFixed(1) + '" y="' + (mid - hgt).toFixed(1) + '" width="' + (bw - 1).toFixed(1) + '" height="' + hgt.toFixed(1) + '" fill="var(--person)" opacity=".45"/>');
+    });
+    o.push('<line x1="' + m.l + '" y1="' + mid + '" x2="' + (W - m.r) + '" y2="' + mid + '" stroke="var(--line-2)"/>');
+    // 項目：難易度順に段を分けて配置
+    var its = S.res.items.map(function (it, j) { return { b: it.model === "GRM" ? IRT.mean(it.b) : it.b, name: it.name, j: j }; }).sort(function (a, b) { return a.b - b.b; });
+    var lanes = [], laneH = 13;
+    its.forEach(function (o2) {
+      var x = xs(IRT.clamp(o2.b, lo, hi)), lane = 0;
+      while (lanes[lane] != null && lanes[lane] > x - 40) lane++;
+      lanes[lane] = x;
+      var y = mid + 12 + lane * laneH;
+      if (y > H - m.b + 4) return;
+      o.push('<line x1="' + x.toFixed(1) + '" y1="' + mid + '" x2="' + x.toFixed(1) + '" y2="' + (y - 7) + '" stroke="var(--item)" stroke-width="1" opacity=".5"/>');
+      o.push('<text x="' + x.toFixed(1) + '" y="' + y + '" font-size="9" fill="var(--item)" text-anchor="middle">' + esc(o2.name.length > 7 ? o2.name.slice(0, 7) : o2.name) + "</text>");
+    });
+    for (var t = -4; t <= 4; t++) {
+      o.push('<line x1="' + xs(t).toFixed(1) + '" y1="' + mid + '" x2="' + xs(t).toFixed(1) + '" y2="' + (mid + 4) + '" stroke="var(--line-2)"/>');
+      o.push('<text x="' + xs(t).toFixed(1) + '" y="' + (H - 8) + '" font-size="9.5" fill="var(--ink-3)" text-anchor="middle">' + (t > 0 ? "+" : "") + t + "</text>");
+    }
+    o.push('<text x="' + (m.l + 2) + '" y="' + (m.t + 9) + '" font-size="9.5" fill="var(--ink-3)">人の分布</text>');
+    o.push("</svg>");
+    return o.join("");
+  }
+
+  /* ================= 6 診断 ================= */
+  function renderDiag() {
+    var its = S.res.items, J = its.length, h = "";
+    // 適合度
+    h += '<div class="card"><h2>項目の適合</h2><p class="lead">S-X² はモデルの予測と実際の反応のずれを合計得点ごとに検定します。p が小さいほどずれが大きい項目です。infit / outfit は 1 が期待値。</p>';
+    h += '<div class="scroll"><table><thead><tr><th>項目</th><th class="num">S-X²</th><th class="num">df</th><th class="num">p</th><th class="num">χ²/df</th><th class="num">infit</th><th class="num">ZSTD</th><th class="num">outfit</th><th class="num">ZSTD</th><th>判定</th></tr></thead><tbody>';
+    var nBad = 0;
+    its.forEach(function (it, j) {
+      var s = S.sx[j], f = S.fitstat.item[j];
+      if (s.p < 0.01) nBad++;
+      h += "<tr><td>" + esc(it.name) + '</td><td class="num">' + n2(s.chi2, 1) + '</td><td class="num">' + s.df + '</td><td class="num">' + pf(s.p) +
+        '</td><td class="num">' + n2(s.ratio) + '</td><td class="num">' + n2(f.infit) + '</td><td class="num">' + n2(f.infitZ, 1) + '</td><td class="num">' + n2(f.outfit) + '</td><td class="num">' + n2(f.outfitZ, 1) + "</td><td>" + fitTag(j) + "</td></tr>";
+    });
+    h += "</tbody></table></div>";
+    h += '<p class="hint">目安：infit / outfit が 0.75〜1.33 の外にある項目、S-X² の p が .01 未満の項目は内容を確認します。標本が大きいと小さなずれでも p は小さくなるため、χ²/df の大きさも併せて見てください。</p></div>';
+
+    // 局所独立
+    var pairs = [], mxq = 0, sumq = 0, cntq = 0;
+    for (var a = 0; a < J; a++) for (var b = a + 1; b < J; b++) {
+      var v = S.q3[a][b];
+      if (!isFinite(v)) continue;
+      sumq += v; cntq++;
+      if (Math.abs(v) > Math.abs(mxq)) mxq = v;
+      pairs.push({ a: a, b: b, v: v });
+    }
+    var meanq = cntq ? sumq / cntq : 0;
+    pairs.sort(function (x, y) { return Math.abs(y.v - meanq) - Math.abs(x.v - meanq); });
+    h += '<div class="card"><h2>前提の確認</h2><p class="lead">項目反応理論は「一次元性」と「局所独立」を前提にします。どちらも残差から確かめます。</p>';
+    h += "<h3>局所独立（Q3）</h3>";
+    h += '<div class="stats">' + stat("|Q3| の最大", n2(Math.abs(mxq)), "平均からのずれで判断する") + stat("Q3 の平均", n2(meanq)) +
+      stat("|Q3−平均|>.20", pairs.filter(function (p) { return Math.abs(p.v - meanq) > 0.2; }).length + " 組", "全 " + cntq + " 組中") + "</div>";
+    h += '<div class="scroll" style="max-height:230px"><table><thead><tr><th>項目の組</th><th class="num">Q3</th><th class="num">平均との差</th><th>判定</th></tr></thead><tbody>';
+    pairs.slice(0, 12).forEach(function (p) {
+      var d = p.v - meanq;
+      h += "<tr><td>" + esc(its[p.a].name) + " － " + esc(its[p.b].name) + '</td><td class="num">' + n2(p.v, 3) + '</td><td class="num">' + n2(d, 3) + "</td><td>" +
+        (Math.abs(d) > 0.3 ? '<span class="tag warn">依存の疑い</span>' : (Math.abs(d) > 0.2 ? '<span class="tag mid">注意</span>' : '<span class="tag ok">問題なし</span>')) + "</td></tr>";
+    });
+    h += "</tbody></table></div><p class=\"hint\">同じ文章題を共有する項目、前の問いの答えが次に必要な項目などで大きくなります。該当する場合は片方を削るか、まとめて1項目として扱います。</p>";
+
+    // 一次元性
+    var eig = S.pca.eigen.map(function (e) { return e.value; });
+    h += "<h3>一次元性（残差の主成分分析）</h3>";
+    h += '<div class="stats">' + stat("第1固有値", n2(eig[0]), "2.0 未満なら追加因子は弱い") + stat("第2固有値", n2(eig[1])) +
+      stat("説明率", n2(100 * eig[0] / J, 1) + "%", "残差全体に占める割合") + "</div>";
+    var ed = eig.slice(0, Math.min(10, J)).map(function (v, i) { return [i + 1, v]; });
+    h += figure("残差の固有値", "1本目が 2.0 を超えると別の次元の疑い",
+      svgChart({ w: 660, h: 230, xmin: 0.5, xmax: Math.min(10, J) + 0.5, ymin: 0, ymax: Math.max(2.4, eig[0] * 1.2), series: [{ type: "bars", data: ed, color: "var(--item)", opacity: .45 }, { data: ed, color: "var(--ink-2)", width: 1.2 }], hline: [{ y: 2, color: "var(--alert)" }], xlabel: "成分", ylabel: "固有値" }));
+    if (eig[0] >= 2) {
+      var load = S.pca.eigen[0].vector;
+      var pos = [], neg = [];
+      load.forEach(function (v, j) { if (v > 0.3) pos.push(its[j].name); else if (v < -0.3) neg.push(its[j].name); });
+      h += '<div class="note warn"><b>第1固有値が 2.0 以上</b>です。残差に共通する第2の次元があるかもしれません。' +
+        (pos.length ? "正の側：" + esc(pos.join("、")) + "。" : "") + (neg.length ? "負の側：" + esc(neg.join("、")) + "。" : "") +
+        " 両群の内容に共通点がないか確かめてください。</div>";
+    } else {
+      h += '<div class="note">第1固有値は ' + n2(eig[0]) + " で、目安の 2.0 を下回っています。一次元性の仮定と大きく矛盾する結果ではありません。</div>";
+    }
+    h += "</div>";
+
+    // DIF
+    h += '<div class="card"><h2>特異項目機能（DIF）</h2>';
+    if (!S.dif) {
+      h += '<p class="lead">群の列を指定すると、同じ特性値の人どうしで正答率が違う項目を調べられます。' +
+        (Math.max.apply(null, S.K) > 2 ? "現在の判定法（Mantel-Haenszel）は 2値項目のみに対応しています。" : "「モデル」の画面で群の列を選んでから、もう一度推定してください。") + "</p>";
+    } else {
+      h += '<p class="lead">Mantel-Haenszel 法。合計得点をそろえたうえで、' + esc(S.dif.ref) + "（" + S.dif.counts[S.dif.ref] + "人）と " + esc(S.dif.foc) + "（" + S.dif.counts[S.dif.foc] + "人）の正答率を比べます。ETS 分類の C は無視できない DIF です。</p>";
+      h += '<div class="scroll"><table><thead><tr><th>項目</th><th class="num">α(MH)</th><th class="num">Δ(MH D-DIF)</th><th class="num">χ²</th><th class="num">p</th><th>ETS分類</th><th>有利な群</th></tr></thead><tbody>';
+      S.dif.res.forEach(function (d, j) {
+        h += "<tr><td>" + esc(its[j].name) + '</td><td class="num">' + n2(d.alpha) + '</td><td class="num">' + n2(d.delta) + '</td><td class="num">' + n2(d.chi2, 1) + '</td><td class="num">' + pf(d.p) + "</td><td>" +
+          (d.cls === "C" ? '<span class="tag warn">C</span>' : (d.cls === "B" ? '<span class="tag mid">B</span>' : '<span class="tag ok">A</span>')) + "</td><td>" +
+          (isFinite(d.delta) && Math.abs(d.delta) > 0.5 ? (d.delta < 0 ? esc(S.dif.ref) : esc(S.dif.foc)) : "—") + "</td></tr>";
+      });
+      h += "</tbody></table></div>";
+      var cs = S.dif.res.filter(function (d) { return d.cls === "C"; }).length;
+      h += '<p class="hint">通過率が極端に高い（低い）項目では、度数の少ない欄が生じて α(MH) が不安定になります。Δ の大きさだけでなく、その項目の通過率も併せて確認してください。</p>';
+      h += '<div class="note' + (cs ? " warn" : "") + '">' + (cs ? "C 判定が " + cs + " 項目あります。表現や題材が一方の群に有利になっていないか、内容の面から検討してください。" : "C 判定の項目はありません。群による偏りは大きくないと考えられます。") + "</div>";
+    }
+    h += "</div>";
+    $("diagBody").innerHTML = h;
+  }
+
+  /* ================= 7 レポート ================= */
+  function renderReport() {
+    var its = S.res.items, J = its.length, N = S.X.length, poly = S.model === "GRM";
+    var rel = IRT.reliability(S.thetaEAP);
+    var aMean = IRT.mean(its.map(function (i) { return i.a; }));
+    var lowA = its.filter(function (i) { return i.a < 0.65; }).map(function (i) { return i.name; });
+    var badFit = [];
+    its.forEach(function (it, j) { if (S.sx[j].p < 0.01 || S.fitstat.item[j].infit > 1.33 || S.fitstat.item[j].infit < 0.75) badFit.push(it.name); });
+    var lowRit = [];
+    its.forEach(function (it, j) { if (S.classical.items[j].rit < 0.2) lowRit.push(it.name); });
+    var ti = [], maxI = 0, peak = 0;
+    for (var t = -4; t <= 4.001; t += 0.05) { var I = IRT.testInfo(t, its); ti.push([t, I]); if (I > maxI) { maxI = I; peak = t; } }
+    var range = ti.filter(function (p) { return p[1] >= 4; });
+    var thv = S.theta.map(function (x) { return x.theta; }).filter(isFinite);
+    var eig1 = S.pca.eigen[0].value;
+    var difC = S.dif ? S.dif.res.filter(function (d) { return d.cls === "C"; }).length : null;
+
+    var h = '<div class="card"><h2>結果の読み取り</h2><div class="report">';
+    h += "<h4>全体像</h4><p>" + N + " 人の回答に " + modelName(S.model) + "を当てはめました。" +
+      (S.res.converged ? "推定は " + S.res.iterations + " 回の反復で収束しています。" : "反復の上限に達しました。求積点を増やすか、極端な項目を外して再推定してください。") +
+      " 識別力の平均は " + n2(aMean) + "、困難度は " + n2(bMin(its)) + " から " + n2(bMax(its)) + " の範囲に分布しています。" +
+      "受験者の特性値は平均 " + n2(IRT.mean(thv)) + "、標準偏差 " + n2(IRT.sd(thv)) + " でした（EAP は平均へ縮小されるため、標準偏差は 1 より小さくなるのが普通です）。</p>";
+    h += "<h4>測定の精度</h4><p>テスト情報量は θ=" + n2(peak) + " で最大 " + n2(maxI, 1) + " に達し、" +
+      (range.length ? "標準誤差 0.50 以下で測れる範囲は θ=" + n2(range[0][0]) + " から " + n2(range[range.length - 1][0]) + " です。" : "標準誤差 0.50 以下で測れる範囲はありません。項目数を増やす必要があります。") +
+      " 経験的信頼性は " + n2(rel.empirical, 3) + "、α 係数は " + n2(S.classical.alpha, 3) + " でした。" +
+      (rel.empirical < 0.7 ? "個人の判定に使うには精度が足りません。" : (rel.empirical < 0.8 ? "集団の比較には使えますが、個人の合否判定には慎重さが要ります。" : "個人の測定にも耐える水準です。")) + "</p>";
+    h += "<h4>項目の質</h4><p>" +
+      (lowA.length ? "識別力が 0.65 を下回る項目は " + esc(lowA.join("、")) + " です。特性値の高低で反応がほとんど変わらないため、削除か改訂の候補になります。" : "識別力が極端に低い項目はありません。") +
+      (badFit.length ? " モデルとのずれが大きい項目は " + esc(badFit.join("、")) + " でした。選択肢の作りや設問の曖昧さを確認してください。" : " S-X² と infit / outfit のいずれでも、大きく不適合な項目はありませんでした。") +
+      (lowRit.length ? " また、I-T相関が .20 未満の項目（" + esc(lowRit.join("、")) + "）は他の項目と測っているものが違う可能性があります。" : "") + "</p>";
+    h += "<h4>前提</h4><p>残差の主成分分析では第1固有値が " + n2(eig1) + " で、" +
+      (eig1 >= 2 ? "目安の 2.0 を超えています。一次元性が保たれていない可能性があるため、下位尺度に分ける、あるいは多次元モデルを検討してください。" : "目安の 2.0 を下回りました。一次元性の仮定はおおむね支持されます。") +
+      (difC != null ? " DIF の検討では、ETS 分類 C の項目が " + difC + " 個ありました。" + (difC ? "内容の偏りを点検してください。" : "") : "") + "</p>";
+    h += "<h4>次の一手</h4><p>" +
+      (range.length && (IRT.mean(thv) < range[0][0] || IRT.mean(thv) > range[range.length - 1][0]) ? "受験者の平均が、精度よく測れる範囲から外れています。集団の中心に合った難易度の項目を足すと効率が上がります。" :
+        "受験者の分布と情報量の山はおおむね重なっています。") +
+      " 項目を削るときは、情報量の図で山が薄くなる帯ができないかを確かめてから決めてください。</p>";
+    h += "</div></div>";
+
+    // 論文記述例
+    h += '<div class="card"><h2>論文・報告書の記述例</h2><p class="lead">そのまま貼り付けられる書きぶりです。数値は今回の結果を差し込んであります。</p><div class="report">';
+    h += "<h4>方法</h4><div class=\"quote\">" + esc(methodText(N, J, poly)) + "</div>";
+    h += "<h4>結果</h4><div class=\"quote\">" + esc(resultText(N, J, its, aMean, rel, peak, maxI, range, eig1, badFit)) + "</div>";
+    h += "<h4>限界</h4><div class=\"quote\">" + esc(limitText(N, rel, eig1)) + "</div>";
+    h += '</div><div class="btnrow"><button class="btn ghost sm" id="copyReport">記述例をコピー</button></div></div>';
+
+    // R コード
+    h += '<div class="card"><h2>R で再現する</h2><p class="lead">データも計算手順もすべて埋め込んであります。<b>追加パッケージは不要</b>で、JASP の R コンソールにそのまま貼り付けて実行できます。図は画面に描かず PNG ファイルとして保存されます。</p>';
+    h += '<pre class="code" id="rcode">' + esc(rCode()) + "</pre>";
+    h += '<div class="btnrow"><button class="btn ghost sm" id="copyR">R コードをコピー</button>' +
+      '<button class="btn ghost sm" id="dlItems">項目パラメータを CSV で保存</button>' +
+      '<button class="btn ghost sm" id="dlTheta2">特性値を CSV で保存</button></div></div>';
+    $("reportBody").innerHTML = h;
+    $("copyR").onclick = function () { copy($("rcode").textContent, this); };
+    $("copyReport").onclick = function () {
+      var t = [];
+      document.querySelectorAll("#reportBody .quote").forEach(function (q) { t.push(q.textContent); });
+      copy(t.join("\n\n"), this);
+    };
+    $("dlItems").onclick = downloadItems;
+    $("dlTheta2").onclick = downloadTheta;
+  }
+  function modelName(m) {
+    return { "1PL": "1パラメータ・ロジスティックモデル（ラッシュモデル）", "2PL": "2パラメータ・ロジスティックモデル", "3PL": "3パラメータ・ロジスティックモデル", "GRM": "段階反応モデル" }[m];
+  }
+  function methodText(N, J, poly) {
+    var t = "　項目反応理論に基づき、" + J + " 項目からなる尺度の分析を行った。分析対象は " + N + " 名である。" +
+      modelName(S.model) + "を仮定し、周辺最尤法（EM アルゴリズム、ガウス・エルミート型の求積点 " + S.res.quad.n + " 点）によって項目母数を推定した。" +
+      "特性値の分布は平均 0、標準偏差 1 の標準正規分布を仮定した。個人の特性値は" + ($("thetaMethod").value === "MLE" ? "最尤法" : "EAP（事後期待値）") + "により推定した。";
+    t += "項目とモデルの適合は S-X² 統計量および infit / outfit 平均平方によって評価し、局所独立の仮定は Q3 統計量、一次元性は残差の主成分分析によって確認した。";
+    if (S.dif) t += "さらに、" + S.dif.ref + "群と" + S.dif.foc + "群の間の特異項目機能（DIF）を Mantel-Haenszel 法により検討し、ETS の基準（A・B・C）に従って分類した。";
+    return t;
+  }
+  function resultText(N, J, its, aMean, rel, peak, maxI, range, eig1, badFit) {
+    var t = "　推定の結果、識別力の平均は " + n2(aMean) + "（範囲 " + n2(Math.min.apply(null, its.map(function (i) { return i.a; }))) + "–" + n2(Math.max.apply(null, its.map(function (i) { return i.a; }))) + "）、" +
+      "困難度は " + n2(bMin(its)) + " から " + n2(bMax(its)) + " の範囲に分布した（Table 1）。" +
+      "残差の主成分分析における第1固有値は " + n2(eig1) + " であり、" + (eig1 < 2 ? "一次元性の仮定はおおむね支持された。" : "第2の次元の存在が示唆された。");
+    t += "S-X² 統計量による項目適合の検討では、" + (badFit.length ? badFit.length + " 項目（" + badFit.join("、") + "）で有意なずれが認められた。" : "有意なずれを示す項目は認められなかった。");
+    t += "テスト情報量は θ = " + n2(peak) + " において最大値 " + n2(maxI, 1) + " をとり、" +
+      (range.length ? "測定の標準誤差が .50 以下となる範囲は θ = " + n2(range[0][0]) + " から " + n2(range[range.length - 1][0]) + " であった。" : "測定の標準誤差が .50 以下となる範囲は認められなかった。");
+    t += "経験的信頼性は " + n2(rel.empirical, 3) + "、α 係数は " + n2(S.classical.alpha, 3) + " であった。";
+    if (S.dif) {
+      var c = S.dif.res.filter(function (d) { return d.cls === "C"; }), b = S.dif.res.filter(function (d) { return d.cls === "B"; });
+      t += "DIF の検討では、C に分類された項目が " + c.length + " 項目、B が " + b.length + " 項目であった" + (c.length ? "（C：" + c.map(function (d, j) { return its[S.dif.res.indexOf(d)].name; }).join("、") + "）" : "") + "。";
+    }
+    return t;
+  }
+  function limitText(N, rel, eig1) {
+    var t = "　本分析にはいくつかの限界がある。第一に、標本規模は " + N + " 名であり、" +
+      (N < 300 ? "項目母数を安定して推定するには十分とはいえない。特に識別力の推定値は標本によって変動しうる。" : "項目母数の推定にはおおむね十分だが、下位群での推定精度には注意が必要である。");
+    t += "第二に、" + (eig1 < 2 ? "一次元性はおおむね支持されたものの、これは残差の主成分分析による間接的な確認であり、確認的因子分析などによる検証が望ましい。" : "一次元性の仮定に疑義が残るため、多次元項目反応理論による再分析が求められる。");
+    t += "第三に、推定された特性値は本標本を基準とした相対的な尺度上の値であり、他の標本と直接比較するには等化の手続きが必要である。";
+    if (rel.empirical < 0.8) t += "第四に、信頼性は " + n2(rel.empirical, 3) + " にとどまり、個人単位の判定に用いるには精度が不足している。";
+    return t;
+  }
+  var R_ENGINE = [
+    "## ============================================================",
+    "##  推定エンジン（ここから下は書き換え不要です）",
+    "##  周辺最尤法（EM アルゴリズム）＋ガウス求積による項目母数の推定。",
+    "##  base R だけで動きます。mirt などの追加パッケージは不要です。",
+    "## ============================================================",
+    "",
+    "## 図のラベルが四角（豆腐）になる環境では、次を FALSE にしてください",
+    "jp_labels <- TRUE",
+    "L <- function(ja, en) if (jp_labels) ja else en",
+    "",
+    "## --- 保存先の自動判定（実際に書き込めるフォルダを探します） ---",
+    "can_write <- function(d) {",
+    "  if (!nzchar(d) || !dir.exists(d)) return(FALSE)",
+    "  f <- file.path(d, paste0(\".irt_test_\", as.integer(runif(1) * 1e6)))",
+    "  ok <- tryCatch({ writeLines(\"test\", f); TRUE }, error = function(e) FALSE, warning = function(w) FALSE)",
+    "  if (ok) unlink(f)",
+    "  ok",
+    "}",
+    "outdir <- local({",
+    "  roots <- unique(c(Sys.getenv(\"USERPROFILE\"), Sys.getenv(\"HOME\"), path.expand(\"~\"), getwd()))",
+    "  roots <- roots[nzchar(roots)]",
+    "  cands <- character(0)",
+    "  for (d in roots) {",
+    "    cands <- c(cands, file.path(d, \"Downloads\"), file.path(d, \"\\u30c0\\u30a6\\u30f3\\u30ed\\u30fc\\u30c9\"),",
+    "               file.path(d, \"Desktop\"), d)",
+    "  }",
+    "  cands <- c(cands, tempdir())",
+    "  for (d in cands) if (can_write(d)) return(d)",
+    "  tempdir()",
+    "})",
+    "cat(\"保存先フォルダ:\", outdir, \"\\n\")",
+    "",
+    "## --- 求積点 ---",
+    "nodes <- seq(-4.5, 4.5, length.out = n_quad)",
+    "wts <- dnorm(nodes); wts <- wts / sum(wts)",
+    "",
+    "## --- カテゴリ確率（求積点 × カテゴリ の行列） ---",
+    "catprob <- function(th, it) {",
+    "  if (it$model == \"GRM\") {",
+    "    S <- matrix(0, length(th), it$K - 1)",
+    "    for (k in seq_len(it$K - 1)) S[, k] <- plogis(it$a * (th - it$b[k]))",
+    "    P <- cbind(1, S) - cbind(S, 0)",
+    "  } else {",
+    "    S <- plogis(it$a * (th - it$b[1]))",
+    "    Pc <- it$c + (1 - it$c) * S",
+    "    P <- cbind(1 - Pc, Pc)",
+    "  }",
+    "  pmax(P, 1e-10)",
+    "}",
+    "",
+    "## --- E ステップ（各回答者の事後分布と、求積点ごとの期待度数） ---",
+    "estep <- function(X, items) {",
+    "  N <- nrow(X); J <- ncol(X); Q <- length(nodes)",
+    "  LL <- matrix(0, N, Q)",
+    "  for (j in seq_len(J)) {",
+    "    lp <- log(catprob(nodes, items[[j]]))",
+    "    x <- X[, j]; ok <- !is.na(x)",
+    "    if (any(ok)) LL[ok, ] <- LL[ok, ] + t(lp[, x[ok] + 1, drop = FALSE])",
+    "  }",
+    "  mx <- apply(LL, 1, max)",
+    "  W <- exp(LL - mx) * rep(wts, each = N)",
+    "  s <- rowSums(W)",
+    "  post <- W / s",
+    "  r <- vector(\"list\", J); n <- vector(\"list\", J)",
+    "  for (j in seq_len(J)) {",
+    "    x <- X[, j]; ok <- !is.na(x); Kj <- items[[j]]$K",
+    "    m <- matrix(0, Q, Kj)",
+    "    for (k in 0:(Kj - 1)) {",
+    "      sel <- ok & x == k",
+    "      if (any(sel)) m[, k + 1] <- colSums(post[sel, , drop = FALSE])",
+    "    }",
+    "    r[[j]] <- m; n[[j]] <- rowSums(m)",
+    "  }",
+    "  list(r = r, n = n, ll = sum(log(s) + mx), post = post)",
+    "}",
+    "",
+    "## --- M ステップ ---",
+    "## 2PL：切片・傾き表現に直すと目的関数が凹関数になるので Newton 法で解けます",
+    "m_2pl <- function(it, rj, nj) {",
+    "  a <- it$a; d <- -it$a * it$b[1]",
+    "  for (i in 1:30) {",
+    "    P <- plogis(a * nodes + d)",
+    "    w <- rj[, 2] - nj * P; v <- nj * P * (1 - P)",
+    "    ga <- sum(w * nodes); gd <- sum(w)",
+    "    haa <- sum(v * nodes^2); had <- sum(v * nodes); hdd <- sum(v)",
+    "    dt <- haa * hdd - had^2",
+    "    if (!is.finite(dt) || abs(dt) < 1e-12) break",
+    "    da <- max(-1, min(1, (hdd * ga - had * gd) / dt))",
+    "    dd <- max(-1, min(1, (haa * gd - had * ga) / dt))",
+    "    a <- max(0.02, min(8, a + da)); d <- d + dd",
+    "    if (max(abs(c(da, dd))) < 1e-8) break",
+    "  }",
+    "  it$a <- a; it$b <- max(-12, min(12, -d / a)); it",
+    "}",
+    "## 1PL：識別力を全項目で共通にし、困難度と交互に更新します",
+    "m_1pl <- function(items, r, n) {",
+    "  J <- length(items); a <- items[[1]]$a",
+    "  for (rep_i in 1:40) {",
+    "    chg <- 0",
+    "    for (j in seq_len(J)) {",
+    "      d <- -a * items[[j]]$b[1]",
+    "      for (i in 1:20) {",
+    "        P <- plogis(a * nodes + d)",
+    "        g <- sum(r[[j]][, 2] - n[[j]] * P); h <- sum(n[[j]] * P * (1 - P))",
+    "        if (h < 1e-12) break",
+    "        st <- max(-1, min(1, g / h)); d <- d + st",
+    "        if (abs(st) < 1e-9) break",
+    "      }",
+    "      nb <- max(-12, min(12, -d / a))",
+    "      chg <- max(chg, abs(nb - items[[j]]$b[1])); items[[j]]$b <- nb",
+    "    }",
+    "    ga <- 0; ha <- 0",
+    "    for (j in seq_len(J)) {",
+    "      z <- nodes - items[[j]]$b[1]; P <- plogis(a * z)",
+    "      ga <- ga + sum((r[[j]][, 2] - n[[j]] * P) * z)",
+    "      ha <- ha + sum(n[[j]] * P * (1 - P) * z^2)",
+    "    }",
+    "    if (ha > 1e-12) {",
+    "      st <- max(-0.5, min(0.5, ga / ha)); a <- max(0.05, min(6, a + st))",
+    "      chg <- max(chg, abs(st))",
+    "    }",
+    "    if (chg < 1e-7) break",
+    "  }",
+    "  for (j in seq_len(J)) items[[j]]$a <- a",
+    "  items",
+    "}",
+    "## 3PL：下限に Beta(5,17)、識別力の対数に標準正規の弱い事前分布を置いて安定させます",
+    "m_3pl <- function(it, rj, nj) {",
+    "  f <- function(v) {",
+    "    a <- max(0.05, min(6, exp(v[1]))); b <- max(-8, min(8, v[2]))",
+    "    cc <- max(1e-4, min(0.5, plogis(v[3])))",
+    "    P <- pmin(pmax(cc + (1 - cc) * plogis(a * (nodes - b)), 1e-8), 1 - 1e-8)",
+    "    ll <- sum(rj[, 2] * log(P) + (nj - rj[, 2]) * log(1 - P))",
+    "    ll <- ll + 4 * log(cc) + 16 * log(1 - cc) - v[1]^2 / 2",
+    "    -ll",
+    "  }",
+    "  st <- c(log(max(0.05, min(6, it$a))), it$b[1], qlogis(max(1e-3, min(0.5, it$c))))",
+    "  res <- optim(st, f, method = \"Nelder-Mead\", control = list(maxit = 200, reltol = 1e-10))",
+    "  it$a <- max(0.05, min(6, exp(res$par[1])))",
+    "  it$b <- max(-8, min(8, res$par[2]))",
+    "  it$c <- max(1e-4, min(0.5, plogis(res$par[3])))",
+    "  it",
+    "}",
+    "## 段階反応モデル：境界の順序を保つため、増分の対数で表現します",
+    "m_grm <- function(it, rj, nj) {",
+    "  m <- it$K - 1",
+    "  build_b <- function(v) {",
+    "    b <- v[2]",
+    "    if (m > 1) for (i in 2:m) b <- c(b, b[i - 1] + exp(max(-6, min(3, v[i + 1]))))",
+    "    pmax(-9, pmin(9, b))",
+    "  }",
+    "  f <- function(v) {",
+    "    tmp <- it",
+    "    tmp$a <- max(0.05, min(6, exp(v[1])))",
+    "    tmp$b <- build_b(v)",
+    "    -sum(rj * log(catprob(nodes, tmp)))",
+    "  }",
+    "  st <- c(log(max(0.05, min(6, it$a))), it$b[1])",
+    "  if (m > 1) for (i in 2:m) st <- c(st, log(max(it$b[i] - it$b[i - 1], 0.05)))",
+    "  res <- optim(st, f, method = \"Nelder-Mead\", control = list(maxit = 120 + 80 * m, reltol = 1e-11))",
+    "  it$a <- max(0.05, min(6, exp(res$par[1])))",
+    "  it$b <- build_b(res$par)",
+    "  it",
+    "}",
+    "",
+    "## --- 初期値（通過率から） ---",
+    "init_items <- function(X, model, K, item_names) {",
+    "  J <- ncol(X); items <- vector(\"list\", J)",
+    "  for (j in seq_len(J)) {",
+    "    v <- X[, j][!is.na(X[, j])]",
+    "    p <- max(0.05, min(0.95, mean(v) / (K[j] - 1)))",
+    "    b0 <- -log(p / (1 - p))",
+    "    if (model == \"GRM\") {",
+    "      b <- sort(b0 - 1 + 2 * (0:(K[j] - 2)) / max(1, K[j] - 2))",
+    "      items[[j]] <- list(name = item_names[j], model = \"GRM\", K = K[j], a = 1, b = b, c = 0)",
+    "    } else {",
+    "      items[[j]] <- list(name = item_names[j], model = model, K = 2, a = 1,",
+    "                         b = max(-3, min(3, b0)), c = if (model == \"3PL\") 0.15 else 0)",
+    "    }",
+    "  }",
+    "  items",
+    "}",
+    "",
+    "## --- 母数ベクトルの詰め替え ---",
+    "pack_par <- function(items, model) {",
+    "  if (model == \"1PL\") return(c(items[[1]]$a, sapply(items, function(it) it$b[1])))",
+    "  unlist(lapply(items, function(it) {",
+    "    if (model == \"GRM\") c(it$a, it$b) else if (model == \"3PL\") c(it$a, it$b[1], it$c) else c(it$a, it$b[1])",
+    "  }))",
+    "}",
+    "unpack_par <- function(v, items, model) {",
+    "  i <- 1",
+    "  if (model == \"1PL\") {",
+    "    a <- v[1]; i <- 2",
+    "    for (j in seq_along(items)) { items[[j]]$a <- a; items[[j]]$b <- v[i]; i <- i + 1 }",
+    "    return(items)",
+    "  }",
+    "  for (j in seq_along(items)) {",
+    "    items[[j]]$a <- v[i]; i <- i + 1",
+    "    if (model == \"GRM\") {",
+    "      items[[j]]$b <- v[i:(i + items[[j]]$K - 2)]; i <- i + items[[j]]$K - 1",
+    "    } else {",
+    "      items[[j]]$b <- v[i]; i <- i + 1",
+    "      if (model == \"3PL\") { items[[j]]$c <- v[i]; i <- i + 1 }",
+    "    }",
+    "  }",
+    "  items",
+    "}",
+    "",
+    "## --- 周辺尤度の勾配（Fisher の等式）。標準誤差の算出に使います ---",
+    "grad_ml <- function(X, items, model) {",
+    "  es <- estep(X, items); r <- es$r; n <- es$n; g <- numeric(0)",
+    "  if (model == \"1PL\") {",
+    "    ga <- 0; gb <- numeric(length(items))",
+    "    for (j in seq_along(items)) {",
+    "      z <- nodes - items[[j]]$b[1]; S <- plogis(items[[j]]$a * z)",
+    "      w <- r[[j]][, 2] - n[[j]] * S",
+    "      ga <- ga + sum(w * z); gb[j] <- -items[[j]]$a * sum(w)",
+    "    }",
+    "    return(c(ga, gb))",
+    "  }",
+    "  for (j in seq_along(items)) {",
+    "    it <- items[[j]]",
+    "    if (model == \"GRM\") {",
+    "      Kj <- it$K",
+    "      Smat <- matrix(sapply(seq_len(Kj - 1), function(k) plogis(it$a * (nodes - it$b[k]))),",
+    "                     nrow = length(nodes))",
+    "      dSa <- cbind(0, sapply(seq_len(Kj - 1), function(k)",
+    "        Smat[, k] * (1 - Smat[, k]) * (nodes - it$b[k])), 0)",
+    "      dSb <- matrix(sapply(seq_len(Kj - 1), function(k)",
+    "        -it$a * Smat[, k] * (1 - Smat[, k])), nrow = length(nodes))",
+    "      P <- catprob(nodes, it)",
+    "      gA <- sum((r[[j]] / P) * (dSa[, 1:Kj, drop = FALSE] - dSa[, 2:(Kj + 1), drop = FALSE]))",
+    "      gB <- numeric(Kj - 1)",
+    "      for (k in seq_len(Kj - 1))",
+    "        gB[k] <- sum(dSb[, k] * (r[[j]][, k + 1] / P[, k + 1] - r[[j]][, k] / P[, k]))",
+    "      g <- c(g, gA, gB)",
+    "    } else {",
+    "      S <- plogis(it$a * (nodes - it$b[1]))",
+    "      P <- pmin(pmax(it$c + (1 - it$c) * S, 1e-8), 1 - 1e-8)",
+    "      w <- (r[[j]][, 2] - n[[j]] * P) / (P * (1 - P))",
+    "      gA <- sum(w * (1 - it$c) * S * (1 - S) * (nodes - it$b[1]))",
+    "      gB <- sum(w * (-(1 - it$c) * S * (1 - S) * it$a))",
+    "      if (model == \"3PL\") g <- c(g, gA, gB, sum(w * (1 - S))) else g <- c(g, gA, gB)",
+    "    }",
+    "  }",
+    "  g",
+    "}",
+    "calc_se <- function(X, items, model) {",
+    "  v <- pack_par(items, model); P <- length(v)",
+    "  H <- matrix(0, P, P)",
+    "  for (p in seq_len(P)) {",
+    "    h <- 1e-4 * max(1, abs(v[p]))",
+    "    vp <- v; vp[p] <- vp[p] + h",
+    "    vm <- v; vm[p] <- vm[p] - h",
+    "    H[, p] <- (grad_ml(X, unpack_par(vp, items, model), model) -",
+    "               grad_ml(X, unpack_par(vm, items, model), model)) / (2 * h)",
+    "  }",
+    "  Hs <- -(H + t(H)) / 2",
+    "  inv <- tryCatch(solve(Hs), error = function(e) NULL)",
+    "  if (is.null(inv)) return(rep(NA_real_, P))",
+    "  d <- diag(inv); ifelse(d > 0, sqrt(d), NA_real_)",
+    "}",
+    "",
+    "## ============================================================",
+    "##  推定の実行",
+    "## ============================================================",
+    "cat(\"推定しています ...\\n\")",
+    "items <- init_items(X, model, K, item_names)",
+    "prev_par <- pack_par(items, model); prev_ll <- -Inf; conv <- FALSE",
+    "for (iter in 1:500) {",
+    "  es <- estep(X, items)",
+    "  if (model == \"1PL\") {",
+    "    items <- m_1pl(items, es$r, es$n)",
+    "  } else {",
+    "    for (j in seq_along(items)) {",
+    "      items[[j]] <- switch(model,",
+    "        \"2PL\" = m_2pl(items[[j]], es$r[[j]], es$n[[j]]),",
+    "        \"3PL\" = m_3pl(items[[j]], es$r[[j]], es$n[[j]]),",
+    "        \"GRM\" = m_grm(items[[j]], es$r[[j]], es$n[[j]]))",
+    "    }",
+    "  }",
+    "  cur_par <- pack_par(items, model)",
+    "  chg <- max(abs(cur_par - prev_par)); prev_par <- cur_par",
+    "  if (chg < 1e-5 && abs(es$ll - prev_ll) < 1e-6 * (abs(es$ll) + 1)) { conv <- TRUE; break }",
+    "  prev_ll <- es$ll",
+    "}",
+    "fin <- estep(X, items)",
+    "npar <- length(pack_par(items, model))",
+    "cat(sprintf(\"%s：%d 回の反復で%s（対数尤度 %.2f、AIC %.1f、BIC %.1f）\\n\",",
+    "            model, iter, if (conv) \"収束\" else \"打ち切り\", fin$ll,",
+    "            -2 * fin$ll + 2 * npar, -2 * fin$ll + log(nrow(X)) * npar))",
+    "",
+    "## --- 標準誤差 ---",
+    "SE <- tryCatch(calc_se(X, items, model), error = function(e) rep(NA_real_, npar))",
+    "",
+    "## --- 項目母数の表 ---",
+    "max_b <- if (model == \"GRM\") max(sapply(items, function(it) it$K - 1)) else 1",
+    "tab <- data.frame(item = sapply(items, function(it) it$name),",
+    "                  a = sapply(items, function(it) it$a), stringsAsFactors = FALSE)",
+    "if (model == \"1PL\") {",
+    "  tab$a_SE <- SE[1]",
+    "  tab$b <- sapply(items, function(it) it$b[1])",
+    "  tab$b_SE <- SE[-1]",
+    "} else {",
+    "  i <- 1",
+    "  aSE <- numeric(length(items))",
+    "  bmat <- matrix(NA_real_, length(items), max_b)",
+    "  bSE <- matrix(NA_real_, length(items), max_b)",
+    "  cSE <- rep(NA_real_, length(items))",
+    "  for (j in seq_along(items)) {",
+    "    aSE[j] <- SE[i]; i <- i + 1",
+    "    nb <- if (model == \"GRM\") items[[j]]$K - 1 else 1",
+    "    for (k in seq_len(nb)) { bmat[j, k] <- items[[j]]$b[k]; bSE[j, k] <- SE[i]; i <- i + 1 }",
+    "    if (model == \"3PL\") { cSE[j] <- SE[i]; i <- i + 1 }",
+    "  }",
+    "  tab$a_SE <- aSE",
+    "  for (k in seq_len(max_b)) {",
+    "    nm <- if (max_b > 1) paste0(\"b\", k) else \"b\"",
+    "    tab[[nm]] <- bmat[, k]; tab[[paste0(nm, \"_SE\")]] <- bSE[, k]",
+    "  }",
+    "  if (model == \"3PL\") { tab$c <- sapply(items, function(it) it$c); tab$c_SE <- cSE }",
+    "}",
+    "tab$p_value <- colMeans(X, na.rm = TRUE) / (K - 1)",
+    "tab$rit <- sapply(seq_len(ncol(X)), function(j) {",
+    "  rest <- rowSums(X[, -j, drop = FALSE], na.rm = TRUE)",
+    "  suppressWarnings(cor(X[, j], rest, use = \"complete.obs\")) })",
+    "cat(\"\\n===== 項目母数（p_value は通過率、多値では平均。rit は I-T 相関）=====\\n\")",
+    "print(format(tab, digits = 3), row.names = FALSE)",
+    "",
+    "## --- 特性値（EAP） ---",
+    "theta <- as.vector(fin$post %*% nodes)",
+    "theta_se <- sqrt(as.vector(fin$post %*% (nodes^2)) - theta^2)",
+    "rel <- var(theta) / (var(theta) + mean(theta_se^2))",
+    "cat(sprintf(\"\\n特性値：平均 %.3f、SD %.3f、平均標準誤差 %.3f、経験的信頼性 %.3f\\n\",",
+    "            mean(theta), sd(theta), mean(theta_se), rel))",
+    "alpha <- local({",
+    "  J <- ncol(X); tot <- rowSums(X, na.rm = TRUE)",
+    "  (J / (J - 1)) * (1 - sum(apply(X, 2, var, na.rm = TRUE)) / var(tot))",
+    "})",
+    "cat(sprintf(\"alpha 係数：%.3f\\n\", alpha))",
+    "",
+    "## --- 情報量 ---",
+    "item_info <- function(th, it) {",
+    "  h <- 1e-4",
+    "  P0 <- catprob(th, it); Pp <- catprob(th + h, it); Pm <- catprob(th - h, it)",
+    "  rowSums(((Pp - Pm) / (2 * h))^2 / P0)",
+    "}",
+    "th_grid <- seq(-4, 4, by = 0.02)",
+    "info <- rowSums(sapply(items, function(it) item_info(th_grid, it)))",
+    "sem <- 1 / sqrt(info)",
+    "cat(sprintf(\"テスト情報量：theta = %.2f で最大 %.2f（そこでの標準誤差 %.3f）\\n\",",
+    "            th_grid[which.max(info)], max(info), min(sem)))",
+    "good_range <- th_grid[sem <= 0.5]",
+    "if (length(good_range)) {",
+    "  cat(sprintf(\"標準誤差 0.50 以下の範囲：theta = %.2f 〜 %.2f\\n\", min(good_range), max(good_range)))",
+    "} else {",
+    "  cat(\"標準誤差 0.50 以下の範囲はありません。\\n\")",
+    "}",
+    "",
+    "## ============================================================",
+    "##  図の保存（画面には描画せず、PNG ファイルとして保存します）",
+    "## ============================================================",
+    "save_png <- function(fname, draw_fn) {",
+    "  path <- file.path(outdir, fname)",
+    "  png(path, width = 1800, height = 1250, res = 190)",
+    "  op <- par(mar = c(4.4, 4.4, 2.6, 4.4))",
+    "  draw_fn()",
+    "  par(op); dev.off()",
+    "  cat(\"保存:\", path, \"\\n\")",
+    "}",
+    "cols <- hcl(h = seq(240, 20, length.out = length(items)), c = 45, l = 45)",
+    "xlab_theta <- L(\"特性値 theta\", \"Theta\")",
+    "",
+    "save_png(\"IRT_item_curves.png\", function() {",
+    "  ymax <- if (model == \"GRM\") max(K) - 1 else 1",
+    "  plot(NA, xlim = c(-4, 4), ylim = c(0, ymax), xlab = xlab_theta,",
+    "       ylab = if (model == \"GRM\") L(\"期待得点\", \"Expected score\") else L(\"正答確率\", \"P(correct)\"),",
+    "       main = if (model == \"GRM\") L(\"期待得点曲線\", \"Expected score curves\")",
+    "              else L(\"項目特性曲線\", \"Item characteristic curves\"))",
+    "  grid(col = \"grey88\")",
+    "  for (j in seq_along(items)) {",
+    "    P <- catprob(th_grid, items[[j]])",
+    "    y <- if (model == \"GRM\") as.vector(P %*% (0:(items[[j]]$K - 1))) else P[, 2]",
+    "    lines(th_grid, y, col = cols[j], lwd = 1.6)",
+    "  }",
+    "  if (model != \"GRM\") abline(h = 0.5, lty = 3, col = \"grey55\")",
+    "})",
+    "",
+    "save_png(\"IRT_test_information.png\", function() {",
+    "  plot(th_grid, info, type = \"l\", lwd = 2.4, col = \"#B8860B\", xlab = xlab_theta,",
+    "       ylab = L(\"テスト情報量\", \"Test information\"),",
+    "       main = L(\"テスト情報量と測定の標準誤差\", \"Test information and standard error\"))",
+    "  grid(col = \"grey88\")",
+    "  polygon(c(th_grid, rev(th_grid)), c(info, rep(0, length(th_grid))), col = \"#B8860B22\", border = NA)",
+    "  par(new = TRUE)",
+    "  plot(th_grid, pmin(sem, 2), type = \"l\", lty = 2, lwd = 1.8, col = \"#8E3A46\",",
+    "       axes = FALSE, xlab = \"\", ylab = \"\", ylim = c(0, 2))",
+    "  axis(4); mtext(L(\"測定の標準誤差\", \"Standard error\"), side = 4, line = 2.4, cex = 0.9)",
+    "  legend(\"topright\", c(L(\"情報量（左軸）\", \"Information (left)\"), L(\"標準誤差（右軸）\", \"SE (right)\")),",
+    "         col = c(\"#B8860B\", \"#8E3A46\"), lty = c(1, 2), lwd = 2, bty = \"n\", cex = 0.85)",
+    "})",
+    "",
+    "save_png(\"IRT_item_information.png\", function() {",
+    "  I <- sapply(items, function(it) item_info(th_grid, it))",
+    "  plot(NA, xlim = c(-4, 4), ylim = c(0, max(I) * 1.05), xlab = xlab_theta,",
+    "       ylab = L(\"項目情報量\", \"Item information\"),",
+    "       main = L(\"項目ごとの情報量\", \"Item information functions\"))",
+    "  grid(col = \"grey88\")",
+    "  for (j in seq_along(items)) lines(th_grid, I[, j], col = cols[j], lwd = 1.4)",
+    "})",
+    "",
+    "save_png(\"IRT_wright_map.png\", function() {",
+    "  b_mean <- sapply(items, function(it) mean(it$b))",
+    "  hh <- hist(theta, breaks = 30, plot = FALSE)",
+    "  top <- max(hh$counts)",
+    "  plot(NA, xlim = c(-4, 4), ylim = c(-top * 0.55, top * 1.05), xlab = xlab_theta,",
+    "       ylab = L(\"人数\", \"Count\"), yaxt = \"n\",",
+    "       main = L(\"人の分布（上）と項目の位置（下）\", \"Persons (top) and items (bottom)\"))",
+    "  axis(2, at = pretty(c(0, top)))",
+    "  rect(hh$breaks[-length(hh$breaks)], 0, hh$breaks[-1], hh$counts, col = \"#B8860B66\", border = \"white\")",
+    "  abline(h = 0, col = \"grey50\")",
+    "  ord <- order(b_mean)",
+    "  lane <- rep(1:3, length.out = length(ord))",
+    "  for (i in seq_along(ord)) {",
+    "    j <- ord[i]; y <- -top * (0.10 + 0.13 * lane[i])",
+    "    segments(b_mean[j], 0, b_mean[j], y + top * 0.04, col = \"#3F6484\", lwd = 1.6)",
+    "    text(b_mean[j], y, item_names[j], cex = 0.55, col = \"#3F6484\")",
+    "  }",
+    "})",
+    "",
+    "## --- 結果を CSV でも保存 ---",
+    "write.csv(tab, file.path(outdir, \"IRT_item_parameters.csv\"), row.names = FALSE, fileEncoding = \"UTF-8\")",
+    "theta_tab <- data.frame(ID = ID, total = rowSums(X, na.rm = TRUE), theta = theta, se = theta_se,",
+    "                        lower95 = theta - 1.96 * theta_se, upper95 = theta + 1.96 * theta_se)",
+    "write.csv(theta_tab, file.path(outdir, \"IRT_theta.csv\"), row.names = FALSE, fileEncoding = \"UTF-8\")",
+    "cat(\"保存:\", file.path(outdir, \"IRT_item_parameters.csv\"), \"\\n\")",
+    "cat(\"保存:\", file.path(outdir, \"IRT_theta.csv\"), \"\\n\")",
+    "cat(\"\\n完了しました。上のフォルダに図 4 枚（PNG）と表 2 枚（CSV）を保存しました。\\n\")"
+  ].join("\n");
+  function rCode() {
+    var its = S.res.items, lines = [], i, j;
+    var cap = 4000, N = Math.min(S.X.length, cap);
+    lines.push("# ============================================================");
+    lines.push("#  項目反応理論ラボ が生成した R コード（" + new Date().toLocaleDateString("ja-JP") + "）");
+    lines.push("#  追加パッケージは不要です（base R のみ）。");
+    lines.push("#  JASP の R コンソールにこのまま貼り付けて実行できます。");
+    lines.push("#");
+    lines.push("#  実行すると、図 4 枚（PNG）と表 2 枚（CSV）が保存されます。");
+    lines.push("#  保存先は書き込めるフォルダを自動で探し、実行後に画面に表示します。");
+    lines.push("# ============================================================");
+    lines.push("");
+    lines.push("## ---- 1. データ（アプリで読み込んだ回答をそのまま埋め込んであります）----");
+    lines.push("##      カテゴリは 0 から始まる番号に変換済み（逆転項目の反転も適用済み）");
+    var names = S.itemNames.map(function (n) { return String(n).replace(/[",\r\n]/g, "_"); });
+    var body = [names.join(",")];
+    for (i = 0; i < N; i++) body.push(S.X[i].map(function (v) { return v == null ? "NA" : v; }).join(","));
+    lines.push("dat <- read.csv(text = \"");
+    lines.push(body.join("\n"));
+    lines.push("\", header = TRUE, check.names = FALSE, na.strings = \"NA\")");
+    if (S.X.length > cap) lines.push("# 注：コードの長さを抑えるため、先頭 " + cap + " 行のみ埋め込んでいます");
+    lines.push("");
+    lines.push("X <- as.matrix(dat)");
+    lines.push("item_names <- colnames(dat)");
+    var ids = [];
+    for (i = 0; i < N; i++) ids.push('"' + String(S.ids[i]).replace(/"/g, "'") + '"');
+    var idLines = [];
+    for (i = 0; i < ids.length; i += 10) idLines.push("  " + ids.slice(i, i + 10).join(", "));
+    lines.push("ID <- c(");
+    lines.push(idLines.join(",\n"));
+    lines.push(")");
+    lines.push("");
+    lines.push("## ---- 2. 分析の設定 ----");
+    lines.push('model <- "' + S.model + '"   # 1PL / 2PL / 3PL / GRM（段階反応モデル）');
+    var allSame = S.K.every(function (k) { return k === S.K[0]; });
+    lines.push("K <- " + (allSame ? "rep(" + S.K[0] + ", ncol(X))" : "c(" + S.K.join(", ") + ")") + "   # 項目ごとのカテゴリ数");
+    lines.push("n_quad <- " + res_nq() + "   # 求積点の数");
+    lines.push("");
+    lines.push(R_ENGINE);
+    return lines.join("\n");
+  }
+  function res_nq() { return S.res && S.res.quad ? S.res.quad.n : 41; }
+  function copy(text, btn) {
+    var ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); btn.textContent = "コピーしました"; setTimeout(function () { btn.textContent = btn.textContent.replace("コピーしました", "もう一度コピー"); }, 1600); }
+    catch (e) { alert("コピーできませんでした。手動で選択してください。"); }
+    document.body.removeChild(ta);
+  }
+  function embedded() { try { return window.self !== window.top; } catch (e) { return true; } }
+  function saveCSV(name, text) {
+    var ok = false;
+    try {
+      var blob = new Blob(["\ufeff" + text], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = name; a.rel = "noopener";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      ok = true;
+    } catch (e) { ok = false; }
+    if (!ok || embedded()) showCsvFallback(name, text, ok);
+  }
+  function showCsvFallback(name, text, downloaded) {
+    var back = el("div", "sheet on");
+    back.innerHTML = '<div class="sheet-box"><div class="sheet-head"><b>' + esc(name) + "</b>" +
+      '<button class="btn ghost sm" data-close="1">閉じる</button></div>' +
+      '<p class="hint" style="margin:0 0 8px">' +
+      (downloaded ? "ダウンロードが始まらないときは、下の内容をコピーして表計算ソフトに貼り付けてください（埋め込み表示ではブラウザーがダウンロードを止めることがあります）。"
+        : "この表示ではファイルを保存できません。下の内容をコピーして表計算ソフトに貼り付けてください。") +
+      '</p><textarea rows="12" spellcheck="false"></textarea>' +
+      '<div class="btnrow"><button class="btn" data-copy="1">全部コピー</button></div></div>';
+    document.body.appendChild(back);
+    var ta = back.querySelector("textarea");
+    ta.value = text;
+    back.querySelector("[data-close]").onclick = function () { document.body.removeChild(back); };
+    back.querySelector("[data-copy]").onclick = function () { ta.select(); copy(text, this); };
+    back.onclick = function (e) { if (e.target === back) document.body.removeChild(back); };
+  }
+  function downloadTheta() {
+    var rows = ["ID,合計得点,theta,標準誤差,下限95,上限95,infit,outfit"];
+    S.theta.forEach(function (t, i) {
+      var f = S.fitstat.person[i];
+      rows.push([q(S.ids[i]), S.totals[i] == null ? "" : S.totals[i], fv(t.theta), fv(t.se),
+      isFinite(t.theta) && isFinite(t.se) ? (t.theta - 1.96 * t.se).toFixed(4) : "",
+      isFinite(t.theta) && isFinite(t.se) ? (t.theta + 1.96 * t.se).toFixed(4) : "",
+      fv(f.infit), fv(f.outfit)].join(","));
+    });
+    saveCSV("特性値.csv", rows.join("\n"));
+  }
+  function downloadItems() {
+    var poly = S.model === "GRM", its = S.res.items;
+    var maxB = poly ? Math.max.apply(null, its.map(function (i) { return i.K - 1; })) : 1;
+    var head = ["項目", "a"];
+    if (poly) { for (var k = 0; k < maxB; k++) head.push("b" + (k + 1)); } else { head.push("b"); if (S.model === "3PL") head.push("c"); }
+    head = head.concat(["通過率_平均", "I-T相関", "S-X2", "df", "p", "infit", "outfit"]);
+    var rows = [head.join(",")];
+    its.forEach(function (it, j) {
+      var r = [q(it.name), it.a.toFixed(4)];
+      if (poly) { for (var k = 0; k < maxB; k++) r.push(it.b[k] == null ? "" : it.b[k].toFixed(4)); }
+      else { r.push(it.b.toFixed(4)); if (S.model === "3PL") r.push(it.c.toFixed(4)); }
+      var cs = S.classical.items[j], s = S.sx[j], f = S.fitstat.item[j];
+      r.push(fv(poly ? cs.mean : cs.prop), fv(cs.rit), fv(s.chi2), s.df, fv(s.p, 4), fv(f.infit), fv(f.outfit));
+      rows.push(r.join(","));
+    });
+    saveCSV("項目パラメータ.csv", rows.join("\n"));
+  }
+  function q(s) { return '"' + String(s).replace(/"/g, '""') + '"'; }
+  function fv(v, d) { return (v == null || !isFinite(v)) ? "" : v.toFixed(d == null ? 4 : d); }
+
+  /* ================= 例のデータ ================= */
+  function sampleBinary() {
+    var u = IRT.rng(505), J = 20, N = 320, lines = [], names = [];
+    var truth = [];
+    for (var j = 0; j < J; j++) { names.push("Q" + (j + 1)); truth.push({ model: "2PL", K: 2, a: 0.65 + 1.1 * u(), b: -2.2 + 4.4 * (j / (J - 1)) + 0.4 * (u() - .5), c: 0 }); }
+    lines.push(["ID", "群"].concat(names).join(","));
+    for (var i = 0; i < N; i++) {
+      var g = i % 2 === 0 ? "A" : "B", th = IRT.rnorm(u), row = [];
+      for (j = 0; j < J; j++) {
+        var b = truth[j].b + (j === 6 && g === "B" ? 0.9 : 0); // 6番目に DIF を仕込む
+        var p = IRT.sigm(truth[j].a * (th - b));
+        row.push(u() <= p ? 1 : 0);
+      }
+      lines.push(["s" + String(i + 1).padStart(3, "0"), g].concat(row).join(","));
+    }
+    return lines.join("\n");
+  }
+  function samplePoly() {
+    var u = IRT.rng(72), J = 12, N = 280, lines = [], names = [];
+    var truth = [];
+    for (var j = 0; j < J; j++) {
+      names.push("項目" + (j + 1));
+      var b0 = -1.8 + 1.8 * u();
+      truth.push({ model: "GRM", K: 5, a: 0.8 + 1.0 * u(), b: [b0, b0 + 0.7 + 0.3 * u(), b0 + 1.5 + 0.3 * u(), b0 + 2.3 + 0.4 * u()] });
+    }
+    lines.push(["ID"].concat(names).join(","));
+    for (var i = 0; i < N; i++) {
+      var th = IRT.rnorm(u), row = [];
+      for (j = 0; j < J; j++) {
+        var p = IRT.catProbs(th, truth[j]), r = u(), acc = 0, k = 0;
+        for (k = 0; k < 5; k++) { acc += p[k]; if (r <= acc) break; }
+        row.push(Math.min(k, 4) + 1);
+      }
+      lines.push(["r" + String(i + 1).padStart(3, "0")].concat(row).join(","));
+    }
+    return lines.join("\n");
+  }
+
+  /* ================= 起動 ================= */
+  function init() {
+    buildSteps(); drawRuler();
+    $("readBtn").onclick = readTable;
+    $("sampleBin").onclick = function () { $("rawText").value = sampleBinary(); readTable(); };
+    $("samplePoly").onclick = function () { $("rawText").value = samplePoly(); readTable(); };
+    $("fileIn").onchange = function (e) {
+      var f = e.target.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function () { $("rawText").value = r.result; readTable(); };
+      r.readAsText(f, "UTF-8");
+    };
+    $("allItems").onclick = function () {
+      S.roles = S.roles.map(function (r, j) { return r === "id" || r === "group" ? r : "item"; });
+      renderMap();
+    };
+    $("clearRev").onclick = function () { S.reverse = S.reverse.map(function () { return false; }); renderMap(); };
+    $("toModel").onclick = function () {
+      var w = buildMatrix();
+      if (S.itemNames.length < 3) { msg("mapMsg", "warn", "項目が 3 列未満です。役割を見直してください。"); return; }
+      if (w.length) msg("mapMsg", "warn", "カテゴリ数が 10 以上の列があります（" + w.join("、") + "）。連続量の列が混ざっていないか確認してください。");
+      setupModels(); go(1);
+    };
+    $("difGroup").onchange = function () { buildMatrix(); updateHint(); };
+    $("thetaMethod").onchange = function () {
+      if (!S.res) return;
+      S.theta = $("thetaMethod").value === "MLE" ? S.thetaMLE : S.thetaEAP;
+      drawRuler(); renderTheta(); renderItems(); renderReport();
+    };
+    var rt = null;
+    window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(drawRuler, 180); });
+    $("runBtn").onclick = run;
+    $("runHint").textContent = "";
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+
+</script>
+</body>
+</html>

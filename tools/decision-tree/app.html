@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>決定木ラボ — データ分析ラボ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0EA; --paper2:#F7F8F4; --card:#FFFFFF;
+  --ink:#17211E; --ink2:#4A5A55; --ink3:#84928C;
+  --line:#D5DBD2; --line2:#E6EAE3;
+  --moss:#2E6B5E; --moss-d:#1F4F45; --moss-l:#E2EDE8;
+  --ume:#8C3B5A; --ochre:#A8761B; --indigo:#2F4A78; --sky:#3E8C9E;
+  --shadow:0 1px 2px rgba(23,33,30,.06), 0 8px 24px -12px rgba(23,33,30,.18);
+  --r:10px;
+  --display:"Shippori Mincho B1",serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
+  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--body);
+  font-size:14px; line-height:1.7; -webkit-font-smoothing:antialiased;
+  background-image:linear-gradient(var(--line2) 1px,transparent 1px),linear-gradient(90deg,var(--line2) 1px,transparent 1px);
+  background-size:28px 28px; background-position:-1px -1px;
+}
+/* ---------- header ---------- */
+.masthead{
+  background:var(--paper); border-bottom:1px solid var(--line);
+  padding:20px clamp(16px,4vw,40px) 16px;
+  display:flex; align-items:flex-end; gap:20px; flex-wrap:wrap;
+  z-index:30;
+}
+.brand{display:flex; align-items:center; gap:14px}
+.brand-mark{width:34px;height:34px;flex:none}
+.brand h1{
+  font-family:var(--display); font-weight:700; font-size:26px; letter-spacing:.04em;
+  margin:0; line-height:1.2;
+}
+.brand p{margin:2px 0 0; font-size:12px; color:var(--ink3); letter-spacing:.08em}
+.masthead .spacer{flex:1}
+.badge-row{display:flex; gap:8px; align-items:center; font-size:11px; color:var(--ink2)}
+.badge{
+  border:1px solid var(--line); border-radius:999px; padding:3px 11px;
+  background:var(--card); font-family:var(--mono); letter-spacing:.04em; white-space:nowrap;
+}
+/* ---------- layout ---------- */
+.shell{display:grid; grid-template-columns:352px minmax(0,1fr); gap:0; align-items:start}
+.rail{
+  border-right:1px solid var(--line); background:var(--paper2);
+  padding:0 0 60px;
+}
+.stage{padding:22px clamp(14px,2.4vw,28px) 80px; min-width:0}
+@media(max-width:1020px){
+  .shell{grid-template-columns:1fr}
+  .rail{border-right:none; border-bottom:1px solid var(--line); min-height:0}
+}
+/* ---------- rail sections ---------- */
+.step{border-bottom:1px solid var(--line); padding:18px clamp(14px,2vw,22px)}
+.step:last-of-type{border-bottom:none}
+.step-head{display:flex; align-items:baseline; gap:10px; margin-bottom:12px}
+.step-num{
+  font-family:var(--mono); font-size:11px; color:var(--moss); border:1px solid var(--moss);
+  border-radius:4px; padding:0 5px; line-height:17px; flex:none; letter-spacing:.02em;
+}
+.step-head h2{font-family:var(--display); font-size:16px; font-weight:700; margin:0; letter-spacing:.05em}
+.step-head span{font-size:11px; color:var(--ink3); margin-left:auto; font-family:var(--mono)}
+label.fld{display:block; margin:0 0 12px}
+label.fld > .lab{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; color:var(--ink2); margin-bottom:5px; font-weight:500}
+label.fld .val{font-family:var(--mono); font-size:12px; color:var(--moss-d)}
+select,input[type=number],input[type=text],textarea{
+  width:100%; font-family:var(--body); font-size:13px; color:var(--ink);
+  background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+}
+textarea{font-family:var(--mono); font-size:11.5px; line-height:1.6; resize:vertical}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--moss); outline-offset:1px}
+input[type=range]{width:100%; accent-color:var(--moss); margin:2px 0}
+.btn{
+  font-family:var(--body); font-size:13px; font-weight:500; cursor:pointer;
+  border:1px solid var(--line); background:var(--card); color:var(--ink);
+  border-radius:8px; padding:8px 14px; transition:.15s;
+}
+.btn:hover{border-color:var(--moss); color:var(--moss-d)}
+.btn.primary{
+  background:var(--moss); border-color:var(--moss); color:#fff; width:100%;
+  padding:12px; font-size:14.5px; font-weight:700; letter-spacing:.08em; box-shadow:var(--shadow);
+}
+.btn.primary:hover{background:var(--moss-d); color:#fff}
+.btn.primary:disabled{background:var(--line); border-color:var(--line); color:var(--ink3); cursor:not-allowed; box-shadow:none}
+.btn.tiny{padding:4px 9px; font-size:11.5px; border-radius:6px}
+.btn-row{display:flex; gap:8px; flex-wrap:wrap}
+.hint{font-size:11.5px; color:var(--ink3); line-height:1.6; margin:6px 0 0}
+.filebtn{
+  display:block; text-align:center; border:1px dashed var(--line); border-radius:8px;
+  padding:14px 10px; cursor:pointer; background:var(--card); font-size:12.5px; color:var(--ink2);
+  transition:.15s;
+}
+.filebtn:hover{border-color:var(--moss); color:var(--moss-d); background:var(--moss-l)}
+.filebtn strong{display:block; font-size:13.5px; color:var(--ink); font-weight:700; margin-bottom:2px}
+.filebtn input{display:none}
+.samples{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px}
+.chip{
+  font-size:11.5px; border:1px solid var(--line); background:var(--card); border-radius:999px;
+  padding:4px 11px; cursor:pointer; color:var(--ink2); transition:.15s;
+}
+.chip:hover{border-color:var(--moss); color:var(--moss-d); background:var(--moss-l)}
+.datastat{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink2); background:var(--moss-l);
+  border-radius:6px; padding:7px 10px; margin-top:10px; border:1px solid #CFE1D9;
+}
+.datastat.warn{background:#FBEEF1; border-color:#EFD3DC; color:var(--ume)}
+/* variable picker */
+.varlist{border:1px solid var(--line); border-radius:8px; background:var(--card); max-height:236px; overflow:auto}
+.varrow{display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--line2); font-size:12.5px}
+.varrow:last-child{border-bottom:none}
+.varrow input[type=checkbox]{accent-color:var(--moss); width:14px; height:14px; flex:none}
+.varrow .nm{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.varrow.is-target{background:var(--moss-l); color:var(--moss-d); font-weight:700}
+.tchip{
+  font-family:var(--mono); font-size:10px; border:1px solid var(--line); border-radius:4px;
+  padding:1px 5px; cursor:pointer; color:var(--ink3); background:var(--paper2); flex:none;
+}
+.tchip[data-t="num"]{color:var(--indigo); border-color:#C6D2E4; background:#EEF3FA}
+.tchip[data-t="cat"]{color:var(--ochre); border-color:#E7D8B2; background:#FBF5E7}
+.tchip:hover{filter:brightness(.95)}
+.mini-tabs{display:flex; gap:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--card)}
+.mini-tabs button{
+  flex:1; border:none; background:transparent; padding:7px 4px; font-size:12px; cursor:pointer;
+  font-family:var(--body); color:var(--ink2); border-right:1px solid var(--line2);
+}
+.mini-tabs button:last-child{border-right:none}
+.mini-tabs button[aria-pressed=true]{background:var(--moss); color:#fff; font-weight:700}
+/* ---------- stage ---------- */
+.tabs{display:flex; gap:2px; flex-wrap:wrap; border-bottom:1px solid var(--line); margin-bottom:18px}
+.tabs button{
+  font-family:var(--body); font-size:13px; background:transparent; border:none; cursor:pointer;
+  padding:9px 14px 10px; color:var(--ink3); border-bottom:2px solid transparent; margin-bottom:-1px;
+  display:flex; align-items:center; gap:7px;
+}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected=true]{color:var(--moss-d); border-bottom-color:var(--moss); font-weight:700}
+.tabs button .n{font-family:var(--mono); font-size:10px; color:var(--ink3)}
+.tabs button[aria-selected=true] .n{color:var(--moss)}
+.panel{display:none}
+.panel.on{display:block; animation:fade .35s ease}
+@keyframes fade{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow)}
+.card-h{
+  display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line2); flex-wrap:wrap;
+}
+.card-h h3{font-family:var(--display); font-size:15px; margin:0; font-weight:700; letter-spacing:.05em}
+.card-h .sub{font-size:11.5px; color:var(--ink3); font-family:var(--mono)}
+.card-h .tools{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap}
+.card-b{padding:16px}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px}
+.empty{
+  text-align:center; padding:80px 24px; color:var(--ink3);
+}
+.empty svg{opacity:.5; margin-bottom:14px}
+.empty h3{font-family:var(--display); color:var(--ink2); font-size:17px; margin:0 0 6px; font-weight:500}
+.empty p{margin:0; font-size:13px}
+/* tree canvas */
+#treeWrap{position:relative; background:var(--card); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow)}
+#treeSvg{display:block; width:100%; height:min(70vh,660px); cursor:grab; touch-action:none; background:
+  radial-gradient(circle at 1px 1px, #E9EDE7 1px, transparent 0) 0 0/22px 22px}
+#treeSvg.drag{cursor:grabbing}
+.zoombar{position:absolute; right:12px; bottom:12px; display:flex; gap:5px; background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:8px; padding:5px}
+.legend{display:flex; gap:14px; flex-wrap:wrap; align-items:center; padding:10px 16px; border-top:1px solid var(--line2); font-size:12px; color:var(--ink2)}
+.legend i{width:11px; height:11px; border-radius:3px; display:inline-block; margin-right:5px; vertical-align:-1px}
+.legend .sep{width:1px; height:14px; background:var(--line); margin:0 2px}
+/* metrics */
+.metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:1px; background:var(--line2)}
+.metric{background:var(--card); padding:14px 16px}
+.metric .k{font-size:11px; color:var(--ink3); letter-spacing:.06em; margin-bottom:3px}
+.metric .v{font-family:var(--mono); font-size:24px; font-weight:500; color:var(--ink); line-height:1.2}
+.metric .v small{font-size:12px; color:var(--ink3); font-weight:400}
+.metric.hi .v{color:var(--moss)}
+table.tbl{border-collapse:collapse; width:100%; font-size:12.5px}
+table.tbl th,table.tbl td{border:1px solid var(--line2); padding:6px 9px; text-align:right; font-family:var(--mono)}
+table.tbl th{background:var(--paper2); font-family:var(--body); font-weight:500; color:var(--ink2); text-align:center; font-size:11.5px}
+table.tbl td.lab,table.tbl th.lab{text-align:left; font-family:var(--body)}
+table.tbl td.diag{background:var(--moss-l); color:var(--moss-d); font-weight:500}
+.scroll{overflow:auto; max-width:100%}
+.tblcap{font-size:11.5px; color:var(--ink3); margin:0 0 8px}
+/* rules */
+.rule{border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:10px; background:var(--card)}
+.rule-h{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px}
+.rule-h .out{font-family:var(--display); font-weight:700; font-size:15px}
+.rule-h .meta{font-family:var(--mono); font-size:11px; color:var(--ink3); margin-left:auto}
+.rule-cond{font-size:12.5px; color:var(--ink2); line-height:1.9}
+.rule-cond code{
+  font-family:var(--mono); font-size:11.5px; background:var(--paper2); border:1px solid var(--line2);
+  border-radius:4px; padding:1px 6px; color:var(--ink);
+}
+.rule-cond .and{color:var(--ink3); font-size:11px; margin:0 4px}
+.purity{height:5px; border-radius:3px; background:var(--line2); overflow:hidden; margin-top:8px}
+.purity i{display:block; height:100%}
+pre.code{
+  font-family:var(--mono); font-size:11.5px; line-height:1.65; background:#182320; color:#DDE7E2;
+  padding:16px; border-radius:8px; overflow:auto; max-height:520px; margin:0;
+}
+pre.code .c{color:#7E9C92}
+pre.code .s{color:#E3B778}
+pre.code .f{color:#8FD0BE}
+/* predict */
+.predgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px}
+.pathstep{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px dashed var(--line2); font-size:13px}
+.pathstep .i{font-family:var(--mono); font-size:10.5px; color:#fff; background:var(--moss); border-radius:999px; width:20px; height:20px; text-align:center; line-height:20px; flex:none; margin-top:2px}
+.pathstep .yn{font-family:var(--mono); font-size:11px; color:var(--moss-d); background:var(--moss-l); border-radius:4px; padding:1px 7px; flex:none}
+.bigout{font-family:var(--display); font-size:30px; font-weight:700; color:var(--moss-d); letter-spacing:.04em}
+.toast{
+  position:fixed; left:50%; bottom:28px; transform:translate(-50%,20px); opacity:0;
+  background:var(--ink); color:#fff; font-size:13px; padding:10px 20px; border-radius:999px;
+  pointer-events:none; transition:.28s; z-index:100;
+}
+.toast.on{opacity:1; transform:translate(-50%,0)}
+.node-detail{font-size:12.5px}
+.node-detail dt{font-size:11px; color:var(--ink3); margin-top:9px}
+.node-detail dd{margin:1px 0 0; font-family:var(--mono); font-size:13px; color:var(--ink)}
+.dx{display:flex; gap:11px; padding:11px 0; border-bottom:1px dashed var(--line2)}
+.dx:last-child{border-bottom:none}
+.dx .ic{width:22px; height:22px; border-radius:6px; flex:none; font-size:12px; text-align:center; line-height:22px; font-family:var(--mono)}
+.dx.good .ic{background:var(--moss-l); color:var(--moss-d)}
+.dx.warn .ic{background:#FBEEF1; color:var(--ume)}
+.dx.info .ic{background:#FBF5E7; color:var(--ochre)}
+.dx b{display:block; font-size:13px; margin-bottom:2px}
+.dx p{margin:0; font-size:12.5px; color:var(--ink2); line-height:1.8}
+.narr{font-size:13.5px; line-height:2.05; color:var(--ink); margin:0 0 14px}
+.narr:last-child{margin-bottom:0}
+.narr em{font-style:normal; font-weight:700; color:var(--moss-d)}
+.narr .num{font-family:var(--mono); font-size:13px}
+.spec{display:grid; grid-template-columns:auto 1fr; gap:7px 18px; font-size:13px; margin:0}
+.spec dt{color:var(--ink3); font-size:12px; white-space:nowrap}
+.spec dd{margin:0}
+.pblock{margin-bottom:20px}
+.pblock:last-child{margin-bottom:0}
+.pblock h4{font-family:var(--display); font-size:14.5px; margin:0 0 8px; display:flex; align-items:center; gap:9px; font-weight:700}
+.pblock h4 .tagn{font-family:var(--mono); font-size:10px; color:#fff; background:var(--ink2); border-radius:4px; padding:2px 7px; font-weight:400; letter-spacing:.04em}
+.pblock h4 .cp{margin-left:auto}
+.ms{background:var(--paper2); border:1px solid var(--line2); border-left:3px solid var(--moss); border-radius:0 8px 8px 0; padding:13px 16px; font-size:13.5px; line-height:2.05; white-space:pre-wrap}
+.ms.mono{font-family:var(--mono); font-size:11.5px; line-height:1.85; white-space:pre; overflow-x:auto}
+.ms.refs{line-height:1.9; font-size:12.5px; border-left-color:var(--ink3)}
+.ms.en{line-height:1.85}
+@media(prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-causal);--paper:var(--al-bg);--paper2:var(--al-surface-2);--card:var(--al-surface);--ink:var(--al-ink);--ink2:var(--al-ink-2);--ink3:var(--al-ink-3);--line:var(--al-line);--line2:var(--al-line-2);--moss:var(--al-cat);--moss-d:var(--al-cat-deep);--moss-l:var(--al-cat-soft);--display:var(--al-serif);--body:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#causal">説明・予測する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>決定木ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<header class="masthead">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <path d="M20 4v9M20 13c0 5-11 4-11 10M20 13c0 5 11 4 11 10" stroke="#2E6B5E" stroke-width="1.6"/>
+      <path d="M9 23c0 4-4 3-4 7M9 23c0 4 4 3 4 7" stroke="#2E6B5E" stroke-width="1.2" opacity=".6"/>
+      <circle cx="20" cy="4" r="3" fill="#2E6B5E"/>
+      <circle cx="31" cy="30" r="2.6" fill="#8C3B5A"/>
+      <circle cx="5" cy="34" r="2.2" fill="#A8761B"/>
+      <circle cx="13" cy="34" r="2.2" fill="#2F4A78"/>
+    </svg>
+    <div>
+      <h1>決定木ラボ</h1>
+      <p>DECISION TREE / CART</p>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="badge-row">
+    <span class="badge">通信なし・端末内で計算</span>
+    <span class="badge">分類 &amp; 回帰</span>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- ============ 左レール ============ -->
+  <aside class="rail">
+    <section class="step">
+      <div class="step-head"><span class="step-num">01</span><h2>データを読み込む</h2></div>
+      <label class="filebtn">
+        <strong>CSV / TSV ファイルを選ぶ</strong>
+        ドラッグ＆ドロップも使えます
+        <input type="file" id="fileIn" accept=".csv,.tsv,.txt">
+      </label>
+      <div class="samples">
+        <button class="chip" data-sample="iris">アヤメ（分類）</button>
+        <button class="chip" data-sample="churn">解約予測（分類）</button>
+        <button class="chip" data-sample="sales">店舗売上（回帰）</button>
+        <button class="chip" id="pasteToggle">貼り付け</button>
+      </div>
+      <div id="pasteBox" style="display:none; margin-top:10px">
+        <textarea id="pasteArea" rows="6" placeholder="1行目に変数名。カンマ区切り／タブ区切りに対応。"></textarea>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn tiny" id="pasteLoad">この内容を読み込む</button>
+        </div>
+      </div>
+      <div class="datastat" id="dataStat">データが未読み込みです。</div>
+    </section>
+
+    <section class="step">
+      <div class="step-head"><span class="step-num">02</span><h2>変数を選ぶ</h2><span id="varCount"></span></div>
+      <label class="fld">
+        <span class="lab">目的変数（予測したいもの）</span>
+        <select id="targetSel"><option>―</option></select>
+      </label>
+      <label class="fld">
+        <span class="lab">分析の種類</span>
+        <div class="mini-tabs" id="taskTabs">
+          <button type="button" data-task="clf" aria-pressed="true">分類</button>
+          <button type="button" data-task="reg" aria-pressed="false">回帰</button>
+        </div>
+        <p class="hint" id="taskHint">目的変数がカテゴリなら分類、数値なら回帰を選びます。</p>
+      </label>
+      <span class="lab" style="font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;margin-bottom:5px">
+        <span>説明変数</span>
+        <span><button class="btn tiny" id="selAll">全部</button> <button class="btn tiny" id="selNone">解除</button></span>
+      </span>
+      <div class="varlist" id="varList"></div>
+      <p class="hint">右のラベルを押すと「数値／カテゴリ」を切り替えられます。</p>
+    </section>
+
+    <section class="step">
+      <div class="step-head"><span class="step-num">03</span><h2>木の育て方</h2></div>
+      <label class="fld" id="critFld">
+        <span class="lab">分割の基準</span>
+        <select id="critSel">
+          <option value="gini">ジニ不純度</option>
+          <option value="entropy">エントロピー（情報利得）</option>
+        </select>
+      </label>
+      <label class="fld">
+        <span class="lab">最大の深さ <span class="val" id="depthVal">3</span></span>
+        <input type="range" id="depthRange" min="1" max="8" value="3" step="1">
+      </label>
+      <label class="fld">
+        <span class="lab">分割に必要な最小サンプル数 <span class="val" id="mssVal">10</span></span>
+        <input type="range" id="mssRange" min="2" max="100" value="10" step="1">
+      </label>
+      <label class="fld">
+        <span class="lab">葉に残す最小サンプル数 <span class="val" id="mslVal">5</span></span>
+        <input type="range" id="mslRange" min="1" max="50" value="5" step="1">
+      </label>
+      <label class="fld">
+        <span class="lab">検証用に取り分ける割合 <span class="val" id="testVal">30%</span></span>
+        <input type="range" id="testRange" min="0" max="50" value="30" step="5">
+      </label>
+      <label class="fld">
+        <span class="lab">乱数の種 <span class="val">再現用</span></span>
+        <input type="number" id="seedIn" value="42" min="0" step="1">
+      </label>
+      <button class="btn primary" id="runBtn" disabled>決定木を育てる</button>
+      <p class="hint" id="runHint">まずデータを読み込んでください。</p>
+    </section>
+  </aside>
+
+  <!-- ============ 右ステージ ============ -->
+  <main class="stage">
+    <div id="emptyState" class="card">
+      <div class="empty">
+        <svg width="86" height="86" viewBox="0 0 40 40" fill="none">
+          <path d="M20 6v8M20 14c0 5-11 4-11 10M20 14c0 5 11 4 11 10" stroke="#84928C" stroke-width="1.4"/>
+          <circle cx="20" cy="6" r="3" fill="#84928C"/>
+          <circle cx="9" cy="26" r="2.6" fill="#84928C"/><circle cx="31" cy="26" r="2.6" fill="#84928C"/>
+        </svg>
+        <h3>データを読み込むと、ここに木が育ちます</h3>
+        <p>左の「01」からCSVを選ぶか、サンプルデータを押してください。</p>
+      </div>
+    </div>
+
+    <div id="resultArea" style="display:none">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="tree" aria-selected="true"><span class="n">A</span>樹形図</button>
+        <button role="tab" data-tab="perf" aria-selected="false"><span class="n">B</span>あたり具合</button>
+        <button role="tab" data-tab="imp" aria-selected="false"><span class="n">C</span>効いている変数</button>
+        <button role="tab" data-tab="rules" aria-selected="false"><span class="n">D</span>ルール一覧</button>
+        <button role="tab" data-tab="story" aria-selected="false"><span class="n">E</span>結果の読み方</button>
+        <button role="tab" data-tab="paper" aria-selected="false"><span class="n">F</span>論文の書き方</button>
+        <button role="tab" data-tab="pred" aria-selected="false"><span class="n">G</span>あてはめて予測</button>
+        <button role="tab" data-tab="code" aria-selected="false"><span class="n">H</span>Rコード</button>
+      </div>
+
+      <!-- A 樹形図 -->
+      <section class="panel on" id="panel-tree">
+        <div id="treeWrap">
+          <svg id="treeSvg"></svg>
+          <div class="zoombar">
+            <button class="btn tiny" id="zOut" title="縮小">−</button>
+            <button class="btn tiny" id="zIn" title="拡大">＋</button>
+            <button class="btn tiny" id="zFit">全体表示</button>
+          </div>
+        </div>
+        <div class="legend" id="treeLegend"></div>
+        <div class="grid2" style="margin-top:16px">
+          <div class="card">
+            <div class="card-h"><h3>選んだノード</h3><span class="sub" id="nodeIdLab">節をクリック</span></div>
+            <div class="card-b"><div id="nodeDetail" class="node-detail" style="color:var(--ink3)">樹形図の四角を押すと、そこに含まれるデータの内訳が出ます。</div></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>木のかたち</h3>
+              <div class="tools">
+                <button class="btn tiny" id="dlSvg">SVGで保存</button>
+                <button class="btn tiny" id="dlPng">PNGで保存</button>
+              </div>
+            </div>
+            <div class="card-b"><div class="metrics" id="treeStats" style="border:1px solid var(--line2); border-radius:8px; overflow:hidden"></div>
+              <p class="hint" id="growNote"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- B 精度 -->
+      <section class="panel" id="panel-perf">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-h"><h3>予測のあたり具合</h3><span class="sub" id="splitNote"></span></div>
+          <div class="metrics" id="perfMetrics"></div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-h"><h3 id="cmTitle">分割表（実測 × 予測）</h3><span class="sub" id="cmScope"></span></div>
+            <div class="card-b"><div id="cmBox" class="scroll"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>深さと精度の関係</h3><span class="sub">過学習の見きわめ</span></div>
+            <div class="card-b"><div id="curveBox"></div>
+              <p class="hint" id="curveNote"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- C 重要度 -->
+      <section class="panel" id="panel-imp">
+        <div class="card">
+          <div class="card-h"><h3>変数の重要度</h3><span class="sub">分割による不純度の減少量を合計し、100%に換算</span></div>
+          <div class="card-b"><div id="impBox"></div></div>
+        </div>
+      </section>
+
+      <!-- D ルール -->
+      <section class="panel" id="panel-rules">
+        <div class="card">
+          <div class="card-h"><h3>葉までのルール</h3><span class="sub" id="ruleCount"></span>
+            <div class="tools"><button class="btn tiny" id="copyRules">文章をコピー</button></div>
+          </div>
+          <div class="card-b"><div id="rulesBox"></div></div>
+        </div>
+      </section>
+
+      <!-- E 結果の読み方 -->
+      <section class="panel" id="panel-story">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-h"><h3>この分析でしたこと</h3><span class="sub">設定の要約</span></div>
+          <div class="card-b"><div id="storySetup"></div></div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-h"><h3>結果から読み取れること</h3><span class="sub">数値の言い換え</span></div>
+          <div class="card-b"><div id="storyRead"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>気をつけること・次の一手</h3><span class="sub">自動チェック</span></div>
+          <div class="card-b"><div id="storyCheck"></div></div>
+        </div>
+      </section>
+
+      <!-- F 論文の書き方 -->
+      <section class="panel" id="panel-paper">
+        <div class="card">
+          <div class="card-h"><h3>論文・レポートでの記述例</h3><span class="sub">いまの結果の数値が入ります</span>
+            <div class="tools">
+              <div class="mini-tabs" id="langTabs" style="width:158px">
+                <button type="button" data-lang="ja" aria-pressed="true">和文</button>
+                <button type="button" data-lang="en" aria-pressed="false">English</button>
+              </div>
+              <button class="btn tiny" id="copyPaper">全文コピー</button>
+            </div>
+          </div>
+          <div class="card-b" id="paperBox"></div>
+        </div>
+      </section>
+
+      <!-- G 予測 -->
+      <section class="panel" id="panel-pred">
+        <div class="grid2">
+          <div class="card">
+            <div class="card-h"><h3>値を入れて試す</h3><span class="sub">初期値は中央値／最頻値</span></div>
+            <div class="card-b">
+              <div class="predgrid" id="predForm"></div>
+              <div class="btn-row" style="margin-top:14px"><button class="btn primary" id="predBtn" style="width:auto; padding:9px 22px">この条件で予測する</button></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>たどった枝</h3><span class="sub" id="predScope"></span></div>
+            <div class="card-b" id="predOut"><p style="color:var(--ink3); margin:0">左に値を入れて実行すると、根から葉までの道すじが出ます。</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- H Rコード -->
+      <section class="panel" id="panel-code">
+        <div class="card">
+          <div class="card-h"><h3>Rコード（rpart）</h3><span class="sub">データを埋め込み済み・そのまま実行できます</span>
+            <div class="tools"><button class="btn tiny" id="copyCode">コピー</button></div>
+          </div>
+          <div class="card-b"><pre class="code" id="codeBox"></pre></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   決定木ラボ — CART をブラウザ内で実行
+   ===================================================================== */
+
+const PALETTE = ["#2E6B5E","#8C3B5A","#A8761B","#2F4A78","#3E8C9E","#6B5B95","#7A8C2E","#B0562E"];
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const fmt = (v,d=3) => (v===null||v===undefined||Number.isNaN(v)) ? "―" : (Math.abs(v)>=1000 ? v.toLocaleString("ja-JP",{maximumFractionDigits:1}) : Number(v.toFixed(d)).toString());
+const pct = v => (v*100).toFixed(1)+"%";
+
+let DATA = null;      // {cols:[{name,type,values,cats,nums}], n}
+let MODEL = null;     // 学習結果
+
+/* ---------- CSV パーサ ---------- */
+function parseTable(text){
+  text = text.replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n").trim();
+  if(!text) throw new Error("中身が空です。");
+  const head = text.split("\n")[0];
+  const delim = (head.split("\t").length > head.split(",").length) ? "\t" : ",";
+  const rows = [];
+  let field = "", row = [], q = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i+1] === '"'){ field += '"'; i++; } else q = false; }
+      else field += c;
+    }else{
+      if(c === '"') q = true;
+      else if(c === delim){ row.push(field); field = ""; }
+      else if(c === "\n"){ row.push(field); rows.push(row); row = []; field = ""; }
+      else field += c;
+    }
+  }
+  row.push(field); rows.push(row);
+  const clean = rows.filter(r => r.some(v => v.trim() !== ""));
+  if(clean.length < 2) throw new Error("見出し行とデータ行が必要です。");
+  const names = clean[0].map((v,i) => v.trim() || `変数${i+1}`);
+  const body = clean.slice(1).map(r => names.map((_,i) => (r[i] ?? "").trim()));
+  return {names, body};
+}
+
+const isNum = v => v !== "" && v !== "NA" && v !== "NaN" && v !== "-" && v !== "." && Number.isFinite(Number(v));
+
+function buildData(names, body){
+  const cols = names.map((name,j) => {
+    const raw = body.map(r => r[j]);
+    const present = raw.filter(v => v !== "" && v !== "NA" && v !== "N/A" && v !== ".");
+    const numOK = present.length && present.every(isNum);
+    const uniq = Array.from(new Set(present));
+    const type = (numOK && uniq.length > 6) ? "num" : (numOK && uniq.length > 2 && uniq.length <= 6 ? "num" : "cat");
+    return {name, raw, type, forced:false};
+  });
+  const d = {cols, n: body.length, names};
+  cols.forEach(c => materialize(c, d.n));
+  return d;
+}
+function materialize(col){
+  col.nums = col.raw.map(v => isNum(v) ? Number(v) : NaN);
+  col.cats = Array.from(new Set(col.raw.filter(v => v !== "" && v !== "NA" && v !== "N/A" && v !== "."))).sort((a,b)=>{
+    if(isNum(a)&&isNum(b)) return Number(a)-Number(b);
+    return a.localeCompare(b,"ja");
+  });
+  col.miss = col.raw.filter(v => v === "" || v === "NA" || v === "N/A" || v === ".").length;
+}
+
+/* ---------- 乱数 ---------- */
+function rng(seed){ let s = seed >>> 0 || 1; return () => { s ^= s<<13; s ^= s>>>17; s ^= s<<5; s >>>= 0; return s/4294967296; }; }
+
+/* ---------- 不純度 ---------- */
+function giniOf(cnt,n){ let s=0; for(const k in cnt){ const p=cnt[k]/n; s+=p*p; } return 1-s; }
+function entOf(cnt,n){ let s=0; for(const k in cnt){ const p=cnt[k]/n; if(p>0) s-=p*Math.log2(p); } return s; }
+
+/* ---------- 学習本体 ---------- */
+function fit(opts){
+  const {X, y, feats, task, crit, maxDepth, minSplit, minLeaf, classes} = opts;
+  const N = X.length;
+  const impur = (idx) => {
+    if(task === "clf"){
+      const c = {}; idx.forEach(i => c[y[i]] = (c[y[i]]||0)+1);
+      return {imp: crit === "entropy" ? entOf(c,idx.length) : giniOf(c,idx.length), counts:c};
+    }else{
+      let s=0; idx.forEach(i => s+=y[i]); const m=s/idx.length;
+      let v=0; idx.forEach(i => v += (y[i]-m)*(y[i]-m));
+      return {imp: v/idx.length, mean:m};
+    }
+  };
+  const importance = new Array(feats.length).fill(0);
+  let nodeSeq = 0, leaves = 0, maxUsed = 0;
+
+  function stats(idx){
+    const st = impur(idx);
+    st.n = idx.length;
+    if(task === "clf"){
+      let best=null, bn=-1;
+      for(const k of classes){ const v = st.counts[k]||0; if(v>bn){ bn=v; best=k; } }
+      st.pred = best; st.purity = bn/idx.length;
+    }else{
+      st.pred = st.mean; st.sd = Math.sqrt(st.imp);
+    }
+    return st;
+  }
+
+  function bestSplit(idx){
+    const parent = impur(idx), n = idx.length;
+    let best = null;
+    for(let f=0; f<feats.length; f++){
+      const ft = feats[f];
+      if(ft.type === "num"){
+        const rows = idx.filter(i => Number.isFinite(X[i][f]));
+        if(rows.length < 2*minLeaf) continue;
+        rows.sort((a,b) => X[a][f]-X[b][f]);
+        if(task === "clf"){
+          const L = {}, R = {};
+          rows.forEach(i => R[y[i]] = (R[y[i]]||0)+1);
+          for(let k=0;k<rows.length-1;k++){
+            const i = rows[k]; L[y[i]] = (L[y[i]]||0)+1; R[y[i]]--;
+            const nl = k+1, nr = rows.length-nl;
+            if(nl < minLeaf || nr < minLeaf) continue;
+            if(X[rows[k]][f] === X[rows[k+1]][f]) continue;
+            const il = crit === "entropy" ? entOf(L,nl) : giniOf(L,nl);
+            const ir = crit === "entropy" ? entOf(R,nr) : giniOf(R,nr);
+            const gain = parent.imp - (nl/rows.length)*il - (nr/rows.length)*ir;
+            if(!best || gain > best.gain + 1e-12){
+              best = {gain, f, type:"num", thr:(X[rows[k]][f]+X[rows[k+1]][f])/2};
+            }
+          }
+        }else{
+          let ls=0, lq=0, ts=0, tq=0;
+          rows.forEach(i => { ts += y[i]; tq += y[i]*y[i]; });
+          for(let k=0;k<rows.length-1;k++){
+            const i = rows[k]; ls += y[i]; lq += y[i]*y[i];
+            const nl = k+1, nr = rows.length-nl;
+            if(nl < minLeaf || nr < minLeaf) continue;
+            if(X[rows[k]][f] === X[rows[k+1]][f]) continue;
+            const vl = lq/nl - (ls/nl)*(ls/nl);
+            const rs = ts-ls, rq = tq-lq;
+            const vr = rq/nr - (rs/nr)*(rs/nr);
+            const gain = parent.imp - (nl/rows.length)*vl - (nr/rows.length)*vr;
+            if(!best || gain > best.gain + 1e-12) best = {gain, f, type:"num", thr:(X[rows[k]][f]+X[rows[k+1]][f])/2};
+          }
+        }
+      }else{
+        const cats = ft.cats;
+        for(const c of cats){
+          const L = idx.filter(i => X[i][f] === c);
+          const R = idx.filter(i => X[i][f] !== c && X[i][f] !== null);
+          if(L.length < minLeaf || R.length < minLeaf) continue;
+          const a = impur(L), b = impur(R), tot = L.length+R.length;
+          const gain = parent.imp - (L.length/tot)*a.imp - (R.length/tot)*b.imp;
+          if(!best || gain > best.gain + 1e-12) best = {gain, f, type:"cat", cat:c};
+        }
+      }
+    }
+    return best;
+  }
+
+  function grow(idx, depth){
+    const node = stats(idx);
+    node.id = nodeSeq++; node.depth = depth;
+    maxUsed = Math.max(maxUsed, depth);
+    if(depth >= maxDepth || idx.length < minSplit || node.imp <= 1e-12){ node.leaf = true; leaves++; return node; }
+    const b = bestSplit(idx);
+    if(!b || b.gain <= 1e-9){ node.leaf = true; leaves++; return node; }
+    const ft = feats[b.f];
+    const goLeft = i => b.type === "num"
+      ? (Number.isFinite(X[i][b.f]) ? X[i][b.f] <= b.thr : null)
+      : (X[i][b.f] === null ? null : X[i][b.f] === b.cat);
+    const L = [], R = [], U = [];
+    idx.forEach(i => { const g = goLeft(i); if(g === true) L.push(i); else if(g === false) R.push(i); else U.push(i); });
+    if(U.length){ (L.length >= R.length ? L : R).push(...U); }   // 欠測は多数派の枝へ
+    if(!L.length || !R.length){ node.leaf = true; leaves++; return node; }
+    node.leaf = false;
+    node.split = {f:b.f, name:ft.name, type:b.type, thr:b.thr, cat:b.cat, defaultLeft: L.length >= R.length};
+    node.gain = b.gain;
+    importance[b.f] += (idx.length/N) * b.gain;
+    node.left = grow(L, depth+1);
+    node.right = grow(R, depth+1);
+    return node;
+  }
+
+  const root = grow(X.map((_,i) => i), 0);
+  const tot = importance.reduce((a,b) => a+b, 0);
+  return {root, importance: importance.map(v => tot > 0 ? v/tot : 0), leaves, depth: maxUsed, nNodes: nodeSeq};
+}
+
+function predictRow(root, xrow){
+  let nd = root, path = [];
+  while(!nd.leaf){
+    const s = nd.split;
+    let goL;
+    if(s.type === "num"){
+      const v = xrow[s.f];
+      goL = Number.isFinite(v) ? v <= s.thr : s.defaultLeft;
+    }else{
+      const v = xrow[s.f];
+      goL = (v === null || v === undefined) ? s.defaultLeft : v === s.cat;
+    }
+    path.push({node:nd, went:goL});
+    nd = goL ? nd.left : nd.right;
+  }
+  return {leaf:nd, path};
+}
+
+/* ---------- 指標 ---------- */
+function clfMetrics(root, X, y, idx, classes){
+  const M = classes.map(() => classes.map(() => 0));
+  let ok = 0;
+  idx.forEach(i => {
+    const p = predictRow(root, X[i]).leaf.pred;
+    const a = classes.indexOf(y[i]), b = classes.indexOf(p);
+    if(a >= 0 && b >= 0) M[a][b]++;
+    if(p === y[i]) ok++;
+  });
+  const per = classes.map((c,k) => {
+    const tp = M[k][k];
+    const fp = M.reduce((s,r,i) => s + (i===k?0:r[k]), 0);
+    const fn = M[k].reduce((s,v,j) => s + (j===k?0:v), 0);
+    const prec = tp+fp ? tp/(tp+fp) : 0, rec = tp+fn ? tp/(tp+fn) : 0;
+    return {c, prec, rec, f1: prec+rec ? 2*prec*rec/(prec+rec) : 0, n: M[k].reduce((a,b)=>a+b,0)};
+  });
+  return {acc: idx.length ? ok/idx.length : NaN, cm:M, per, n: idx.length};
+}
+function regMetrics(root, X, y, idx){
+  if(!idx.length) return {r2:NaN, rmse:NaN, mae:NaN, n:0, pairs:[]};
+  let se=0, ae=0, m=0;
+  idx.forEach(i => m += y[i]); m /= idx.length;
+  let tss=0; const pairs=[];
+  idx.forEach(i => {
+    const p = predictRow(root, X[i]).leaf.pred;
+    se += (y[i]-p)**2; ae += Math.abs(y[i]-p); tss += (y[i]-m)**2;
+    pairs.push([y[i], p]);
+  });
+  return {r2: tss>0 ? 1-se/tss : NaN, rmse: Math.sqrt(se/idx.length), mae: ae/idx.length, n: idx.length, pairs};
+}
+
+/* =====================================================================
+   UI — データ読み込み
+   ===================================================================== */
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 1900);
+}
+function loadText(text, label){
+  try{
+    const {names, body} = parseTable(text);
+    DATA = buildData(names, body);
+    DATA.label = label || "読み込んだデータ";
+    renderVars();
+    $("#dataStat").className = "datastat";
+    $("#dataStat").textContent = `${DATA.label} ／ ${DATA.n} 行 × ${DATA.cols.length} 列`;
+    $("#runBtn").disabled = false;
+    $("#runHint").textContent = "設定を決めて「決定木を育てる」を押してください。";
+    MODEL = null; $("#resultArea").style.display = "none"; $("#emptyState").style.display = "";
+    toast("データを読み込みました");
+  }catch(e){
+    $("#dataStat").className = "datastat warn";
+    $("#dataStat").textContent = "読み込めません：" + e.message;
+    $("#runBtn").disabled = true;
+  }
+}
+$("#fileIn").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => loadText(r.result, f.name);
+  r.onerror = () => { $("#dataStat").className="datastat warn"; $("#dataStat").textContent="ファイルを開けません。"; };
+  r.readAsText(f, "UTF-8");
+});
+["dragover","drop"].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
+document.addEventListener("drop", e => {
+  const f = e.dataTransfer?.files?.[0]; if(!f) return;
+  const r = new FileReader(); r.onload = () => loadText(r.result, f.name); r.readAsText(f, "UTF-8");
+});
+$("#pasteToggle").addEventListener("click", () => {
+  const b = $("#pasteBox"); b.style.display = b.style.display === "none" ? "" : "none";
+});
+$("#pasteLoad").addEventListener("click", () => loadText($("#pasteArea").value, "貼り付けデータ"));
+$$("[data-sample]").forEach(b => b.addEventListener("click", () => {
+  const k = b.dataset.sample;
+  loadText(SAMPLES[k].csv, SAMPLES[k].label);
+  if(SAMPLES[k].task){ setTask(SAMPLES[k].task); }
+  if(SAMPLES[k].target){ $("#targetSel").value = SAMPLES[k].target; onTargetChange(); }
+}));
+
+/* ---------- 変数リスト ---------- */
+function renderVars(){
+  const sel = $("#targetSel");
+  sel.innerHTML = DATA.cols.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("");
+  sel.value = DATA.cols[DATA.cols.length-1].name;
+  drawVarList();
+  onTargetChange();
+  $("#varCount").textContent = `${DATA.cols.length} 変数`;
+}
+function drawVarList(){
+  const t = $("#targetSel").value;
+  $("#varList").innerHTML = DATA.cols.map((c,i) => {
+    const isT = c.name === t;
+    return `<div class="varrow ${isT?"is-target":""}">
+      <input type="checkbox" data-fi="${i}" ${isT?"disabled":"checked"} class="fchk">
+      <span class="nm" title="${esc(c.name)}">${esc(c.name)}</span>
+      ${c.miss?`<span class="tchip" style="cursor:default" title="欠測">欠 ${c.miss}</span>`:""}
+      <span class="tchip" data-t="${c.type}" data-ti="${i}">${c.type==="num"?"数値":"カテゴリ"}</span>
+    </div>`;
+  }).join("");
+  $$("#varList .tchip[data-ti]").forEach(el => el.addEventListener("click", () => {
+    const i = +el.dataset.ti, c = DATA.cols[i];
+    if(c.type === "cat" && !c.nums.some(Number.isFinite)){ toast("数値に変換できない列です"); return; }
+    c.type = c.type === "num" ? "cat" : "num"; c.forced = true;
+    drawVarList(); onTargetChange(true);
+  }));
+}
+function setTask(t){
+  $$("#taskTabs button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.task === t)));
+  $("#critFld").style.display = t === "clf" ? "" : "none";
+  $("#cmTitle").textContent = t === "clf" ? "分割表（実測 × 予測）" : "実測と予測の散らばり";
+}
+const curTask = () => $("#taskTabs button[aria-pressed=true]").dataset.task;
+$$("#taskTabs button").forEach(b => b.addEventListener("click", () => setTask(b.dataset.task)));
+function onTargetChange(keep){
+  const c = DATA.cols.find(x => x.name === $("#targetSel").value);
+  if(!c) return;
+  drawVarList();
+  if(!keep) setTask(c.type === "cat" ? "clf" : "reg");
+  $("#taskHint").textContent = c.type === "cat"
+    ? `「${c.name}」は ${c.cats.length} 種類のカテゴリです。分類として扱います。`
+    : `「${c.name}」は数値です。回帰なら平均値を、分類なら値をカテゴリとして予測します。`;
+}
+$("#targetSel").addEventListener("change", () => onTargetChange());
+$("#selAll").addEventListener("click", () => $$(".fchk").forEach(c => { if(!c.disabled) c.checked = true; }));
+$("#selNone").addEventListener("click", () => $$(".fchk").forEach(c => { if(!c.disabled) c.checked = false; }));
+
+/* ---------- スライダー ---------- */
+const bind = (id, out, f) => { const el = $(id); const up = () => $(out).textContent = f ? f(el.value) : el.value; el.addEventListener("input", up); up(); };
+bind("#depthRange", "#depthVal");
+bind("#mssRange", "#mssVal");
+bind("#mslRange", "#mslVal");
+bind("#testRange", "#testVal", v => v + "%");
+
+/* =====================================================================
+   実行
+   ===================================================================== */
+$("#runBtn").addEventListener("click", run);
+
+function prepare(){
+  const tName = $("#targetSel").value;
+  const tCol = DATA.cols.find(c => c.name === tName);
+  const fi = $$(".fchk").filter(c => c.checked && !c.disabled).map(c => +c.dataset.fi);
+  if(!fi.length) throw new Error("説明変数を1つ以上選んでください。");
+  const task = curTask();
+  const feats = fi.map(i => ({name:DATA.cols[i].name, type:DATA.cols[i].type, cats:DATA.cols[i].cats, idx:i}));
+  const keep = [];
+  for(let r=0; r<DATA.n; r++){
+    const tv = tCol.raw[r];
+    if(tv === "" || tv === "NA" || tv === "N/A" || tv === ".") continue;
+    if(task === "reg" && !Number.isFinite(tCol.nums[r])) continue;
+    keep.push(r);
+  }
+  if(keep.length < 8) throw new Error("有効な行が少なすぎます（8行以上必要）。");
+  const X = keep.map(r => feats.map(f => {
+    const c = DATA.cols[f.idx];
+    if(f.type === "num") return c.nums[r];
+    const v = c.raw[r];
+    return (v === "" || v === "NA" || v === "N/A" || v === ".") ? null : v;
+  }));
+  const y = keep.map(r => task === "clf" ? tCol.raw[r] : tCol.nums[r]);
+  const classes = task === "clf" ? Array.from(new Set(y)).sort((a,b) => {
+    if(isNum(a)&&isNum(b)) return Number(a)-Number(b);
+    return String(a).localeCompare(String(b),"ja");
+  }) : null;
+  return {X, y, feats, task, classes, tName, dropped: DATA.n - keep.length, rows: keep};
+}
+
+function splitIdx(n, ratio, seed){
+  const idx = Array.from({length:n}, (_,i) => i);
+  if(ratio <= 0) return {tr:idx, te:[]};
+  const rnd = rng(seed);
+  for(let i=n-1;i>0;i--){ const j = Math.floor(rnd()*(i+1)); [idx[i],idx[j]] = [idx[j],idx[i]]; }
+  const cut = Math.max(1, Math.round(n*ratio));
+  return {te: idx.slice(0,cut).sort((a,b)=>a-b), tr: idx.slice(cut).sort((a,b)=>a-b)};
+}
+
+function run(){
+  let P;
+  try{ P = prepare(); }
+  catch(e){ toast(e.message); $("#runHint").textContent = e.message; return; }
+
+  const opts = {
+    crit: $("#critSel").value,
+    maxDepth: +$("#depthRange").value,
+    minSplit: +$("#mssRange").value,
+    minLeaf: +$("#mslRange").value,
+    ratio: +$("#testRange").value/100,
+    seed: +$("#seedIn").value || 1
+  };
+  const sp = splitIdx(P.X.length, opts.ratio, opts.seed);
+  const Xtr = sp.tr.map(i => P.X[i]), ytr = sp.tr.map(i => P.y[i]);
+  if(P.task === "clf" && new Set(ytr).size < 2){ toast("訓練データの目的変数が1種類しかありません"); return; }
+
+  const model = fit({X:Xtr, y:ytr, feats:P.feats, task:P.task, crit:opts.crit,
+                     maxDepth:opts.maxDepth, minSplit:opts.minSplit, minLeaf:opts.minLeaf,
+                     classes:P.task === "clf" ? P.classes : null});
+
+  const trIdx = Xtr.map((_,i) => i);
+  const teIdx = sp.te.map((_,k) => k);
+  const Xte = sp.te.map(i => P.X[i]), yte = sp.te.map(i => P.y[i]);
+
+  MODEL = {...P, ...model, opts, Xtr, ytr, Xte, yte,
+    train: P.task === "clf" ? clfMetrics(model.root, Xtr, ytr, trIdx, P.classes) : regMetrics(model.root, Xtr, ytr, trIdx),
+    test:  sp.te.length ? (P.task === "clf" ? clfMetrics(model.root, Xte, yte, teIdx, P.classes) : regMetrics(model.root, Xte, yte, teIdx)) : null,
+    nTrain: sp.tr.length, nTest: sp.te.length
+  };
+  MODEL.curve = depthCurve(P, opts, Xtr, ytr, Xte, yte);
+
+  $("#emptyState").style.display = "none";
+  $("#resultArea").style.display = "";
+  renderAll();
+  $("#runHint").textContent = `深さ ${model.depth}、葉の数 ${model.leaves} の木ができました。`;
+}
+
+function depthCurve(P, opts, Xtr, ytr, Xte, yte){
+  const out = [];
+  const trIdx = Xtr.map((_,i)=>i), teIdx = Xte.map((_,i)=>i);
+  for(let d=1; d<=8; d++){
+    const m = fit({X:Xtr, y:ytr, feats:P.feats, task:P.task, crit:opts.crit, maxDepth:d,
+                   minSplit:opts.minSplit, minLeaf:opts.minLeaf, classes:P.classes});
+    const a = P.task === "clf" ? clfMetrics(m.root, Xtr, ytr, trIdx, P.classes).acc : regMetrics(m.root, Xtr, ytr, trIdx).r2;
+    const b = Xte.length ? (P.task === "clf" ? clfMetrics(m.root, Xte, yte, teIdx, P.classes).acc : regMetrics(m.root, Xte, yte, teIdx).r2) : null;
+    out.push({d, train:a, test:b, leaves:m.leaves});
+  }
+  return out;
+}
+
+/* =====================================================================
+   描画
+   ===================================================================== */
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+const classColor = i => PALETTE[i % PALETTE.length];
+
+function renderAll(){ drawTree(); drawPerf(); drawImp(); drawRules(); drawStory(); drawPaper(); drawPredForm(); drawCode(); }
+
+/* ---------- 樹形図 ---------- */
+const NW = 186, NH = 84, XG = 22, YG = 64;
+let view = {x:0, y:0, k:1};
+
+function layout(root){
+  let cursor = 0;
+  const walk = nd => {
+    if(nd.leaf){ nd._x = cursor * (NW+XG); cursor++; }
+    else{ walk(nd.left); walk(nd.right); nd._x = (nd.left._x + nd.right._x)/2; }
+    nd._y = nd.depth * (NH+YG);
+  };
+  walk(root);
+  let maxX = 0, maxY = 0;
+  const each = nd => { maxX = Math.max(maxX, nd._x); maxY = Math.max(maxY, nd._y);
+    if(!nd.leaf){ each(nd.left); each(nd.right); } };
+  each(root);
+  return {w: maxX + NW, h: maxY + NH};
+}
+
+function elbow(x1,y1,x2,y2){
+  const my = y1 + (y2-y1)/2, r = Math.min(14, Math.abs(x2-x1)/2, Math.abs(y2-y1)/2);
+  if(Math.abs(x2-x1) < 1) return `M${x1},${y1} L${x2},${y2}`;
+  const dir = x2 > x1 ? 1 : -1;
+  return `M${x1},${y1} L${x1},${my-r} Q${x1},${my} ${x1+dir*r},${my} L${x2-dir*r},${my} Q${x2},${my} ${x2},${my+r} L${x2},${y2}`;
+}
+
+function drawTree(){
+  const M = MODEL, svg = $("#treeSvg");
+  const size = layout(M.root);
+  const N = M.root.n;
+  let branches = "", nodes = "";
+
+  const walk = nd => {
+    if(!nd.leaf){
+      [["left",true],["right",false]].forEach(([side,isL]) => {
+        const ch = nd[side];
+        const w = 1.2 + 9*Math.sqrt(ch.n/N);
+        branches += `<path class="br" d="${elbow(nd._x+NW/2, nd._y+NH, ch._x+NW/2, ch._y)}" stroke-width="${w.toFixed(2)}"/>`;
+        const lx = (nd._x+NW/2 + ch._x+NW/2)/2, ly = nd._y+NH + (YG/2);
+        branches += `<g class="brlab"><rect x="${lx-19}" y="${ly-11}" width="38" height="20" rx="10"/><text x="${lx}" y="${ly+3}">${isL?"はい":"いいえ"}</text></g>`;
+      });
+      walk(nd.left); walk(nd.right);
+    }
+    nodes += nodeSvg(nd, N);
+  };
+  walk(M.root);
+
+  svg.innerHTML = `<defs><style>
+    .br{fill:none; stroke:#B9C6C0; stroke-linecap:round}
+    .brlab rect{fill:#fff; stroke:#DCE3DE}
+    .brlab text{font-family:${cssFont()}; font-size:10.5px; fill:#4A5A55; text-anchor:middle}
+    .nd rect.bx{fill:#fff; stroke:#CBD5CF; stroke-width:1}
+    .nd:hover rect.bx{stroke:#2E6B5E; stroke-width:1.6}
+    .nd.sel rect.bx{stroke:#2E6B5E; stroke-width:2.2}
+    .q{font-family:${cssFont()}; font-size:13px; fill:#17211E; font-weight:600; text-anchor:middle}
+    .p{font-family:${cssFont()}; font-size:15px; font-weight:700; text-anchor:middle}
+    .m{font-family:'IBM Plex Mono',monospace; font-size:10px; fill:#84928C; text-anchor:middle}
+    .nd{cursor:pointer}
+  </style></defs>
+  <g id="vp">${branches}${nodes}</g>`;
+
+  svg.querySelectorAll(".nd").forEach(g => g.addEventListener("click", () => {
+    svg.querySelectorAll(".nd").forEach(x => x.classList.remove("sel"));
+    g.classList.add("sel");
+    showNode(+g.dataset.id);
+  }));
+
+  MODEL.size = size;
+  fitView();
+  // 凡例
+  if(M.task === "clf"){
+    $("#treeLegend").innerHTML = M.classes.map((c,i) =>
+      `<span><i style="background:${classColor(i)}"></i>${esc(c)}</span>`).join("")
+      + `<span class="sep"></span><span>枝の太さ＝流れるデータ数</span>`;
+  }else{
+    $("#treeLegend").innerHTML = `<span><i style="background:${PALETTE[0]}"></i>予測値が小さい</span><span><i style="background:${PALETTE[7]}"></i>大きい</span><span class="sep"></span><span>枝の太さ＝流れるデータ数</span>`;
+  }
+  const st = [
+    ["深さ", M.depth], ["葉の数", M.leaves], ["節の総数", M.nNodes],
+    ["学習に使った行", M.nTrain]
+  ];
+  $("#treeStats").innerHTML = st.map(([k,v]) => `<div class="metric"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  $("#growNote").textContent = M.dropped ? `目的変数が空欄などの ${M.dropped} 行は除外しました。` : "すべての行を使いました。";
+}
+function cssFont(){ return "'Zen Kaku Gothic New',sans-serif"; }
+
+function leafColor(nd){
+  const M = MODEL;
+  if(M.task === "clf") return classColor(M.classes.indexOf(nd.pred));
+  const ys = M.ytr, mn = Math.min(...ys), mx = Math.max(...ys);
+  const t = mx > mn ? (nd.pred-mn)/(mx-mn) : .5;
+  return mixHex("#2E6B5E", "#B0562E", t);
+}
+function mixHex(a,b,t){
+  const p = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+  const [r1,g1,b1] = p(a), [r2,g2,b2] = p(b);
+  const c = (x,y) => Math.round(x+(y-x)*t).toString(16).padStart(2,"0");
+  return `#${c(r1,r2)}${c(g1,g2)}${c(b1,b2)}`;
+}
+
+function nodeSvg(nd, N){
+  const M = MODEL, x = nd._x, y = nd._y;
+  const col = leafColor(nd);
+  let inner = "";
+  // 分布バー
+  if(M.task === "clf"){
+    let off = 0;
+    inner += M.classes.map((c,i) => {
+      const w = (nd.counts[c]||0)/nd.n * (NW-24);
+      const r = `<rect x="${x+12+off}" y="${y+NH-14}" width="${Math.max(0,w)}" height="6" rx="2" fill="${classColor(i)}" opacity="${nd.pred===c?1:.42}"/>`;
+      off += w; return r;
+    }).join("");
+  }else{
+    inner += `<rect x="${x+12}" y="${y+NH-14}" width="${NW-24}" height="6" rx="2" fill="#EDF0EA"/>`;
+    const ys = M.ytr, mn = Math.min(...ys), mx = Math.max(...ys);
+    const t = mx>mn ? (nd.pred-mn)/(mx-mn) : .5;
+    inner += `<rect x="${x+12}" y="${y+NH-14}" width="${Math.max(3,(NW-24)*t)}" height="6" rx="2" fill="${col}"/>`;
+  }
+  const head = nd.leaf
+    ? `<text class="p" x="${x+NW/2}" y="${y+34}" fill="${col}">${esc(shorten(M.task==="clf"?nd.pred:fmt(nd.pred,1),16))}</text>`
+    : `<text class="q" x="${x+NW/2}" y="${y+27}">${esc(shorten(nd.split.name,13))}</text>
+       <text class="q" x="${x+NW/2}" y="${y+47}" font-size="12.5" fill="#2E6B5E">${esc(condText(nd.split))}</text>`;
+  const sub = nd.leaf
+    ? (M.task === "clf" ? `n=${nd.n}・純度 ${pct(nd.purity)}` : `n=${nd.n}・SD ${fmt(nd.sd,1)}`)
+    : `n=${nd.n}`;
+  const tag = nd.leaf ? `<rect x="${x}" y="${y}" width="4" height="${NH}" rx="2" fill="${col}"/>` : "";
+  return `<g class="nd" data-id="${nd.id}">
+    <rect class="bx" x="${x}" y="${y}" width="${NW}" height="${NH}" rx="9"/>
+    ${tag}${head}
+    <text class="m" x="${x+NW/2}" y="${y+NH-22}">${sub}</text>
+    ${inner}
+  </g>`;
+}
+function shorten(s,n){ s = String(s); return s.length > n ? s.slice(0,n-1)+"…" : s; }
+function condText(s){ return s.type === "num" ? `≤ ${fmt(s.thr,2)}` : `= ${shorten(s.cat,10)}`; }
+
+function showNode(id){
+  const find = nd => nd.id === id ? nd : (nd.leaf ? null : (find(nd.left) || find(nd.right)));
+  const nd = find(MODEL.root); if(!nd) return;
+  const M = MODEL;
+  $("#nodeIdLab").textContent = `第 ${nd.depth} 階層 ／ ${nd.leaf ? "葉" : "分岐点"}`;
+  let h = `<dl style="margin:0">`;
+  h += `<dt>含まれるデータ</dt><dd>${nd.n} 行（全体の ${pct(nd.n/M.root.n)}）</dd>`;
+  if(!nd.leaf) h += `<dt>ここでの質問</dt><dd style="font-family:var(--body)">${esc(nd.split.name)} が ${esc(condText(nd.split))} か？</dd>`;
+  if(M.task === "clf"){
+    h += `<dt>予測されるカテゴリ</dt><dd style="font-family:var(--body);font-weight:700;color:${leafColor(nd)}">${esc(nd.pred)}（${pct(nd.purity)}）</dd>`;
+    h += `<dt>内訳</dt><dd style="font-family:var(--body)">` + M.classes.map((c,i) =>
+      `<div style="display:flex;gap:8px;align-items:center;margin:3px 0">
+        <i style="width:9px;height:9px;border-radius:2px;background:${classColor(i)};display:inline-block"></i>
+        <span style="flex:1">${esc(c)}</span>
+        <span style="font-family:var(--mono);font-size:12px">${nd.counts[c]||0}</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">${pct((nd.counts[c]||0)/nd.n)}</span>
+      </div>`).join("") + `</dd>`;
+    h += `<dt>${MODEL.opts.crit === "entropy" ? "エントロピー" : "ジニ不純度"}</dt><dd>${fmt(nd.imp,3)}</dd>`;
+  }else{
+    h += `<dt>予測値（平均）</dt><dd style="font-weight:700;color:${leafColor(nd)}">${fmt(nd.pred,2)}</dd>`;
+    h += `<dt>標準偏差</dt><dd>${fmt(nd.sd,2)}</dd>`;
+  }
+  h += `</dl>`;
+  $("#nodeDetail").innerHTML = h;
+  $("#nodeDetail").style.color = "";
+}
+
+/* ---- ズーム・パン ---- */
+function applyView(){
+  const vp = $("#treeSvg").querySelector("#vp");
+  if(vp) vp.setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
+}
+function fitView(){
+  const svg = $("#treeSvg"), r = svg.getBoundingClientRect(), s = MODEL.size;
+  const pad = 34;
+  const k = Math.min((r.width-pad*2)/Math.max(s.w,1), (r.height-pad*2)/Math.max(s.h,1), 1.15);
+  view.k = Math.max(0.12, k);
+  view.x = (r.width - s.w*view.k)/2;
+  view.y = pad;
+  applyView();
+}
+(function panzoom(){
+  const svg = $("#treeSvg");
+  let down = false, sx = 0, sy = 0;
+  svg.addEventListener("pointerdown", e => { down = true; sx = e.clientX-view.x; sy = e.clientY-view.y; svg.classList.add("drag"); svg.setPointerCapture(e.pointerId); });
+  svg.addEventListener("pointermove", e => { if(!down) return; view.x = e.clientX-sx; view.y = e.clientY-sy; applyView(); });
+  svg.addEventListener("pointerup", e => { down = false; svg.classList.remove("drag"); });
+  svg.addEventListener("pointercancel", () => { down = false; svg.classList.remove("drag"); });
+  svg.addEventListener("wheel", e => {
+    e.preventDefault();
+    const r = svg.getBoundingClientRect(), mx = e.clientX-r.left, my = e.clientY-r.top;
+    const f = e.deltaY < 0 ? 1.12 : 1/1.12, nk = Math.min(3, Math.max(0.1, view.k*f));
+    view.x = mx - (mx-view.x)*(nk/view.k); view.y = my - (my-view.y)*(nk/view.k); view.k = nk;
+    applyView();
+  }, {passive:false});
+  const zoom = f => { const r = svg.getBoundingClientRect(), mx = r.width/2, my = r.height/2;
+    const nk = Math.min(3, Math.max(0.1, view.k*f));
+    view.x = mx-(mx-view.x)*(nk/view.k); view.y = my-(my-view.y)*(nk/view.k); view.k = nk; applyView(); };
+  $("#zIn").addEventListener("click", () => zoom(1.2));
+  $("#zOut").addEventListener("click", () => zoom(1/1.2));
+  $("#zFit").addEventListener("click", () => MODEL && fitView());
+})();
+
+/* ---- 画像保存 ---- */
+function svgString(){
+  const s = MODEL.size, pad = 24;
+  const src = $("#treeSvg").innerHTML.replace(/<g id="vp"[^>]*>/, `<g transform="translate(${pad},${pad})">`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${s.w+pad*2}" height="${s.h+pad*2}" viewBox="0 0 ${s.w+pad*2} ${s.h+pad*2}"><rect width="100%" height="100%" fill="#ffffff"/>${src}</svg>`;
+}
+const EMBEDDED = (() => { try{ return window.self !== window.top; }catch(e){ return true; } })();
+function dl(blob, name){
+  const url = URL.createObjectURL(blob);
+  if(EMBEDDED){
+    window.open(url, "_blank");
+    toast("新しいタブで開きました。右クリックから保存できます");
+  }else{
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast(name + " を保存しました");
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 20000);
+}
+function copyText(t, msg){
+  const fb = () => {
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.style.position = "fixed"; ta.style.top = "-999px";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    let ok = false; try{ ok = document.execCommand("copy"); }catch(e){}
+    ta.remove();
+    toast(ok ? msg : "コピーできませんでした。文面を選択してコピーしてください");
+  };
+  if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(() => toast(msg), fb);
+  else fb();
+}
+$("#dlSvg").addEventListener("click", () => { if(!MODEL) return; dl(new Blob([svgString()],{type:"image/svg+xml"}), "決定木.svg"); });
+$("#dlPng").addEventListener("click", () => {
+  if(!MODEL) return;
+  const str = svgString(), s = MODEL.size, scale = 2;
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement("canvas");
+    cv.width = (s.w+48)*scale; cv.height = (s.h+48)*scale;
+    const ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.drawImage(img,0,0,cv.width,cv.height);
+    cv.toBlob(b => dl(b, "決定木.png"));
+  };
+  img.onerror = () => toast("PNGにできませんでした。SVGをお試しください。");
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(str);
+});
+
+/* ---------- 精度 ---------- */
+function drawPerf(){
+  const M = MODEL, hasTe = !!M.test;
+  $("#splitNote").textContent = hasTe
+    ? `学習 ${M.nTrain} 行 / 検証 ${M.nTest} 行（種 ${M.opts.seed}）`
+    : `全 ${M.nTrain} 行で学習（検証データなし）`;
+  let ms = [];
+  if(M.task === "clf"){
+    ms.push(["正解率（学習）", pct(M.train.acc), false]);
+    if(hasTe) ms.push(["正解率（検証）", pct(M.test.acc), true]);
+    const base = Math.max(...M.classes.map(c => M.ytr.filter(v => v===c).length))/M.ytr.length;
+    ms.push(["いつも多数派なら", pct(base), false]);
+    ms.push(["葉の数", M.leaves, false]);
+  }else{
+    ms.push(["決定係数 R²（学習）", fmt(M.train.r2,3), false]);
+    if(hasTe) ms.push(["R²（検証）", fmt(M.test.r2,3), true]);
+    ms.push(["RMSE" + (hasTe?"（検証）":""), fmt((hasTe?M.test:M.train).rmse,2), false]);
+    ms.push(["MAE" + (hasTe?"（検証）":""), fmt((hasTe?M.test:M.train).mae,2), false]);
+  }
+  $("#perfMetrics").innerHTML = ms.map(([k,v,hi]) =>
+    `<div class="metric ${hi?"hi":""}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+  const sc = hasTe ? M.test : M.train;
+  $("#cmScope").textContent = hasTe ? "検証データ" : "学習データ";
+  if(M.task === "clf") $("#cmBox").innerHTML = cmTable(sc, M.classes);
+  else $("#cmBox").innerHTML = scatter(sc);
+  $("#curveBox").innerHTML = curveChart(M.curve, M.task, hasTe);
+  const best = M.curve.reduce((a,b) => ((b.test ?? b.train) > (a.test ?? a.train) ? b : a), M.curve[0]);
+  $("#curveNote").textContent = hasTe
+    ? `検証での成績がいちばん良いのは深さ ${best.d} 付近です。学習の線だけが伸び続けるところから先は、覚えすぎ（過学習）のサインです。`
+    : `検証データを取り分けると、覚えすぎかどうかを確かめられます（設定03のスライダー）。`;
+}
+function cmTable(m, classes){
+  let h = `<p class="tblcap">行＝実際の値、列＝予測した値。対角線が当たりです。</p><table class="tbl"><tr><th class="lab">実測 ＼ 予測</th>${classes.map(c => `<th>${esc(c)}</th>`).join("")}<th>再現率</th></tr>`;
+  m.cm.forEach((row,i) => {
+    h += `<tr><td class="lab">${esc(classes[i])}</td>` +
+      row.map((v,j) => `<td class="${i===j?"diag":""}">${v}</td>`).join("") +
+      `<td>${pct(m.per[i].rec)}</td></tr>`;
+  });
+  h += `<tr><th class="lab">適合率</th>${m.per.map(p => `<th>${pct(p.prec)}</th>`).join("")}<th>F1平均<br>${fmt(m.per.reduce((a,b)=>a+b.f1,0)/m.per.length,3)}</th></tr></table>`;
+  return h;
+}
+function scatter(m){
+  const W = 380, H = 300, pad = 46;
+  if(!m.pairs.length) return "<p>データがありません。</p>";
+  const xs = m.pairs.map(p => p[0]), ys = m.pairs.map(p => p[1]);
+  const lo = Math.min(...xs, ...ys), hi = Math.max(...xs, ...ys);
+  const sx = v => pad + (v-lo)/(hi-lo||1)*(W-pad-14);
+  const sy = v => H-pad - (v-lo)/(hi-lo||1)*(H-pad-14);
+  let g = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:var(--mono);font-size:9px">
+    <line x1="${sx(lo)}" y1="${sy(lo)}" x2="${sx(hi)}" y2="${sy(hi)}" stroke="#CBD5CF" stroke-dasharray="4 3"/>
+    <line x1="${pad}" y1="${H-pad}" x2="${W-8}" y2="${H-pad}" stroke="#84928C"/>
+    <line x1="${pad}" y1="8" x2="${pad}" y2="${H-pad}" stroke="#84928C"/>
+    <text x="${W/2}" y="${H-10}" text-anchor="middle" fill="#4A5A55" font-family="var(--body)" font-size="11">実測値</text>
+    <text x="12" y="${H/2}" text-anchor="middle" fill="#4A5A55" font-family="var(--body)" font-size="11" transform="rotate(-90 12 ${H/2})">予測値</text>
+    <text x="${pad}" y="${H-pad+13}" fill="#84928C">${fmt(lo,1)}</text>
+    <text x="${W-14}" y="${H-pad+13}" text-anchor="end" fill="#84928C">${fmt(hi,1)}</text>`;
+  m.pairs.forEach(([a,b]) => g += `<circle cx="${sx(a).toFixed(1)}" cy="${sy(b).toFixed(1)}" r="3.4" fill="#2E6B5E" opacity=".55"/>`);
+  return g + `</svg><p class="tblcap" style="margin-top:6px">点線に近いほど当たっています。回帰木は葉ごとに同じ値を返すので、横並びの帯になります。</p>`;
+}
+function curveChart(curve, task, hasTe){
+  const W = 380, H = 250, pl = 44, pb = 34;
+  const vals = curve.flatMap(c => [c.train, c.test]).filter(v => v !== null && Number.isFinite(v));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if(task === "clf"){ lo = Math.min(lo, 0.4); hi = 1; } else { hi = Math.max(hi, 1); lo = Math.min(lo, 0); }
+  const sx = d => pl + (d-1)/7*(W-pl-14);
+  const sy = v => H-pb - (v-lo)/((hi-lo)||1)*(H-pb-16);
+  const line = key => curve.filter(c => c[key] !== null && Number.isFinite(c[key]))
+    .map((c,i) => `${i?"L":"M"}${sx(c.d).toFixed(1)},${sy(c[key]).toFixed(1)}`).join(" ");
+  let g = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:var(--mono);font-size:9px">`;
+  [0,.25,.5,.75,1].forEach(t => { const v = lo+(hi-lo)*t;
+    g += `<line x1="${pl}" y1="${sy(v)}" x2="${W-10}" y2="${sy(v)}" stroke="#EDF0EA"/><text x="${pl-6}" y="${sy(v)+3}" text-anchor="end" fill="#84928C">${fmt(v,2)}</text>`; });
+  curve.forEach(c => g += `<text x="${sx(c.d)}" y="${H-pb+14}" text-anchor="middle" fill="#84928C">${c.d}</text>`);
+  g += `<text x="${W/2}" y="${H-6}" text-anchor="middle" fill="#4A5A55" font-family="var(--body)" font-size="11">木の深さ</text>`;
+  g += `<path d="${line("train")}" fill="none" stroke="#A8761B" stroke-width="2"/>`;
+  curve.forEach(c => g += `<circle cx="${sx(c.d)}" cy="${sy(c.train)}" r="3" fill="#A8761B"/>`);
+  if(hasTe){
+    g += `<path d="${line("test")}" fill="none" stroke="#2E6B5E" stroke-width="2.4"/>`;
+    curve.forEach(c => Number.isFinite(c.test) && (g += `<circle cx="${sx(c.d)}" cy="${sy(c.test)}" r="3.4" fill="#2E6B5E"/>`));
+  }
+  const cur = MODEL.opts.maxDepth;
+  g += `<line x1="${sx(cur)}" y1="10" x2="${sx(cur)}" y2="${H-pb}" stroke="#8C3B5A" stroke-dasharray="3 3"/>
+        <text x="${sx(cur)}" y="8" text-anchor="middle" fill="#8C3B5A" font-family="var(--body)" font-size="10">いまの設定</text>`;
+  g += `</svg>
+  <div class="legend" style="border:none;padding:6px 0 0">
+    <span><i style="background:#A8761B"></i>学習データ</span>
+    ${hasTe?`<span><i style="background:#2E6B5E"></i>検証データ</span>`:""}
+    <span class="sep"></span><span>縦軸＝${task==="clf"?"正解率":"R²"}</span>
+  </div>`;
+  return g;
+}
+
+/* ---------- 重要度 ---------- */
+function drawImp(){
+  const M = MODEL;
+  const rows = M.feats.map((f,i) => ({name:f.name, v:M.importance[i], type:f.type}))
+    .sort((a,b) => b.v-a.v);
+  const used = rows.filter(r => r.v > 0).length;
+  let h = `<p class="tblcap">上ほど、木の分岐に効いた変数です。${used ? `実際に使われたのは ${used} 個です。` : ""}</p>`;
+  h += rows.map((r,i) => `
+    <div style="display:flex;align-items:center;gap:12px;margin:0 0 10px">
+      <span style="width:34px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink3)">${(i+1).toString().padStart(2,"0")}</span>
+      <span style="width:min(30%,190px);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.name)}">${esc(r.name)}</span>
+      <span style="flex:1;background:var(--paper2);border-radius:4px;height:20px;position:relative;overflow:hidden;border:1px solid var(--line2)">
+        <i style="position:absolute;left:0;top:0;bottom:0;width:${(r.v*100).toFixed(1)}%;background:${r.v>0?"linear-gradient(90deg,#2E6B5E,#3E8C9E)":"transparent"};border-radius:3px"></i>
+      </span>
+      <span style="width:58px;text-align:right;font-family:var(--mono);font-size:12px;color:${r.v>0?"var(--moss-d)":"var(--ink3)"}">${(r.v*100).toFixed(1)}%</span>
+    </div>`).join("");
+  if(!used) h += `<p class="hint">どの変数でも有効な分割が見つかりませんでした。深さや最小サンプル数の条件をゆるめてみてください。</p>`;
+  $("#impBox").innerHTML = h;
+}
+
+/* ---------- ルール ---------- */
+function collectRules(){
+  const out = [];
+  const walk = (nd, conds) => {
+    if(nd.leaf){ out.push({node:nd, conds:conds.slice()}); return; }
+    const s = nd.split;
+    walk(nd.left, conds.concat([{txt: s.type === "num" ? `${s.name} ≤ ${fmt(s.thr,2)}` : `${s.name} が ${s.cat}`}]));
+    walk(nd.right, conds.concat([{txt: s.type === "num" ? `${s.name} > ${fmt(s.thr,2)}` : `${s.name} が ${s.cat} 以外`}]));
+  };
+  walk(MODEL.root, []);
+  return out.sort((a,b) => b.node.n - a.node.n);
+}
+function drawRules(){
+  const M = MODEL, rules = collectRules();
+  $("#ruleCount").textContent = `${rules.length} 本`;
+  $("#rulesBox").innerHTML = rules.map((r,i) => {
+    const nd = r.node, col = leafColor(nd);
+    const out = M.task === "clf" ? esc(nd.pred) : fmt(nd.pred,2);
+    const meta = M.task === "clf"
+      ? `n=${nd.n}（${pct(nd.n/M.root.n)}）・純度 ${pct(nd.purity)}`
+      : `n=${nd.n}（${pct(nd.n/M.root.n)}）・SD ${fmt(nd.sd,2)}`;
+    const p = M.task === "clf" ? nd.purity : 1 - Math.min(1, nd.sd/(Math.sqrt(M.root.imp)||1));
+    return `<div class="rule">
+      <div class="rule-h">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">R${(i+1).toString().padStart(2,"0")}</span>
+        <span class="out" style="color:${col}">${out}</span>
+        <span class="meta">${meta}</span>
+      </div>
+      <div class="rule-cond">${r.conds.length
+        ? r.conds.map(c => `<code>${esc(c.txt)}</code>`).join(`<span class="and">かつ</span>`)
+        : "（分岐なし）"}</div>
+      <div class="purity"><i style="width:${(p*100).toFixed(0)}%;background:${col}"></i></div>
+    </div>`;
+  }).join("");
+}
+$("#copyRules").addEventListener("click", () => {
+  if(!MODEL) return;
+  const M = MODEL;
+  const txt = collectRules().map((r,i) => {
+    const nd = r.node;
+    const cond = r.conds.length ? r.conds.map(c => c.txt).join(" かつ ") : "（条件なし）";
+    const out = M.task === "clf" ? `${nd.pred}（純度 ${pct(nd.purity)}）` : `${fmt(nd.pred,2)}`;
+    return `R${i+1}. もし ${cond} ならば → ${M.tName} = ${out} ／ n=${nd.n}`;
+  }).join("\n");
+  copyText(txt, "ルールをコピーしました");
+});
+
+/* =====================================================================
+   結果の読み方（自動解説）
+   ===================================================================== */
+function d3(v){ return Number.isFinite(v) ? v.toFixed(3).replace(/^(-?)0\./,"$1.") : "―"; }
+function baseRate(){
+  const M = MODEL;
+  return Math.max(...M.classes.map(c => M.ytr.filter(v => v === c).length))/M.ytr.length;
+}
+function firstSplitText(){
+  const s = MODEL.root.split;
+  if(!s) return null;
+  return s.type === "num" ? `${s.name}が${fmt(s.thr,2)}以下かどうか` : `${s.name}が「${s.cat}」かどうか`;
+}
+function impRank(){
+  return MODEL.feats.map((f,i) => ({name:f.name, v:MODEL.importance[i]}))
+    .filter(r => r.v > 0).sort((a,b) => b.v-a.v);
+}
+function condsOf(r, lang){ const j = lang === "en" ? " and " : "、かつ "; return r.conds.length ? r.conds.map(c => c.txt).join(j) : (lang === "en" ? "(no condition)" : "（条件なし）"); }
+function pickLeaves(){
+  const rules = collectRules(), M = MODEL, lim = Math.max(4, M.root.n*0.04);
+  if(M.task === "clf"){
+    return rules.filter(r => r.node.n >= lim)
+      .sort((a,b) => (b.node.purity - a.node.purity) || (b.node.n - a.node.n)).slice(0,2);
+  }
+  const s = rules.filter(r => r.node.n >= lim).sort((a,b) => b.node.pred - a.node.pred);
+  return s.length > 1 ? [s[0], s[s.length-1]] : s.slice(0,1);
+}
+function gapOf(){
+  const M = MODEL; if(!M.test) return null;
+  return M.task === "clf" ? M.train.acc - M.test.acc : M.train.r2 - M.test.r2;
+}
+
+function drawStory(){
+  const M = MODEL, clf = M.task === "clf", te = M.test;
+  const critName = M.opts.crit === "entropy" ? "エントロピー（情報利得）" : "ジニ不純度";
+  /* --- 1. したこと --- */
+  $("#storySetup").innerHTML = `<dl class="spec">
+    <dt>目的変数</dt><dd><strong>${esc(M.tName)}</strong>（${clf ? `${M.classes.length} カテゴリ：${M.classes.map(esc).join("・")}` : "数値"}）</dd>
+    <dt>説明変数</dt><dd>${M.feats.length} 個 ― ${M.feats.map(f => esc(f.name)).join("、")}</dd>
+    <dt>手法</dt><dd>${clf ? "分類木" : "回帰木"}（CART）／分割基準：${clf ? critName : "分散の減少"}</dd>
+    <dt>止める条件</dt><dd>深さ ${M.opts.maxDepth} まで・分割に必要な最小 ${M.opts.minSplit} 件・葉は最小 ${M.opts.minLeaf} 件</dd>
+    <dt>データ</dt><dd>有効 ${M.nTrain + M.nTest} 件${M.dropped ? `（欠測等で ${M.dropped} 件を除外）` : ""}${te ? ` ／ 学習 ${M.nTrain} 件・検証 ${M.nTest} 件（無作為分割、種 ${M.opts.seed}）` : " ／ すべて学習に使用（検証なし）"}</dd>
+  </dl>`;
+
+  /* --- 2. 読み取れること --- */
+  const imp = impRank(), fs = firstSplitText(), leaves = pickLeaves();
+  let h = "";
+  h += `<p class="narr">できあがった木は深さ <em>${M.depth}</em>、末端（葉）が <em>${M.leaves} 個</em>です。`;
+  h += fs ? `最初の枝分かれは <em>${esc(fs)}</em> で、ここが${esc(M.tName)}をもっとも大きく分ける境目でした。`
+          : `有効な分割が見つからず、木は分岐しませんでした。`;
+  h += `葉に至るまでの条件をたどると、${M.leaves} 本の「もし〜ならば」ルールとして読めます（ルール一覧タブ）。</p>`;
+
+  if(clf){
+    const b = baseRate();
+    h += `<p class="narr">当てはまり具合は、学習データで正解率 <em class="num">${pct(M.train.acc)}</em>`;
+    h += te ? `、取り分けておいた検証データで <em class="num">${pct(te.acc)}</em> でした。` : ` でした（検証データなし）。`;
+    h += `いつも多数派のカテゴリだと答える場合の正解率が ${pct(b)} なので、この木は${(te ? te.acc : M.train.acc) - b > 0.05 ? "それを上回る予測ができています" : "多数派予測とあまり変わりません"}。`;
+    const sc = te || M.train, worst = sc.per.slice().sort((a,b) => a.rec-b.rec)[0];
+    if(worst && Number.isFinite(worst.rec)) h += `カテゴリ別では「${esc(worst.c)}」の再現率が ${pct(worst.rec)} ともっとも低く、この群の取りこぼしが起きやすいことがわかります。`;
+    h += `</p>`;
+  }else{
+    h += `<p class="narr">当てはまり具合は、学習データで R² = <em class="num">${d3(M.train.r2)}</em>`;
+    h += te ? `、検証データで R² = <em class="num">${d3(te.r2)}</em>（RMSE = ${fmt(te.rmse,2)}）でした。` : `（RMSE = ${fmt(M.train.rmse,2)}）でした。`;
+    h += `R² は目的変数のばらつきのうち木が説明できた割合で、検証データの値が実力に近い値です。</p>`;
+  }
+
+  if(imp.length){
+    h += `<p class="narr">分岐に効いた変数は <em>${esc(imp[0].name)}</em>（${(imp[0].v*100).toFixed(1)}%）が最大で、`;
+    h += imp.length > 1 ? `続いて ${imp.slice(1,3).map(r => `${esc(r.name)}（${(r.v*100).toFixed(1)}%）`).join("、")} でした。` : `他の変数は分岐に使われませんでした。`;
+    h += `重要度は「その変数で分けたときに、どれだけ${clf ? "混ざり具合" : "ばらつき"}が減ったか」の合計で、回帰係数のような向き（プラス・マイナス）は持ちません。向きを知るには、下の葉の条件を読んでください。</p>`;
+  }
+
+  if(leaves.length){
+    h += `<p class="narr">とくに目を引く葉は次のとおりです。<br>` + leaves.map(r => {
+      const nd = r.node;
+      return clf
+        ? `・<em>${esc(condsOf(r))}</em> にあてはまる群（n = ${nd.n}、学習データの ${pct(nd.n/M.root.n)}）では、${esc(M.tName)}が <strong>${esc(nd.pred)}</strong> である割合が ${pct(nd.purity)} を占めました。`
+        : `・<em>${esc(condsOf(r))}</em> にあてはまる群（n = ${nd.n}）の${esc(M.tName)}は平均 <strong>${fmt(nd.pred,2)}</strong>（SD = ${fmt(nd.sd,2)}）でした。`;
+    }).join("<br>") + `</p>`;
+  }
+  $("#storyRead").innerHTML = h;
+
+  /* --- 3. チェック --- */
+  $("#storyCheck").innerHTML = diagnose().map(d =>
+    `<div class="dx ${d.lv}"><span class="ic">${d.lv === "good" ? "◎" : d.lv === "warn" ? "!" : "i"}</span>
+     <div><b>${esc(d.t)}</b><p>${d.p}</p></div></div>`).join("");
+}
+
+function diagnose(){
+  const M = MODEL, clf = M.task === "clf", te = M.test, out = [];
+  const gap = gapOf();
+  if(!te){
+    out.push({lv:"warn", t:"検証データがありません", p:"いまの正解率は、学習に使ったデータを当てなおした値です。実力より高く出ます。設定03の「検証用に取り分ける割合」を 20〜30% にして、もう一度育ててください。"});
+  }else if(gap !== null && gap > 0.15){
+    out.push({lv:"warn", t:"覚えすぎ（過学習）の疑い", p:`学習データと検証データで成績が ${clf ? pct(gap) : d3(gap)} ぶん離れています。木が細かく育ちすぎているサインです。深さを ${Math.max(1,M.opts.maxDepth-1)} に下げるか、葉の最小サンプル数を増やしてみてください。「あたり具合」タブの深さと精度のグラフも参考になります。`});
+  }else if(gap !== null && gap <= 0.05){
+    out.push({lv:"good", t:"学習と検証の差が小さい", p:"未知のデータにもだいたい同じ精度で当たりそうです。この木の構造はそれなりに安定していると考えられます。"});
+  }
+  if(clf){
+    const b = baseRate(), acc = te ? te.acc : M.train.acc;
+    if(acc - b < 0.05) out.push({lv:"warn", t:"多数派予測と大きな差がありません", p:`常に最頻カテゴリを答えるだけで ${pct(b)} 当たります。説明変数を増やす、変数の型（数値／カテゴリ）を見直す、深さの上限を上げるなどを試してください。`});
+    else out.push({lv:"good", t:"ベースラインを上回っています", p:`多数派予測（${pct(b)}）に対して ${pct(acc)} まで改善しました。説明変数に予測の手がかりがあると言えます。`});
+    if(b > 0.75) out.push({lv:"info", t:"カテゴリの偏りが大きい", p:"片方のカテゴリが多いデータでは、正解率だけを見ると実態を見誤ります。分割表の再現率・適合率、とくに少数派カテゴリの再現率をあわせて報告してください。"});
+  }else{
+    const r2 = te ? te.r2 : M.train.r2;
+    if(!(r2 > 0.3)) out.push({lv:"warn", t:"説明力が高くありません", p:`R² = ${d3(r2)} です。回帰木は葉ごとに同じ値を返すため、なめらかな関係の予測は苦手です。線形回帰と見比べる、深さを上げる、変数を追加するなどを検討してください。`});
+    else out.push({lv:"good", t:"それなりに説明できています", p:`R² = ${d3(r2)} です。ただし回帰木の予測値は階段状になるので、外挿（データの範囲外の予測）はできません。`});
+  }
+  if(M.depth >= M.opts.maxDepth) out.push({lv:"info", t:"深さの上限にぶつかっています", p:`設定した上限（${M.opts.maxDepth}）まで育ちました。上限を上げると木は変わります。「あたり具合」タブの曲線で、検証成績が伸びるかどうかを確かめてください。`});
+  const small = collectRules().filter(r => r.node.n < 10).length;
+  if(small) out.push({lv:"info", t:`少人数の葉が ${small} 個あります`, p:"10件に満たない葉のルールは、たまたまそうなっただけの可能性があります。解釈や引用は、サンプル数の多い葉を中心にしてください。"});
+  const imp = impRank();
+  if(imp.length && imp[0].v > 0.6) out.push({lv:"info", t:`${imp[0].name} に依存しています`, p:"重要度の6割以上が1変数に集中しています。この変数が測れない場面では予測が効きません。また、目的変数と実質的に同じ情報を含む変数（データ漏れ）が混じっていないか確認してください。"});
+  if(M.nTrain + M.nTest < 100) out.push({lv:"info", t:"標本が小さめです", p:"決定木は、数件の入れ替わりで枝の形が変わることが知られています。標本が小さいときは、乱数の種を変えて木の形が安定するかを確かめ、結論は重要度の上位変数など大きな傾向にとどめるのが安全です。"});
+  return out;
+}
+
+/* =====================================================================
+   論文での記述例
+   ===================================================================== */
+let PLANG = "ja";
+function paperBlocks(lang){
+  const M = MODEL, clf = M.task === "clf", te = M.test, B = [];
+  const imp = impRank(), leaves = pickLeaves(), fs = M.root.split;
+  const nAll = M.nTrain + M.nTest;
+  const featJ = M.feats.map(f => f.name).join("、");
+  const featE = M.feats.map(f => f.name).join(", ");
+  const crit = M.opts.crit === "entropy" ? "エントロピー基準（情報利得）" : "ジニ不純度";
+  const critE = M.opts.crit === "entropy" ? "the information gain (entropy) criterion" : "the Gini impurity criterion";
+  const fsJa = fs ? (fs.type === "num" ? `${fs.name} ≤ ${fmt(fs.thr,2)}` : `${fs.name} =「${fs.cat}」`) : "―";
+  const acc = te ? te.acc : M.train.acc;
+
+  if(lang === "ja"){
+    let m = `${M.tName}を目的変数、${featJ}の計${M.feats.length}変数を説明変数として、CART法（Breiman et al., 1984）による${clf ? "分類木" : "回帰木"}分析を行った。`;
+    m += clf ? `分割の評価には${crit}を用い、` : `分割の評価には二乗誤差（分散）の減少量を用い、`;
+    m += `木の深さの上限を${M.opts.maxDepth}、分割に必要な最小標本数を${M.opts.minSplit}、末端ノードの最小標本数を${M.opts.minLeaf}に設定した。`;
+    m += te ? `過剰適合を検討するため、標本を無作為に学習用${M.nTrain}件（${pct(M.nTrain/nAll)}）と検証用${M.nTest}件（${pct(M.nTest/nAll)}）に分割し、学習用データで構築した木を検証用データに適用して${clf ? "正解率および再現率・適合率" : "決定係数およびRMSE"}を算出した（乱数の種＝${M.opts.seed}）。`
+              : `標本全体（${nAll}件）を用いて木を構築した。`;
+    m += `変数重要度は、各変数による分割がもたらした不純度の減少量の総和を、全体を100%として基準化した値である。`;
+    B.push({tag:"方法", t:"Method", x:m});
+
+    let r = `分析対象は${nAll}件であった${M.dropped ? `（目的変数の欠測等により${M.dropped}件を除外）` : ""}。`;
+    r += `構築された${clf ? "分類木" : "回帰木"}は深さ${M.depth}、末端ノード数${M.leaves}であり、第1分岐は「${fsJa}」であった。`;
+    if(clf){
+      r += `学習用データにおける正解率は${d3(M.train.acc)}`;
+      r += te ? `、検証用データにおける正解率は${d3(te.acc)}であり、最頻カテゴリを常に予測した場合の正解率（${d3(baseRate())}）を上回った。` : `であった（最頻カテゴリを常に予測した場合は${d3(baseRate())}）。`;
+      const sc = te || M.train;
+      r += `カテゴリ別の再現率／適合率は、${sc.per.slice(0,3).map(p => `${p.c}が${d3(p.rec)}／${d3(p.prec)}`).join("、")}であった。`;
+    }else{
+      r += `決定係数は学習用データでR² = ${d3(M.train.r2)}`;
+      r += te ? `、検証用データでR² = ${d3(te.r2)}（RMSE = ${fmt(te.rmse,2)}、MAE = ${fmt(te.mae,2)}）であった。` : `（RMSE = ${fmt(M.train.rmse,2)}）であった。`;
+    }
+    if(imp.length) r += `変数重要度は${imp[0].name}が最も高く（${(imp[0].v*100).toFixed(1)}%）、次いで${imp.slice(1,3).map(x => `${x.name}（${(x.v*100).toFixed(1)}%）`).join("、")}であった。`;
+    if(leaves.length){
+      const L = leaves[0].node;
+      r += clf
+        ? `末端ノードのうち、${condsOf(leaves[0])}を満たす群（n = ${L.n}、学習標本の${pct(L.n/M.root.n)}）では、${M.tName}が「${L.pred}」である割合が${pct(L.purity)}に達した。`
+        : `末端ノードのうち、${condsOf(leaves[0])}を満たす群（n = ${L.n}）の${M.tName}の平均は${fmt(L.pred,2)}（SD = ${fmt(L.sd,2)}）であり、末端ノード間で最も高い値を示した。`;
+    }
+    B.push({tag:"結果", t:"Results", x:r});
+
+    let tb = `表1　変数重要度\n変数\t重要度(%)\n` + imp.map(x => `${x.name}\t${(x.v*100).toFixed(1)}`).join("\n");
+    if(clf){
+      const sc = te || M.train;
+      tb += `\n\n表2　分類の精度（${te ? "検証用データ" : "学習用データ"}）\nカテゴリ\tn\t再現率\t適合率\tF1\n`
+          + sc.per.map(p => `${p.c}\t${p.n}\t${d3(p.rec)}\t${d3(p.prec)}\t${d3(p.f1)}`).join("\n")
+          + `\n全体正解率\t${sc.n}\t${d3(sc.acc)}\t\t`;
+    }
+    B.push({tag:"表", t:"表（タブ区切り・そのまま表計算ソフトに貼れます）", x:tb, mono:true});
+
+    B.push({tag:"図", t:"図のキャプション", x:
+      `図1　${M.tName}を予測する${clf ? "分類木" : "回帰木"}\n注）各ノードの上段は分割に用いた変数と閾値、下段は該当標本数を示す。末端ノードには${clf ? "予測カテゴリと標本の内訳" : "予測値（当該ノードの平均）"}を示した。分岐の左が条件を満たす場合、右が満たさない場合である。枝の太さは通過する標本数に比例する。`});
+
+    let dsc = imp.length ? `本分析では、${imp[0].name}が${M.tName}を分ける最も重要な変数として選択され、${fsJa}を境に${M.tName}の分布が明確に異なることが示された。` : `本分析では、明確な分岐構造は得られなかった。`;
+    dsc += `決定木は変数間の交互作用を条件の組み合わせとして表現できる一方、標本のわずかな変動によって木の構造が変化しやすいこと（Breiman, 1996）、および連続変数を閾値で二分するために情報の一部が失われることに留意する必要がある。`;
+    dsc += te ? `本研究では学習用と検証用にデータを分割して汎化性能を確認したが、` : `本研究では検証用データを設けていないため、示された精度は楽観的である可能性がある。`;
+    dsc += `標本数が限られる場合には、交差検証やランダムフォレスト等のアンサンブル手法により、選択された変数と閾値の安定性を確認することが望まれる。`;
+    B.push({tag:"考察", t:"Discussion（書き出し例）", x:dsc});
+
+    B.push({tag:"文献", t:"引用文献", refs:true, x:
+`Breiman, L. (1996). Bagging predictors. Machine Learning, 24(2), 123–140.
+Breiman, L., Friedman, J. H., Olshen, R. A., & Stone, C. J. (1984). Classification and regression trees. Wadsworth.
+Hastie, T., Tibshirani, R., & Friedman, J. (2009). The elements of statistical learning (2nd ed.). Springer.
+Therneau, T. M., & Atkinson, B. (2023). rpart: Recursive partitioning and regression trees (R package version 4.1) [Computer software].`});
+  }else{
+    let m = `A ${clf ? "classification" : "regression"} tree was constructed using the CART algorithm (Breiman et al., 1984), with ${M.tName} as the outcome variable and ${M.feats.length} predictors (${featE}). `;
+    m += clf ? `Splits were evaluated with ${critE}, ` : `Splits were evaluated by the reduction in within-node variance, `;
+    m += `and growth was constrained to a maximum depth of ${M.opts.maxDepth}, a minimum of ${M.opts.minSplit} observations required to attempt a split, and a minimum of ${M.opts.minLeaf} observations per terminal node. `;
+    m += te ? `To assess overfitting, the sample was randomly partitioned into a training set (n = ${M.nTrain}, ${pct(M.nTrain/nAll)}) and a hold-out validation set (n = ${M.nTest}, ${pct(M.nTest/nAll)}; random seed = ${M.opts.seed}); the tree was grown on the training set and evaluated on the validation set. `
+              : `The tree was grown on the full sample (N = ${nAll}). `;
+    m += `Variable importance was computed as the total impurity reduction attributable to each predictor, rescaled to sum to 100%.`;
+    B.push({tag:"Method", t:"Method", x:m, en:true});
+
+    let r = `The analysis included ${nAll} cases${M.dropped ? ` (${M.dropped} cases were excluded because of missing values on the outcome)` : ""}. The resulting tree had a depth of ${M.depth} with ${M.leaves} terminal nodes, and the first split was defined by ${fs ? (fs.type === "num" ? `${fs.name} ≤ ${fmt(fs.thr,2)}` : `${fs.name} = "${fs.cat}"`) : "no valid split"}. `;
+    if(clf){
+      r += `Classification accuracy was ${d3(M.train.acc)} in the training set`;
+      r += te ? ` and ${d3(te.acc)} in the validation set, exceeding the majority-class baseline of ${d3(baseRate())}. ` : ` (majority-class baseline = ${d3(baseRate())}). `;
+      const sc = te || M.train;
+      r += `Recall and precision by category were ${sc.per.slice(0,3).map(p => `${p.c}: ${d3(p.rec)} / ${d3(p.prec)}`).join("; ")}. `;
+    }else{
+      r += `The model explained ${d3(M.train.r2)} of the variance in the training set`;
+      r += te ? ` and ${d3(te.r2)} in the validation set (RMSE = ${fmt(te.rmse,2)}, MAE = ${fmt(te.mae,2)}). ` : ` (RMSE = ${fmt(M.train.rmse,2)}). `;
+    }
+    if(imp.length) r += `${imp[0].name} was the most important predictor (${(imp[0].v*100).toFixed(1)}%), followed by ${imp.slice(1,3).map(x => `${x.name} (${(x.v*100).toFixed(1)}%)`).join(" and ")}. `;
+    if(leaves.length){
+      const L = leaves[0].node;
+      r += clf ? `In the terminal node defined by ${condsOf(leaves[0],"en")} (n = ${L.n}, ${pct(L.n/M.root.n)} of the training sample), ${pct(L.purity)} of the cases were classified as "${L.pred}".`
+               : `The highest predicted values were observed in the terminal node defined by ${condsOf(leaves[0],"en")} (n = ${L.n}, M = ${fmt(L.pred,2)}, SD = ${fmt(L.sd,2)}).`;
+    }
+    B.push({tag:"Results", t:"Results", x:r, en:true});
+
+    let tb = `Table 1. Variable importance\nPredictor\tImportance (%)\n` + imp.map(x => `${x.name}\t${(x.v*100).toFixed(1)}`).join("\n");
+    if(clf){
+      const sc = te || M.train;
+      tb += `\n\nTable 2. Classification performance (${te ? "validation set" : "training set"})\nCategory\tn\tRecall\tPrecision\tF1\n`
+          + sc.per.map(p => `${p.c}\t${p.n}\t${d3(p.rec)}\t${d3(p.prec)}\t${d3(p.f1)}`).join("\n")
+          + `\nOverall accuracy\t${sc.n}\t${d3(sc.acc)}\t\t`;
+    }
+    B.push({tag:"Table", t:"Tables (tab-separated)", x:tb, mono:true});
+
+    B.push({tag:"Figure", t:"Figure caption", en:true, x:
+      `Figure 1. ${clf ? "Classification" : "Regression"} tree predicting ${M.tName}.\nNote. Each internal node reports the splitting variable and its threshold together with the number of cases reaching that node; terminal nodes report ${clf ? "the predicted category and the distribution of cases" : "the predicted value (the node mean)"}. The left branch corresponds to cases satisfying the stated condition. Branch width is proportional to the number of cases.`});
+
+    let dsc = imp.length ? `${imp[0].name} emerged as the strongest predictor of ${M.tName}, with the distribution differing markedly on either side of the first split. ` : `No informative split structure was identified. `;
+    dsc += `Although trees represent interactions naturally as combinations of conditions, their structure is known to be unstable under small perturbations of the sample (Breiman, 1996), and dichotomising continuous predictors at a threshold discards information. `;
+    dsc += te ? `Generalisation was examined here with a hold-out set; ` : `Because no hold-out set was used, the reported accuracy is likely optimistic; `;
+    dsc += `cross-validation or ensemble methods such as random forests would help confirm the stability of the selected predictors and cut points.`;
+    B.push({tag:"Discussion", t:"Discussion (opening)", x:dsc, en:true});
+
+    B.push({tag:"Refs", t:"References", refs:true, x:
+`Breiman, L. (1996). Bagging predictors. Machine Learning, 24(2), 123–140.
+Breiman, L., Friedman, J. H., Olshen, R. A., & Stone, C. J. (1984). Classification and regression trees. Wadsworth.
+Hastie, T., Tibshirani, R., & Friedman, J. (2009). The elements of statistical learning (2nd ed.). Springer.
+Therneau, T. M., & Atkinson, B. (2023). rpart: Recursive partitioning and regression trees (R package version 4.1) [Computer software].`});
+  }
+  return B;
+}
+function drawPaper(){
+  const B = paperBlocks(PLANG);
+  $("#paperBox").innerHTML = `<p class="tblcap">${PLANG === "ja"
+      ? "そのまま貼って、下線部を自分の言葉に直してください。数値はいまの結果と連動しています。" 
+      : "Numbers update with the current model. Adapt the wording to your journal's style."}</p>`
+    + B.map((b,i) => `<div class="pblock">
+        <h4><span class="tagn">${esc(b.tag)}</span>${esc(b.t)}
+          <button class="btn tiny cp" data-pb="${i}">コピー</button></h4>
+        <div class="ms ${b.mono ? "mono" : ""} ${b.refs ? "refs" : ""} ${b.en ? "en" : ""}">${esc(b.x)}</div>
+      </div>`).join("");
+  $$("#paperBox [data-pb]").forEach(btn => btn.addEventListener("click", () => {
+    copyText(paperBlocks(PLANG)[+btn.dataset.pb].x, "この段落をコピーしました");
+  }));
+}
+$$("#langTabs button").forEach(b => b.addEventListener("click", () => {
+  PLANG = b.dataset.lang;
+  $$("#langTabs button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  if(MODEL) drawPaper();
+}));
+$("#copyPaper").addEventListener("click", () => {
+  if(!MODEL) return;
+  copyText(paperBlocks(PLANG).map(b => `【${b.t}】\n${b.x}`).join("\n\n"), "記述例をすべてコピーしました");
+});
+
+/* ---------- 予測フォーム ---------- */
+function drawPredForm(){
+  const M = MODEL;
+  $("#predScope").textContent = `${M.leaves} 枚の葉のどれかに届きます`;
+  $("#predForm").innerHTML = M.feats.map((f,i) => {
+    if(f.type === "num"){
+      const vs = M.Xtr.map(r => r[i]).filter(Number.isFinite).sort((a,b) => a-b);
+      const med = vs.length ? vs[Math.floor(vs.length/2)] : 0;
+      return `<label class="fld" style="margin:0"><span class="lab">${esc(f.name)}</span>
+        <input type="number" step="any" data-pi="${i}" value="${Number(med.toFixed(3))}"></label>`;
+    }
+    const seen = Array.from(new Set(M.Xtr.map(r => r[i]).filter(v => v !== null)));
+    const cats = f.cats.filter(c => seen.includes(c));
+    return `<label class="fld" style="margin:0"><span class="lab">${esc(f.name)}</span>
+      <select data-pi="${i}">${(cats.length?cats:f.cats).map(c => `<option>${esc(c)}</option>`).join("")}</select></label>`;
+  }).join("");
+  $("#predOut").innerHTML = `<p style="color:var(--ink3);margin:0">左に値を入れて実行すると、根から葉までの道すじが出ます。</p>`;
+}
+$("#predBtn").addEventListener("click", () => {
+  const M = MODEL; if(!M) return;
+  const row = M.feats.map((f,i) => {
+    const el = $(`#predForm [data-pi="${i}"]`);
+    return f.type === "num" ? Number(el.value) : el.value;
+  });
+  const {leaf, path} = predictRow(M.root, row);
+  const col = leafColor(leaf);
+  let h = `<div style="margin-bottom:14px">
+    <div style="font-size:11px;color:var(--ink3);letter-spacing:.06em">予測される ${esc(M.tName)}</div>
+    <div class="bigout" style="color:${col}">${M.task === "clf" ? esc(leaf.pred) : fmt(leaf.pred,2)}</div>
+    ${M.task === "clf" ? `<div style="font-size:12px;color:var(--ink2)">この葉の ${pct(leaf.purity)} が同じカテゴリ（n=${leaf.n}）</div>`
+                       : `<div style="font-size:12px;color:var(--ink2)">同じ葉に入る ${leaf.n} 件の平均値（±${fmt(leaf.sd,1)}）</div>`}
+  </div>`;
+  h += path.map((p,i) => `<div class="pathstep">
+      <span class="i">${i+1}</span>
+      <span style="flex:1">${esc(p.node.split.name)} が ${esc(condText(p.node.split))} か？</span>
+      <span class="yn">${p.went ? "はい" : "いいえ"}</span>
+    </div>`).join("");
+  if(!path.length) h += `<p class="hint">この木は分岐していません。</p>`;
+  $("#predOut").innerHTML = h;
+  // 樹形図側もハイライト
+  const ids = new Set(path.map(p => p.node.id)); ids.add(leaf.id);
+  $$("#treeSvg .nd").forEach(g => g.classList.toggle("sel", ids.has(+g.dataset.id)));
+});
+
+/* ---------- Rコード ---------- */
+function drawCode(){
+  const M = MODEL;
+  const names = [M.tName, ...M.feats.map(f => f.name)];
+  const header = names.join(",");
+  const lines = M.rows.map(r => names.map(nm => {
+    const c = DATA.cols.find(x => x.name === nm);
+    const v = c.raw[r];
+    return /[",\n]/.test(v) ? `""${v.replace(/"/g,'""')}""` : v;
+  }).join(","));
+  const method = M.task === "clf" ? "class" : "anova";
+  const pw = Math.min(4200, Math.max(1600, M.leaves * 240));
+  const ph = Math.min(3000, Math.max(900, (M.depth + 1) * 300));
+  const parms = M.task === "clf" ? `, parms = list(split = "${M.opts.crit === "entropy" ? "information" : "gini"}")` : "";
+  const code =
+`# ===== 決定木ラボ が出力したコード（rpart） =====
+# ・rpart.plot が無い環境（JASP など）でも動きます
+# ・樹形図は画面に描かず、PNG ファイルに直接保存します
+#   （画面描画は木が大きいとウィンドウが固まることがあるため）
+library(rpart)
+
+# 作図用パッケージ。無ければ入れ、それも無理なら標準の作図に切り替えます
+if (!requireNamespace("rpart.plot", quietly = TRUE)) {
+  try(install.packages("rpart.plot"), silent = TRUE)
+}
+has_rp <- requireNamespace("rpart.plot", quietly = TRUE)
+
+dat <- read.csv(text = "
+${header}
+${lines.join("\n")}
+", stringsAsFactors = TRUE)
+
+${M.task === "clf" ? `dat$\`${M.tName}\` <- as.factor(dat$\`${M.tName}\`)\n` : ""}f <- ${bt(M.tName)} ~ ${M.feats.map(x => bt(x.name)).join(" + ")}
+
+set.seed(${M.opts.seed})
+fit <- rpart(f, data = dat, method = "${method}"${parms},
+             control = rpart.control(maxdepth = ${M.opts.maxDepth},
+                                     minsplit = ${M.opts.minSplit},
+                                     minbucket = ${M.opts.minLeaf},
+                                     cp = 0, xval = 10))
+
+printcp(fit)                 # 複雑度と交差検証誤差
+
+# ===== 樹形図を PNG に保存（画面には描きません） =====
+graphics.off()                     # 前の作図装置が残っていると保存に失敗するので閉じる
+
+# 保存先：ダウンロードフォルダを優先（無ければホーム → 作業フォルダ → 一時フォルダ）
+can_write <- function(d) {
+  f <- file.path(d, ".dtlab_write_test")
+  ok <- suppressWarnings(tryCatch(file.create(f), error = function(e) FALSE))
+  if (isTRUE(ok)) unlink(f)
+  isTRUE(ok)
+}
+cands <- c(file.path(Sys.getenv("USERPROFILE"), "Downloads"),   # Windows
+           file.path(Sys.getenv("OneDrive"), "Downloads"),      # OneDrive に移動している場合
+           file.path(path.expand("~"), "Downloads"),            # macOS / Linux
+           file.path(dirname(path.expand("~")), "Downloads"),
+           path.expand("~"), getwd(), tempdir())
+out_dir <- Filter(function(d) !is.na(d) && nzchar(d) && dir.exists(d) && can_write(d), cands)[1]
+if (is.na(out_dir)) out_dir <- tempdir()
+plot_file <- file.path(out_dir, "decision_tree.png")
+
+# 日本語が出る装置で開く（項目名が消える・□になるのを防ぐ）
+# なお文字化けする場合は下の "MS Gothic" を "Meiryo" や "Yu Gothic" に変えてください
+jp_family <- function() {
+  if (.Platform$OS.type == "windows") {
+    try(windowsFonts(JP = windowsFont("MS Gothic")), silent = TRUE)
+    "JP"
+  } else if (identical(Sys.info()[["sysname"]], "Darwin")) "HiraginoSans-W3"
+  else "Noto Sans CJK JP"
+}
+open_png <- function(f, w, h) {
+  fam <- jp_family()
+  ok <- tryCatch({
+    if (.Platform$OS.type == "windows") {
+      png(f, width = w, height = h, res = 160, family = fam)   # 既定装置は日本語に強い
+    } else if (capabilities("cairo")) {
+      png(f, width = w, height = h, res = 160, type = "cairo", family = fam)
+    } else {
+      png(f, width = w, height = h, res = 160)
+    }
+    TRUE
+  }, error = function(e) FALSE)
+  if (!isTRUE(ok)) png(f, width = w, height = h, res = 160)     # 最後の手段
+}
+
+# 画像ビューアで開いたままだとファイルが使用中で失敗するため、その場合は一時ファイルへ
+if (!isTRUE(tryCatch({ open_png(plot_file, ${pw}, ${ph}); TRUE }, error = function(e) FALSE))) {
+  plot_file <- tempfile(fileext = ".png")
+  open_png(plot_file, ${pw}, ${ph})
+}
+
+tryCatch({
+  if (has_rp) {
+    rpart.plot::rpart.plot(fit, type = 2, extra = ${M.task === "clf" ? 104 : 101},
+                           box.palette = "BuGn", tweak = 1.1)
+  } else {
+    op <- par(xpd = NA, mar = c(1, 1, 3, 1))
+    plot(fit, uniform = TRUE, branch = 0.3, compress = TRUE)
+    text(fit, use.n = TRUE, all = TRUE, cex = 0.8)
+    title("${M.task === "clf" ? "分類木" : "回帰木"}：${M.tName}")
+    par(op)
+  }
+}, finally = dev.off())            # 何があっても装置を閉じる（固まり防止）
+
+cat("樹形図を保存しました:", normalizePath(plot_file), "\\n")
+# 画面に描きたいときは open_png(...) の行と dev.off() を外してください
+
+print(fit$variable.importance)   # 変数の重要度
+cat("\\n--- 分岐の一覧（樹形図が読みにくいときはこちら） ---\\n")
+print(fit)                       # 各ノードの条件・件数・予測
+${M.task === "clf"
+  ? `pred <- predict(fit, dat, type = "class")\ntable(実測 = dat$\`${M.tName}\`, 予測 = pred)`
+  : `pred <- predict(fit, dat)\ncat("R2 =", 1 - sum((dat$\`${M.tName}\` - pred)^2) / sum((dat$\`${M.tName}\` - mean(dat$\`${M.tName}\`))^2), "\\n")`}
+`;
+  $("#codeBox").textContent = code;
+}
+function bt(n){ return "`" + n + "`"; }
+$("#copyCode").addEventListener("click", () => {
+  copyText($("#codeBox").textContent, "Rコードをコピーしました");
+});
+
+/* ---------- タブ ---------- */
+$$(".tabs button").forEach(b => b.addEventListener("click", () => {
+  $$(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  $$(".panel").forEach(p => p.classList.toggle("on", p.id === "panel-" + b.dataset.tab));
+  if(b.dataset.tab === "tree" && MODEL) setTimeout(fitView, 30);
+}));
+window.addEventListener("resize", () => { if(MODEL && $("#panel-tree").classList.contains("on")) fitView(); });
+
+/* ---------- サンプルデータ ---------- */
+const SAMPLES = {
+  iris: {label:"アヤメ 150個体", target:"品種", task:"clf", csv:`がく片長,がく片幅,花弁長,花弁幅,品種
+5.1,3.5,1.4,0.2,セトサ
+4.9,3.0,1.4,0.2,セトサ
+4.7,3.2,1.3,0.2,セトサ
+4.6,3.1,1.5,0.2,セトサ
+5.0,3.6,1.4,0.2,セトサ
+5.4,3.9,1.7,0.4,セトサ
+4.6,3.4,1.4,0.3,セトサ
+5.0,3.4,1.5,0.2,セトサ
+4.4,2.9,1.4,0.2,セトサ
+4.9,3.1,1.5,0.1,セトサ
+5.4,3.7,1.5,0.2,セトサ
+4.8,3.4,1.6,0.2,セトサ
+4.8,3.0,1.4,0.1,セトサ
+4.3,3.0,1.1,0.1,セトサ
+5.8,4.0,1.2,0.2,セトサ
+5.7,4.4,1.5,0.4,セトサ
+5.4,3.9,1.3,0.4,セトサ
+5.1,3.5,1.4,0.3,セトサ
+5.7,3.8,1.7,0.3,セトサ
+5.1,3.8,1.5,0.3,セトサ
+5.4,3.4,1.7,0.2,セトサ
+5.1,3.7,1.5,0.4,セトサ
+4.6,3.6,1.0,0.2,セトサ
+5.1,3.3,1.7,0.5,セトサ
+4.8,3.4,1.9,0.2,セトサ
+5.0,3.0,1.6,0.2,セトサ
+5.0,3.4,1.6,0.4,セトサ
+5.2,3.5,1.5,0.2,セトサ
+5.2,3.4,1.4,0.2,セトサ
+4.7,3.2,1.6,0.2,セトサ
+4.8,3.1,1.6,0.2,セトサ
+5.4,3.4,1.5,0.4,セトサ
+5.2,4.1,1.5,0.1,セトサ
+5.5,4.2,1.4,0.2,セトサ
+4.9,3.1,1.5,0.2,セトサ
+5.0,3.2,1.2,0.2,セトサ
+5.5,3.5,1.3,0.2,セトサ
+4.9,3.6,1.4,0.1,セトサ
+4.4,3.0,1.3,0.2,セトサ
+5.1,3.4,1.5,0.2,セトサ
+5.0,3.5,1.3,0.3,セトサ
+4.5,2.3,1.3,0.3,セトサ
+4.4,3.2,1.3,0.2,セトサ
+5.0,3.5,1.6,0.6,セトサ
+5.1,3.8,1.9,0.4,セトサ
+4.8,3.0,1.4,0.3,セトサ
+5.1,3.8,1.6,0.2,セトサ
+4.6,3.2,1.4,0.2,セトサ
+5.3,3.7,1.5,0.2,セトサ
+5.0,3.3,1.4,0.2,セトサ
+7.0,3.2,4.7,1.4,バーシクル
+6.4,3.2,4.5,1.5,バーシクル
+6.9,3.1,4.9,1.5,バーシクル
+5.5,2.3,4.0,1.3,バーシクル
+6.5,2.8,4.6,1.5,バーシクル
+5.7,2.8,4.5,1.3,バーシクル
+6.3,3.3,4.7,1.6,バーシクル
+4.9,2.4,3.3,1.0,バーシクル
+6.6,2.9,4.6,1.3,バーシクル
+5.2,2.7,3.9,1.4,バーシクル
+5.0,2.0,3.5,1.0,バーシクル
+5.9,3.0,4.2,1.5,バーシクル
+6.0,2.2,4.0,1.0,バーシクル
+6.1,2.9,4.7,1.4,バーシクル
+5.6,2.9,3.6,1.3,バーシクル
+6.7,3.1,4.4,1.4,バーシクル
+5.6,3.0,4.5,1.5,バーシクル
+5.8,2.7,4.1,1.0,バーシクル
+6.2,2.2,4.5,1.5,バーシクル
+5.6,2.5,3.9,1.1,バーシクル
+5.9,3.2,4.8,1.8,バーシクル
+6.1,2.8,4.0,1.3,バーシクル
+6.3,2.5,4.9,1.5,バーシクル
+6.1,2.8,4.7,1.2,バーシクル
+6.4,2.9,4.3,1.3,バーシクル
+6.6,3.0,4.4,1.4,バーシクル
+6.8,2.8,4.8,1.4,バーシクル
+6.7,3.0,5.0,1.7,バーシクル
+6.0,2.9,4.5,1.5,バーシクル
+5.7,2.6,3.5,1.0,バーシクル
+5.5,2.4,3.8,1.1,バーシクル
+5.5,2.4,3.7,1.0,バーシクル
+5.8,2.7,3.9,1.2,バーシクル
+6.0,2.7,5.1,1.6,バーシクル
+5.4,3.0,4.5,1.5,バーシクル
+6.0,3.4,4.5,1.6,バーシクル
+6.7,3.1,4.7,1.5,バーシクル
+6.3,2.3,4.4,1.3,バーシクル
+5.6,3.0,4.1,1.3,バーシクル
+5.5,2.5,4.0,1.3,バーシクル
+5.5,2.6,4.4,1.2,バーシクル
+6.1,3.0,4.6,1.4,バーシクル
+5.8,2.6,4.0,1.2,バーシクル
+5.0,2.3,3.3,1.0,バーシクル
+5.6,2.7,4.2,1.3,バーシクル
+5.7,3.0,4.2,1.2,バーシクル
+5.7,2.9,4.2,1.3,バーシクル
+6.2,2.9,4.3,1.3,バーシクル
+5.1,2.5,3.0,1.1,バーシクル
+5.7,2.8,4.1,1.3,バーシクル
+6.3,3.3,6.0,2.5,バージニカ
+5.8,2.7,5.1,1.9,バージニカ
+7.1,3.0,5.9,2.1,バージニカ
+6.3,2.9,5.6,1.8,バージニカ
+6.5,3.0,5.8,2.2,バージニカ
+7.6,3.0,6.6,2.1,バージニカ
+4.9,2.5,4.5,1.7,バージニカ
+7.3,2.9,6.3,1.8,バージニカ
+6.7,2.5,5.8,1.8,バージニカ
+7.2,3.6,6.1,2.5,バージニカ
+6.5,3.2,5.1,2.0,バージニカ
+6.4,2.7,5.3,1.9,バージニカ
+6.8,3.0,5.5,2.1,バージニカ
+5.7,2.5,5.0,2.0,バージニカ
+5.8,2.8,5.1,2.4,バージニカ
+6.4,3.2,5.3,2.3,バージニカ
+6.5,3.0,5.5,1.8,バージニカ
+7.7,3.8,6.7,2.2,バージニカ
+7.7,2.6,6.9,2.3,バージニカ
+6.0,2.2,5.0,1.5,バージニカ
+6.9,3.2,5.7,2.3,バージニカ
+5.6,2.8,4.9,2.0,バージニカ
+7.7,2.8,6.7,2.0,バージニカ
+6.3,2.7,4.9,1.8,バージニカ
+6.7,3.3,5.7,2.1,バージニカ
+7.2,3.2,6.0,1.8,バージニカ
+6.2,2.8,4.8,1.8,バージニカ
+6.1,3.0,4.9,1.8,バージニカ
+6.4,2.8,5.6,2.1,バージニカ
+7.2,3.0,5.8,1.6,バージニカ
+7.4,2.8,6.1,1.9,バージニカ
+7.9,3.8,6.4,2.0,バージニカ
+6.4,2.8,5.6,2.2,バージニカ
+6.3,2.8,5.1,1.5,バージニカ
+6.1,2.6,5.6,1.4,バージニカ
+7.7,3.0,6.1,2.3,バージニカ
+6.3,3.4,5.6,2.4,バージニカ
+6.4,3.1,5.5,1.8,バージニカ
+6.0,3.0,4.8,1.8,バージニカ
+6.9,3.1,5.4,2.1,バージニカ
+6.7,3.1,5.6,2.4,バージニカ
+6.9,3.1,5.1,2.3,バージニカ
+5.8,2.7,5.1,1.9,バージニカ
+6.8,3.2,5.9,2.3,バージニカ
+6.7,3.3,5.7,2.5,バージニカ
+6.7,3.0,5.2,2.3,バージニカ
+6.3,2.5,5.0,1.9,バージニカ
+6.5,3.0,5.2,2.0,バージニカ
+6.2,3.4,5.4,2.3,バージニカ
+5.9,3.0,5.1,1.8,バージニカ`},
+  churn: {label:"サブスク解約 120件", target:"解約", task:"clf", csv:`年齢,契約月数,月額料金,プラン,月間ログイン日数,サポート問合せ,解約
+40,10,5980,プレミアム,1,なし,解約
+57,4,7980,ライト,1,なし,解約
+47,27,2980,ライト,2,あり,解約
+34,41,7980,ライト,18,あり,継続
+23,15,2980,プレミアム,27,なし,継続
+27,37,4980,プレミアム,26,なし,継続
+26,38,7980,プレミアム,6,あり,解約
+56,4,7980,ライト,15,あり,解約
+69,21,5980,プレミアム,29,あり,継続
+31,45,3980,ライト,18,あり,継続
+53,32,4980,プレミアム,14,あり,継続
+52,27,3980,スタンダード,4,あり,継続
+46,3,2980,プレミアム,18,あり,継続
+51,38,5980,ライト,26,なし,継続
+37,31,2980,ライト,23,あり,継続
+48,19,5980,プレミアム,11,なし,継続
+49,23,3980,プレミアム,3,あり,解約
+28,48,3980,スタンダード,12,あり,継続
+25,11,5980,スタンダード,17,あり,解約
+55,18,5980,スタンダード,21,あり,継続
+34,10,2980,ライト,4,なし,解約
+57,12,4980,スタンダード,0,なし,継続
+46,35,4980,プレミアム,18,あり,継続
+52,40,2980,スタンダード,28,あり,継続
+45,26,5980,ライト,15,あり,継続
+33,29,3980,ライト,10,なし,継続
+26,1,7980,ライト,17,なし,解約
+24,56,3980,プレミアム,12,なし,継続
+60,17,4980,プレミアム,11,あり,継続
+49,31,5980,スタンダード,2,なし,解約
+26,48,4980,プレミアム,8,あり,継続
+21,14,7980,スタンダード,4,なし,継続
+68,34,4980,プレミアム,27,なし,継続
+43,59,3980,スタンダード,24,なし,継続
+54,35,7980,スタンダード,20,なし,継続
+68,55,3980,ライト,26,あり,継続
+67,52,3980,ライト,16,あり,継続
+21,51,4980,スタンダード,8,なし,継続
+64,39,4980,スタンダード,25,あり,継続
+34,7,3980,スタンダード,6,あり,解約
+33,31,7980,プレミアム,26,なし,継続
+61,6,2980,スタンダード,25,なし,継続
+50,57,3980,スタンダード,25,あり,継続
+66,26,5980,スタンダード,23,なし,継続
+66,11,3980,ライト,0,なし,解約
+61,10,7980,プレミアム,15,あり,解約
+29,36,7980,ライト,0,なし,解約
+26,34,3980,スタンダード,27,なし,継続
+33,2,4980,ライト,9,なし,継続
+54,27,3980,ライト,29,あり,継続
+49,43,7980,プレミアム,13,なし,継続
+21,56,5980,ライト,19,なし,継続
+69,52,3980,ライト,4,あり,解約
+23,21,7980,プレミアム,17,あり,継続
+69,7,7980,ライト,7,なし,解約
+52,29,7980,ライト,24,なし,継続
+48,21,7980,プレミアム,19,なし,継続
+54,52,5980,プレミアム,30,なし,継続
+64,34,4980,プレミアム,28,なし,継続
+27,26,5980,スタンダード,2,なし,継続
+47,5,3980,プレミアム,9,なし,継続
+65,42,4980,ライト,8,なし,継続
+49,15,2980,スタンダード,28,あり,継続
+34,11,5980,プレミアム,12,あり,解約
+46,13,4980,スタンダード,2,あり,解約
+48,46,2980,スタンダード,10,あり,継続
+52,5,2980,ライト,28,なし,解約
+69,12,4980,ライト,26,あり,継続
+63,53,4980,スタンダード,4,あり,継続
+23,52,3980,スタンダード,28,なし,継続
+37,2,2980,スタンダード,2,なし,解約
+49,1,4980,プレミアム,13,あり,解約
+59,9,2980,プレミアム,22,なし,解約
+36,4,3980,ライト,29,あり,継続
+60,20,7980,ライト,9,あり,継続
+42,52,2980,スタンダード,1,なし,継続
+21,47,7980,プレミアム,6,あり,解約
+62,53,5980,プレミアム,15,あり,継続
+52,20,3980,ライト,10,なし,継続
+60,9,5980,スタンダード,1,なし,解約
+20,5,4980,スタンダード,5,なし,解約
+52,43,4980,プレミアム,7,あり,解約
+22,30,3980,ライト,8,あり,継続
+41,36,4980,ライト,1,あり,解約
+33,23,3980,ライト,10,あり,継続
+61,13,3980,プレミアム,24,なし,継続
+25,17,2980,ライト,12,なし,継続
+60,15,2980,プレミアム,30,なし,継続
+62,58,7980,スタンダード,24,あり,継続
+38,47,7980,プレミアム,4,なし,継続
+65,58,7980,プレミアム,13,なし,継続
+56,54,2980,プレミアム,18,なし,継続
+25,2,2980,ライト,20,あり,解約
+48,36,2980,プレミアム,0,なし,継続
+51,17,2980,スタンダード,25,なし,継続
+54,6,7980,ライト,23,あり,解約
+36,52,2980,スタンダード,7,なし,継続
+49,32,5980,ライト,15,あり,解約
+69,3,7980,プレミアム,20,なし,解約
+36,42,4980,プレミアム,18,なし,継続
+20,31,2980,スタンダード,8,なし,継続
+38,46,7980,スタンダード,14,あり,継続
+49,50,2980,プレミアム,6,あり,解約
+21,19,5980,ライト,26,あり,継続
+37,25,3980,ライト,2,なし,解約
+43,9,7980,プレミアム,16,あり,解約
+27,46,4980,ライト,15,あり,継続
+51,44,5980,スタンダード,9,なし,継続
+46,23,5980,スタンダード,3,あり,解約
+45,8,3980,プレミアム,0,あり,解約
+36,24,2980,スタンダード,12,なし,継続
+37,55,2980,スタンダード,3,なし,継続
+62,19,3980,ライト,8,あり,継続
+43,51,5980,ライト,25,あり,継続
+55,36,3980,プレミアム,2,なし,継続
+59,49,3980,プレミアム,27,あり,継続
+51,4,7980,ライト,5,あり,解約
+36,48,4980,スタンダード,20,なし,継続
+39,31,7980,プレミアム,12,なし,継続
+33,33,5980,プレミアム,7,あり,解約`},
+  sales: {label:"店舗の月間売上 100店", target:"月間売上", task:"reg", csv:`店舗面積,駅からの徒歩分,従業員数,立地,営業年数,月間売上
+90,19,19,駅前,12,418
+178,3,2,住宅街,9,442
+171,8,8,ロードサイド,16,448
+131,5,9,ロードサイド,5,414
+163,13,2,ロードサイド,25,480
+181,2,11,駅前,9,680
+151,20,14,ロードサイド,14,335
+143,5,13,駅前,2,595
+64,16,8,住宅街,22,126
+107,14,18,住宅街,19,361
+119,18,20,住宅街,19,348
+37,9,7,ロードサイド,11,230
+168,19,20,駅前,23,534
+176,9,11,駅前,3,531
+153,16,4,住宅街,3,292
+105,14,15,駅前,2,424
+184,20,3,住宅街,23,326
+101,17,9,駅前,10,329
+31,3,5,ロードサイド,18,254
+134,10,10,駅前,23,511
+40,11,12,住宅街,5,197
+147,17,14,ロードサイド,20,393
+173,4,18,住宅街,14,508
+107,14,10,ロードサイド,10,270
+170,11,2,住宅街,19,384
+180,5,3,ロードサイド,21,553
+115,15,13,ロードサイド,12,322
+155,1,20,駅前,22,660
+35,12,10,ロードサイド,15,174
+75,12,7,住宅街,25,283
+124,20,10,住宅街,13,328
+175,5,11,ロードサイド,8,580
+197,9,9,住宅街,6,469
+54,4,12,住宅街,22,224
+87,15,7,駅前,11,330
+175,15,10,駅前,4,495
+38,17,8,住宅街,19,123
+194,3,13,ロードサイド,5,628
+137,10,18,住宅街,15,405
+137,19,15,駅前,14,491
+69,7,2,住宅街,20,263
+86,2,16,ロードサイド,24,423
+162,10,19,住宅街,8,527
+103,4,9,駅前,2,391
+161,7,15,ロードサイド,2,571
+73,17,11,駅前,22,332
+35,17,19,住宅街,2,196
+117,5,10,ロードサイド,16,399
+45,12,9,駅前,4,197
+73,8,10,駅前,1,345
+154,19,14,駅前,25,499
+164,17,15,駅前,16,564
+112,1,3,駅前,2,469
+38,3,18,ロードサイド,16,328
+110,6,12,駅前,12,453
+107,12,10,駅前,11,441
+139,4,6,ロードサイド,1,419
+50,19,7,駅前,12,185
+147,20,19,住宅街,21,402
+140,2,13,ロードサイド,16,457
+110,14,15,住宅街,1,302
+181,3,15,駅前,14,727
+63,1,12,住宅街,18,321
+148,4,18,住宅街,22,480
+57,11,20,ロードサイド,4,312
+151,5,9,住宅街,2,365
+164,3,20,駅前,22,702
+36,11,5,駅前,4,216
+153,10,20,住宅街,3,522
+160,17,9,駅前,18,506
+55,18,3,ロードサイド,11,153
+49,8,7,ロードサイド,8,204
+146,20,14,住宅街,12,262
+172,14,4,住宅街,17,333
+90,14,7,住宅街,23,196
+162,16,6,ロードサイド,13,376
+68,6,5,住宅街,24,189
+143,19,7,駅前,9,420
+80,5,20,ロードサイド,11,466
+167,10,15,ロードサイド,19,488
+179,9,8,住宅街,1,435
+81,6,20,住宅街,8,416
+112,16,6,住宅街,23,214
+149,19,19,駅前,16,516
+48,13,3,住宅街,8,162
+47,7,10,駅前,7,287
+96,5,7,ロードサイド,23,363
+95,6,3,住宅街,6,259
+138,3,4,駅前,3,496
+39,12,16,ロードサイド,24,336
+116,1,2,住宅街,11,312
+83,19,17,住宅街,5,240
+169,11,5,住宅街,3,381
+165,9,5,ロードサイド,23,452
+125,12,16,住宅街,22,359
+97,4,12,ロードサイド,19,350
+167,17,5,ロードサイド,16,385
+105,19,7,ロードサイド,21,271
+191,5,7,住宅街,21,506
+173,5,12,ロードサイド,24,567`}
+};
+</script>
+</body>
+</html>

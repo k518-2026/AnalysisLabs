@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markdown Studio — データ分析ラボ</title>
+<meta name="description" content="Markdown を書きながらプレビューし、HTML・Word・PDF に書き出す。">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<link rel="stylesheet" href="../../assets/site.css?v=b63567b0">
+<style>:root{--al-cat:var(--al-c-prep)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#prep">データの準備</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>Markdown Studio</span><span class="al-gap"></span><a class="al-link al-primary" href="app.html">ツールを開く</a></div>
+<main>
+  <header class="tool-hero">
+    <div class="wrap">
+      <a class="chip" href="../../#prep"><i></i>データの準備</a>
+      <h1>Markdown Studio</h1>
+      <p class="en">Markdown Studio</p>
+      <p class="lead">Markdown を書きながらプレビューし、HTML・Word・PDF に書き出す。</p>
+      <div class="actions">
+        <a class="btn primary" href="app.html">ツールを開く <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        
+      </div>
+    </div>
+  </header>
+  <div class="wrap doc">
+    <article>
+      <section>
+        <h2><span class="n">01</span>概要</h2>
+        <p>Markdown を書きながらプレビューで確かめられるエディターです。検索と置換ができ、HTML・Word・PDF への書き出しと、Markdown ファイルとしての保存ができます。</p>
+      </section>
+      <section>
+        <h2><span class="n">02</span>できること</h2>
+        <ul><li>リアルタイムのプレビュー</li><li>検索と置換</li><li>HTML・Word・PDF への書き出し</li><li>Markdown として保存</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">03</span>使い方</h2>
+        <ol class="steps"><li>Markdown を書く</li><li>プレビューで確かめる</li><li>必要な形式で書き出す</li></ol>
+      </section>
+      <section>
+        <h2><span class="n">04</span>読み込めるデータ</h2>
+        <p>Markdown のテキスト。</p>
+      </section>
+      <section>
+        <h2><span class="n">05</span>書き出せるもの</h2>
+        <ul><li>HTML</li><li>Word</li><li>PDF</li><li>Markdown</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">06</span>注意</h2>
+        <ul class="notes"><li>処理に使うライブラリを CDN から読み込みます。</li><li>計算はブラウザーの中で行われ、入力したデータがサーバーに送られることはありません。</li><li>出力される記述例や R コードは下書きです。数値と解釈は、研究の文脈と照らし合わせて確かめてください。</li></ul>
+      </section>
+    </article>
+    <aside class="side">
+      <div class="box">
+        <h3>このツール</h3>
+        <dl>
+          <dt>カテゴリ</dt><dd>データの準備</dd>
+          <dt>入力</dt><dd>Markdown のテキスト</dd>
+          <dt>マニュアル</dt><dd>この説明ページのみ</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h3>データの準備のツール</h3>
+        <ul><li><a href="../form-cleaner/">フォーム回答整形ラボ</a></li><li><a href="../data-cleaning/">データ前処理・クリーニングラボ</a></li><li><a href="../missing-data/">欠測データラボ</a></li><li><a href="../file-merge/">ファイル統合</a></li><li><a href="../file-split/">ファイル分割</a></li><li aria-current="page"><a href="../markdown/">Markdown Studio</a></li><li><a href="../sqs-editor/">SQS ソースエディタ Web</a></li><li><a href="../sqs-reader/">SQS マーク読み取り</a></li></ul>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <div>
+      <b>データ分析ラボ</b>
+      <p>ブラウザーだけで動く、統計解析と質的分析のツール集。どのツールもインストール不要で、計算はブラウザーの中で完結します。</p>
+      <p><a href="../../">ツールの一覧へ</a> ・ <a href="https://github.com/k518-2026/AnalysisLabs">ソースコード（GitHub）</a></p>
+    </div>
+    <div>
+      <p>© 2026 K.Yamamoto ・ MIT License</p>
+      <p>「SQS ソースエディタ Web」「SQS マーク読み取り」は、Apache License 2.0 で公開されている SQS（Shared Questionnaire System）をもとに作り直したものです。</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

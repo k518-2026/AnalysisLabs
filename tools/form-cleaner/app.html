@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>フォーム回答整形ラボ — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#EDEBE3;
+  --paper-2:#E4E1D6;
+  --card:#FBFAF5;
+  --ink:#1C1E1C;
+  --ink-2:#5B605B;
+  --ink-3:#8B8F88;
+  --rule:#D3D0C4;
+  --mark:#6E2846;
+  --mark-soft:#F3E5EB;
+  --pencil:#3F5668;
+  --pencil-soft:#E5EBEF;
+  --flag:#A0601C;
+  --ok:#38664A;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  --gothic: "Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic","Noto Sans JP","Meiryo",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--gothic);
+  font-size:15px;
+  line-height:1.75;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 100px}
+
+/* ---------- マストヘッド ---------- */
+.masthead{
+  position:relative;
+  background:var(--ink);
+  color:#F3F1EA;
+  padding:26px 0 22px;
+  margin-bottom:0;
+}
+/* マークシートのタイミングマーク */
+.masthead::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:7px;
+  background:repeating-linear-gradient(to right,
+    var(--mark) 0 14px, transparent 14px 26px);
+  opacity:.9;
+}
+.masthead .wrap{padding-bottom:0}
+.eyebrow{
+  font-size:11px;letter-spacing:.22em;color:#B9AEB2;
+  font-family:var(--mono);text-transform:uppercase;display:block;margin-bottom:6px;
+}
+.masthead h1{
+  margin:0;font-size:clamp(23px,4.6vw,34px);font-weight:800;letter-spacing:.06em;line-height:1.25;
+}
+.masthead p{margin:8px 0 0;color:#C6C3B8;font-size:13.5px;max-width:60ch}
+
+/* ---------- ステップナビ ---------- */
+.steps{
+  display:flex;gap:0;flex-wrap:wrap;
+  border-bottom:1px solid var(--rule);
+  background:var(--paper-2);
+  position:sticky;top:0;z-index:40;
+}
+.steps .inner{max-width:1180px;margin:0 auto;padding:0 12px;display:flex;width:100%;overflow-x:auto}
+.step{
+  appearance:none;border:0;background:none;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-2);
+  padding:13px 16px 11px;border-bottom:3px solid transparent;white-space:nowrap;letter-spacing:.03em;
+}
+.step .no{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-right:7px}
+.step[aria-selected="true"]{color:var(--mark);border-bottom-color:var(--mark)}
+.step[aria-selected="true"] .no{color:var(--mark)}
+.step:disabled{opacity:.38;cursor:not-allowed}
+.step:focus-visible{outline:2px solid var(--pencil);outline-offset:-3px}
+
+/* ---------- 汎用 ---------- */
+.panel{display:none;padding-top:28px}
+.panel.on{display:block}
+h2{font-size:19px;font-weight:800;letter-spacing:.05em;margin:0 0 4px}
+h3{font-size:14px;font-weight:800;letter-spacing:.05em;margin:26px 0 10px;color:var(--ink)}
+.lede{color:var(--ink-2);font-size:13.5px;margin:0 0 20px;max-width:72ch}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:18px 20px;margin-bottom:16px}
+.muted{color:var(--ink-2);font-size:12.5px}
+.mono{font-family:var(--mono)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
+hr.rule{border:0;border-top:1px solid var(--rule);margin:22px 0}
+
+button.btn{
+  appearance:none;font-family:inherit;font-size:13px;font-weight:700;letter-spacing:.04em;
+  background:var(--ink);color:#F6F4ED;border:1px solid var(--ink);border-radius:2px;
+  padding:9px 18px;cursor:pointer;transition:background .12s,color .12s;
+}
+button.btn:hover{background:var(--mark);border-color:var(--mark)}
+button.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+button.btn.ghost:hover{background:var(--card);border-color:var(--ink);color:var(--ink)}
+button.btn.small{padding:5px 11px;font-size:12px;font-weight:600}
+button.btn:disabled{opacity:.4;cursor:not-allowed;background:var(--ink);border-color:var(--ink)}
+button.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--pencil);outline-offset:2px}
+
+select,input[type=text],input[type=number]{
+  font-family:inherit;font-size:13px;color:var(--ink);background:#fff;
+  border:1px solid var(--rule);border-radius:2px;padding:6px 8px;
+}
+label.check{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+label.check input{accent-color:var(--mark);width:15px;height:15px}
+
+/* ---------- 読み込み ---------- */
+.drop{
+  border:2px dashed var(--rule);border-radius:4px;background:var(--card);
+  padding:44px 24px;text-align:center;transition:border-color .15s,background .15s;
+}
+.drop.hot{border-color:var(--mark);background:var(--mark-soft)}
+.drop .big{font-size:16px;font-weight:800;letter-spacing:.05em;margin-bottom:6px}
+.drop .sub{font-size:12.5px;color:var(--ink-2);margin-bottom:18px}
+
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:16px}
+.readout div{background:var(--card);padding:11px 13px}
+.readout .k{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);font-family:var(--mono);text-transform:uppercase}
+.readout .v{font-size:17px;font-weight:800;font-family:var(--mono);margin-top:2px}
+
+/* ---------- 変数カード（署名要素） ---------- */
+.toolbar{
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  background:var(--paper-2);border:1px solid var(--rule);padding:10px 12px;margin-bottom:14px;border-radius:3px;
+  position:sticky;top:45px;z-index:30;
+}
+.vcard{
+  background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--rule);
+  border-radius:3px;padding:14px 16px;margin-bottom:10px;
+}
+.vcard.t-likert{border-left-color:var(--mark)}
+.vcard.t-multi{border-left-color:var(--pencil)}
+.vcard.t-nominal{border-left-color:#7A7F52}
+.vcard.t-numeric{border-left-color:var(--ok)}
+.vcard.t-text{border-left-color:var(--flag)}
+.vcard.t-meta{border-left-color:var(--ink-3)}
+.vcard.off{opacity:.5}
+.vhead{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.vsrc{flex:1;min-width:200px}
+.vsrc .orig{font-size:13.5px;font-weight:700;line-height:1.5;word-break:break-word}
+.vsrc .item{display:inline-block;background:var(--pencil-soft);color:var(--pencil);font-size:11px;
+  padding:1px 7px;border-radius:2px;margin-left:6px;font-weight:700;vertical-align:2px}
+.vsrc .stat{font-size:11.5px;color:var(--ink-3);font-family:var(--mono);margin-top:3px}
+.varrow{font-family:var(--mono);color:var(--ink-3);align-self:center;font-size:15px}
+.vname{display:flex;flex-direction:column;gap:4px;min-width:150px}
+.vname input{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--mark);width:100%}
+.vctrl{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
+
+/* マークシート風の水準チップ */
+.levels{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;padding-top:12px;border-top:1px dotted var(--rule)}
+.level{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--rule);border-radius:999px;padding:3px 12px 3px 4px}
+.level .bubble{
+  width:40px;text-align:center;font-family:var(--mono);font-weight:700;font-size:13px;
+  border:2px solid var(--mark);border-radius:999px;background:var(--mark-soft);color:var(--mark);padding:2px 0;
+  -moz-appearance:textfield;
+}
+.level .bubble::-webkit-outer-spin-button,.level .bubble::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.level .lab{font-size:12.5px;max-width:26ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.level .n{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.level.tok .bubble{border-color:var(--pencil);background:var(--pencil-soft);color:var(--pencil)}
+.badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;padding:2px 7px;border:1px solid var(--rule);border-radius:2px;color:var(--ink-2);background:#fff}
+.badge.warn{color:var(--flag);border-color:var(--flag)}
+
+/* ---------- 表 ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);background:var(--card)}
+table.grid{border-collapse:collapse;font-size:12px;white-space:nowrap;min-width:100%}
+table.grid th,table.grid td{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:5px 10px;text-align:left}
+table.grid th{background:var(--paper-2);font-family:var(--mono);font-weight:700;font-size:11.5px;color:var(--mark);position:sticky;top:0}
+table.grid td{font-family:var(--mono);color:var(--ink-2)}
+table.grid td.na{color:var(--ink-3);font-style:italic}
+table.grid tbody tr:nth-child(even) td{background:#F6F4EE}
+table.plain{border-collapse:collapse;width:100%;font-size:13px}
+table.plain th,table.plain td{border-bottom:1px solid var(--rule);padding:7px 9px;text-align:left;vertical-align:top}
+table.plain th{font-size:11.5px;letter-spacing:.08em;color:var(--ink-3);font-family:var(--mono);font-weight:700}
+
+.note{background:var(--pencil-soft);border-left:3px solid var(--pencil);padding:11px 14px;font-size:12.5px;color:var(--ink);border-radius:0 3px 3px 0}
+.warnbox{background:#FAF0E2;border-left:3px solid var(--flag);padding:11px 14px;font-size:12.5px;border-radius:0 3px 3px 0}
+pre.code{background:var(--ink);color:#E9E6DC;font-family:var(--mono);font-size:11.5px;line-height:1.65;
+  padding:14px 16px;overflow-x:auto;border-radius:3px;white-space:pre;max-height:340px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--rule);background:#fff;border-radius:2px;padding:3px 9px;cursor:pointer;font-family:var(--mono)}
+.chip.sel{background:var(--mark);color:#fff;border-color:var(--mark)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.fld{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2)}
+.fld > span{font-weight:700;letter-spacing:.04em;font-size:11.5px}
+
+footer.foot{border-top:1px solid var(--rule);margin-top:40px;padding-top:16px;font-size:11.5px;color:var(--ink-3)}
+@media (max-width:640px){
+  .toolbar{position:static}
+  .steps{position:static}
+  .level .lab{max-width:15ch}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-prep);--paper:var(--al-bg);--paper-2:var(--al-surface-2);--card:var(--al-surface);--ink:var(--al-ink);--ink-2:var(--al-ink-2);--ink-3:var(--al-ink-3);--rule:var(--al-line);--gothic:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#prep">データの準備</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>フォーム回答整形ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a><a class="al-link" href="manual.html">マニュアル</a></div>
+
+
+<header class="masthead">
+  <div class="wrap">
+    <span class="eyebrow">Google Forms / Microsoft Forms &rarr; analysis-ready CSV</span>
+    <h1>フォーム回答整形ラボ</h1>
+    <p>フォームが吐き出したままのCSVを読み込むと、質問文を変数名に、選択肢を数値に置き換えて、そのまま分析に使えるCSVと対応表（コードブック）を書き出します。</p>
+  </div>
+</header>
+
+<nav class="steps">
+  <div class="inner" role="tablist">
+    <button class="step" role="tab" data-p="load" aria-selected="true"><span class="no">01</span>CSVを読む</button>
+    <button class="step" role="tab" data-p="vars" aria-selected="false" disabled><span class="no">02</span>変数を整える</button>
+    <button class="step" role="tab" data-p="comp" aria-selected="false" disabled><span class="no">03</span>合成得点をつくる</button>
+    <button class="step" role="tab" data-p="out"  aria-selected="false" disabled><span class="no">04</span>書き出す</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ============ 01 ============ -->
+<section class="panel on" id="p-load">
+  <h2>回答のCSVを読む</h2>
+  <p class="lede">GoogleフォームやMicrosoft Formsからダウンロードしたファイルをそのまま置いてください。文字コード（UTF-8 / Shift_JIS）と区切り文字は自動で判定します。ファイルはブラウザーの中だけで処理され、どこにも送信されません。</p>
+
+  <div class="drop" id="drop">
+    <div class="big">CSVファイルをここにドロップ</div>
+    <div class="sub">または</div>
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="pick">ファイルを選ぶ</button>
+      <button class="btn ghost" id="demo">サンプルで試す</button>
+    </div>
+    <input type="file" id="file" accept=".csv,.tsv,.txt" hidden>
+  </div>
+
+  <div id="loadInfo" hidden>
+    <div class="readout" id="readout"></div>
+    <h3>読み込んだままのデータ</h3>
+    <div class="tablewrap" id="rawPrev"></div>
+    <div class="row" style="margin-top:18px">
+      <button class="btn" id="toVars">変数を整える &rarr;</button>
+      <span class="muted" id="detectMsg"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section class="panel" id="p-vars">
+  <h2>変数を整える</h2>
+  <p class="lede">列ごとに、種類・変数名・選択肢に割り当てる値を確かめます。自動判定はあくまで下書きなので、違っていたらその場で直してください。丸の中の数字が、出力されるCSVに入る値です。</p>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="質問文でしぼり込む" style="min-width:180px">
+    <select id="filterType">
+      <option value="">すべての種類</option>
+      <option value="likert">評定尺度</option>
+      <option value="nominal">単一選択</option>
+      <option value="multi">複数選択</option>
+      <option value="numeric">数値</option>
+      <option value="text">自由記述</option>
+      <option value="meta">記録情報</option>
+    </select>
+    <span class="spacer"></span>
+    <button class="btn ghost small" data-bulk="text-off">自由記述を外す</button>
+    <button class="btn ghost small" data-bulk="meta-off">記録情報を外す</button>
+    <button class="btn ghost small" data-bulk="all-on">すべて含める</button>
+  </div>
+
+  <div id="cards"></div>
+
+  <div class="row" style="margin-top:20px">
+    <button class="btn" id="toComp">合成得点をつくる &rarr;</button>
+    <button class="btn ghost" id="toOut2">そのまま書き出す &rarr;</button>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section class="panel" id="p-comp">
+  <h2>合成得点をつくる</h2>
+  <p class="lede">同じ尺度を測っている項目をまとめて、合計点や平均点の列を追加できます。選んだ項目のα係数もその場で計算します（必要なければ、このまま次へ進んで構いません）。</p>
+
+  <div class="card">
+    <div class="grid2">
+      <label class="fld"><span>変数名</span><input type="text" id="cName" placeholder="例：学習意欲" class="mono"></label>
+      <label class="fld"><span>計算</span>
+        <select id="cStat"><option value="mean">平均</option><option value="sum">合計</option></select>
+      </label>
+      <label class="fld"><span>欠測があるとき</span>
+        <select id="cMiss">
+          <option value="pairwise">答えた項目だけで計算</option>
+          <option value="listwise">1つでも欠測なら空欄</option>
+        </select>
+      </label>
+    </div>
+    <h3>項目を選ぶ</h3>
+    <div class="chips" id="cPool"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="cAdd" disabled>この合成得点を追加</button>
+      <span class="mono muted" id="cAlpha"></span>
+    </div>
+  </div>
+
+  <div id="cList"></div>
+
+  <div class="row" style="margin-top:20px">
+    <button class="btn" id="toOut">書き出す &rarr;</button>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section class="panel" id="p-out">
+  <h2>書き出す</h2>
+  <p class="lede">出力の細かい決まりを選んで、分析用CSVと対応表をダウンロードします。プレビューは実際に書き出される中身そのものです。</p>
+
+  <div class="card">
+    <div class="grid2">
+      <label class="fld"><span>選択肢の書き出し方</span>
+        <select id="oValue"><option value="code">数値コード</option><option value="label">選んだ文言のまま</option></select></label>
+      <label class="fld"><span>単一選択の扱い</span>
+        <select id="oNominal"><option value="code">1つの列に番号</option><option value="dummy">0/1のダミー変数に展開</option></select></label>
+      <label class="fld"><span>欠測の書き方</span>
+        <select id="oMiss"><option value="">空欄</option><option value="NA">NA</option><option value=".">.（ピリオド）</option><option value="999">999</option><option value="-99">-99</option></select></label>
+      <label class="fld"><span>文字コード</span>
+        <select id="oEnc"><option value="bom">UTF-8（Excelでそのまま開ける）</option><option value="utf8">UTF-8（BOMなし）</option></select></label>
+    </div>
+    <hr class="rule">
+    <div class="row">
+      <label class="check"><input type="checkbox" id="oTrim" checked>前後の空白と改行を取り除く</label>
+      <label class="check"><input type="checkbox" id="oHan" checked>全角の英数字を半角にそろえる</label>
+      <label class="check"><input type="checkbox" id="oDupRow">まったく同じ回答行を1つにまとめる</label>
+      <label class="check"><input type="checkbox" id="oEmptyRow" checked>全項目が空の行を捨てる</label>
+      <label class="check"><input type="checkbox" id="oDropFirst">ダミー展開のとき最初の水準を基準にする</label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="fld" style="flex:1;min-width:260px"><span>欠測として扱う言葉（読点で区切る）</span>
+        <input type="text" id="oMissWords" value="無回答、該当なし、特になし、未回答、なし" ></label>
+    </div>
+  </div>
+
+  <div class="readout" id="outStat"></div>
+
+  <h3>分析用データ（先頭10行）</h3>
+  <div class="tablewrap" id="outPrev"></div>
+
+  <h3>変数対応表（コードブック）</h3>
+  <div class="tablewrap" style="max-height:360px;overflow-y:auto"><table class="plain" id="cbTable"></table></div>
+
+  <h3>Rでの読み込みコード</h3>
+  <pre class="code" id="rcode"></pre>
+
+  <hr class="rule">
+  <div class="row">
+    <button class="btn" id="dlData">分析用CSVをダウンロード</button>
+    <button class="btn ghost" id="dlBook">対応表CSVをダウンロード</button>
+    <button class="btn ghost" id="dlR">Rコードをダウンロード</button>
+    <button class="btn ghost" id="dlLog">処理の記録をダウンロード</button>
+  </div>
+</section>
+
+<footer class="foot">
+  フォーム回答整形ラボ ── 計算も変換もすべてブラウザーの中で完結します。外部への通信は一切ありません。
+</footer>
+</div>
+
+<script>
+/* =========================================================
+   フォーム回答整形ラボ  —  すべてブラウザー内で完結
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const state = {
+  fileName:'', encoding:'', delim:',', formType:'',
+  headers:[], rows:[], cols:[], composites:[], log:[]
+};
+
+/* ---------------- CSV 読み書き ---------------- */
+function decodeBytes(buf){
+  const b = new Uint8Array(buf);
+  if(b[0]===0xEF && b[1]===0xBB && b[2]===0xBF)
+    return {text:new TextDecoder('utf-8').decode(b.subarray(3)), enc:'UTF-8 (BOM付)'};
+  try{
+    return {text:new TextDecoder('utf-8',{fatal:true}).decode(b), enc:'UTF-8'};
+  }catch(e){
+    try{ return {text:new TextDecoder('shift_jis').decode(b), enc:'Shift_JIS'}; }
+    catch(e2){ return {text:new TextDecoder('utf-8').decode(b), enc:'UTF-8 (推定)'}; }
+  }
+}
+function guessDelim(text){
+  const line = text.split('\n')[0] || '';
+  const c = {',':0,'\t':0,';':0}; let q=false;
+  for(const ch of line){ if(ch==='"') q=!q; else if(!q && ch in c) c[ch]++; }
+  const best = Object.entries(c).sort((a,b)=>b[1]-a[1])[0];
+  return best[1] > 0 ? best[0] : ',';
+}
+function parseCSV(text, d){
+  text = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<text.length;i++){
+    const ch = text[i];
+    if(q){
+      if(ch==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; }
+      else f+=ch;
+    }else{
+      if(ch==='"') q=true;
+      else if(ch===d){ row.push(f); f=''; }
+      else if(ch==='\n'){ row.push(f); rows.push(row); row=[]; f=''; }
+      else f+=ch;
+    }
+  }
+  if(f!=='' || row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r => r.length>1 || (r[0]||'').trim()!=='');
+}
+function csvField(v){
+  v = v==null ? '' : String(v);
+  return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+}
+const toCSV = rows => rows.map(r => r.map(csvField).join(',')).join('\r\n');
+
+function download(name, text, bom){
+  const parts = bom ? ['\uFEFF', text] : [text];
+  const url = URL.createObjectURL(new Blob(parts, {type:'text/csv;charset=utf-8'}));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+/* ---------------- 文字の整え ---------------- */
+function han(s){
+  return s.replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+          .replace(/　/g,' ');
+}
+function clean(v){
+  let s = v==null ? '' : String(v);
+  if($('#oTrim')?.checked !== false){ s = s.replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').trim(); }
+  if($('#oHan')?.checked) s = han(s);
+  return s;
+}
+const normKey = s => han(String(s)).replace(/[\s.．,，、。・･]/g,'').toLowerCase();
+
+function safeName(s){
+  let t = String(s).replace(/\s+/g,'_')
+    .replace(/[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uFF66-\uFF9F_]/g,'');
+  if(/^[0-9]/.test(t)) t = 'X'+t;
+  return t || 'V';
+}
+
+/* ---------------- 列の判定 ---------------- */
+const META_PAT = [
+  [/^(タイムスタンプ|timestamp|送信日時|回答日時)$/i,'timestamp'],
+  [/^(メールアドレス|email\s*address|メール|email|e-?mail)$/i,'email'],
+  [/^(id|回答id|response\s*id)$/i,'id'],
+  [/^(開始時刻|start\s*time)$/i,'start_time'],
+  [/^(完了時刻|completion\s*time)$/i,'end_time'],
+  [/^(最終更新時間|last\s*modified\s*time)$/i,'modified'],
+  [/^(名前|氏名|name|回答者|user\s*name|ユーザー名)$/i,'name'],
+  [/^(合計点|得点|点数|score|total\s*points|点)$/i,'score'],
+  [/^(クイズフィードバック|quiz\s*feedback)$/i,'feedback']
+];
+function metaName(h){
+  const k = normKey(h);
+  for(const [re,n] of META_PAT) if(re.test(k)) return n;
+  return null;
+}
+
+/* 順序のありそうな語（直接引き） */
+const TERM_SCORES = [
+  [/^いつも$|^毎回$|^常に$|^毎日$/, 3],
+  [/^ほぼいつも$|^ほとんど毎日$|^週に[4-6]/, 2.5],
+  [/^よく$|^よくある$|^しばしば$|^頻繁|^週に[23]/, 2],
+  [/^ときどき$|^時々$|^たまに$|^月に/, 1],
+  [/^あまりない$|^ほとんどない$|^めったにない$|^まれ|^稀|^年に/, -1.5],
+  [/^まったくない$|^全くない$|^ない$|^一度もない$/, -2.5],
+  [/^はい$|^yes$|^あてはまる$|^ある$|^あり$|^参加した$|^知っている$/i, 1],
+  [/^いいえ$|^no$|^あてはまらない$|^なし$|^参加していない$|^知らない$/i, -1],
+  [/^非常に良い$|^とても良い$|^大変良い$/, 3],
+  [/^良い$|^よい$/, 2],
+  [/^どちらかといえば良い$|^やや良い$/, 1],
+  [/^どちらかといえば悪い$|^やや悪い$/, -1],
+  [/^悪い$|^わるい$/, -2],
+  [/^非常に悪い$|^とても悪い$/, -3]
+];
+function heuristicScore(raw){
+  const s = normKey(raw);
+  if(!s) return null;
+  for(const [re,v] of TERM_SCORES) if(re.test(s)) return v;
+  if(/どちらとも|どちらでも|なんともいえない|普通|ふつう|中立|変わらない|同じくらい|ちょうど|ほどよい|適切|適度|適当/.test(s)) return 0;
+  let inten = 1;
+  if(/^(まったく|全く|全然|非常に|とても|大変|すごく|かなり|強く|きわめて|極めて|完全に|十分)/.test(s)) inten = 2;
+  else if(/^(やや|少し|多少|いくらか|まあ|ある程度|どちらかといえば|どちらかというと|あまり|それほど|わりと|比較的|ときどき)/.test(s)) inten = 0.5;
+  let dir = 1;
+  if(/(ない|ないです|ありません|ません|不可)$/.test(s)) dir = -1;
+  else if(/^(不|非|未|無)/.test(s) && !/^非常/.test(s)) dir = -1;
+  else if(/嫌い|反対|不満|苦手|困難|難しい|低い|少ない|悪い|遅い|狭い|短い/.test(s)) dir = -1;
+  if(/満足|好き|賛成|得意|容易|やさしい|高い|多い|良い|できる/.test(s) && dir===1) dir = 1;
+  return dir * inten;
+}
+/* 先頭の数字（「1. まったくそう思わない」「5：とてもそう思う」） */
+function leadNum(raw){
+  const m = String(raw).trim().match(/^([0-9０-９]{1,2})\s*[.．:：、,，)）]\s*\S/);
+  return m ? parseInt(han(m[1]),10) : null;
+}
+/* 「1年」「20代」「3回」のように数字で始まる水準 */
+function leadInt(raw){
+  const m = han(String(raw).trim()).match(/^(\d{1,4})/);
+  return m ? parseInt(m[1],10) : null;
+}
+/* 見出しが自由記述をにおわせるか */
+const FREE_HEAD = /自由|感想|意見|理由|コメント|要望|ご意見|記述|一言|メッセージ|お気づき|その他（|その他\(/;
+
+const MULTI_SEPS = [';', '; ', ', ', '、', '，', ','];
+function detectMulti(vals){
+  const ne = vals.filter(v=>v!=='');
+  if(ne.length < 3) return null;
+  for(const sep of MULTI_SEPS){
+    const withSep = ne.filter(v => v.includes(sep)).length;
+    if(withSep / ne.length < 0.12) continue;
+    const tok = new Set();
+    ne.forEach(v => v.split(sep).map(t=>t.trim()).filter(Boolean).forEach(t => tok.add(t)));
+    const uniqWhole = new Set(ne).size;
+    if(tok.size <= 25 && tok.size < uniqWhole && [...tok].every(t => t.length <= 60)){
+      return {sep, tokens:[...tok]};
+    }
+  }
+  return null;
+}
+const NUM_RE = /^[+-]?(\d+(\.\d+)?|\.\d+)$/;
+const numBody = v => han(String(v)).replace(/[,，\s%％]/g,'');
+const isNum = v => { const s = numBody(v); return s !== '' && NUM_RE.test(s); };
+const toNum = v => parseFloat(numBody(v));
+
+function analyzeColumn(header, idx, rows){
+  const vals = rows.map(r => clean(r[idx] ?? ''));
+  const ne = vals.filter(v => v !== '');
+  const uniq = [...new Set(ne)];
+  const c = {
+    idx, orig:header, group:null, item:null, include:true, reverse:false,
+    levels:[], tokens:[], sep:null,
+    n:ne.length, missing:vals.length - ne.length, nuniq:uniq.length
+  };
+
+  /* グリッド質問：「満足度 [授業の内容]」 */
+  const g = String(header).match(/^(.*?)\s*[\[［](.+?)[\]］]\s*$/);
+  if(g){ c.group = g[1].trim(); c.item = g[2].trim(); }
+
+  const mn = metaName(header);
+  if(mn){ c.type='meta'; c.metaName=mn; c.include = !/^(email|name)$/.test(mn); return c; }
+
+  if(ne.length === 0){ c.type='text'; c.include=false; return c; }
+
+  /* 数値 */
+  if(ne.every(isNum) && uniq.length > 1){
+    const nums = ne.map(toNum);
+    c.type = 'numeric';
+    c.summary = `${Math.min(...nums)} 〜 ${Math.max(...nums)}`;
+    return c;
+  }
+
+  /* 複数選択 */
+  const m = detectMulti(ne);
+  if(m){
+    c.type = 'multi'; c.sep = m.sep;
+    const cnt = {}; m.tokens.forEach(t=>cnt[t]=0);
+    ne.forEach(v => v.split(m.sep).map(t=>t.trim()).forEach(t => { if(t in cnt) cnt[t]++; }));
+    c.tokens = m.tokens.map(t=>({raw:t, name:'', n:cnt[t]})).sort((a,b)=>b.n-a.n);
+    return c;
+  }
+
+  /* カテゴリか自由記述か */
+  const avgLen = ne.reduce((a,b)=>a+b.length,0)/ne.length;
+  const longish = uniq.filter(u=>u.length>50).length;
+  const freeHead = FREE_HEAD.test(String(header)) && uniq.length > 3
+                   && (avgLen >= 8 || uniq.length / ne.length >= 0.7);
+  if(uniq.length > 20 || (avgLen > 32 && uniq.length > 6) || longish > 0 || freeHead){
+    c.type = 'text';
+    c.summary = `平均 ${Math.round(avgLen)} 字`;
+    return c;
+  }
+
+  const cnt = {}; ne.forEach(v => cnt[v]=(cnt[v]||0)+1);
+  const nums = uniq.map(leadNum);
+  const ints = uniq.map(leadInt);
+  let scores;
+  if(nums.every(v => v!==null) && new Set(nums).size === nums.length){
+    scores = nums; c.type = 'likert';
+  }else if(uniq.length >= 3 && ints.every(v => v!==null) && new Set(ints).size === ints.length){
+    scores = ints; c.type = 'likert';
+  }else{
+    const h = uniq.map(heuristicScore);
+    const ok = h.every(v => v!==null) && new Set(h).size === h.length;
+    if(ok && uniq.length >= 3){
+      const order = uniq.map((u,i)=>({u,s:h[i]})).sort((a,b)=>a.s-b.s);
+      scores = uniq.map(u => order.findIndex(o=>o.u===u)+1);
+      c.type = 'likert';
+    }else{
+      scores = uniq.map((u,i)=>i+1);
+      c.type = 'nominal';
+    }
+  }
+  c.levels = uniq.map((u,i)=>({raw:u, code:scores[i], n:cnt[u]}))
+                 .sort((a,b)=>a.code-b.code);
+  return c;
+}
+
+/* ---------------- 変数名 ---------------- */
+function assignNames(){
+  let q = 0; const gnum = {}, gseq = {}, used = {};
+  const uniqName = n => { let x=n, i=2; while(used[x]) x = n+'_'+(i++); used[x]=1; return x; };
+  for(const c of state.cols) if(c.renamed && c.name) used[c.name] = 1;
+  for(const c of state.cols){
+    if(c.renamed && c.name){ if(c.group){ if(!(c.group in gnum)){ gnum[c.group] = ++q; gseq[c.group] = 0; } gseq[c.group]++; } else q++; continue; }
+    if(c.type === 'meta'){ c.name = uniqName(c.metaName || 'meta'); continue; }
+    if(c.group){
+      if(!(c.group in gnum)){ gnum[c.group] = ++q; gseq[c.group] = 0; }
+      c.qnum = gnum[c.group]; c.sub = ++gseq[c.group];
+      c.name = uniqName('Q'+c.qnum+'_'+c.sub);
+    }else{
+      c.qnum = ++q; c.sub = null;
+      c.name = uniqName('Q'+c.qnum);
+    }
+  }
+  state.cols.forEach(c => c.tokens.forEach((t,i)=>{ t.name = c.name+'_'+(i+1); }));
+}
+
+/* ---------------- 読み込み ---------------- */
+function loadText(text, fname){
+  const d = guessDelim(text);
+  const rows = parseCSV(text, d);
+  if(rows.length < 2){ alert('見出し行と回答行が読み取れませんでした。CSVの中身を確かめてください。'); return; }
+  state.delim = d;
+  state.fileName = fname;
+  state.headers = rows[0].map(h => clean(h));
+  state.rows = rows.slice(1).filter(r => r.some(v => (v||'').trim()!==''));
+  const hk = state.headers.map(normKey).join('|');
+  state.formType = /タイムスタンプ|timestamp/.test(hk) ? 'Googleフォーム'
+                 : /^id\|/.test(hk+'|') || /開始時刻|starttime|完了時刻|completiontime/.test(hk) ? 'Microsoft Forms'
+                 : '一般のCSV';
+  state.cols = state.headers.map((h,i) => analyzeColumn(h, i, state.rows));
+  state.composites = [];
+  assignNames();
+  state.log = [
+    `ファイル：${fname}`,
+    `文字コード：${state.encoding}`,
+    `区切り文字：${d === '\t' ? 'タブ' : d}`,
+    `推定した書き出し元：${state.formType}`,
+    `読み込んだ回答数：${state.rows.length}／列数：${state.headers.length}`
+  ];
+  renderLoad(); renderCards(); renderPool();
+  $$('.step').forEach(b => b.disabled = false);
+  go('load');
+  $('#loadInfo').hidden = false;
+}
+function readFile(f){
+  const fr = new FileReader();
+  fr.onload = () => { const d = decodeBytes(fr.result); state.encoding = d.enc; loadText(d.text, f.name); };
+  fr.readAsArrayBuffer(f);
+}
+
+/* ---------------- 画面：読み込み ---------------- */
+function renderLoad(){
+  const kinds = {};
+  state.cols.forEach(c => kinds[c.type] = (kinds[c.type]||0)+1);
+  const jp = {likert:'評定尺度', nominal:'単一選択', multi:'複数選択', numeric:'数値', text:'自由記述', meta:'記録情報'};
+  $('#readout').innerHTML = [
+    ['回答数', state.rows.length],
+    ['列数', state.headers.length],
+    ['文字コード', state.encoding],
+    ['書き出し元', state.formType]
+  ].map(([k,v]) => `<div><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('');
+  $('#detectMsg').textContent = Object.entries(kinds)
+    .map(([k,v]) => `${jp[k]||k} ${v}`).join('　/　');
+  const head = state.headers.slice(0,14);
+  const body = state.rows.slice(0,6);
+  $('#rawPrev').innerHTML = `<table class="grid"><thead><tr>${
+      head.map(h=>`<th title="${esc(h)}">${esc(h.length>22?h.slice(0,22)+'…':h)}</th>`).join('')
+    }${state.headers.length>14?'<th>…</th>':''}</tr></thead><tbody>${
+      body.map(r=>`<tr>${head.map((_,i)=>{
+        const v = clean(r[i]??'');
+        return `<td class="${v===''?'na':''}">${v===''?'(空)':esc(v.length>20?v.slice(0,20)+'…':v)}</td>`;
+      }).join('')}${state.headers.length>14?'<td>…</td>':''}</tr>`).join('')
+    }</tbody></table>`;
+}
+
+/* ---------------- 画面：変数カード ---------------- */
+const TYPE_JP = {likert:'評定尺度', nominal:'単一選択', multi:'複数選択', numeric:'数値', text:'自由記述', meta:'記録情報'};
+function renderCards(){
+  const q = ($('#search').value||'').trim();
+  const ft = $('#filterType').value;
+  const html = state.cols.map((c,i) => {
+    if(ft && c.type !== ft) return '';
+    if(q && !(c.orig.includes(q) || c.name.includes(q))) return '';
+    const stat = `n=${c.n}　欠測=${c.missing}　水準=${c.nuniq}` + (c.summary ? `　${c.summary}` : '');
+    let levels = '';
+    if((c.type==='likert' || c.type==='nominal') && c.levels.length){
+      levels = `<div class="levels">${c.levels.map((lv,j)=>`
+        <span class="level">
+          <input class="bubble" type="number" data-c="${i}" data-l="${j}" value="${lv.code}" aria-label="${esc(lv.raw)}に割り当てる値">
+          <span class="lab" title="${esc(lv.raw)}">${esc(lv.raw)}</span>
+          <span class="n">${lv.n}</span>
+        </span>`).join('')}</div>`;
+    }else if(c.type==='multi'){
+      levels = `<div class="levels">${c.tokens.map((t,j)=>`
+        <span class="level tok">
+          <span class="bubble">${esc(String(j+1))}</span>
+          <span class="lab" title="${esc(t.raw)}">${esc(t.raw)}</span>
+          <span class="n">${t.n}</span>
+        </span>`).join('')}</div>`;
+    }
+    return `<div class="vcard t-${c.type} ${c.include?'':'off'}">
+      <div class="vhead">
+        <div class="vsrc">
+          <div class="orig">${esc(c.group ? c.group : c.orig)}${c.item?`<span class="item">${esc(c.item)}</span>`:''}</div>
+          <div class="stat">${esc(stat)}</div>
+        </div>
+        <span class="varrow">&rarr;</span>
+        <div class="vname">
+          <input type="text" data-name="${i}" value="${esc(c.name)}">
+          <select data-type="${i}">
+            ${Object.entries(TYPE_JP).map(([k,v])=>`<option value="${k}"${c.type===k?' selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="vctrl">
+        <label class="check"><input type="checkbox" data-inc="${i}" ${c.include?'checked':''}>この列を出力に含める</label>
+        ${c.type==='likert'?`<label class="check"><input type="checkbox" data-rev="${i}" ${c.reverse?'checked':''}>逆転項目として反転する</label>
+          <button class="btn ghost small" data-flip="${i}">値の順を入れ替える</button>`:''}
+        ${c.type==='multi'?`<span class="badge">区切り「${esc(c.sep===', '?'，（カンマ）':c.sep)}」で ${c.tokens.length} 列に展開</span>`:''}
+        ${c.type==='text'?`<span class="badge warn">自由記述は数値化しません</span>`:''}
+        ${c.type==='meta'&&/email|name/.test(c.metaName||'')?`<span class="badge warn">個人が特定されうる列</span>`:''}
+      </div>
+      ${levels}
+    </div>`;
+  }).join('');
+  $('#cards').innerHTML = html || '<p class="muted">条件に合う列がありません。</p>';
+}
+
+/* カード内の操作 */
+$('#cards').addEventListener('input', e => {
+  const t = e.target;
+  if(t.dataset.name !== undefined){ const c = state.cols[+t.dataset.name]; c.name = safeName(t.value); c.renamed = true; }
+  else if(t.dataset.l !== undefined){
+    const v = parseFloat(t.value);
+    if(!isNaN(v)) state.cols[+t.dataset.c].levels[+t.dataset.l].code = v;
+  }
+});
+$('#cards').addEventListener('change', e => {
+  const t = e.target;
+  if(t.dataset.inc !== undefined){ state.cols[+t.dataset.inc].include = t.checked; renderCards(); renderPool(); }
+  else if(t.dataset.rev !== undefined){ state.cols[+t.dataset.rev].reverse = t.checked; }
+  else if(t.dataset.type !== undefined){
+    const c = state.cols[+t.dataset.type];
+    retype(c, t.value); renderCards(); renderPool();
+  }
+});
+$('#cards').addEventListener('click', e => {
+  const b = e.target.closest('[data-flip]');
+  if(!b) return;
+  const c = state.cols[+b.dataset.flip];
+  const codes = c.levels.map(l=>l.code);
+  const mn = Math.min(...codes), mx = Math.max(...codes);
+  c.levels.forEach(l => l.code = mn + mx - l.code);
+  c.levels.sort((a,b2)=>a.code-b2.code);
+  renderCards();
+});
+
+function retype(c, type){
+  const vals = state.rows.map(r => clean(r[c.idx] ?? '')).filter(v=>v!=='');
+  c.type = type;
+  c.reverse = false; c.tokens = []; c.levels = []; c.sep = null;
+  if(type === 'multi'){
+    const m = detectMulti(vals) || {sep:',', tokens:[...new Set(vals.flatMap(v=>v.split(',').map(x=>x.trim()).filter(Boolean)))]};
+    c.sep = m.sep;
+    const cnt = {}; m.tokens.forEach(t=>cnt[t]=0);
+    vals.forEach(v => v.split(m.sep).map(x=>x.trim()).forEach(x=>{ if(x in cnt) cnt[x]++; }));
+    c.tokens = m.tokens.map(t=>({raw:t, name:'', n:cnt[t]}));
+  }else if(type === 'likert' || type === 'nominal'){
+    const cnt = {}; vals.forEach(v=>cnt[v]=(cnt[v]||0)+1);
+    const uniq = Object.keys(cnt);
+    c.levels = uniq.map((u,i)=>({raw:u, code:leadNum(u) ?? (i+1), n:cnt[u]})).sort((a,b)=>a.code-b.code);
+  }
+  assignNames();
+}
+
+/* まとめて操作 */
+$$('[data-bulk]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.bulk;
+  state.cols.forEach(c => {
+    if(k==='text-off' && c.type==='text') c.include = false;
+    if(k==='meta-off' && c.type==='meta') c.include = false;
+    if(k==='all-on') c.include = true;
+  });
+  renderCards(); renderPool();
+}));
+$('#search').addEventListener('input', renderCards);
+$('#filterType').addEventListener('change', renderCards);
+
+/* ---------------- 合成得点 ---------------- */
+function numericCols(){
+  return state.cols.filter(c => c.include && (c.type==='likert' || c.type==='numeric'));
+}
+let cSel = new Set();
+function renderPool(){
+  cSel = new Set([...cSel].filter(n => numericCols().some(c=>c.name===n)));
+  $('#cPool').innerHTML = numericCols().map(c =>
+    `<span class="chip ${cSel.has(c.name)?'sel':''}" data-pick="${esc(c.name)}" title="${esc(c.orig)}">${esc(c.name)}</span>`
+  ).join('') || '<span class="muted">評定尺度か数値の列がありません。</span>';
+  updAlpha();
+}
+$('#cPool').addEventListener('click', e => {
+  const c = e.target.closest('[data-pick]'); if(!c) return;
+  const n = c.dataset.pick;
+  cSel.has(n) ? cSel.delete(n) : cSel.add(n);
+  renderPool();
+});
+function colValuesNumeric(c){
+  return state.rows.map(r => {
+    const raw = clean(r[c.idx] ?? '');
+    if(raw === '' || missWords().includes(raw)) return null;
+    if(c.type === 'numeric') return isNum(raw) ? toNum(raw) : null;
+    const lv = c.levels.find(l => l.raw === raw);
+    if(!lv) return null;
+    if(c.reverse){
+      const cs = c.levels.map(l=>l.code);
+      return Math.min(...cs) + Math.max(...cs) - lv.code;
+    }
+    return lv.code;
+  });
+}
+function cronbach(mat){
+  const k = mat[0]?.length || 0, n = mat.length;
+  if(k < 2 || n < 3) return null;
+  const vr = a => { const m = a.reduce((x,y)=>x+y,0)/a.length;
+                    return a.reduce((x,y)=>x+(y-m)**2,0)/(a.length-1); };
+  let sv = 0;
+  for(let j=0;j<k;j++) sv += vr(mat.map(r=>r[j]));
+  const tv = vr(mat.map(r => r.reduce((x,y)=>x+y,0)));
+  if(tv === 0) return null;
+  return k/(k-1)*(1-sv/tv);
+}
+function updAlpha(){
+  const picked = numericCols().filter(c => cSel.has(c.name));
+  $('#cAdd').disabled = picked.length < 2 || !$('#cName').value.trim();
+  if(picked.length < 2){ $('#cAlpha').textContent = ''; return; }
+  const V = picked.map(colValuesNumeric);
+  const mat = [];
+  for(let i=0;i<state.rows.length;i++){
+    const row = V.map(v => v[i]);
+    if(row.every(x => x !== null)) mat.push(row);
+  }
+  const a = mat.length ? cronbach(mat) : null;
+  $('#cAlpha').textContent = a === null
+    ? `${picked.length} 項目・完全回答 ${mat.length} 名`
+    : `${picked.length} 項目／完全回答 ${mat.length} 名／α = ${a.toFixed(3)}`;
+}
+$('#cName').addEventListener('input', updAlpha);
+$('#cAdd').addEventListener('click', () => {
+  const name = safeName($('#cName').value.trim());
+  if(!name) return;
+  state.composites.push({
+    name, vars:[...cSel], stat:$('#cStat').value, miss:$('#cMiss').value
+  });
+  cSel = new Set(); $('#cName').value = '';
+  renderPool(); renderComposites();
+});
+function renderComposites(){
+  if(!state.composites.length){ $('#cList').innerHTML = ''; return; }
+  $('#cList').innerHTML = `<h3>追加した合成得点</h3><table class="plain"><thead><tr>
+    <th>変数名</th><th>計算</th><th>項目</th><th>欠測</th><th></th></tr></thead><tbody>${
+    state.composites.map((c,i)=>`<tr>
+      <td class="mono" style="color:var(--mark);font-weight:700">${esc(c.name)}</td>
+      <td>${c.stat==='mean'?'平均':'合計'}</td>
+      <td class="mono" style="font-size:11.5px;white-space:normal">${c.vars.map(esc).join(', ')}</td>
+      <td>${c.miss==='pairwise'?'答えた項目だけ':'1つでも欠測なら空欄'}</td>
+      <td><button class="btn ghost small" data-del="${i}">削除</button></td></tr>`).join('')
+  }</tbody></table>`;
+}
+$('#cList').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if(!b) return;
+  state.composites.splice(+b.dataset.del, 1); renderComposites();
+});
+
+/* ---------------- 出力の組み立て ---------------- */
+const missWords = () => ($('#oMissWords').value||'').split(/[、,，]/).map(s=>s.trim()).filter(Boolean);
+
+function buildSpec(){
+  const spec = [], used = {};
+  const uq = n => { let x=n, i=2; while(used[x]) x = n+'_'+(i++); used[x]=1; return x; };
+  const nomMode = $('#oNominal').value, dropFirst = $('#oDropFirst').checked;
+  for(const c of state.cols){
+    if(!c.include) continue;
+    if(c.type === 'multi'){
+      c.tokens.forEach((t,i) => spec.push({name:uq(c.name+'_'+(i+1)), kind:'multi', c, ti:i, label:t.raw}));
+    }else if(c.type === 'nominal' && nomMode === 'dummy'){
+      c.levels.forEach((lv,i) => {
+        if(dropFirst && i === 0) return;
+        spec.push({name:uq(c.name+'_'+(i+1)), kind:'dummy', c, li:i, label:lv.raw});
+      });
+    }else{
+      spec.push({name:uq(c.name), kind:c.type, c, label:''});
+    }
+  }
+  return spec;
+}
+function cellOf(sp, r){
+  const c = sp.c;
+  const raw = clean(state.rows[r][c.idx] ?? '');
+  const miss = raw === '' || missWords().includes(raw);
+  const MS = $('#oMiss').value;
+  const asLabel = $('#oValue').value === 'label';
+  if(sp.kind === 'multi'){
+    if(miss) return MS;
+    const parts = raw.split(c.sep).map(t=>t.trim());
+    return parts.includes(c.tokens[sp.ti].raw) ? 1 : 0;
+  }
+  if(sp.kind === 'dummy'){
+    if(miss) return MS;
+    return raw === c.levels[sp.li].raw ? 1 : 0;
+  }
+  if(miss) return MS;
+  if(sp.kind === 'numeric') return isNum(raw) ? toNum(raw) : MS;
+  if(sp.kind === 'likert' || sp.kind === 'nominal'){
+    const lv = c.levels.find(l => l.raw === raw);
+    if(!lv) return asLabel ? raw : MS;
+    if(asLabel) return lv.raw;
+    if(sp.kind === 'likert' && c.reverse){
+      const cs = c.levels.map(l=>l.code);
+      return Math.min(...cs) + Math.max(...cs) - lv.code;
+    }
+    return lv.code;
+  }
+  return raw;
+}
+function buildTable(){
+  const spec = buildSpec();
+  const names = spec.map(s => s.name);
+  const idxOf = {}; names.forEach((n,i)=>idxOf[n]=i);
+  let rows = [];
+  for(let r=0; r<state.rows.length; r++) rows.push(spec.map(sp => cellOf(sp, r)));
+
+  /* 合成得点 */
+  const compNames = [];
+  for(const cp of state.composites){
+    compNames.push(cp.name);
+    const cols = cp.vars.map(v => state.cols.find(c => c.name === v)).filter(Boolean);
+    const V = cols.map(colValuesNumeric);
+    rows.forEach((row, r) => {
+      const xs = V.map(v => v[r]);
+      const ok = xs.filter(x => x !== null);
+      let val = '';
+      if(cp.miss === 'listwise' && ok.length !== xs.length) val = $('#oMiss').value;
+      else if(!ok.length) val = $('#oMiss').value;
+      else val = cp.stat === 'sum' ? ok.reduce((a,b)=>a+b,0)
+                                   : Math.round(ok.reduce((a,b)=>a+b,0)/ok.length*1000)/1000;
+      row.push(val);
+    });
+  }
+  let head = names.concat(compNames);
+
+  /* 行の整理 */
+  const MS = $('#oMiss').value;
+  const dropped = {empty:0, dup:0};
+  if($('#oEmptyRow').checked){
+    const before = rows.length;
+    rows = rows.filter(r => r.some(v => v !== '' && v !== MS));
+    dropped.empty = before - rows.length;
+  }
+  if($('#oDupRow').checked){
+    const seen = new Set(), keep = [];
+    for(const r of rows){ const k = r.join('\u0001'); if(seen.has(k)) continue; seen.add(k); keep.push(r); }
+    dropped.dup = rows.length - keep.length; rows = keep;
+  }
+  return {head, rows, spec, dropped};
+}
+
+/* ---------------- 画面：出力 ---------------- */
+function renderOut(){
+  const t = buildTable();
+  const totalCells = t.rows.length * t.head.length;
+  const MS = $('#oMiss').value;
+  let missCells = 0;
+  t.rows.forEach(r => r.forEach(v => { if(v === '' || v === MS) missCells++; }));
+  $('#outStat').innerHTML = [
+    ['回答数', t.rows.length],
+    ['変数の数', t.head.length],
+    ['欠測率', totalCells ? (missCells/totalCells*100).toFixed(1)+'%' : '—'],
+    ['除いた行', (t.dropped.empty + t.dropped.dup) || 0]
+  ].map(([k,v]) => `<div><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('');
+
+  const hh = t.head.slice(0,25);
+  $('#outPrev').innerHTML = `<table class="grid"><thead><tr>${
+    hh.map(h=>`<th>${esc(h)}</th>`).join('')}${t.head.length>25?'<th>…</th>':''}</tr></thead><tbody>${
+    t.rows.slice(0,10).map(r=>`<tr>${hh.map((_,i)=>{
+      const v = r[i];
+      return `<td class="${(v===''||v===MS)?'na':''}">${v===''?'&nbsp;':esc(String(v).slice(0,24))}</td>`;
+    }).join('')}${t.head.length>25?'<td>…</td>':''}</tr>`).join('')
+  }</tbody></table>`;
+
+  $('#cbTable').innerHTML = `<thead><tr>
+    <th>変数名</th><th>元の見出し</th><th>種類</th><th>値の割り当て</th><th>有効</th><th>欠測</th><th>備考</th></tr></thead>
+    <tbody>${codebook().slice(1).map(r=>`<tr>
+      <td class="mono" style="color:var(--mark);font-weight:700">${esc(r[0])}</td>
+      <td style="max-width:340px">${esc(r[1])}</td>
+      <td>${esc(r[2])}</td>
+      <td class="mono" style="font-size:11px;max-width:300px;white-space:normal">${esc(r[3])}</td>
+      <td class="mono">${esc(r[4])}</td><td class="mono">${esc(r[5])}</td>
+      <td style="font-size:11.5px">${esc(r[6]||'')}</td></tr>`).join('')}</tbody>`;
+
+  $('#rcode').textContent = rCode(t);
+}
+function typeJP(sp){
+  if(sp.kind === 'multi') return '複数選択（0/1）';
+  if(sp.kind === 'dummy') return 'ダミー（0/1）';
+  return TYPE_JP[sp.kind] || sp.kind;
+}
+function codebook(){
+  const t = buildTable();
+  const out = [['変数名','元の見出し','種類','値の割り当て','有効回答','欠測','備考']];
+  t.spec.forEach((sp, j) => {
+    const c = sp.c;
+    let map = '';
+    if(sp.kind === 'multi' || sp.kind === 'dummy') map = `1 = ${sp.label} ／ 0 = それ以外`;
+    else if(sp.kind === 'likert' || sp.kind === 'nominal'){
+      const cs = c.levels.map(l=>l.code), mn = Math.min(...cs), mx = Math.max(...cs);
+      map = c.levels
+        .map(l => ({v:(sp.kind==='likert'&&c.reverse)?(mn+mx-l.code):l.code, t:l.raw}))
+        .sort((a,b)=>a.v-b.v).map(x => `${x.v}=${x.t}`).join(' / ');
+    }else if(sp.kind === 'numeric') map = c.summary || '数値';
+    const col = t.rows.map(r => r[j]);
+    const MS = $('#oMiss').value;
+    const miss = col.filter(v => v === '' || v === MS).length;
+    out.push([sp.name, c.orig, typeJP(sp), map, String(col.length - miss), String(miss),
+              (sp.kind==='likert' && c.reverse) ? '逆転処理済み' : '']);
+  });
+  state.composites.forEach(cp => {
+    out.push([cp.name, `合成得点（${cp.vars.join(', ')}）`,
+      cp.stat === 'mean' ? '平均得点' : '合計得点', '', '', '',
+      cp.miss === 'pairwise' ? '答えた項目だけで計算' : '欠測があれば空欄']);
+  });
+  return out;
+}
+function rCode(t){
+  const fn = (state.fileName.replace(/\.[^.]+$/,'') || 'survey') + '_analysis.csv';
+  const L = [`# フォーム回答整形ラボ  ${new Date().toLocaleString('ja-JP')}`,
+    `dat <- read.csv("${fn}", fileEncoding = "UTF-8-BOM", stringsAsFactors = FALSE)`, ''];
+  if($('#oValue').value === 'code'){
+    L.push('# 値ラベル（必要に応じて factor に変換）');
+    t.spec.forEach(sp => {
+      if(sp.kind !== 'likert' && sp.kind !== 'nominal') return;
+      const c = sp.c, cs = c.levels.map(l=>l.code), mn = Math.min(...cs), mx = Math.max(...cs);
+      const ls = c.levels.map(l => ({v:(sp.kind==='likert'&&c.reverse)?(mn+mx-l.code):l.code, t:l.raw}))
+                         .sort((a,b)=>a.v-b.v);
+      L.push(`dat$${sp.name} <- factor(dat$${sp.name}, levels = c(${ls.map(x=>x.v).join(', ')}), labels = c(${ls.map(x=>'"'+x.t.replace(/"/g,'\\"')+'"').join(', ')}))  # ${c.orig.slice(0,40)}`);
+    });
+    L.push('');
+  }
+  const lik = t.spec.filter(s => s.kind === 'likert').map(s => s.name);
+  if(lik.length){
+    L.push('# 評定尺度をまとめて数値として扱う場合');
+    L.push(`items <- c(${lik.map(n=>'"'+n+'"').join(', ')})`);
+    L.push('num <- sapply(dat[items], function(x) as.numeric(as.character(x)))');
+    L.push('summary(num)');
+  }
+  return L.join('\n');
+}
+
+/* 出力設定の変更で再描画 */
+['#oValue','#oNominal','#oMiss','#oEnc','#oTrim','#oHan','#oDupRow','#oEmptyRow','#oDropFirst','#oMissWords']
+  .forEach(s => $(s).addEventListener('change', () => { if($('#p-out').classList.contains('on')) renderOut(); }));
+
+/* ---------------- ダウンロード ---------------- */
+$('#dlData').addEventListener('click', () => {
+  const t = buildTable();
+  const base = (state.fileName.replace(/\.[^.]+$/,'') || 'survey');
+  download(base + '_analysis.csv', toCSV([t.head, ...t.rows]), $('#oEnc').value === 'bom');
+});
+$('#dlBook').addEventListener('click', () => {
+  const base = (state.fileName.replace(/\.[^.]+$/,'') || 'survey');
+  download(base + '_codebook.csv', toCSV(codebook()), $('#oEnc').value === 'bom');
+});
+$('#dlR').addEventListener('click', () => {
+  const base = (state.fileName.replace(/\.[^.]+$/,'') || 'survey');
+  const url = URL.createObjectURL(new Blob([rCode(buildTable())], {type:'text/plain;charset=utf-8'}));
+  const a = document.createElement('a'); a.href = url; a.download = base + '_read.R';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+});
+$('#dlLog').addEventListener('click', () => {
+  const t = buildTable();
+  const L = ['# 処理の記録  フォーム回答整形ラボ', new Date().toLocaleString('ja-JP'), '', ...state.log, '',
+    `出力変数：${t.head.length} 列／出力行：${t.rows.length} 行`,
+    `選択肢の書き出し方：${$('#oValue').selectedOptions[0].text}`,
+    `単一選択の扱い：${$('#oNominal').selectedOptions[0].text}`,
+    `欠測の書き方：${$('#oMiss').selectedOptions[0].text}`,
+    `欠測として扱った言葉：${missWords().join('、') || 'なし'}`,
+    `除いた行：全項目が空 ${t.dropped.empty} 行／重複 ${t.dropped.dup} 行`, ''];
+  const rev = state.cols.filter(c => c.include && c.reverse).map(c=>c.name);
+  if(rev.length) L.push(`逆転処理した変数：${rev.join(', ')}`);
+  state.composites.forEach(cp => L.push(`合成得点 ${cp.name}：${cp.stat==='mean'?'平均':'合計'}（${cp.vars.join(', ')}）`));
+  L.push('', '# 変数一覧');
+  codebook().slice(1).forEach(r => L.push(`${r[0]}\t${r[2]}\t${r[1]}`));
+  const url = URL.createObjectURL(new Blob(['\uFEFF'+L.join('\n')], {type:'text/plain;charset=utf-8'}));
+  const a = document.createElement('a'); a.href = url;
+  a.download = (state.fileName.replace(/\.[^.]+$/,'')||'survey') + '_log.txt';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+});
+
+/* ---------------- 画面切り替え ---------------- */
+function go(p){
+  $$('.panel').forEach(x => x.classList.toggle('on', x.id === 'p'+'-'+p));
+  $$('.step').forEach(b => b.setAttribute('aria-selected', b.dataset.p === p));
+  if(p === 'out') renderOut();
+  if(p === 'comp'){ renderPool(); renderComposites(); }
+  window.scrollTo({top:0, behavior:'instant'});
+}
+$$('.step').forEach(b => b.addEventListener('click', () => { if(!b.disabled) go(b.dataset.p); }));
+$('#toVars').addEventListener('click', () => go('vars'));
+$('#toComp').addEventListener('click', () => go('comp'));
+$('#toOut').addEventListener('click', () => go('out'));
+$('#toOut2').addEventListener('click', () => go('out'));
+
+/* ---------------- ファイル入力 ---------------- */
+$('#pick').addEventListener('click', () => $('#file').click());
+$('#file').addEventListener('change', e => { if(e.target.files[0]) readFile(e.target.files[0]); });
+const drop = $('#drop');
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hot'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hot'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) readFile(f); });
+
+/* ---------------- サンプル ---------------- */
+$('#demo').addEventListener('click', () => { state.encoding = 'UTF-8 (BOM付)'; loadText(sampleCSV(), 'サンプル回答.csv'); });
+function sampleCSV(){
+  const head = ['タイムスタンプ','メールアドレス','学年','この授業の内容は理解できましたか',
+    '授業の進む速さはどうでしたか','今後も同じ形式の授業を受けたいですか',
+    '満足度 [教材のわかりやすさ]','満足度 [教員の説明]','満足度 [グループ活動]',
+    '役に立った学習方法をすべて選んでください','1週間あたりの学習時間（時間）','授業の感想を自由に書いてください'];
+  const g = ['1年','2年','3年','4年'];
+  const a5 = ['まったくそう思わない','あまりそう思わない','どちらともいえない','ややそう思う','とてもそう思う'];
+  const sp = ['とても遅い','やや遅い','ちょうどよい','やや速い','とても速い'];
+  const sat = ['非常に不満','やや不満','どちらともいえない','やや満足','非常に満足'];
+  const opt = ['グループ討論','演習問題','動画教材','教科書','小テスト'];
+  const fb = ['グループ活動が楽しかったです。','演習の時間がもう少しほしいと感じました。',
+    '説明がていねいでわかりやすかった。','資料の配布が早いと助かります。','特にありません。',''];
+  const rnd = a => a[Math.floor(Math.random()*a.length)];
+  const rows = [head];
+  for(let i=0;i<60;i++){
+    const k = Math.floor(Math.random()*3)+1;
+    const picks = [...opt].sort(()=>Math.random()-.5).slice(0,k);
+    rows.push([
+      `2026/07/${String(3+i%20).padStart(2,'0')} ${9+i%9}:${String(i%60).padStart(2,'0')}:00`,
+      `student${100+i}@example.ac.jp`, rnd(g),
+      rnd(a5), rnd(sp), Math.random()<0.06 ? '' : rnd(a5),
+      rnd(sat), rnd(sat), Math.random()<0.05 ? '' : rnd(sat),
+      picks.join(', '), String(Math.round((Math.random()*8+1)*10)/10),
+      Math.random()<0.4 ? rnd(fb) : ''
+    ]);
+  }
+  return toCSV(rows);
+}
+
+</script>
+</body>
+</html>

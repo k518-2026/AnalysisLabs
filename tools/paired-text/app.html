@@ -1,0 +1,2212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>対応テキストマイニング — データ分析ラボ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEF1F5;
+  --surface:#FFFFFF;
+  --ink:#131820;
+  --muted:#5D6875;
+  --line:#D5DCE5;
+  --pre:#2F6FB5;      /* 事前 */
+  --post:#C2306B;     /* 事後 */
+  --pre-soft:#E4EDF7;
+  --post-soft:#FAE6EE;
+  --keep:#8A94A2;
+  --code-bg:#000000;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  font-size:15px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px 96px}
+
+/* header */
+header.top{padding:56px 0 28px;border-bottom:2px solid var(--ink)}
+.title{
+  font-family:"Zen Old Mincho","Yu Mincho",serif;
+  font-weight:700;font-size:clamp(28px,4.6vw,46px);line-height:1.25;margin:0;letter-spacing:.01em;
+}
+.title .arrow{color:var(--post);font-family:"JetBrains Mono",monospace;font-weight:500}
+.lede{margin:14px 0 0;max-width:62ch;color:var(--muted)}
+.status-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
+#kuroBaseRow{margin-top:8px}
+#kuroBaseRow input[type=text]{flex:1 1 320px;min-width:220px;font-size:12px}
+
+/* sections */
+section.step{margin-top:44px;background:var(--surface);border:1px solid var(--line);border-radius:2px}
+.step-head{display:flex;gap:14px;align-items:baseline;padding:18px 22px;border-bottom:1px solid var(--line)}
+.step-num{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;color:var(--post);letter-spacing:.14em;padding-top:4px}
+.step-title{font-family:"Zen Old Mincho",serif;font-weight:700;font-size:20px;margin:0}
+.step-note{color:var(--muted);font-size:13px;margin:2px 0 0}
+.step-body{padding:22px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.field label.lab{display:block;font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:6px}
+.lab .tag{font-family:"JetBrains Mono",monospace;font-size:11px;padding:1px 6px;border-radius:2px;margin-right:8px;vertical-align:1px}
+.tag.pre{background:var(--pre-soft);color:var(--pre)}
+.tag.post{background:var(--post-soft);color:var(--post)}
+textarea,input[type=text],input[type=number],select{
+  width:100%;font-family:"JetBrains Mono","Zen Kaku Gothic New",monospace;font-size:13px;
+  border:1px solid var(--line);border-radius:2px;padding:10px 12px;background:#FBFCFD;color:var(--ink);
+}
+textarea{min-height:170px;resize:vertical;line-height:1.6}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--pre);outline-offset:1px;background:#fff}
+.field-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:var(--muted)}
+input[type=file]{font-size:12px;max-width:190px}
+.dropzone{position:relative;border-radius:2px}
+.dropzone.over{outline:2px dashed var(--post);outline-offset:8px}
+.drop-msg{margin:6px 0 0;font-size:11.5px;color:var(--muted)}
+.drop-veil{
+  position:absolute;inset:-6px;display:none;align-items:center;justify-content:center;
+  background:rgba(250,230,238,.86);border-radius:2px;pointer-events:none;z-index:2;
+  font-weight:700;font-size:14px;color:var(--post);letter-spacing:.08em;
+}
+.dropzone.over .drop-veil{display:flex}
+
+button{
+  font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+  background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:2px;padding:9px 16px;
+}
+button:hover{background:#2B3341}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+button.ghost:hover{background:#F1F4F8}
+button.run{font-size:15px;padding:14px 30px;background:var(--post);border-color:var(--post)}
+button.run:hover{background:#A6255A}
+button:focus-visible,a:focus-visible,.tab:focus-visible{outline:2px solid var(--pre);outline-offset:2px}
+.run-row{display:flex;gap:14px;align-items:center;margin-top:26px;flex-wrap:wrap}
+.run-msg{font-size:13px;color:var(--muted)}
+
+/* settings */
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px 22px}
+.set label.lab{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;margin-bottom:6px}
+.hint{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.pos-grid{display:flex;flex-wrap:wrap;gap:6px}
+.chk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:2px;padding:5px 10px;font-size:13px;cursor:pointer;background:#FBFCFD}
+.chk:has(input:checked){background:var(--ink);color:#fff;border-color:var(--ink)}
+.chk input{accent-color:var(--post);margin:0}
+fieldset{border:1px solid var(--line);border-radius:2px;padding:14px 16px;margin:0 0 18px}
+legend{font-size:12px;font-weight:700;letter-spacing:.1em;padding:0 6px}
+
+/* ledger (signature) */
+.fold-btn{margin-left:auto;align-self:center;flex:0 0 auto;white-space:nowrap}
+.ledger-wrap{max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:2px}
+.ledger-wrap.folded{display:none}
+.ledger{border-top:none}
+.lrow{display:grid;grid-template-columns:1fr 168px 1fr;align-items:center;border-bottom:1px solid var(--line);min-height:46px}
+.lrow:nth-child(even){background:#FAFBFD}
+.chip{font-family:"JetBrains Mono",monospace;font-size:13px;padding:5px 10px;border-radius:2px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell-pre{text-align:right;padding:8px 14px}
+.cell-post{text-align:left;padding:8px 14px}
+.chip.pre{background:var(--pre-soft);color:var(--pre);border:1px solid #C5D9EE}
+.chip.post{background:var(--post-soft);color:var(--post);border:1px solid #EFCBDB}
+.chip.none{background:#F2F4F7;color:#98A2AF;border:1px dashed var(--line)}
+.link{position:relative;text-align:center;font-size:10.5px;font-family:"JetBrains Mono",monospace;letter-spacing:.06em;color:var(--muted)}
+.link::before{content:"";position:absolute;left:6px;right:6px;top:50%;height:1px;background:linear-gradient(90deg,var(--pre),var(--post))}
+.link span{position:relative;background:var(--surface);padding:0 7px}
+.lrow:nth-child(even) .link span{background:#FAFBFD}
+.link.dashed::before{background:none;border-top:1px dashed var(--line)}
+.ledger-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0px}
+
+/* tabs + canvas */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:0}
+.tab{font-family:inherit;font-size:13.5px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);padding:12px 18px;cursor:pointer;border-radius:0}
+.tab:hover{color:var(--ink);background:#F5F7FA}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--post)}
+.net-layout{display:grid;grid-template-columns:1fr 250px;gap:20px;padding-top:18px}
+.canvas-box{border:1px solid var(--line);border-radius:2px;background:#fff;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:560px;touch-action:none;user-select:none}
+.canvas-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:24px}
+.netparams .set{margin-bottom:14px}
+.netparams input[type=range]{width:100%;accent-color:var(--post)}
+.rangeval{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--muted);float:right}
+.dl-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.net-caption{font-size:12.5px;color:var(--muted);margin:12px 2px 0}
+
+/* tables */
+.table-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.filter-btn{font-size:12px;font-weight:500;padding:6px 12px;background:transparent;color:var(--muted);border:1px solid var(--line)}
+.filter-btn[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700}
+.tbl-scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:2px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 11px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{position:sticky;top:0;background:#F4F6F9;font-size:11.5px;letter-spacing:.06em;z-index:1;cursor:pointer;border-bottom:1px solid var(--ink)}
+thead th:hover{background:#E9EDF3}
+td.num{text-align:right;font-family:"JetBrains Mono",monospace}
+td.term{font-weight:700}
+td.words{white-space:normal;color:var(--muted);font-size:12.5px;line-height:1.6;min-width:220px}
+.badge{font-size:11px;font-family:"JetBrains Mono",monospace;padding:2px 7px;border-radius:2px}
+.b-up{background:var(--post-soft);color:var(--post)}
+.b-down{background:var(--pre-soft);color:var(--pre)}
+.b-new{background:var(--post);color:#fff}
+.b-gone{background:var(--pre);color:#fff}
+.b-same{background:#F0F2F5;color:var(--keep)}
+.subhead{font-size:13px;font-weight:700;letter-spacing:.06em;margin:28px 0 10px;padding-left:10px;border-left:3px solid var(--post)}
+
+/* 06 まとめ */
+.sum-card{border:1px solid var(--line);border-radius:2px;padding:16px 18px;background:#FBFCFD}
+.sum-card h3{margin:0 0 14px;font-size:12px;letter-spacing:.1em;font-weight:700}
+.sum-card.pre h3{color:var(--pre)}
+.sum-card.post h3{color:var(--post)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:12px;margin-bottom:16px}
+.stat{border-left:2px solid var(--line);padding-left:9px}
+.sum-card.pre .stat{border-left-color:var(--pre)}
+.sum-card.post .stat{border-left-color:var(--post)}
+.stat .v{font-family:"JetBrains Mono",monospace;font-size:16px;font-weight:700;display:block;line-height:1.35}
+.stat .k{font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.wordline{margin:0 0 12px}
+.wordline .k{display:block;font-size:10.5px;color:var(--muted);letter-spacing:.08em;margin-bottom:5px}
+.w{display:inline-block;font-size:12.5px;padding:3px 9px;border-radius:2px;margin:0 5px 5px 0;background:#F0F3F7}
+.w.pre{background:var(--pre-soft);color:var(--pre)}
+.w.post{background:var(--post-soft);color:var(--post)}
+.w .n{font-family:"JetBrains Mono",monospace;font-size:10.5px;opacity:.7;margin-left:5px}
+.cmp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-bottom:18px}
+.prose{font-size:13.5px;line-height:1.95;margin:0 0 14px;max-width:74ch}
+.writing{border:1px solid var(--line);border-radius:2px;background:#FBFCFD;padding:16px 18px;margin-bottom:12px}
+.writing h4{margin:0 0 9px;font-size:11.5px;letter-spacing:.12em;color:var(--muted);font-weight:700}
+.writing p{margin:0;font-size:13.5px;line-height:2.05;text-align:justify}
+
+/* R code */
+.code-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+pre.rcode{
+  background:var(--code-bg);color:#E8EAED;border-radius:2px;padding:20px 22px;overflow:auto;max-height:620px;
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;line-height:1.75;margin:0;
+  border:1px solid #2A2F38;
+}
+.r-cmt{color:#6E7A88;font-style:italic}
+.r-str{color:#7BD88F}
+.r-num{color:#E5B567}
+.r-kw{color:#C78EDB;font-weight:700}
+.r-fn{color:#63C6E8}
+.r-op{color:#F27E9D}
+.r-sec{color:#FFD166;font-weight:700}
+.code-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;font-family:"JetBrains Mono",monospace;margin-top:12px;color:var(--muted)}
+.code-legend b{font-weight:500}
+
+.pill{font-size:11.5px;font-family:"JetBrains Mono",monospace;padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:#fff}
+.pill.on{border-color:var(--post);color:var(--post)}
+.hidden{display:none}
+.err{color:#B3261E;font-size:13px;font-weight:700}
+footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+@media (max-width:860px){
+  .grid2{grid-template-columns:1fr}
+  .net-layout{grid-template-columns:1fr}
+  .lrow{grid-template-columns:1fr 96px 1fr}
+  canvas{height:420px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-text);--paper:var(--al-bg);--surface:var(--al-surface);--ink:var(--al-ink);--muted:var(--al-ink-2);--line:var(--al-line);}body{font-family:var(--al-sans)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#text">質的・テキスト</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>対応テキストマイニング</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="wrap">
+
+<header class="top">
+  <h1 class="title">対応テキストマイニング<br><span class="arrow">事前 &rarr; 事後</span>の語彙変化を可視化する</h1>
+  <p class="lede">同じ回答者から2時点で集めた自由記述を、IDで突き合わせて比べます。品詞を選んで共起ネットワークを描き、消えた語・現れた語を取り出し、同じ分析をRで再現するスクリプトも書き出します。</p>
+  <div class="status-row">
+    <span class="pill" id="modePill">形態素解析：簡易モード（内蔵）</span>
+    <button class="ghost" id="loadKuromoji">高精度モードを読み込む（kuromoji.js）</button>
+    <span class="run-msg" id="kuroMsg"></span>
+  </div>
+  <div class="status-row hidden" id="kuroBaseRow">
+    <label class="hint" for="kuroBase">辞書の配布元URL（社内・校内ネットワークでCDNが遮断される場合は、kuromojiを置いた場所を指定）</label>
+    <input type="text" id="kuroBase" placeholder="例: https://example.org/kuromoji-0.1.2" spellcheck="false">
+  </div>
+</header>
+
+<!-- 01 データ -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">01</span>
+    <div><h2 class="step-title">データを入れる</h2>
+    <p class="step-note">1行1件で <code>ID,テキスト</code> の形式。テキスト中のカンマはそのままで構いません（最初のカンマまでをIDとして読みます）。</p></div>
+  </div>
+  <div class="step-body">
+    <div class="grid2">
+      <div class="field dropzone" data-target="#preText">
+        <label class="lab" for="preText"><span class="tag pre">PRE</span>事前テキスト</label>
+        <textarea id="preText" spellcheck="false" placeholder="A01,授業の前はプログラミングが難しそうで不安でした&#10;A02,数学は苦手なので心配です"></textarea>
+        <div class="field-foot"><span id="preCount">0 件</span><input type="file" id="preFile" accept=".csv,.txt,.tsv"></div>
+        <p class="drop-msg">CSVをここにドロップしても読み込めます</p>
+        <div class="drop-veil"><span>ここにドロップ</span></div>
+      </div>
+      <div class="field dropzone" data-target="#postText">
+        <label class="lab" for="postText"><span class="tag post">POST</span>事後テキスト</label>
+        <textarea id="postText" spellcheck="false" placeholder="A01,実際に動かしてみると楽しかったです&#10;A02,数学の考え方が役に立つと分かりました"></textarea>
+        <div class="field-foot"><span id="postCount">0 件</span><input type="file" id="postFile" accept=".csv,.txt,.tsv"></div>
+        <p class="drop-msg">CSVをここにドロップしても読み込めます</p>
+        <div class="drop-veil"><span>ここにドロップ</span></div>
+      </div>
+    </div>
+    <div class="run-row">
+      <button class="ghost" id="sampleBtn">サンプルデータを入れる</button>
+      <button class="ghost" id="clearBtn">入力を消す</button>
+    </div>
+  </div>
+</section>
+
+<!-- 02 設定 -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">02</span>
+    <div><h2 class="step-title">解析の条件を決める</h2>
+    <p class="step-note">抽出する品詞と、共起ネットワークのしきい値。あとから変えて何度でも実行できます。</p></div>
+  </div>
+  <div class="step-body">
+    <fieldset>
+      <legend>抽出する品詞</legend>
+      <div class="pos-grid" id="posGrid"></div>
+      <div class="hint">簡易モードでは品詞は文字種と語尾から推定します。動詞・形容詞を正確に扱うときは高精度モード（kuromoji.js）を読み込んでください。</div>
+    </fieldset>
+
+    <div class="settings">
+      <div class="set">
+        <label class="lab" for="minFreq">最小出現回数</label>
+        <input type="number" id="minFreq" value="2" min="1" step="1">
+        <div class="hint">これ未満しか出ない語は捨てます。</div>
+      </div>
+      <div class="set">
+        <label class="lab" for="topN">ネットワークに載せる語数</label>
+        <input type="number" id="topN" value="60" min="5" max="200" step="5">
+        <div class="hint">頻度上位から。</div>
+      </div>
+      <div class="set">
+        <label class="lab" for="minCooc">最小共起回数</label>
+        <input type="number" id="minCooc" value="2" min="1" step="1">
+      </div>
+      <div class="set">
+        <label class="lab" for="jaccard">Jaccard係数のしきい値</label>
+        <input type="number" id="jaccard" value="0.15" min="0" max="1" step="0.01">
+        <div class="hint">2語の共起の強さ。大きいほど線が減ります。</div>
+      </div>
+      <div class="set">
+        <label class="lab" for="maxEdges">最大リンク数</label>
+        <input type="number" id="maxEdges" value="80" min="5" max="500" step="5">
+      </div>
+      <div class="set">
+        <label class="lab" for="coocUnit">共起を数える単位</label>
+        <select id="coocUnit">
+          <option value="sentence">文（。！？で区切る）</option>
+          <option value="doc" selected>回答1件（ID単位）</option>
+        </select>
+      </div>
+      <div class="set">
+        <label class="lab" for="minLen">語の最小文字数</label>
+        <input type="number" id="minLen" value="2" min="1" max="6" step="1">
+        <div class="hint">簡易モードの動詞は漢字の語幹だけになります。1にすると単漢字も残ります。</div>
+      </div>
+      <div class="set">
+        <label class="lab" for="idThreshold">ID照合の許容ずれ（編集距離）</label>
+        <input type="number" id="idThreshold" value="2" min="0" max="5" step="1">
+        <div class="hint">A01とA-1、001と1のような表記ずれを拾います。</div>
+      </div>
+      <div class="set" style="grid-column:1/-1">
+        <label class="lab" for="stopwords">除外語（カンマまたは改行区切り）</label>
+        <textarea id="stopwords" style="min-height:64px">する,ある,いる,なる,れる,られる,こと,もの,これ,それ,ため,よう,ない,思う,とても,少し,ます,です</textarea>
+      </div>
+      <div class="set" style="grid-column:1/-1">
+        <label class="lab" for="userDict">ユーザー辞書（この語はまとめて1語として扱う／改行かカンマ区切り）</label>
+        <textarea id="userDict" style="min-height:56px" placeholder="プログラミング的思考,グループワーク,情報活用能力"></textarea>
+      </div>
+    </div>
+
+    <div class="run-row">
+      <button class="run" id="runBtn">解析を実行</button>
+      <span class="run-msg" id="runMsg"></span>
+    </div>
+  </div>
+</section>
+
+<!-- 03 ID対応 -->
+<section class="step hidden" id="sec3">
+  <div class="step-head">
+    <span class="step-num">03</span>
+    <div><h2 class="step-title">IDの対応</h2>
+    <p class="step-note">完全一致で結べなかったIDは、表記をそろえた上で近い順に探します。対応がついた組だけを比較に使います。</p></div>
+    <button class="ghost fold-btn" id="ledgerToggle" aria-expanded="true" aria-controls="ledgerWrap">折りたたむ</button>
+  </div>
+  <div class="step-body">
+    <div class="ledger-legend" id="ledgerLegend"></div>
+    <div class="ledger-wrap" id="ledgerWrap"><div class="ledger" id="ledger"></div></div>
+  </div>
+</section>
+
+<!-- 04 ネットワーク -->
+<section class="step hidden" id="sec4">
+  <div class="step-head">
+    <span class="step-num">04</span>
+    <div><h2 class="step-title">共起ネットワーク</h2>
+    <p class="step-note">円の大きさは出現回数、線の太さはJaccard係数。円はドラッグで動かせます。背景をドラッグで全体を移動、ホイールかピンチで拡大縮小、ダブルクリックで元の表示に戻ります。</p></div>
+  </div>
+  <div class="step-body">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-net="pre" aria-selected="false">事前</button>
+      <button class="tab" role="tab" data-net="post" aria-selected="false">事後</button>
+      <button class="tab" role="tab" data-net="comp" aria-selected="true">対応比較（事前⇄事後）</button>
+    </div>
+    <div class="net-layout">
+      <div>
+        <div class="canvas-box">
+          <canvas id="net"></canvas>
+          <div class="canvas-empty hidden" id="netEmpty"></div>
+        </div>
+        <p class="net-caption" id="netCaption"></p>
+        <div class="dl-row">
+          <button id="dlPng">この図をPNGで保存</button>
+          <button class="ghost" id="dlSvgLike">高解像度（×3）で保存</button>
+          <button class="ghost" id="relayout">配置をやり直す</button>
+          <button class="ghost" id="resetView">表示を元に戻す</button>
+        </div>
+      </div>
+      <div class="netparams">
+        <div class="set">
+          <label class="lab" for="pRep">反発の強さ<span class="rangeval" id="vRep">1.0</span></label>
+          <input type="range" id="pRep" min="0.2" max="3" step="0.1" value="1">
+        </div>
+        <div class="set">
+          <label class="lab" for="pLink">リンクの長さ<span class="rangeval" id="vLink">1.0</span></label>
+          <input type="range" id="pLink" min="0.4" max="2.5" step="0.1" value="1">
+        </div>
+        <div class="set">
+          <label class="lab" for="pIter">計算の反復回数<span class="rangeval" id="vIter">300</span></label>
+          <input type="range" id="pIter" min="60" max="800" step="20" value="300">
+        </div>
+        <div class="set">
+          <label class="lab" for="pFont">文字の大きさ<span class="rangeval" id="vFont">13</span></label>
+          <input type="range" id="pFont" min="8" max="24" step="1" value="13">
+        </div>
+        <div class="set">
+          <label class="lab" for="pNode">円の大きさ<span class="rangeval" id="vNode">1.0</span></label>
+          <input type="range" id="pNode" min="0.4" max="2.5" step="0.1" value="1">
+        </div>
+        <div class="set">
+          <label class="lab" for="pBg">背景</label>
+          <select id="pBg">
+            <option value="#ffffff">白</option>
+            <option value="transparent">透明（PNG）</option>
+            <option value="#0E1319">濃紺</option>
+          </select>
+        </div>
+        <div class="set">
+          <label class="chk"><input type="checkbox" id="pCurve" checked>線を曲げる</label>
+        </div>
+        <div class="set">
+          <label class="chk"><input type="checkbox" id="pIsolate" checked>孤立した語を隠す</label>
+        </div>
+        <div class="set">
+          <label class="chk"><input type="checkbox" id="pAlign" checked>対応比較を整列する</label>
+          <div class="hint">左＝事前のみ／中央上＝増加／中央＝変化なし／中央下＝減少／右＝事後のみ。外すと自由配置に戻ります。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 変化 -->
+<section class="step hidden" id="sec5">
+  <div class="step-head">
+    <span class="step-num">05</span>
+    <div><h2 class="step-title">言葉の変化</h2>
+    <p class="step-note">対応がついた組だけを集計しています。判定は「事後のみ／増加／変化なし／減少／事前のみ」。</p></div>
+  </div>
+  <div class="step-body">
+    <div class="table-tools" id="changeFilters"></div>
+    <div class="tbl-scroll"><table id="changeTable"></table></div>
+    <div class="run-row"><button class="ghost" id="dlChangeCsv">この表をCSVで保存</button></div>
+
+    <h3 class="subhead">IDごとの変化</h3>
+    <div class="tbl-scroll"><table id="pairTable"></table></div>
+    <div class="run-row"><button class="ghost" id="dlPairCsv">ID別の表をCSVで保存</button></div>
+  </div>
+</section>
+
+<!-- 06 まとめ -->
+<section class="step hidden" id="sec6">
+  <div class="step-head">
+    <span class="step-num">06</span>
+    <div><h2 class="step-title">結果のまとめと記述例</h2>
+    <p class="step-note">いま画面に出ている設定での要約です。数値は上の図・表と一致します。論文や報告書に使える文章例もあわせて作ります。</p></div>
+  </div>
+  <div class="step-body">
+    <div class="grid2">
+      <div class="sum-card pre"><h3>事前の特徴</h3><div id="sumPre"></div></div>
+      <div class="sum-card post"><h3>事後の特徴</h3><div id="sumPost"></div></div>
+    </div>
+
+    <h3 class="subhead">2つのネットワークの比較</h3>
+    <div id="sumCompare"></div>
+
+    <h3 class="subhead">論文での記述例</h3>
+    <div id="sumWriting"></div>
+    <div class="run-row">
+      <button class="ghost" id="copyWriting">記述例をまとめてコピー</button>
+      <span class="run-msg">数値は自動で入ります。解釈の部分はご自身の言葉に直してお使いください。</span>
+    </div>
+  </div>
+</section>
+
+<!-- 07 R -->
+<section class="step hidden" id="sec7">
+  <div class="step-head">
+    <span class="step-num">07</span>
+    <div><h2 class="step-title">Rのコマンド</h2>
+    <p class="step-note">いま画面に出ている設定と同じ条件で、RMeCab + igraph/ggraph による分析を再現します。</p></div>
+  </div>
+  <div class="step-body">
+    <div class="code-head">
+      <div class="code-legend">
+        <span><b class="r-sec">■</b> 見出し</span>
+        <span><b class="r-cmt">■</b> コメント</span>
+        <span><b class="r-kw">■</b> 予約語</span>
+        <span><b class="r-fn">■</b> 関数</span>
+        <span><b class="r-str">■</b> 文字列</span>
+        <span><b class="r-num">■</b> 数値</span>
+        <span><b class="r-op">■</b> 演算子</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="ghost" id="copyR">コピー</button>
+        <button id="dlR">.R として保存</button>
+      </div>
+    </div>
+    <pre class="rcode" id="rcode"></pre>
+  </div>
+</section>
+
+<footer>
+  すべての処理はブラウザの中だけで動きます。テキストが外部に送られることはありません（高精度モードを選んだときだけ、辞書ファイルをCDNから取得します）。
+</footer>
+</div>
+
+<script>
+/* ============================================================
+   0. ユーティリティ
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nfkc = s => s.normalize('NFKC');
+
+function download(name, content, type){
+  const blob = content instanceof Blob ? content : new Blob([content], {type: type || 'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();}, 400);
+}
+function levenshtein(a,b){
+  if(a===b) return 0;
+  const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  let prev=new Array(n+1), cur=new Array(n+1);
+  for(let j=0;j<=n;j++) prev[j]=j;
+  for(let i=1;i<=m;i++){
+    cur[0]=i;
+    for(let j=1;j<=n;j++){
+      cur[j]=Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    }
+    [prev,cur]=[cur,prev];
+  }
+  return prev[n];
+}
+
+/* ============================================================
+   1. 入力のパース
+   ============================================================ */
+function parseRecords(raw){
+  const out = [], seen = new Map();
+  raw.split(/\r?\n/).forEach((line, i) => {
+    if(!line.trim()) return;
+    let id, text;
+    const m = line.match(/^\s*"((?:[^"]|"")*)"\s*,\s*([\s\S]*)$/);
+    if(m){ id = m[1].replace(/""/g,'"'); text = m[2]; }
+    else{
+      const k = line.indexOf(',');
+      if(k < 0){ id = 'row' + (i+1); text = line; }
+      else { id = line.slice(0,k); text = line.slice(k+1); }
+    }
+    id = id.trim(); text = text.trim().replace(/^"(.*)"$/s,'$1');
+    if(!id) id = 'row' + (i+1);
+    if(/^(id|ＩＤ)$/i.test(id) && /^(text|テキスト|回答|本文)$/i.test(text)) return; // ヘッダ行
+    if(seen.has(id)){ // 同一IDは連結
+      out[seen.get(id)].text += ' ' + text;
+    }else{
+      seen.set(id, out.length);
+      out.push({id, text});
+    }
+  });
+  return out;
+}
+
+/* ============================================================
+   2. 形態素解析
+   ============================================================ */
+let kuroTokenizer = null;
+const POS_LIST = ['名詞','固有名詞','サ変名詞','動詞','形容詞','形容動詞','副詞','感動詞','連体詞','数','未知語'];
+const POS_DEFAULT = ['名詞','固有名詞','サ変名詞','動詞','形容詞','形容動詞'];
+
+const RE = {
+  kanji:/[一-龥々〆ヵヶ]/, hira:/[ぁ-んー]/, kata:/[ァ-ヴｦ-ﾟー]/,
+  latin:/[A-Za-z]/, digit:/[0-9]/
+};
+function charClass(c){
+  if(RE.kanji.test(c)) return 'kanji';
+  if(RE.kata.test(c)) return 'kata';
+  if(RE.hira.test(c)) return 'hira';
+  if(RE.latin.test(c)) return 'latin';
+  if(RE.digit.test(c)) return 'digit';
+  return 'other';
+}
+const VERB_TAIL = /^(する|し[てたまなよ]|します|しない|され|せる|さ|る|れる|られ|り|ります|った|って|う|え|えた|く|いた|き|ける|む|んだ|ぶ|つ|ぐ|ず|ぬ|べ|め|げ|ろ|よう)/;
+const ADJ_TAIL = /^(い|かった|くて|く|ければ|さ|そう|かっ)/;
+const ADV_WORDS = new Set(['とても','すこし','少し','かなり','もっと','ずっと','あまり','よく','ぜんぜん','まったく','いつも','すぐ','やはり','たしかに','とくに']);
+const INTERJ = new Set(['はい','いいえ','ありがとう','おはよう','こんにちは','すごい','すごく']);
+
+/* 簡易トークナイザ：文字種の切れ目で区切り、語尾から品詞を推定する */
+function tokenizeSimple(text, dictWords){
+  const t = nfkc(text);
+  // ユーザー辞書を先に切り出す
+  const marks = [];
+  let work = t;
+  dictWords.forEach((w,i)=>{
+    if(!w) return;
+    let idx = 0;
+    while((idx = work.indexOf(w, idx)) !== -1){
+      marks.push({start:idx, end:idx+w.length, word:w});
+      idx += w.length;
+    }
+  });
+  marks.sort((a,b)=>a.start-b.start);
+  const covered = new Array(work.length).fill(false);
+  const forced = [];
+  marks.forEach(m=>{
+    let free = true;
+    for(let i=m.start;i<m.end;i++) if(covered[i]) free = false;
+    if(free){ for(let i=m.start;i<m.end;i++) covered[i]=true; forced.push(m); }
+  });
+
+  // 文字種ランに分割（辞書語は境界として扱う）
+  const runs = [];
+  let cur = null;
+  for(let i=0;i<work.length;i++){
+    const f = forced.find(m=>m.start===i);
+    if(f){ if(cur){runs.push(cur);cur=null;} runs.push({s:f.word, cls:'dict'}); i = f.end-1; continue; }
+    if(covered[i]) continue;
+    const c = work[i], cl = charClass(c);
+    if(cur && cur.cls===cl) cur.s += c;
+    else { if(cur) runs.push(cur); cur = {s:c, cls:cl}; }
+  }
+  if(cur) runs.push(cur);
+
+  const tokens = [];
+  for(let i=0;i<runs.length;i++){
+    const r = runs[i], next = runs[i+1];
+    if(r.cls==='other'){ tokens.push({surface:r.s, base:r.s, pos:'記号'}); continue; }
+    if(r.cls==='dict'){ tokens.push({surface:r.s, base:r.s, pos:'名詞'}); continue; }
+    if(r.cls==='digit'){ tokens.push({surface:r.s, base:r.s, pos:'数'}); continue; }
+    if(r.cls==='latin'){ tokens.push({surface:r.s, base:r.s.toLowerCase(), pos:'名詞'}); continue; }
+    if(r.cls==='kata'){
+      const s = r.s.replace(/ー+$/,'');
+      tokens.push({surface:r.s, base:s||r.s, pos: s.length>=4 ? '名詞' : '名詞'});
+      continue;
+    }
+    if(r.cls==='kanji'){
+      let pos = '名詞', base = r.s;
+      if(next && next.cls==='hira'){
+        const tail = next.s;
+        if(/^(しい|しく|しか|しそう|しさ|しけれ)/.test(tail)){ pos='形容詞'; base = r.s+'しい'; }   // 難しい・楽しい
+        else if(/^(きい|きく|きか|きな)/.test(tail)){ pos='形容詞'; base = r.s+'きい'; }            // 大きい
+        else if(VERB_TAIL.test(tail)){ pos='動詞'; }                                                // 語幹のみ残す
+        else if(ADJ_TAIL.test(tail)){ pos='形容詞'; base = r.s+'い'; }                              // 面白い・良い
+      }
+      tokens.push({surface:r.s, base, pos});
+      continue;
+    }
+    if(r.cls==='hira'){
+      const s = r.s;
+      if(ADV_WORDS.has(s)) { tokens.push({surface:s, base:s, pos:'副詞'}); continue; }
+      if(INTERJ.has(s)) { tokens.push({surface:s, base:s, pos:'感動詞'}); continue; }
+      // ひらがなのみの塊は多くが助詞・助動詞。3文字以上のものだけ未知語として残す
+      if(s.length>=3 && !VERB_TAIL.test(s)) tokens.push({surface:s, base:s, pos:'未知語'});
+      else tokens.push({surface:s, base:s, pos:'助詞'});
+      continue;
+    }
+  }
+  return tokens;
+}
+
+function tokenizeKuromoji(text, dictWords){
+  const raw = kuroTokenizer.tokenize(nfkc(text));
+  const out = [];
+  for(const t of raw){
+    const p1 = t.pos, p2 = t.pos_detail_1;
+    let pos = null;
+    if(p1==='名詞'){
+      if(p2==='固有名詞') pos='固有名詞';
+      else if(p2==='サ変接続') pos='サ変名詞';
+      else if(p2==='数') pos='数';
+      else if(p2==='非自立'||p2==='代名詞'||p2==='接尾'||p2==='特殊') pos=null;
+      else if(p2==='形容動詞語幹') pos='形容動詞';
+      else pos='名詞';
+    }
+    else if(p1==='動詞'){ pos = (p2==='非自立') ? null : '動詞'; }
+    else if(p1==='形容詞'){ pos='形容詞'; }
+    else if(p1==='副詞'){ pos='副詞'; }
+    else if(p1==='感動詞'){ pos='感動詞'; }
+    else if(p1==='連体詞'){ pos='連体詞'; }
+    else if(p1==='記号'){ pos='記号'; }
+    else pos = null;
+    if(!pos) continue;
+    const base = (t.basic_form && t.basic_form!=='*') ? t.basic_form : t.surface_form;
+    out.push({surface:t.surface_form, base, pos});
+  }
+  // ユーザー辞書の語を後から結合
+  if(dictWords.length){
+    for(const w of dictWords){
+      for(let i=0;i<out.length;i++){
+        let acc='', j=i;
+        while(j<out.length && w.startsWith(acc+out[j].surface)){ acc += out[j].surface; j++; if(acc===w) break; }
+        if(acc===w && j>i+1){ out.splice(i, j-i, {surface:w, base:w, pos:'名詞'}); }
+      }
+    }
+  }
+  return out;
+}
+const analyze = (text, dict) => kuroTokenizer ? tokenizeKuromoji(text, dict) : tokenizeSimple(text, dict);
+
+function splitSentences(text){
+  return nfkc(text).split(/[。．.!?！？\n]+/).map(s=>s.trim()).filter(Boolean);
+}
+
+/* ============================================================
+   3. 集計
+   ============================================================ */
+function getSettings(){
+  const pos = new Set($$('#posGrid input:checked').map(i=>i.value));
+  const sw = new Set($('#stopwords').value.split(/[,、\n]/).map(s=>nfkc(s.trim())).filter(Boolean));
+  const dict = $('#userDict').value.split(/[,、\n]/).map(s=>nfkc(s.trim())).filter(Boolean).sort((a,b)=>b.length-a.length);
+  return {
+    pos, stop: sw, dict,
+    minFreq:+$('#minFreq').value, topN:+$('#topN').value, minCooc:+$('#minCooc').value,
+    jaccard:+$('#jaccard').value, maxEdges:+$('#maxEdges').value,
+    unit:$('#coocUnit').value, minLen:+$('#minLen').value, idThr:+$('#idThreshold').value
+  };
+}
+function keepToken(tk, st){
+  if(!st.pos.has(tk.pos)) return false;
+  const w = tk.base;
+  if(!w || w==='*') return false;
+  if(st.stop.has(w)) return false;
+  if(/^[\s\p{P}\p{S}]+$/u.test(w)) return false;
+  if(w.length < st.minLen) return false;
+  return true;
+}
+/* 1件ぶんを処理して {words:[...], units:[[...],[...]]} を返す */
+function processDoc(text, st){
+  const chunks = st.unit==='sentence' ? splitSentences(text) : [text];
+  const units = [], words = [];
+  for(const c of chunks){
+    const ws = analyze(c, st.dict).filter(t=>keepToken(t,st)).map(t=>t.base);
+    if(ws.length) units.push(ws);
+    words.push(...ws);
+  }
+  return {words, units};
+}
+function tally(docs){ // docs: [{id, words, units}]
+  const freq = new Map(), df = new Map();
+  docs.forEach(d=>{
+    d.words.forEach(w=>freq.set(w,(freq.get(w)||0)+1));
+    new Set(d.words).forEach(w=>df.set(w,(df.get(w)||0)+1));
+  });
+  return {freq, df};
+}
+function coocFromUnits(units, termSet){
+  const pair = new Map(), unitDf = new Map();
+  units.forEach(u=>{
+    const s = Array.from(new Set(u.filter(w=>termSet.has(w)))).sort();
+    s.forEach(w=>unitDf.set(w,(unitDf.get(w)||0)+1));
+    for(let i=0;i<s.length;i++) for(let j=i+1;j<s.length;j++){
+      const k = s[i]+'\t'+s[j];
+      pair.set(k,(pair.get(k)||0)+1);
+    }
+  });
+  return {pair, unitDf};
+}
+function buildEdges(pair, unitDf, st){
+  const edges = [];
+  pair.forEach((c,k)=>{
+    if(c < st.minCooc) return;
+    const [a,b] = k.split('\t');
+    const j = c / ((unitDf.get(a)||0) + (unitDf.get(b)||0) - c);
+    if(j < st.jaccard) return;
+    edges.push({source:a, target:b, count:c, jaccard:j});
+  });
+  edges.sort((x,y)=> y.jaccard - x.jaccard || y.count - x.count);
+  return edges.slice(0, st.maxEdges);
+}
+
+/* ============================================================
+   4. IDの対応づけ
+   ============================================================ */
+function normId(s){
+  return nfkc(String(s)).toLowerCase().replace(/[\s_\-–—.·・]/g,'');
+}
+function numPart(s){
+  const m = nfkc(String(s)).match(/\d+/);
+  return m ? String(parseInt(m[0],10)) : null;
+}
+function alphaPart(s){
+  return nfkc(String(s)).toLowerCase().replace(/[^a-z]/g,'');
+}
+function matchIds(pre, post, thr){
+  const pairs = [], usedPost = new Set();
+  const postByExact = new Map(), postByNorm = new Map(), postByNum = new Map();
+  post.forEach((p,i)=>{
+    postByExact.set(p.id, i);
+    const n = normId(p.id); if(!postByNorm.has(n)) postByNorm.set(n,i);
+    const num = numPart(p.id);
+    if(num){ const key = alphaPart(p.id)+'#'+num; if(!postByNum.has(key)) postByNum.set(key,i); }
+  });
+  const take = (i, j, method, score) => { usedPost.add(j); pairs.push({pre:pre[i], post:post[j], method, score}); };
+
+  const pending = [];
+  pre.forEach((p,i)=>{
+    let j = postByExact.get(p.id);
+    if(j!==undefined && !usedPost.has(j)){ take(i,j,'完全一致',0); return; }
+    j = postByNorm.get(normId(p.id));
+    if(j!==undefined && !usedPost.has(j)){ take(i,j,'表記をそろえて一致',0); return; }
+    const num = numPart(p.id);
+    if(num){
+      j = postByNum.get(alphaPart(p.id)+'#'+num);
+      if(j!==undefined && !usedPost.has(j)){ take(i,j,'番号が一致',0); return; }
+    }
+    pending.push(i);
+  });
+  // 近似一致（編集距離）
+  pending.forEach(i=>{
+    if(thr<=0) return;
+    let best=-1, bestD=Infinity;
+    post.forEach((p,j)=>{
+      if(usedPost.has(j)) return;
+      const d = levenshtein(normId(pre[i].id), normId(p.id));
+      if(d < bestD){ bestD = d; best = j; }
+    });
+    if(best>=0 && bestD<=thr) take(i,best,'近似一致（距離'+bestD+'）',bestD);
+  });
+  const matchedPre = new Set(pairs.map(p=>p.pre.id));
+  const preOnly = pre.filter(p=>!matchedPre.has(p.id));
+  const postOnly = post.filter((p,j)=>!usedPost.has(j));
+  return {pairs, preOnly, postOnly};
+}
+
+/* ============================================================
+   5. ネットワークの構築
+   ============================================================ */
+function buildSingleNetwork(docs, st){
+  const {freq, df} = tally(docs);
+  const terms = Array.from(freq.entries()).filter(([,c])=>c>=st.minFreq)
+    .sort((a,b)=>b[1]-a[1]).slice(0, st.topN).map(([w])=>w);
+  const set = new Set(terms);
+  const units = docs.flatMap(d=>d.units);
+  const {pair, unitDf} = coocFromUnits(units, set);
+  const edges = buildEdges(pair, unitDf, st);
+  const nodes = terms.map(w=>({id:w, freq:freq.get(w), df:df.get(w), group:'single'}));
+  return {nodes, edges, freq, df};
+}
+function buildCompareNetwork(preDocs, postDocs, st){
+  const A = tally(preDocs), B = tally(postDocs);
+  const all = new Set([...A.freq.keys(), ...B.freq.keys()]);
+  const scored = [];
+  all.forEach(w=>{
+    const a = A.freq.get(w)||0, b = B.freq.get(w)||0;
+    if(a+b >= st.minFreq) scored.push([w, a+b]);
+  });
+  scored.sort((x,y)=>y[1]-x[1]);
+  const terms = scored.slice(0, st.topN).map(x=>x[0]);
+  const set = new Set(terms);
+  const ca = coocFromUnits(preDocs.flatMap(d=>d.units), set);
+  const cb = coocFromUnits(postDocs.flatMap(d=>d.units), set);
+  const ea = new Map(buildEdges(ca.pair, ca.unitDf, st).map(e=>[e.source+'\t'+e.target, e]));
+  const eb = new Map(buildEdges(cb.pair, cb.unitDf, st).map(e=>[e.source+'\t'+e.target, e]));
+  const keys = new Set([...ea.keys(), ...eb.keys()]);
+  const edges = [];
+  keys.forEach(k=>{
+    const a = ea.get(k), b = eb.get(k), [s,t] = k.split('\t');
+    edges.push({
+      source:s, target:t,
+      jaccard: Math.max(a?a.jaccard:0, b?b.jaccard:0),
+      count: (a?a.count:0)+(b?b.count:0),
+      type: a&&b ? 'both' : (a ? 'pre' : 'post'),
+      jPre: a?a.jaccard:0, jPost: b?b.jaccard:0
+    });
+  });
+  edges.sort((x,y)=>y.jaccard-x.jaccard);
+  const nodes = terms.map(w=>{
+    const a = A.freq.get(w)||0, b = B.freq.get(w)||0;
+    let group;
+    if(a===0) group='new'; else if(b===0) group='gone';
+    else if(b>a) group='up'; else if(b<a) group='down'; else group='same';
+    return {id:w, freq:a+b, preFreq:a, postFreq:b, group};
+  });
+  return {nodes, edges:edges.slice(0, st.maxEdges), A, B, kind:'comp'};
+}
+
+/* ============================================================
+   6. 力学配置と描画
+   ============================================================ */
+const NODE_COLORS = {
+  new:'#C2306B', up:'#E08A2E', same:'#8A94A2', down:'#5B9BD5', gone:'#2F6FB5',
+  single_pre:'#2F6FB5', single_post:'#C2306B'
+};
+const GROUP_LABEL = {new:'事後のみ', up:'増加', same:'変化なし', down:'減少', gone:'事前のみ'};
+
+/* 対応比較の整列配置：
+   事前のみ＝左、増加＝中央上、変化なし＝中央、減少＝中央下、事後のみ＝右。
+   tx/ty は基準位置（±1）、sx/sy はその位置へ引き寄せる強さ。
+   左右の列は縦に広がってほしいので y は弱く、上下の帯は逆に y を強く引く。 */
+const ALIGN_ANCHOR = {
+  gone: {tx:-1, ty: 0, sx:2.4, sy:0.30},
+  new:  {tx: 1, ty: 0, sx:2.4, sy:0.30},
+  up:   {tx: 0, ty:-1, sx:1.5, sy:2.10},
+  down: {tx: 0, ty: 1, sx:1.5, sy:2.10},
+  same: {tx: 0, ty: 0, sx:1.5, sy:0.85}
+};
+const ALIGN_X = 430, ALIGN_Y = 235;
+
+/* 力学配置のあと、各グループを決められた区画に写し取る。
+   区画のなかでの並びは力学配置の結果をそのまま縮尺しているので、
+   関係の近い語どうしは近くに残る。 */
+const ALIGN_REGION = {
+  gone: {x0:-520, x1:-290, y0:-330, y1: 330},
+  up:   {x0:-200, x1: 200, y0:-345, y1:-155},
+  same: {x0:-215, x1: 215, y0:-120, y1: 120},
+  down: {x0:-200, x1: 200, y0: 155, y1: 345},
+  new:  {x0: 290, x1: 520, y0:-330, y1: 330}
+};
+function relaxInBox(arr, R){
+  const min = 44;
+  for(let it=0; it<70; it++){
+    for(let i=0;i<arr.length;i++) for(let j=i+1;j<arr.length;j++){
+      let ux = arr[i].x-arr[j].x, uy = arr[i].y-arr[j].y;
+      let d = Math.hypot(ux,uy);
+      if(d < 0.01){ ux = Math.random()-0.5; uy = Math.random()-0.5; d = 0.01; }
+      if(d < min){
+        const push = (min-d)/2;
+        arr[i].x += ux/d*push; arr[i].y += uy/d*push;
+        arr[j].x -= ux/d*push; arr[j].y -= uy/d*push;
+      }
+    }
+    arr.forEach(n=>{
+      n.x = Math.max(R.x0, Math.min(R.x1, n.x));
+      n.y = Math.max(R.y0, Math.min(R.y1, n.y));
+    });
+  }
+}
+function constrainAligned(net){
+  const groups = {};
+  net.nodes.forEach(nd=>{ const g = ALIGN_REGION[nd.group] ? nd.group : 'same'; (groups[g] = groups[g] || []).push(nd); });
+  Object.keys(groups).forEach(g=>{
+    const arr = groups[g], R = ALIGN_REGION[g];
+    const cx = (R.x0+R.x1)/2, cy = (R.y0+R.y1)/2;
+    if(arr.length === 1){ arr[0].x = cx; arr[0].y = cy; return; }
+    const xs = arr.map(nd=>nd.x), ys = arr.map(nd=>nd.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const sx = (R.x1-R.x0)/Math.max(1, maxX-minX);
+    const sy = (R.y1-R.y0)/Math.max(1, maxY-minY);
+    arr.forEach(nd=>{ nd.x = R.x0 + (nd.x-minX)*sx; nd.y = R.y0 + (nd.y-minY)*sy; });
+    relaxInBox(arr, R);
+  });
+}
+
+function layout(net, opts){
+  const nodes = net.nodes, edges = net.edges;
+  const n = nodes.length; if(!n) return;
+  const W = 1000, H = 700;
+  const aligned = !!(opts.align && net.kind === 'comp');
+  const k = Math.sqrt((W*H)/n) * opts.link * 0.55;
+  const idx = new Map(nodes.map((d,i)=>[d.id,i]));
+  const anchorOf = d => ALIGN_ANCHOR[d.group] || ALIGN_ANCHOR.same;
+  nodes.forEach((d,i)=>{
+    if(aligned){
+      const a = anchorOf(d);
+      d.x = a.tx*ALIGN_X + (Math.random()-0.5)*170;
+      d.y = a.ty*ALIGN_Y + (Math.random()-0.5)*(a.ty ? 150 : 300);
+    }else{
+      const a = 2*Math.PI*i/n, r = 260*(0.6+0.4*Math.random());
+      d.x = Math.cos(a)*r; d.y = Math.sin(a)*r;
+    }
+  });
+  const links = edges.map(e=>({s:idx.get(e.source), t:idx.get(e.target), w:e.jaccard})).filter(l=>l.s!==undefined&&l.t!==undefined);
+  let temp = W/8;
+  const iters = opts.iter;
+  for(let it=0; it<iters; it++){
+    const dx = new Float64Array(n), dy = new Float64Array(n);
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+      let ux = nodes[i].x-nodes[j].x, uy = nodes[i].y-nodes[j].y;
+      let d2 = ux*ux+uy*uy; if(d2<0.01){ ux=Math.random()-0.5; uy=Math.random()-0.5; d2=0.01; }
+      const d = Math.sqrt(d2);
+      const f = (k*k/d) * opts.rep;
+      dx[i]+=ux/d*f; dy[i]+=uy/d*f; dx[j]-=ux/d*f; dy[j]-=uy/d*f;
+    }
+    links.forEach(l=>{
+      const ux = nodes[l.s].x-nodes[l.t].x, uy = nodes[l.s].y-nodes[l.t].y;
+      const d = Math.max(0.01, Math.hypot(ux,uy));
+      const f = (d*d/k) * (0.4 + l.w);
+      dx[l.s]-=ux/d*f; dy[l.s]-=uy/d*f; dx[l.t]+=ux/d*f; dy[l.t]+=uy/d*f;
+    });
+    const g = 0.035*Math.sqrt(n)*0.5;
+    for(let i=0;i<n;i++){
+      if(aligned){
+        const a = anchorOf(nodes[i]);
+        dx[i] += (a.tx*ALIGN_X - nodes[i].x) * g * a.sx;
+        dy[i] += (a.ty*ALIGN_Y - nodes[i].y) * g * a.sy;
+      }else{
+        dx[i] -= nodes[i].x*g;
+        dy[i] -= nodes[i].y*g;
+      }
+      const d = Math.max(0.01, Math.hypot(dx[i],dy[i]));
+      const step = Math.min(d, temp);
+      nodes[i].x += dx[i]/d*step;
+      nodes[i].y += dy[i]/d*step;
+    }
+    temp *= 0.985;
+  }
+  if(aligned) constrainAligned(net);
+}
+
+function computeFit(nodes, W, H){
+  const pad = 56;
+  const xs = nodes.map(n=>n.x), ys = nodes.map(n=>n.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const sx = (W-pad*2)/Math.max(1,(maxX-minX)), sy = (H-pad*2-30)/Math.max(1,(maxY-minY));
+  const s = Math.min(sx, sy);
+  return {
+    s,
+    ox: pad + (W-pad*2 - (maxX-minX)*s)/2 - minX*s,
+    oy: pad + 18 + (H-pad*2-30 - (maxY-minY)*s)/2 - minY*s,
+    maxFreq: Math.max(...nodes.map(n=>n.freq))
+  };
+}
+/* view = {k, tx, ty}：拡大率と平行移動。fit を渡すと再計算しない（ドラッグ中に図が跳ねないように） */
+function drawNetwork(ctx, net, kind, opts, W, H, scale, view, fit){
+  view = view || {k:1, tx:0, ty:0};
+  const nodes = net.nodes.filter(n=>!n.hidden), edges = net.edges;
+  ctx.save();
+  ctx.scale(scale, scale);
+  if(opts.bg !== 'transparent'){ ctx.fillStyle = opts.bg; ctx.fillRect(0,0,W,H); }
+  else ctx.clearRect(0,0,W,H);
+  const dark = opts.bg === '#0E1319';
+  if(!nodes.length){ ctx.restore(); return null; }
+
+  fit = fit || computeFit(nodes, W, H);
+  const {s, ox, oy, maxFreq} = fit;
+  const P = n => ({x: n.x*s+ox, y: n.y*s+oy});
+  const pos = new Map(nodes.map(n=>[n.id, P(n)]));
+  const R = n => (5 + 16*Math.sqrt(n.freq/maxFreq)) * opts.node;
+  ctx.save();
+  ctx.translate(view.tx, view.ty);
+  ctx.scale(view.k, view.k);
+
+  // edges
+  edges.forEach(e=>{
+    const a = pos.get(e.source), b = pos.get(e.target);
+    if(!a||!b) return;
+    let color = dark ? 'rgba(190,200,214,.55)' : 'rgba(120,132,148,.45)';
+    if(kind==='comp'){
+      if(e.type==='pre') color = 'rgba(47,111,181,.75)';
+      else if(e.type==='post') color = 'rgba(194,48,107,.75)';
+      else color = dark ? 'rgba(200,208,220,.5)' : 'rgba(110,122,138,.42)';
+    }else if(kind==='pre') color = 'rgba(47,111,181,.5)';
+    else if(kind==='post') color = 'rgba(194,48,107,.5)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.7 + e.jaccard*7;
+    ctx.beginPath();
+    if(opts.curve){
+      const mx=(a.x+b.x)/2, my=(a.y+b.y)/2, dx=b.x-a.x, dy=b.y-a.y;
+      ctx.moveTo(a.x,a.y);
+      ctx.quadraticCurveTo(mx - dy*0.10, my + dx*0.10, b.x, b.y);
+    }else{ ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); }
+    ctx.stroke();
+  });
+
+  // nodes
+  nodes.forEach(n=>{
+    const p = pos.get(n.id), r = R(n);
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle = kind==='comp' ? NODE_COLORS[n.group] : (kind==='pre'?NODE_COLORS.single_pre:NODE_COLORS.single_post);
+    ctx.globalAlpha = .88; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.4; ctx.strokeStyle = dark ? '#0E1319' : '#fff'; ctx.stroke();
+  });
+
+  // labels
+  ctx.font = `500 ${opts.font}px "Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  nodes.forEach(n=>{
+    const p = pos.get(n.id), r = R(n);
+    const y = p.y + r + opts.font*0.85;
+    ctx.lineWidth = 3.5; ctx.strokeStyle = dark ? 'rgba(14,19,25,.9)' : 'rgba(255,255,255,.92)';
+    ctx.strokeText(n.id, p.x, y);
+    ctx.fillStyle = dark ? '#EAEEF4' : '#131820';
+    ctx.fillText(n.id, p.x, y);
+  });
+
+  ctx.restore(); // ← ここでビュー変換を解除。見出しと凡例は拡大縮小しない
+  // title + legend
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.font = `700 15px "Zen Kaku Gothic New",sans-serif`;
+  ctx.fillStyle = dark ? '#EAEEF4' : '#131820';
+  const titles = {pre:'共起ネットワーク：事前', post:'共起ネットワーク：事後', comp:'共起ネットワーク：事前⇄事後の対応比較'};
+  ctx.fillText(titles[kind], 20, 16);
+  ctx.font = `500 12px "Zen Kaku Gothic New",sans-serif`;
+  let lx = 20, ly = H - 24;
+  const items = kind==='comp'
+    ? [['new','事後のみ'],['up','増加'],['same','変化なし'],['down','減少'],['gone','事前のみ']]
+    : [];
+  items.forEach(([g,lab])=>{
+    ctx.beginPath(); ctx.arc(lx+6, ly+7, 6, 0, Math.PI*2);
+    ctx.fillStyle = NODE_COLORS[g]; ctx.fill();
+    ctx.fillStyle = dark ? '#C9D2DE' : '#5D6875';
+    ctx.fillText(lab, lx+18, ly);
+    lx += 22 + ctx.measureText(lab).width + 14;
+  });
+  if(kind==='comp'){
+    ly -= 22; lx = 20;
+    [['rgba(47,111,181,.9)','事前のみの共起'],['rgba(194,48,107,.9)','事後のみの共起'],[dark?'rgba(200,208,220,.7)':'rgba(110,122,138,.6)','両方に共通']].forEach(([c,lab])=>{
+      ctx.strokeStyle=c; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(lx,ly+7); ctx.lineTo(lx+16,ly+7); ctx.stroke();
+      ctx.fillStyle = dark ? '#C9D2DE' : '#5D6875';
+      ctx.fillText(lab, lx+22, ly);
+      lx += 22 + ctx.measureText(lab).width + 14;
+    });
+  }
+  ctx.restore();
+  return fit;
+}
+
+/* ============================================================
+   7. アプリの状態と実行
+   ============================================================ */
+const state = {nets:{}, kinds:{}, current:'comp', result:null, changeRows:[], pairRows:[], writing:'', filter:'all', ledgerFold:null, ledgerRows:0,
+               view:{k:1, tx:0, ty:0}, tf:null};
+
+function netOpts(){
+  return {
+    rep:+$('#pRep').value, link:+$('#pLink').value, iter:+$('#pIter').value,
+    font:+$('#pFont').value, node:+$('#pNode').value, bg:$('#pBg').value,
+    curve:$('#pCurve').checked, isolate:$('#pIsolate').checked, align:$('#pAlign').checked
+  };
+}
+function applyIsolate(net, hide){
+  const used = new Set();
+  net.edges.forEach(e=>{used.add(e.source); used.add(e.target);});
+  net.nodes.forEach(n=> n.hidden = hide && !used.has(n.id));
+}
+function renderCanvas(){
+  const cv = $('#net'), net = state.nets[state.current];
+  const box = cv.parentElement;
+  const W = box.clientWidth, H = Math.min(620, Math.max(360, Math.round(W*0.62)));
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height);
+  if(!net || !net.nodes.length){
+    $('#netEmpty').classList.remove('hidden');
+    $('#netEmpty').textContent = '条件に合う語がありません。最小出現回数やJaccardのしきい値を下げてください。';
+    return;
+  }
+  $('#netEmpty').classList.add('hidden');
+  if(net._fitW !== W || net._fitH !== H) net._fit = null;
+  const fit = drawNetwork(ctx, net, state.current, netOpts(), W, H, dpr, state.view, net._fit);
+  if(fit){ net._fit = fit; net._fitW = W; net._fitH = H; state.tf = fit; }
+  const shown = net.nodes.filter(n=>!n.hidden).length;
+  const r = state.result;
+  const scope = state.current==='comp'
+    ? `対応した ${r ? r.m.pairs.length : 0} 組だけを集計`
+    : `${state.current==='pre'?'事前':'事後'}の全データ ${r ? (state.current==='pre' ? r.m.pairs.length + r.m.preOnly.length : r.m.pairs.length + r.m.postOnly.length) : 0} 件`;
+  $('#netCaption').textContent = `語 ${shown} 個・リンク ${net.edges.length} 本／${scope}／共起の単位：${$('#coocUnit').selectedOptions[0].textContent}／Jaccard ≧ ${$('#jaccard').value}`;
+}
+function relayoutCurrent(){
+  const net = state.nets[state.current];
+  if(!net) return;
+  const o = netOpts();
+  layout(net, o);
+  applyIsolate(net, o.isolate);
+  net._fit = null;
+  resetView();
+}
+function resetView(){
+  state.view = {k:1, tx:0, ty:0};
+  const net = state.nets[state.current];
+  if(net) net._fit = null;
+  renderCanvas();
+}
+function exportPng(scale){
+  const net = state.nets[state.current];
+  if(!net) return;
+  const W = 1400, H = 900;
+  const cv = document.createElement('canvas');
+  cv.width = W*scale; cv.height = H*scale;
+  const ctx = cv.getContext('2d');
+  // 保存する画像は拡大・移動の状態に関係なく図全体を収める（動かした円の位置はそのまま）
+  drawNetwork(ctx, net, state.current, netOpts(), W, H, scale, {k:1, tx:0, ty:0}, null);
+  const name = {pre:'network_pre', post:'network_post', comp:'network_compare'}[state.current];
+  cv.toBlob(b => download(`${name}_${new Date().toISOString().slice(0,10)}.png`, b), 'image/png');
+}
+
+function run(){
+  const st = getSettings();
+  const pre = parseRecords($('#preText').value);
+  const post = parseRecords($('#postText').value);
+  $('#preCount').textContent = pre.length + ' 件';
+  $('#postCount').textContent = post.length + ' 件';
+  if(!pre.length || !post.length){
+    $('#runMsg').innerHTML = '<span class="err">事前・事後の両方にデータを入れてください。</span>';
+    return;
+  }
+  if(!st.pos.size){
+    $('#runMsg').innerHTML = '<span class="err">品詞を1つ以上選んでください。</span>';
+    return;
+  }
+  $('#runMsg').textContent = '解析中…';
+
+  setTimeout(()=>{
+    const m = matchIds(pre, post, st.idThr);
+    const preDocs = m.pairs.map(p=>({id:p.pre.id, ...processDoc(p.pre.text, st)}));
+    const postDocs = m.pairs.map(p=>({id:p.post.id, ...processDoc(p.post.text, st)}));
+    // 未対応も単独ネットワークには含める
+    const preAll = pre.map(d=>({id:d.id, ...processDoc(d.text, st)}));
+    const postAll = post.map(d=>({id:d.id, ...processDoc(d.text, st)}));
+
+    state.nets.pre = buildSingleNetwork(preAll, st);
+    state.nets.post = buildSingleNetwork(postAll, st);
+    state.nets.comp = buildCompareNetwork(preDocs, postDocs, st);
+    state.result = {m, preDocs, postDocs, st};
+
+    Object.keys(state.nets).forEach(k=>{
+      layout(state.nets[k], netOpts());
+      applyIsolate(state.nets[k], netOpts().isolate);
+    });
+
+    renderLedger(m);
+    renderChange(preDocs, postDocs, st);
+    renderPairs(m, preDocs, postDocs);
+    renderSummary(st, m);
+    renderR(st, m);
+    ['sec3','sec4','sec5','sec6','sec7'].forEach(id=>$('#'+id).classList.remove('hidden'));
+    renderCanvas();
+    $('#runMsg').textContent = `対応 ${m.pairs.length} 組／事前のみ ${m.preOnly.length} 件・事後のみ ${m.postOnly.length} 件`;
+  }, 20);
+}
+
+/* ---- 03 レジャー ---- */
+function renderLedger(m){
+  const counts = {};
+  m.pairs.forEach(p=>{const key=p.method.replace(/（.*/,''); counts[key]=(counts[key]||0)+1;});
+  $('#ledgerLegend').innerHTML =
+    Object.entries(counts).map(([k,v])=>`<span><span class="dot" style="background:var(--post)"></span>${esc(k)} ${v}組</span>`).join('') +
+    `<span><span class="dot" style="background:#C7CED8"></span>未対応 ${m.preOnly.length + m.postOnly.length}件</span>`;
+  const rows = [];
+  m.pairs.forEach(p=>{
+    rows.push(`<div class="lrow">
+      <div class="cell-pre"><span class="chip pre">${esc(p.pre.id)}</span></div>
+      <div class="link"><span>${esc(p.method)}</span></div>
+      <div class="cell-post"><span class="chip post">${esc(p.post.id)}</span></div></div>`);
+  });
+  m.preOnly.forEach(p=>{
+    rows.push(`<div class="lrow">
+      <div class="cell-pre"><span class="chip pre">${esc(p.id)}</span></div>
+      <div class="link dashed"><span>対応なし</span></div>
+      <div class="cell-post"><span class="chip none">—</span></div></div>`);
+  });
+  m.postOnly.forEach(p=>{
+    rows.push(`<div class="lrow">
+      <div class="cell-pre"><span class="chip none">—</span></div>
+      <div class="link dashed"><span>対応なし</span></div>
+      <div class="cell-post"><span class="chip post">${esc(p.id)}</span></div></div>`);
+  });
+  $('#ledger').innerHTML = rows.join('');
+  state.ledgerRows = rows.length;
+  // 行数が多いときは初期状態を折りたたみに。一度手で切り替えたら、その選択を保つ
+  applyLedgerFold(state.ledgerFold === null ? rows.length > 12 : state.ledgerFold);
+}
+function applyLedgerFold(folded){
+  const wrap = $('#ledgerWrap'), btn = $('#ledgerToggle');
+  wrap.classList.toggle('folded', folded);
+  btn.setAttribute('aria-expanded', String(!folded));
+  btn.textContent = folded ? `対応表を表示（${state.ledgerRows}行）` : '折りたたむ';
+}
+
+/* ---- 05 変化 ---- */
+function judge(a,b){
+  if(a===0 && b>0) return ['new','事後のみ'];
+  if(b===0 && a>0) return ['gone','事前のみ'];
+  if(b>a) return ['up','増加'];
+  if(b<a) return ['down','減少'];
+  return ['same','変化なし'];
+}
+function renderChange(preDocs, postDocs, st){
+  const A = tally(preDocs), B = tally(postDocs);
+  const all = new Set([...A.freq.keys(), ...B.freq.keys()]);
+  const rows = [];
+  all.forEach(w=>{
+    const a = A.freq.get(w)||0, b = B.freq.get(w)||0;
+    if(a+b < st.minFreq) return;
+    const [g, lab] = judge(a,b);
+    rows.push({term:w, pre:a, post:b, diff:b-a, preDf:A.df.get(w)||0, postDf:B.df.get(w)||0, g, lab});
+  });
+  rows.sort((x,y)=>Math.abs(y.diff)-Math.abs(x.diff) || (y.pre+y.post)-(x.pre+x.post));
+  state.changeRows = rows;
+  const filters = [['all','すべて'],['new','事後のみ'],['up','増加'],['down','減少'],['gone','事前のみ'],['same','変化なし']];
+  $('#changeFilters').innerHTML = filters.map(([k,l])=>
+    `<button class="filter-btn" data-f="${k}" aria-pressed="${state.filter===k}">${l}</button>`).join('')
+    + `<span class="run-msg" id="changeCount"></span>`;
+  drawChangeTable();
+}
+function drawChangeTable(){
+  const rows = state.changeRows.filter(r=> state.filter==='all' || r.g===state.filter);
+  $('#changeTable').innerHTML =
+    `<thead><tr><th data-k="term">語</th><th data-k="lab">判定</th><th data-k="pre">事前 頻度</th><th data-k="post">事後 頻度</th><th data-k="diff">差</th><th data-k="preDf">事前 人数</th><th data-k="postDf">事後 人数</th></tr></thead><tbody>` +
+    rows.map(r=>`<tr>
+      <td class="term">${esc(r.term)}</td>
+      <td><span class="badge b-${r.g}">${r.lab}</span></td>
+      <td class="num">${r.pre}</td><td class="num">${r.post}</td>
+      <td class="num" style="color:${r.diff>0?'var(--post)':r.diff<0?'var(--pre)':'inherit'}">${r.diff>0?'+':''}${r.diff}</td>
+      <td class="num">${r.preDf}</td><td class="num">${r.postDf}</td></tr>`).join('') + '</tbody>';
+  const c = $('#changeCount'); if(c) c.textContent = rows.length + ' 語';
+}
+function renderPairs(m, preDocs, postDocs){
+  const rows = m.pairs.map((p,i)=>{
+    const a = new Set(preDocs[i].words), b = new Set(postDocs[i].words);
+    const gone = [...a].filter(w=>!b.has(w));
+    const nw = [...b].filter(w=>!a.has(w));
+    const keep = [...a].filter(w=>b.has(w));
+    return {id:p.pre.id+' → '+p.post.id, nPre:a.size, nPost:b.size, gone, nw, keep,
+      rate: a.size+b.size ? (nw.length/Math.max(1,b.size)) : 0};
+  });
+  state.pairRows = rows;
+  $('#pairTable').innerHTML =
+    `<thead><tr><th>ID（事前→事後）</th><th>語数 事前</th><th>語数 事後</th><th>新出率</th><th>事後に現れた語</th><th>事前にあって消えた語</th><th>両方にある語</th></tr></thead><tbody>` +
+    rows.map(r=>`<tr>
+      <td class="term">${esc(r.id)}</td>
+      <td class="num">${r.nPre}</td><td class="num">${r.nPost}</td>
+      <td class="num">${(r.rate*100).toFixed(0)}%</td>
+      <td class="words" style="color:var(--post)">${esc(r.nw.slice(0,10).join('、')) || '—'}</td>
+      <td class="words" style="color:var(--pre)">${esc(r.gone.slice(0,10).join('、')) || '—'}</td>
+      <td class="words">${esc(r.keep.slice(0,10).join('、')) || '—'}</td></tr>`).join('') + '</tbody>';
+}
+
+
+/* ============================================================
+   8. まとめと記述例（06）
+   ============================================================ */
+function netStats(net){
+  const nodes = net.nodes, edges = net.edges;
+  const n = nodes.length, m = edges.length;
+  const deg = new Map(nodes.map(x => [x.id, 0]));
+  edges.forEach(e => {
+    if(deg.has(e.source)) deg.set(e.source, deg.get(e.source) + 1);
+    if(deg.has(e.target)) deg.set(e.target, deg.get(e.target) + 1);
+  });
+  const byDeg = nodes.slice().sort((a,b) => (deg.get(b.id) - deg.get(a.id)) || (b.freq - a.freq));
+  return {
+    n, m,
+    density: n > 1 ? (2*m)/(n*(n-1)) : 0,
+    avgDeg:  n ? (2*m)/n : 0,
+    hub: byDeg[0] || null,
+    hubDeg: byDeg[0] ? deg.get(byDeg[0].id) : 0,
+    isolated: nodes.filter(x => !deg.get(x.id)).length,
+    topFreq: nodes.slice().sort((a,b) => b.freq - a.freq).slice(0, 8),
+    topDeg: byDeg.filter(x => deg.get(x.id) > 0).slice(0, 5),
+    deg
+  };
+}
+function edgeKeySet(net){ return new Set(net.edges.map(e => e.source + '\t' + e.target)); }
+function jaccardOf(A, B){
+  let inter = 0;
+  A.forEach(x => { if(B.has(x)) inter++; });
+  const uni = A.size + B.size - inter;
+  return uni ? inter/uni : 0;
+}
+function chips(arr, cls, valueOf){
+  if(!arr.length) return '<span class="w">（該当なし）</span>';
+  return arr.map(x => `<span class="w ${cls}">${esc(x.id || x.term || x)}${
+    valueOf ? `<span class="n">${valueOf(x)}</span>` : ''}</span>`).join('');
+}
+function statBlock(items){
+  return '<div class="stat-grid">' + items.map(([k,v]) =>
+    `<div class="stat"><span class="v">${v}</span><span class="k">${k}</span></div>`).join('') + '</div>';
+}
+function listWords(arr, n){ return arr.slice(0, n).map(x => x.id || x.term || x); }
+function joinJa(a){ return a.length ? a.map(w => '「' + w + '」').join('') : '該当なし'; }
+
+function renderSummary(st, m){
+  const preNet = state.nets.pre, postNet = state.nets.post;
+  const sPre = netStats(preNet), sPost = netStats(postNet);
+  const preSet = new Set(preNet.nodes.map(x => x.id));
+  const postSet = new Set(postNet.nodes.map(x => x.id));
+  const nodeJ = jaccardOf(preSet, postSet);
+  const edgeJ = jaccardOf(edgeKeySet(preNet), edgeKeySet(postNet));
+  const common = preNet.nodes.filter(x => postSet.has(x.id)).sort((a,b) => b.freq - a.freq);
+  const onlyPre = preNet.nodes.filter(x => !postSet.has(x.id)).sort((a,b) => b.freq - a.freq);
+  const onlyPost = postNet.nodes.filter(x => !preSet.has(x.id)).sort((a,b) => b.freq - a.freq);
+
+  // 対応づいた組だけの増減（05の表と同じデータ）
+  const rows = state.changeRows || [];
+  const cnt = {new:0, up:0, same:0, down:0, gone:0};
+  rows.forEach(r => cnt[r.g]++);
+  const newW  = rows.filter(r => r.g === 'new').sort((a,b) => b.post - a.post);
+  const upW   = rows.filter(r => r.g === 'up').sort((a,b) => b.diff - a.diff);
+  const downW = rows.filter(r => r.g === 'down').sort((a,b) => a.diff - b.diff);
+  const goneW = rows.filter(r => r.g === 'gone').sort((a,b) => b.pre - a.pre);
+  const gained = newW.concat(upW).slice(0, 6);
+  const lost   = goneW.concat(downW).slice(0, 6);
+
+  const card = (s, cls) =>
+    statBlock([
+      ['語（ノード）', s.n], ['共起（エッジ）', s.m],
+      ['平均次数', s.avgDeg.toFixed(2)], ['密度', s.density.toFixed(3)]
+    ]) +
+    `<div class="wordline"><span class="k">よく出てくる語</span>${
+      chips(s.topFreq, cls, x => x.freq)}</div>` +
+    `<div class="wordline"><span class="k">結びつきが多い語</span>${
+      chips(s.topDeg, cls, x => s.deg.get(x.id))}</div>` +
+    `<p class="prose" style="margin:0">${
+      (s.m && s.hub && s.hubDeg)
+        ? `中心にあるのは<b>「${esc(s.hub.id)}」</b>（${s.hubDeg}本の線でつながる）。`
+        : '語どうしをつなぐ共起が見つかりませんでした。最小共起回数やJaccard係数を下げると出てきます。'
+    }${(s.m && s.isolated) ? `どことも結びつかない語が ${s.isolated} 語あります。` : ''}</p>`;
+
+  $('#sumPre').innerHTML  = card(sPre, 'pre');
+  $('#sumPost').innerHTML = card(sPost, 'post');
+
+  const denser = sPre.density === sPost.density ? null : (sPre.density > sPost.density ? '事前' : '事後');
+  $('#sumCompare').innerHTML =
+    statBlock([
+      ['共通する語', common.length + ' 語'],
+      ['事前だけの語', onlyPre.length + ' 語'],
+      ['事後だけの語', onlyPost.length + ' 語'],
+      ['語彙のJaccard', nodeJ.toFixed(2)],
+      ['共起ペアのJaccard', edgeJ.toFixed(2)]
+    ]) +
+    `<div class="wordline"><span class="k">両方に出てくる語</span>${chips(common.slice(0,10), '', x => x.freq)}</div>` +
+    `<div class="wordline"><span class="k">事前のネットワークにだけある語</span>${chips(onlyPre.slice(0,10), 'pre', x => x.freq)}</div>` +
+    `<div class="wordline"><span class="k">事後のネットワークにだけある語</span>${chips(onlyPost.slice(0,10), 'post', x => x.freq)}</div>` +
+    `<h3 class="subhead" style="margin-top:24px">対応がついた ${m.pairs.length} 組での増減</h3>` +
+    statBlock([
+      ['事後のみ', cnt.new + ' 語'], ['増加', cnt.up + ' 語'], ['変化なし', cnt.same + ' 語'],
+      ['減少', cnt.down + ' 語'], ['事前のみ', cnt.gone + ' 語']
+    ]) +
+    `<div class="wordline"><span class="k">事後に現れた・増えた語</span>${chips(gained, 'post', r => '+' + r.diff)}</div>` +
+    `<div class="wordline"><span class="k">事前から消えた・減った語</span>${chips(lost, 'pre', r => r.diff)}</div>` +
+    `<p class="prose">語彙の重なりはJaccard係数で ${nodeJ.toFixed(2)}、共起ペアの重なりは ${edgeJ.toFixed(2)}。${
+      edgeJ < nodeJ - 0.05
+        ? '同じ語を使っていても、語と語の結びつき方は事前と事後で入れ替わっている部分が大きいことになります。'
+        : (edgeJ > nodeJ + 0.05
+            ? '語の顔ぶれが変わった割に、結びつき方の骨格は保たれています。'
+            : '語の入れ替わりと結びつきの入れ替わりが、同じくらいの度合いで起きています。')
+    }${denser ? `ネットワークの密度は${denser}の方が高く、語どうしがより密に結びついています。` : ''}</p>`;
+
+  renderWriting(st, m, {sPre, sPost, nodeJ, edgeJ, common, onlyPre, onlyPost, cnt, gained, lost, newW, upW, downW, goneW, denser});
+}
+
+function renderWriting(st, m, d){
+  const posSel = [...st.pos].join('・');
+  const unitLabel = st.unit === 'sentence' ? '文' : '回答全体';
+  const engine = kuroTokenizer
+    ? '形態素解析器kuromoji.js（IPADIC辞書）を用いて語を抽出し、活用語は基本形に統一した'
+    : '字種・語尾にもとづく簡易的な語の切り出しをおこない（形態素解析器は不使用）';
+  const simRaw = d.edgeJ;
+  const simWord = simRaw >= 0.4 ? '相当程度共通している' : (simRaw >= 0.2 ? '部分的に共通している' : '大きく異なっている');
+
+  const methods =
+    `本研究では、同一の対象者から2時点（事前・事後）で収集した自由記述を対象に、対応のある共起ネットワーク分析をおこなった。` +
+    `事前・事後の記述はIDによって突き合わせ、${m.pairs.length}組が対応づけられた（事前のみ${m.preOnly.length}件、事後のみ${m.postOnly.length}件）。` +
+    `${engine}、品詞が${posSel}である語のうち${st.minLen}文字以上の語を分析対象とした。` +
+    `出現回数${st.minFreq}回以上の語のうち上位${st.topN}語をノードとし、共起の判定は${unitLabel}を単位として、` +
+    `同一単位内での共起が${st.minCooc}回以上かつJaccard係数${st.jaccard}以上の語対をエッジとして描画した（エッジは上位${st.maxEdges}本まで）。` +
+    `ネットワークの可視化には力学モデル（force-directed layout）を用い、ノードの大きさを出現回数、エッジの太さをJaccard係数に対応させた。`;
+
+  const results =
+    `事前のネットワークはノード数${d.sPre.n}、エッジ数${d.sPre.m}（平均次数${d.sPre.avgDeg.toFixed(2)}、密度${d.sPre.density.toFixed(3)}）であり、` +
+    `${(d.sPre.m && d.sPre.hub && d.sPre.hubDeg) ? `「${d.sPre.hub.id}」が次数${d.sPre.hubDeg}で最も高い中心性を示した` : '設定した基準を満たす共起は検出されなかった'}。` +
+    `事後のネットワークはノード数${d.sPost.n}、エッジ数${d.sPost.m}（平均次数${d.sPost.avgDeg.toFixed(2)}、密度${d.sPost.density.toFixed(3)}）であり、` +
+    `${(d.sPost.m && d.sPost.hub && d.sPost.hubDeg) ? `「${d.sPost.hub.id}」が次数${d.sPost.hubDeg}で中心的な語として観察された` : '設定した基準を満たす共起は検出されなかった'}。` +
+    `両時点に共通して出現した語は${d.common.length}語、事前のみに出現した語は${d.onlyPre.length}語、事後のみに出現した語は${d.onlyPost.length}語であり、` +
+    `語彙のJaccard係数は${d.nodeJ.toFixed(2)}、共起ペアのJaccard係数は${d.edgeJ.toFixed(2)}であった。` +
+    `対応づけられた${m.pairs.length}組を対象とした語の増減では、事後にのみ出現した語が${d.cnt.new}語、増加した語が${d.cnt.up}語、` +
+    `変化のなかった語が${d.cnt.same}語、減少した語が${d.cnt.down}語、事前にのみ出現した語が${d.cnt.gone}語であった。` +
+    (d.upW.length || d.downW.length
+      ? (d.upW.length ? `出現が増加した語のうち変化が大きかったものは${joinJa(listWords(d.upW, 3))}` : '') +
+        (d.upW.length && d.downW.length ? '、' : '') +
+        (d.downW.length ? `減少が大きかった語は${joinJa(listWords(d.downW, 3))}` : '') + 'であった。'
+      : '');
+
+  const discussion =
+    (d.common.length
+      ? `事前・事後に共通して現れた語は${joinJa(listWords(d.common, 3))}であり、両時点を通じて一貫した関心が置かれていたことがうかがえる。`
+      : '事前と事後で中心となる語は重なっておらず、記述の焦点そのものが入れ替わったことがうかがえる。') +
+    (d.newW.length || d.upW.length
+      ? `${d.newW.length ? `事後にのみ現れた${joinJa(listWords(d.newW, 3))}` : ''}` +
+        `${d.newW.length && d.upW.length ? 'や、' : ''}` +
+        `${d.upW.length ? `出現が増加した${joinJa(listWords(d.upW, 3))}` : ''}` +
+        `は、2時点のあいだに生じた変化を反映していると考えられる。`
+      : '') +
+    (d.goneW.length || d.downW.length
+      ? `逆に${d.goneW.length ? `事前にのみ見られた${joinJa(listWords(d.goneW, 3))}` : ''}` +
+        `${d.goneW.length && d.downW.length ? 'や、' : ''}` +
+        `${d.downW.length ? `減少した${joinJa(listWords(d.downW, 3))}` : ''}` +
+        `からは、関心の重心が移動した可能性が読み取れる。`
+      : '') +
+    `共起ペアのJaccard係数が${d.edgeJ.toFixed(2)}であったことは、語と語の結びつきの構造が${simWord}ことを示唆する。` +
+    (d.denser ? `また、ネットワークの密度は${d.denser}の方が高く、${d.denser}の記述において語彙間の結びつきがより緊密であったことを示している。` : '') +
+    `ただし、本分析は${m.pairs.length}組の記述にもとづく探索的な検討であり、` +
+    (kuroTokenizer
+      ? '辞書に依存する形態素解析である以上、固有名詞や新語の扱いには限界がある点に留意が必要である。'
+      : '形態素解析器を用いない簡易的な語抽出・品詞推定に基づくため、語の区切りや品詞判定には一定の誤差が含まれる点に留意が必要である。') +
+    `語の増減の解釈にあたっては、記述量そのものの変化もあわせて確認する必要がある。`;
+
+  state.writing = [
+    '【方法】\n' + methods,
+    '【結果】\n' + results,
+    '【考察】\n' + discussion
+  ].join('\n\n');
+
+  $('#sumWriting').innerHTML = [['方法', methods], ['結果', results], ['考察', discussion]]
+    .map(([k, v]) => `<div class="writing"><h4>${k}</h4><p>${esc(v)}</p></div>`).join('');
+}
+
+/* ============================================================
+   8b. Rコードの生成とハイライト
+   ============================================================ */
+function rVec(arr){ return 'c(' + arr.map(s=>'"'+String(s).replace(/"/g,'\\"')+'"').join(', ') + ')'; }
+function buildRCode(st, m){
+  const posMap = {'名詞':'名詞','固有名詞':'名詞','サ変名詞':'名詞','動詞':'動詞','形容詞':'形容詞','形容動詞':'形容詞','副詞':'副詞','感動詞':'感動詞','連体詞':'連体詞','数':'名詞','未知語':'名詞'};
+  const rpos = Array.from(new Set(Array.from(st.pos).map(p=>posMap[p]).filter(Boolean)));
+  const detail = Array.from(st.pos);
+  const stop = Array.from(st.stop);
+  const dict = st.dict;
+  return `# ============================================================
+# 対応のある2テキスト（事前・事後）の比較テキストマイニング
+# Webアプリの設定をそのまま再現したスクリプト
+# 生成日: ${new Date().toLocaleDateString('ja-JP')}
+# ============================================================
+
+# ---- 0. 準備 ------------------------------------------------
+# install.packages(c("dplyr","tidyr","stringr","igraph","ggraph","ggplot2","stringdist"))
+# RMeCab は https://rmecab.jp/ から: install.packages("RMeCab", repos = "https://rmecab.jp/R")
+library(RMeCab)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(igraph)
+library(ggraph)
+library(ggplot2)
+library(stringdist)
+
+# ---- 1. パラメータ（アプリの設定と同じ値） -------------------
+POS_KEEP    <- ${rVec(rpos)}          # 使う品詞
+POS_DETAIL  <- ${rVec(detail)}        # アプリ側の細分類（参考）
+MIN_FREQ    <- ${st.minFreq}                       # 最小出現回数
+TOP_N       <- ${st.topN}                      # ネットワークに載せる語数
+MIN_COOC    <- ${st.minCooc}                       # 最小共起回数
+JACCARD_MIN <- ${st.jaccard}                    # Jaccard係数のしきい値
+MAX_EDGES   <- ${st.maxEdges}                      # 最大リンク数
+MIN_NCHAR   <- ${st.minLen}                       # 語の最小文字数
+ID_MAXDIST  <- ${st.idThr}                       # ID照合で許す編集距離
+UNIT        <- "${st.unit}"              # "doc" = 回答1件 / "sentence" = 文
+STOPWORDS   <- ${rVec(stop)}
+USER_DICT   <- ${dict.length ? rVec(dict) : 'character(0)'}   # 1語として扱う語
+
+# ---- 2. データ読み込み --------------------------------------
+# CSVは 1列目 ID, 2列目 text
+pre  <- read.csv("pre.csv",  stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+post <- read.csv("post.csv", stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+names(pre)  <- c("id", "text")
+names(post) <- c("id", "text")
+
+# ---- 3. IDの対応づけ（ずれていたら近いIDを探す） -------------
+norm_id <- function(x) tolower(gsub("[[:space:]_\\\\-\\\\.]", "", x))
+
+match_ids <- function(pre, post, maxdist = ID_MAXDIST) {
+  a <- norm_id(pre$id); b <- norm_id(post$id)
+  used <- rep(FALSE, length(b))
+  res <- data.frame(pre_id = character(0), post_id = character(0),
+                    method = character(0), stringsAsFactors = FALSE)
+  for (i in seq_along(a)) {
+    j <- which(b == a[i] & !used)[1]                      # 表記をそろえて一致
+    method <- "exact"
+    if (is.na(j)) {                                       # 数字部分で一致
+      na <- str_extract(a[i], "[0-9]+"); nb <- str_extract(b, "[0-9]+")
+      j <- which(!is.na(na) & nb == na & !used)[1]; method <- "number"
+    }
+    if (is.na(j) && maxdist > 0) {                        # 近似一致
+      d <- stringdist(a[i], b, method = "lv"); d[used] <- Inf
+      if (min(d) <= maxdist) { j <- which.min(d); method <- paste0("fuzzy(", min(d), ")") }
+    }
+    if (!is.na(j)) {
+      used[j] <- TRUE
+      res <- rbind(res, data.frame(pre_id = pre$id[i], post_id = post$id[j],
+                                   method = method, stringsAsFactors = FALSE))
+    }
+  }
+  res
+}
+pairs <- match_ids(pre, post)
+cat("対応した組:", nrow(pairs), "/ 事前", nrow(pre), "件, 事後", nrow(post), "件\\n")
+
+pre_m  <- pre[match(pairs$pre_id,  pre$id), ]
+post_m <- post[match(pairs$post_id, post$id), ]
+pre_m$pair  <- seq_len(nrow(pairs))
+post_m$pair <- seq_len(nrow(pairs))
+
+# ---- 4. 形態素解析 ------------------------------------------
+# 複合語を1語にまとめたいときは USER_DICT を MeCab のユーザー辞書に登録する
+tokenize_df <- function(df) {
+  out <- lapply(seq_len(nrow(df)), function(i) {
+    txt <- df$text[i]
+    units <- if (UNIT == "sentence") unlist(strsplit(txt, "[。．!?！？]")) else txt
+    units <- units[nzchar(str_trim(units))]
+    do.call(rbind, lapply(seq_along(units), function(u) {
+      tmp <- tempfile(fileext = ".txt")
+      writeLines(units[u], tmp, useBytes = TRUE)
+      mr <- RMeCabText(tmp); unlink(tmp)
+      w <- vapply(mr, function(x) ifelse(x[8] == "*", x[1], x[8]), "")
+      p <- vapply(mr, function(x) x[2], "")
+      data.frame(pair = df$pair[i], id = df$id[i],
+                 unit = paste0(df$pair[i], "-", u),
+                 term = w, pos = p, stringsAsFactors = FALSE)
+    }))
+  })
+  bind_rows(out) %>%
+    filter(pos %in% POS_KEEP,
+           !term %in% STOPWORDS,
+           nchar(term) >= MIN_NCHAR,
+           !str_detect(term, "^[[:punct:][:digit:]]+$"))
+}
+tk_pre  <- tokenize_df(pre_m)  %>% mutate(time = "pre")
+tk_post <- tokenize_df(post_m) %>% mutate(time = "post")
+tk <- bind_rows(tk_pre, tk_post)
+
+# ---- 5. 語の変化を取り出す ----------------------------------
+freq <- tk %>%
+  count(time, term, name = "freq") %>%
+  pivot_wider(names_from = time, values_from = freq, values_fill = 0) %>%
+  mutate(diff = post - pre,
+         judge = case_when(pre == 0 & post > 0 ~ "事後のみ",
+                           post == 0 & pre > 0 ~ "事前のみ",
+                           post > pre          ~ "増加",
+                           post < pre          ~ "減少",
+                           TRUE                ~ "変化なし")) %>%
+  filter(pre + post >= MIN_FREQ) %>%
+  arrange(desc(abs(diff)))
+write.csv(freq, "change_terms.csv", row.names = FALSE, fileEncoding = "UTF-8")
+
+# IDごとの出入り（対応する回答者の中での変化）
+by_pair <- tk %>%
+  distinct(pair, time, term) %>%
+  group_by(pair, term) %>%
+  summarise(times = paste(sort(time), collapse = "+"), .groups = "drop") %>%
+  mutate(status = recode(times, "pre" = "消えた語", "post" = "現れた語",
+                         "post+pre" = "両方にある語"))
+write.csv(by_pair, "change_by_id.csv", row.names = FALSE, fileEncoding = "UTF-8")
+
+# ---- 6. 共起（Jaccard係数） ---------------------------------
+cooc <- function(d, terms) {
+  d <- d %>% filter(term %in% terms) %>% distinct(unit, term)
+  df <- d %>% count(term, name = "df")
+  j <- d %>% inner_join(d, by = "unit", relationship = "many-to-many") %>%
+    filter(term.x < term.y) %>%
+    count(term.x, term.y, name = "co") %>%
+    filter(co >= MIN_COOC) %>%
+    left_join(df, by = c("term.x" = "term")) %>% rename(df.x = df) %>%
+    left_join(df, by = c("term.y" = "term")) %>% rename(df.y = df) %>%
+    mutate(jaccard = co / (df.x + df.y - co)) %>%
+    filter(jaccard >= JACCARD_MIN) %>%
+    arrange(desc(jaccard)) %>% head(MAX_EDGES)
+  j
+}
+top_terms <- function(d) {
+  d %>% count(term, name = "freq") %>% filter(freq >= MIN_FREQ) %>%
+    arrange(desc(freq)) %>% head(TOP_N) %>% pull(term)
+}
+terms_pre  <- top_terms(tk_pre)
+terms_post <- top_terms(tk_post)
+e_pre  <- cooc(tk_pre,  terms_pre)
+e_post <- cooc(tk_post, terms_post)
+
+# ---- 7. 共起ネットワークを描く ------------------------------
+plot_net <- function(edges, nodes, title, palette) {
+  g <- graph_from_data_frame(
+    edges %>% select(from = term.x, to = term.y, weight = jaccard),
+    vertices = nodes, directed = FALSE)
+  set.seed(42)
+  ggraph(g, layout = "fr") +
+    geom_edge_link(aes(width = weight, colour = weight), alpha = .55, show.legend = FALSE) +
+    geom_node_point(aes(size = freq, colour = group), alpha = .9) +
+    geom_node_text(aes(label = name), repel = TRUE, size = 3.4, family = "sans") +
+    scale_edge_width(range = c(.3, 2.4)) +
+    scale_size(range = c(2, 10)) +
+    scale_colour_manual(values = palette) +
+    labs(title = title, size = "出現回数", colour = "") +
+    theme_graph(base_family = "sans")
+}
+
+nodes_pre <- tk_pre %>% filter(term %in% terms_pre) %>%
+  count(term, name = "freq") %>% rename(name = term) %>% mutate(group = "事前")
+nodes_post <- tk_post %>% filter(term %in% terms_post) %>%
+  count(term, name = "freq") %>% rename(name = term) %>% mutate(group = "事後")
+
+p_pre  <- plot_net(e_pre,  nodes_pre,  "共起ネットワーク：事前", c("事前" = "#2F6FB5"))
+p_post <- plot_net(e_post, nodes_post, "共起ネットワーク：事後", c("事後" = "#C2306B"))
+
+# ---- 8. 対応比較のネットワーク ------------------------------
+terms_cmp <- freq %>% arrange(desc(pre + post)) %>% head(TOP_N) %>% pull(term)
+e_cmp <- bind_rows(
+  cooc(tk_pre,  terms_cmp) %>% mutate(time = "事前のみ"),
+  cooc(tk_post, terms_cmp) %>% mutate(time = "事後のみ")) %>%
+  group_by(term.x, term.y) %>%
+  summarise(jaccard = max(jaccard),
+            link = if (n() > 1) "両方に共通" else first(time), .groups = "drop") %>%
+  arrange(desc(jaccard)) %>% head(MAX_EDGES)
+
+nodes_cmp <- freq %>% filter(term %in% terms_cmp) %>%
+  transmute(name = term, freq = pre + post, group = judge)
+
+g_cmp <- graph_from_data_frame(
+  e_cmp %>% select(from = term.x, to = term.y, weight = jaccard, link),
+  vertices = nodes_cmp %>% filter(name %in% c(e_cmp$term.x, e_cmp$term.y)),
+  directed = FALSE)
+
+set.seed(42)
+p_cmp <- ggraph(g_cmp, layout = "fr") +
+  geom_edge_link(aes(width = weight, colour = link), alpha = .6) +
+  geom_node_point(aes(size = freq, colour = group), alpha = .9) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3.4, family = "sans") +
+  scale_edge_colour_manual(values = c("事前のみ" = "#2F6FB5", "事後のみ" = "#C2306B",
+                                      "両方に共通" = "#8A94A2")) +
+  scale_colour_manual(values = c("事後のみ" = "#C2306B", "増加" = "#E08A2E",
+                                 "変化なし" = "#8A94A2", "減少" = "#5B9BD5",
+                                 "事前のみ" = "#2F6FB5")) +
+  scale_edge_width(range = c(.3, 2.4)) + scale_size(range = c(2, 10)) +
+  labs(title = "共起ネットワーク：事前⇄事後の対応比較", colour = "語の変化",
+       edge_colour = "共起の出方") +
+  theme_graph(base_family = "sans")
+
+# ---- 9. 画像として保存 --------------------------------------
+ggsave("network_pre.png",     p_pre,  width = 10, height = 7, dpi = 300, bg = "white")
+ggsave("network_post.png",    p_post, width = 10, height = 7, dpi = 300, bg = "white")
+ggsave("network_compare.png", p_cmp,  width = 11, height = 8, dpi = 300, bg = "white")
+
+# ---- 10. 検定（任意） ---------------------------------------
+# 対応のある2時点で、語の使用有無が変わったかを McNemar 検定で見る
+check_term <- function(w) {
+  a <- by_pair %>% filter(term == w)
+  n01 <- sum(a$status == "現れた語"); n10 <- sum(a$status == "消えた語")
+  if (n01 + n10 < 5) return(NULL)
+  binom.test(n01, n01 + n10, 0.5)$p.value
+}
+sapply(head(freq$term, 20), check_term)
+`;
+}
+function highlightR(code){
+  const re = /(#[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(function|if|else|for|while|repeat|return|in|TRUE|FALSE|NULL|NA|Inf|library|require)\b|\b(\d+\.?\d*)\b|([A-Za-z._][A-Za-z0-9._]*)(?=\s*\()|(<-|->|%>%|%in%|\$|~|==|!=|<=|>=|&&|\|\||[-+*/=<>!&|])/g;
+  let out = '', last = 0, mm;
+  while((mm = re.exec(code))){
+    out += esc(code.slice(last, mm.index));
+    let cls = 'r-op', txt = mm[0];
+    if(mm[1]) cls = /^#\s*(-{2,}|={2,})/.test(mm[1]) ? 'r-sec' : 'r-cmt';
+    else if(mm[2]) cls = 'r-str';
+    else if(mm[3]) cls = 'r-kw';
+    else if(mm[4]) cls = 'r-num';
+    else if(mm[5]) cls = 'r-fn';
+    out += `<span class="${cls}">${esc(txt)}</span>`;
+    last = mm.index + txt.length;
+  }
+  out += esc(code.slice(last));
+  return out;
+}
+function renderR(st, m){
+  const code = buildRCode(st, m);
+  state.rcode = code;
+  $('#rcode').innerHTML = highlightR(code);
+}
+
+/* ============================================================
+   9. 画面の配線
+   ============================================================ */
+$('#posGrid').innerHTML = POS_LIST.map(p=>
+  `<label class="chk"><input type="checkbox" value="${p}" ${POS_DEFAULT.includes(p)?'checked':''}>${p}</label>`).join('');
+
+$('#runBtn').addEventListener('click', run);
+$('#ledgerToggle').addEventListener('click', ()=>{
+  state.ledgerFold = !$('#ledgerWrap').classList.contains('folded');
+  applyLedgerFold(state.ledgerFold);
+});
+$('#clearBtn').addEventListener('click', ()=>{
+  $('#preText').value=''; $('#postText').value='';
+  $('#preCount').textContent='0 件'; $('#postCount').textContent='0 件';
+  ['sec3','sec4','sec5','sec6','sec7'].forEach(id=>$('#'+id).classList.add('hidden'));
+  $('#runMsg').textContent='';
+});
+['preText','postText'].forEach(id=>{
+  $('#'+id).addEventListener('input', ()=>{
+    const n = parseRecords($('#'+id).value).length;
+    $(id==='preText'?'#preCount':'#postCount').textContent = n + ' 件';
+  });
+});
+function readFile(input, target){
+  input.addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{ $(target).value = r.result; $(target).dispatchEvent(new Event('input')); };
+    r.readAsText(f, 'UTF-8');
+  });
+}
+readFile($('#preFile'), '#preText');
+readFile($('#postFile'), '#postText');
+
+/* ---- CSV / テキストファイルのドラッグ＆ドロップ ---- */
+function loadIntoTextarea(file, target){
+  const zone = document.querySelector(`[data-target="${target}"]`);
+  if(!/\.(csv|txt|tsv)$/i.test(file.name) && !/^text\//.test(file.type)){
+    if(zone) zone.querySelector('.drop-msg').textContent = 'CSVかテキストファイルを入れてください';
+    return;
+  }
+  const r = new FileReader();
+  r.onload = ()=>{
+    let txt = String(r.result);
+    if(/\t/.test(txt.split('\n')[0]) && !/,/.test(txt.split('\n')[0])) txt = txt.replace(/\t/g, ',');
+    $(target).value = txt;
+    $(target).dispatchEvent(new Event('input'));
+    if(zone) zone.querySelector('.drop-msg').textContent = file.name + ' を読み込みました';
+  };
+  r.readAsText(file, 'UTF-8');
+}
+$$('.dropzone').forEach(zone=>{
+  const target = zone.dataset.target;
+  let depth = 0;
+  zone.addEventListener('dragenter', e=>{ e.preventDefault(); depth++; zone.classList.add('over'); });
+  zone.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  zone.addEventListener('dragleave', e=>{ if(--depth <= 0){ depth = 0; zone.classList.remove('over'); } });
+  zone.addEventListener('drop', e=>{
+    e.preventDefault(); depth = 0; zone.classList.remove('over');
+    const dt = e.dataTransfer;
+    if(dt.files && dt.files.length){ loadIntoTextarea(dt.files[0], target); return; }
+    const txt = dt.getData('text/plain');
+    if(txt){ $(target).value = txt; $(target).dispatchEvent(new Event('input')); }
+  });
+});
+// ページの外側にファイルを落としてもブラウザが開かないようにする
+['dragover','drop'].forEach(ev=>window.addEventListener(ev, e=>{
+  if(!e.target.closest || !e.target.closest('.dropzone')) e.preventDefault();
+}));
+
+$('#sampleBtn').addEventListener('click', ()=>{
+  $('#preText').value = [
+'A01,プログラミングは難しそうで不安です。数学が苦手なので心配。',
+'A02,パソコンの操作は少し得意ですが、プログラムは書いたことがありません。',
+'A03,授業で何をするのか分からないので不安が大きいです。',
+'A04,ゲームを作ってみたいけれど、自分には難しいと思います。',
+'A05,英語の命令を覚えるのが大変そうで心配です。',
+'A06,一人で作業するのは苦手なので不安があります。',
+'A07,プログラミングは理系の人がするものだと思っています。',
+'A08,失敗したらどうしようという不安があります。',
+'A09,先生の説明についていけるか心配です。',
+'A10,興味はありますが、難しい印象が強いです。'
+  ].join('\n');
+  $('#postText').value = [
+'A01,実際に動かしてみると楽しかった。エラーも自分で直せました。',
+'A02,プログラムを書く順番を考えるのが面白かったです。',
+'A03,グループで相談しながら作ると理解が進みました。',
+'A04,簡単なゲームを完成させることができて自信がつきました。',
+'A05,英語の命令は少しずつ覚えられました。繰り返しが大事だと思います。',
+'A06,友達と協力して問題を解決できたのが良かったです。',
+'A07,文系でもプログラミングは役に立つと分かりました。',
+'A08,失敗しても直せばいいと分かり、不安が減りました。',
+'A09,先生に質問しながら進められたので理解できました。',
+'A10,難しい部分もありましたが、達成感があって楽しかったです。'
+  ].join('\n');
+  $('#preText').dispatchEvent(new Event('input'));
+  $('#postText').dispatchEvent(new Event('input'));
+});
+
+$$('.tab').forEach(t=>t.addEventListener('click', ()=>{
+  $$('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
+  t.setAttribute('aria-selected','true');
+  state.current = t.dataset.net;
+  resetView();
+}));
+$('#relayout').addEventListener('click', relayoutCurrent);
+$('#resetView').addEventListener('click', resetView);
+
+/* ---- 図を動かす：円のドラッグ／背景のドラッグで移動／ホイールとピンチで拡大縮小 ---- */
+const cvEl = $('#net');
+function nodeAt(mx, my){
+  const net = state.nets[state.current];
+  if(!net || !state.tf) return null;
+  const {s, ox, oy, maxFreq} = state.tf, v = state.view, o = netOpts();
+  const bx = (mx - v.tx)/v.k, by = (my - v.ty)/v.k;
+  let best = null, bd = Infinity;
+  net.nodes.forEach(n=>{
+    if(n.hidden) return;
+    const r = Math.max(8, (5 + 16*Math.sqrt(n.freq/maxFreq)) * o.node);
+    const d = Math.hypot(bx - (n.x*s+ox), by - (n.y*s+oy));
+    if(d <= r && d < bd){ bd = d; best = n; }
+  });
+  return best;
+}
+function toLayout(mx, my){
+  const {s, ox, oy} = state.tf, v = state.view;
+  return {x: ((mx - v.tx)/v.k - ox)/s, y: ((my - v.ty)/v.k - oy)/s};
+}
+function zoomAt(mx, my, factor){
+  const v = state.view;
+  const k = Math.min(8, Math.max(0.25, v.k*factor));
+  const r = k/v.k;
+  v.tx = mx - (mx - v.tx)*r;
+  v.ty = my - (my - v.ty)*r;
+  v.k = k;
+  renderCanvas();
+}
+let grab = null;
+const touches = new Map();
+cvEl.addEventListener('pointerdown', e=>{
+  if(!state.nets[state.current]) return;
+  cvEl.setPointerCapture(e.pointerId);
+  touches.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
+  if(touches.size === 2){
+    const [a,b] = [...touches.values()];
+    grab = {type:'pinch', dist:Math.hypot(a.x-b.x, a.y-b.y)};
+    return;
+  }
+  const n = nodeAt(e.offsetX, e.offsetY);
+  grab = n
+    ? {type:'node', node:n}
+    : {type:'pan', x:e.offsetX, y:e.offsetY, tx:state.view.tx, ty:state.view.ty};
+  cvEl.style.cursor = n ? 'grabbing' : 'move';
+});
+cvEl.addEventListener('pointermove', e=>{
+  const t = touches.get(e.pointerId);
+  if(t){ t.x = e.offsetX; t.y = e.offsetY; }
+  if(!grab){
+    if(state.nets[state.current]) cvEl.style.cursor = nodeAt(e.offsetX, e.offsetY) ? 'grab' : 'default';
+    return;
+  }
+  if(grab.type === 'pinch'){
+    if(touches.size < 2) return;
+    const [a,b] = [...touches.values()];
+    const d = Math.hypot(a.x-b.x, a.y-b.y);
+    if(grab.dist > 0) zoomAt((a.x+b.x)/2, (a.y+b.y)/2, d/grab.dist);
+    grab.dist = d;
+  }else if(grab.type === 'node'){
+    const p = toLayout(e.offsetX, e.offsetY);
+    grab.node.x = p.x; grab.node.y = p.y;
+    renderCanvas();
+  }else{
+    state.view.tx = grab.tx + (e.offsetX - grab.x);
+    state.view.ty = grab.ty + (e.offsetY - grab.y);
+    renderCanvas();
+  }
+});
+function endGrab(e){
+  touches.delete(e.pointerId);
+  if(touches.size === 0) grab = null;
+  cvEl.style.cursor = 'default';
+}
+cvEl.addEventListener('pointerup', endGrab);
+cvEl.addEventListener('pointercancel', endGrab);
+cvEl.addEventListener('wheel', e=>{
+  if(!state.nets[state.current]) return;
+  e.preventDefault();
+  zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY*0.0015));
+}, {passive:false});
+cvEl.addEventListener('dblclick', resetView);
+$('#dlPng').addEventListener('click', ()=>exportPng(1.5));
+$('#dlSvgLike').addEventListener('click', ()=>exportPng(3));
+[['pRep','vRep'],['pLink','vLink'],['pIter','vIter'],['pFont','vFont'],['pNode','vNode']].forEach(([a,b])=>{
+  const el = $('#'+a);
+  el.addEventListener('input', ()=>{ $('#'+b).textContent = el.value; });
+  el.addEventListener('change', ()=>{
+    if(['pRep','pLink','pIter'].includes(a)) relayoutCurrent(); else renderCanvas();
+  });
+});
+$('#pBg').addEventListener('change', renderCanvas);
+$('#pCurve').addEventListener('change', renderCanvas);
+$('#pAlign').addEventListener('change', ()=>{
+  const o = netOpts();
+  if(state.nets.comp){ layout(state.nets.comp, o); applyIsolate(state.nets.comp, o.isolate); state.nets.comp._fit = null; }
+  if(state.current === 'comp') resetView(); else renderCanvas();
+});
+$('#pIsolate').addEventListener('change', ()=>{
+  Object.values(state.nets).forEach(n=>{ if(n){ applyIsolate(n, $('#pIsolate').checked); n._fit = null; } });
+  renderCanvas();
+});
+window.addEventListener('resize', ()=>{ if(state.nets[state.current]) renderCanvas(); });
+
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.filter-btn');
+  if(b){ state.filter = b.dataset.f; $$('.filter-btn').forEach(x=>x.setAttribute('aria-pressed', x===b)); drawChangeTable(); }
+  const th = e.target.closest('#changeTable th');
+  if(th && th.dataset.k){
+    const k = th.dataset.k;
+    const numeric = ['pre','post','diff','preDf','postDf'].includes(k);
+    state.changeRows.sort((x,y)=> numeric ? y[k]-x[k] : String(x[k]).localeCompare(String(y[k]),'ja'));
+    drawChangeTable();
+  }
+});
+$('#dlChangeCsv').addEventListener('click', ()=>{
+  const head = '語,判定,事前頻度,事後頻度,差,事前人数,事後人数\n';
+  const body = state.changeRows.map(r=>[r.term,r.lab,r.pre,r.post,r.diff,r.preDf,r.postDf].join(',')).join('\n');
+  download('change_terms.csv', '\uFEFF'+head+body, 'text/csv;charset=utf-8');
+});
+$('#dlPairCsv').addEventListener('click', ()=>{
+  const head = 'ID,語数_事前,語数_事後,新出率,事後に現れた語,消えた語,両方にある語\n';
+  const body = state.pairRows.map(r=>[
+    '"'+r.id+'"', r.nPre, r.nPost, (r.rate*100).toFixed(1)+'%',
+    '"'+r.nw.join(' ')+'"', '"'+r.gone.join(' ')+'"', '"'+r.keep.join(' ')+'"'
+  ].join(',')).join('\n');
+  download('change_by_id.csv', '\uFEFF'+head+body, 'text/csv;charset=utf-8');
+});
+$('#copyR').addEventListener('click', async ()=>{
+  try{ await navigator.clipboard.writeText(state.rcode); $('#copyR').textContent='コピーしました'; }
+  catch(e){ $('#copyR').textContent='コピーできません'; }
+  setTimeout(()=>$('#copyR').textContent='コピー', 1600);
+});
+$('#dlR').addEventListener('click', ()=> download('paired_text_mining.R', state.rcode, 'text/plain;charset=utf-8'));
+$('#copyWriting').addEventListener('click', async ()=>{
+  try{ await navigator.clipboard.writeText(state.writing || ''); $('#copyWriting').textContent='コピーしました'; }
+  catch(e){ $('#copyWriting').textContent='コピーできません'; }
+  setTimeout(()=>$('#copyWriting').textContent='記述例をまとめてコピー', 1600);
+});
+
+/* ============================================================
+   kuromoji（高精度モード）
+   ------------------------------------------------------------
+   Google Apps Script（HtmlService のサンドボックス iframe）で
+   止まってしまう問題への対応。
+
+   原因：kuromoji 内部の辞書読み込みは XMLHttpRequest の onload の中で
+   gunzip している。CDN が .gz を Content-Encoding: gzip で返すと
+   ブラウザ側で先に解凍されるため gunzip が例外を投げ、その例外が
+   onload の中で捨てられてコールバックが呼ばれない。結果 build() が
+   永久に返らず「読み込んでいます…」のまま停止する。
+
+   対策：辞書取得の間だけ XMLHttpRequest を差し替え、自前の fetch で
+   取得する。解凍済みなら gzip し直して kuromoji に渡し、必ず
+   onload か onerror のどちらかを呼ぶ。加えて全体にタイムアウトを
+   かけ、どんな失敗でも必ず画面に理由を出して停止しないようにする。
+   ============================================================ */
+const KURO_BASES = [
+  'https://cdn.jsdelivr.net/npm/kuromoji@0.1.2',
+  'https://fastly.jsdelivr.net/npm/kuromoji@0.1.2',
+  'https://unpkg.com/kuromoji@0.1.2'
+];
+const KURO_FILE_TIMEOUT  = 60000;   // 辞書1ファイルあたり
+const KURO_SCRIPT_TIMEOUT= 30000;   // 本体スクリプト
+const KURO_TOTAL_TIMEOUT = 240000;  // 辞書12ファイル全体
+
+function withTimeout(promise, ms, label){
+  return new Promise((res, rej)=>{
+    const t = setTimeout(()=> rej(new Error(label + 'がタイムアウトしました')), ms);
+    promise.then(v=>{ clearTimeout(t); res(v); }, e=>{ clearTimeout(t); rej(e); });
+  });
+}
+function loadScript(src){
+  return withTimeout(new Promise((res,rej)=>{
+    const s = document.createElement('script');
+    s.src = src; s.async = true;
+    s.onload = ()=> res();
+    s.onerror = ()=> rej(new Error('本体スクリプトを取得できません'));
+    document.head.appendChild(s);
+  }), KURO_SCRIPT_TIMEOUT, '本体スクリプトの取得');
+}
+function shortHost(u){ try{ return u.replace(/^https?:\/+/,'').split('/')[0]; }catch(e){ return u; } }
+
+/* kuromoji は内部で path.join を使うため https:// が https:/ に潰れる。
+   fetch に渡す前に戻す。 */
+function fixUrl(u){ return String(u).replace(/^(https?:)\/(?!\/)/i, '$1//'); }
+const isGzip = u8 => u8.length > 2 && u8[0] === 0x1f && u8[1] === 0x8b;
+
+/* CDN 側で解凍済みだった場合に、kuromoji が期待する gzip へ戻す */
+async function regzip(u8){
+  if(typeof CompressionStream === 'undefined'){
+    throw new Error('辞書が解凍済みで、この環境では再圧縮できません');
+  }
+  const stream = new Blob([u8]).stream().pipeThrough(new CompressionStream('gzip'));
+  if(typeof Response !== 'undefined'){
+    try{ return new Uint8Array(await new Response(stream).arrayBuffer()); }catch(e){ /* 下の手順へ */ }
+  }
+  const reader = stream.getReader(), chunks = [];
+  let len = 0, r;
+  while(!(r = await reader.read()).done){ chunks.push(r.value); len += r.value.length; }
+  const out = new Uint8Array(len);
+  let at = 0;
+  for(const c of chunks){ out.set(c, at); at += c.length; }
+  return out;
+}
+
+/* 辞書ファイル（*.dat.gz）の取得だけを横取りする XMLHttpRequest */
+function installDictFetcher(onProgress){
+  const Real = window.XMLHttpRequest;
+  const inflight = [];
+  let failed = false;   // 1つ失敗したら以降は通知せず、残りの通信も止める
+  function ShimXHR(){
+    this.status = 0; this.response = null; this.responseType = '';
+    this.onload = null; this.onerror = null; this.ontimeout = null;
+    this._url = ''; this._method = 'GET'; this._real = null;
+  }
+  ShimXHR.prototype.open = function(method, url){ this._method = method; this._url = String(url); };
+  ShimXHR.prototype.setRequestHeader = function(){};
+  ShimXHR.prototype.abort = function(){ if(this._real){ try{ this._real.abort(); }catch(e){} } };
+  ShimXHR.prototype.send = function(body){
+    const self = this, url = fixUrl(this._url);
+
+    // 辞書以外は本物の XMLHttpRequest に任せる
+    if(!/\.dat\.gz(\?|$)/i.test(url)){
+      const r = new Real(); this._real = r;
+      try{ r.responseType = this.responseType; }catch(e){}
+      r.onload = function(){
+        self.status = r.status; self.response = r.response;
+        try{ self.responseText = r.responseText; }catch(e){}
+        if(self.onload) self.onload.call(self);
+      };
+      r.onerror = function(e){ self.status = r.status; if(self.onerror) self.onerror.call(self, e); };
+      r.open(this._method, url, true);
+      r.send(body);
+      return;
+    }
+
+    /* 取得は必ず「本物の XMLHttpRequest」で行う。
+       GAS のサンドボックス内では fetch が postMessage 経由の代理実装に
+       差し替わっており、init に AbortSignal を渡すと構造化クローンに
+       失敗して DataCloneError になるため、fetch は使わない。 */
+    const file = url.split('/').pop();
+    const fail = err =>{
+      self.status = 0;
+      if(failed) return;            // 二重通知を避ける
+      failed = true;
+      inflight.forEach(r=>{ try{ r.abort(); }catch(e){} });
+      if(self.onerror) self.onerror.call(self, err instanceof Error ? err : new Error(String(err)));
+    };
+    const finish = u8 =>{
+      self.status = 200;
+      self.response = (u8.byteOffset === 0 && u8.byteLength === u8.buffer.byteLength)
+        ? u8.buffer
+        : u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      if(onProgress) onProgress();
+      // onload 内の例外（kuromoji 側の解凍失敗など）を握り潰さない
+      try{ if(self.onload) self.onload.call(self); }
+      catch(e){ fail(e); }
+    };
+
+    try{
+      const r = new Real();
+      this._real = r;
+      inflight.push(r);
+      r.open('GET', url, true);
+      r.responseType = 'arraybuffer';
+      try{ r.timeout = KURO_FILE_TIMEOUT; }catch(e){}
+      r.onload = function(){
+        if(failed) return;
+        if(r.status && r.status !== 200){ fail(new Error('HTTP ' + r.status + '（' + file + '）')); return; }
+        if(!r.response){ fail(new Error('空の応答（' + file + '）')); return; }
+        let u8;
+        try{ u8 = new Uint8Array(r.response); }
+        catch(e){ fail(new Error('応答を読めません（' + file + '）')); return; }
+        if(isGzip(u8)) finish(u8);
+        else regzip(u8).then(finish).catch(fail);   // 自動解凍されていたら戻す
+      };
+      r.onerror   = ()=> fail(new Error('通信できません（' + file + '）'));
+      r.ontimeout = ()=> fail(new Error('タイムアウト（' + file + '）'));
+      r.send();
+    }catch(e){ fail(e); }
+  };
+  window.XMLHttpRequest = ShimXHR;
+  return (cancel)=>{
+    window.XMLHttpRequest = Real;
+    if(cancel){ failed = true; inflight.forEach(r=>{ try{ r.abort(); }catch(e){} }); }
+  };
+}
+
+$('#loadKuromoji').addEventListener('click', async ()=>{
+  const btn = $('#loadKuromoji'), msg = $('#kuroMsg');
+  btn.disabled = true;
+
+  const customEl = $('#kuroBase');
+  const custom = customEl ? customEl.value.trim().replace(/\/+$/,'') : '';
+  const bases = custom ? [custom].concat(KURO_BASES) : KURO_BASES.slice();
+  const errors = [];
+
+  for(const base of bases){
+    let restore = null;
+    try{
+      msg.textContent = '本体を読み込み中…（' + shortHost(base) + '）';
+      if(!window.kuromoji) await loadScript(base + '/build/kuromoji.js');
+      if(!window.kuromoji) throw new Error('kuromoji本体を読み込めません');
+
+      let done = 0;
+      restore = installDictFetcher(()=>{
+        done++;
+        msg.textContent = '辞書を読み込み中… ' + done + '/12（約15MB、初回のみ）';
+      });
+      msg.textContent = '辞書を読み込み中… 0/12（約15MB、初回のみ）';
+
+      await withTimeout(new Promise((res, rej)=>{
+        try{
+          kuromoji.builder({dicPath: base + '/dict/'}).build((err, tk)=>{
+            if(err) rej(err instanceof Error ? err : new Error(String(err && err.message || err)));
+            else { kuroTokenizer = tk; res(); }
+          });
+        }catch(e){ rej(e); }
+      }), KURO_TOTAL_TIMEOUT, '辞書の読み込み');
+
+      restore(); restore = null;
+      break;
+    }catch(e){
+      if(restore) restore(true);
+      errors.push(shortHost(base) + '：' + (e && e.message ? e.message : e));
+    }
+  }
+
+  if(kuroTokenizer){
+    $('#modePill').textContent = '形態素解析：高精度モード（kuromoji.js）';
+    $('#modePill').classList.add('on');
+    btn.classList.add('hidden');
+    if($('#kuroBaseRow')) $('#kuroBaseRow').classList.add('hidden');
+    if(state.result){
+      msg.textContent = '読み込みました。高精度モードで解析し直しています…';
+      setTimeout(()=>{ run(); msg.textContent = '読み込みました。'; }, 30);
+    }else{
+      msg.textContent = '読み込みました。「解析を実行」を押してください。';
+    }
+  }else{
+    btn.disabled = false;
+    if($('#kuroBaseRow')) $('#kuroBaseRow').classList.remove('hidden');
+    msg.innerHTML = '<span class="err">辞書を取得できませんでした（' +
+      errors.join(' / ').replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) +
+      '）。簡易モードのままでも分析は進められます。</span>';
+  }
+});
+</script>
+</body>
+</html>

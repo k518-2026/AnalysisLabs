@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Studio — データ分析ラボ</title>
+  
+  <!-- 1. 外部ライブラリ群 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- 2. アプリ全体のスタイリング -->
+  <style id="base-style">
+    :root {
+      --bg-app: #f3f4f6; --bg-panel: #ffffff; --border-color: #e5e7eb;
+      --text-main: #1f2937; --text-muted: #6b7280; --accent: #4f46e5;
+      --accent-hover: #4338ca; --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1); --radius: 12px;
+    }
+    body { display: flex; flex-direction: column; height: 100vh; margin: 0; background-color: var(--bg-app); font-family: 'Noto Sans JP', sans-serif; color: var(--text-main); }
+    
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-panel); color: var(--text-main); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-shadow: var(--shadow-sm); }
+    .btn:hover { background-color: #f9fafb; border-color: #d1d5db; }
+    .btn-primary { background-color: var(--accent); color: white; border: none; }
+    .btn-primary:hover { background-color: var(--accent-hover); }
+    .btn-icon { padding: 8px; border: none; box-shadow: none; color: var(--text-muted); }
+    .btn-icon:hover { background-color: #f3f4f6; color: var(--text-main); }
+    .btn-danger { color: #dc2626; } .btn-danger:hover { background-color: #fef2f2; color: #b91c1c; }
+
+    #main-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background-color: var(--bg-panel); border-bottom: 1px solid var(--border-color); z-index: 10; }
+    .toolbar-title { font-weight: 700; font-size: 16px; color: var(--text-main); }
+    .export-group { display: flex; gap: 8px; }
+
+    #main-container { display: flex; flex: 1; padding: 16px; gap: 16px; overflow: hidden; }
+    .panel { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-panel); border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; position: relative; }
+
+    #editor-toolbar { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border-color); background-color: #f9fafb; }
+    .editor-tools-left { display: flex; gap: 4px; }
+    .tool-divider { width: 1px; background-color: var(--border-color); margin: 0 4px; }
+    
+    #editor { flex: 1; padding: 20px; background-color: transparent; border: none; resize: none; font-size: 15px; line-height: 1.7; font-family: 'Roboto Mono', monospace; color: #374151; outline: none; }
+    #editor::placeholder { color: #9ca3af; font-style: italic; }
+    .panel.dragover { border: 2px dashed var(--accent); background-color: #eef2ff; }
+
+    #search-bar { position: absolute; top: 60px; right: 20px; background: var(--bg-panel); padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-md); display: none; z-index: 20; flex-direction: column; gap: 8px; width: 250px; }
+    .search-row { display: flex; gap: 8px; }
+    .search-input { flex: 1; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 4px; outline: none; }
+    .search-input:focus { border-color: var(--accent); }
+    .close-search { position: absolute; top: 8px; right: 8px; cursor: pointer; color: var(--text-muted); }
+  </style>
+
+  <!-- 3. プレビュー＆エクスポート用デザイン -->
+  <style id="preview-style">
+    #preview-container { padding: 24px 32px; overflow-y: auto; scroll-behavior: smooth; }
+    #preview { color: #24292f; line-height: 1.6; font-family: 'Noto Sans JP', sans-serif; font-size: 16px; }
+    #preview strong, #preview b { font-weight: 700; color: #111827; }
+    
+    #preview h1, #preview h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; margin-top: 24px; font-weight: 700; }
+    #preview h3, #preview h4 { font-weight: 700; }
+    #preview blockquote { border-left: 4px solid #d0d7de; padding: 0 1em; color: #57606a; margin: 0; }
+    #preview code { background-color: rgba(175,184,193,0.2); padding: 0.2em 0.4em; border-radius: 6px; font-family: 'Roboto Mono', monospace; font-size: 0.9em; }
+    
+    #preview table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+    #preview th, #preview td { border: 1px solid #d0d7de; padding: 8px 12px; }
+    #preview th { background-color: #f6f8fa; font-weight: 700; }
+    #preview tr:nth-child(even) { background-color: #f6f8fa; }
+    
+    /* 印刷/PDF出力時の改ページ制御 */
+    #preview pre, #preview table, #preview img, #preview blockquote { page-break-inside: avoid; break-inside: avoid; }
+    #preview pre { background-color: #f6f8fa; padding: 16px; overflow: auto; border-radius: 6px; }
+    
+    #preview a { color: #0969da; text-decoration: none; }
+    #preview a:hover { text-decoration: underline; }
+    
+    /* PDF化時の余分なスクロールバーなどを隠すハック */
+    @media print {
+      #preview-container { overflow: visible !important; padding: 0 !important; }
+    }
+  </style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-prep);--bg-app:var(--al-bg);--bg-panel:var(--al-surface);--border-color:var(--al-line);--text-main:var(--al-ink);--text-muted:var(--al-ink-2);--accent:var(--al-cat);--accent-hover:var(--al-cat-deep);}body{font-family:var(--al-sans)}body{height:calc(100vh - var(--al-bar-h))}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#prep">データの準備</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>Markdown Studio</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+  <!-- 4. HTML構造 -->
+  <div id="main-toolbar">
+    <div class="toolbar-title"><i class="fa-solid fa-pen-nib" style="margin-right: 8px; color: var(--accent);"></i>Markdown Studio</div>
+    <div class="export-group">
+      <button class="btn" onclick="exportHTML()"><i class="fa-brands fa-html5"></i> HTML出力</button>
+      <button class="btn" onclick="exportWord()"><i class="fa-solid fa-file-word"></i> Word出力</button>
+      <button class="btn btn-primary" onclick="exportPDF()"><i class="fa-solid fa-file-pdf"></i> PDF出力</button>
+    </div>
+  </div>
+
+  <div id="main-container">
+    <div class="panel" id="editor-panel">
+      <div id="editor-toolbar">
+        <div class="editor-tools-left">
+          <button class="btn btn-icon btn-danger" onclick="clearEditor()" title="新規作成（すべて消去）"><i class="fa-solid fa-file-circle-plus"></i></button>
+          <div class="tool-divider"></div>
+          <button class="btn btn-icon" onclick="undo()" title="元に戻す"><i class="fa-solid fa-rotate-left"></i></button>
+          <button class="btn btn-icon" onclick="redo()" title="やり直し"><i class="fa-solid fa-rotate-right"></i></button>
+          <button class="btn btn-icon" onclick="toggleSearch()" title="検索・置換"><i class="fa-solid fa-magnifying-glass"></i></button>
+          <div class="tool-divider"></div>
+          <button class="btn btn-icon" onclick="insertMarkdown('# ', '')" title="見出し"><i class="fa-solid fa-heading"></i></button>
+          <button class="btn btn-icon" onclick="insertMarkdown('**', '**')" title="太字"><i class="fa-solid fa-bold"></i></button>
+          <button class="btn btn-icon" onclick="insertMarkdown('- ', '')" title="リスト"><i class="fa-solid fa-list-ul"></i></button>
+          <button class="btn btn-icon" onclick="insertMarkdown('| 見出し | 見出し |\n|---|---|\n| 内容 | 内容 |', '')" title="テーブル"><i class="fa-solid fa-table"></i></button>
+          <button class="btn btn-icon" onclick="insertLink()" title="リンク・アンカー"><i class="fa-solid fa-link"></i></button>
+        </div>
+        <button class="btn" onclick="exportMarkdown()" title="Ctrl+S / Cmd+S"><i class="fa-solid fa-download"></i> MD保存</button>
+      </div>
+      
+      <div id="search-bar">
+        <i class="fa-solid fa-xmark close-search" onclick="toggleSearch()"></i>
+        <div class="search-row">
+          <input type="text" id="search-input" class="search-input" placeholder="検索ワード">
+          <button class="btn" onclick="findNext()">次へ</button>
+        </div>
+        <div class="search-row">
+          <input type="text" id="replace-input" class="search-input" placeholder="置換ワード">
+          <button class="btn" onclick="replaceText()">置換</button>
+        </div>
+      </div>
+      <textarea id="editor" placeholder="ここにMarkdownを入力するか、ファイルをドロップしてください..."></textarea>
+    </div>
+    <div class="panel" id="preview-container">
+      <div id="preview"></div>
+    </div>
+  </div>
+
+  <!-- 5. JavaScript -->
+  <script>
+    const editor = document.getElementById('editor');
+    const preview = document.getElementById('preview');
+    let undoStack = []; let redoStack = [];
+
+    marked.setOptions({ gfm: true, breaks: true });
+
+    function pushHistory() { undoStack.push(editor.value); redoStack = []; }
+
+    // --- 完全版プレビュー更新（アンカーと外部リンクの統合制御） ---
+    function updatePreview() {
+      const rawHtml = marked.parse(editor.value);
+      const cleanHtml = DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'id', 'rel'] });
+      preview.innerHTML = cleanHtml;
+      
+      const headings = preview.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      headings.forEach(heading => {
+        if (!heading.id) heading.id = heading.textContent.trim();
+      });
+      
+      const links = preview.querySelectorAll('a');
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        if (href.startsWith('#')) {
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
+            try {
+              const targetId = decodeURIComponent(href.substring(1));
+              const targetElement = Array.from(headings).find(h => h.id === targetId);
+              if (targetElement) targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) { console.warn("リンク先が見つかりません", err); }
+          });
+        } else {
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener noreferrer');
+        }
+      });
+      
+      localStorage.setItem('md_draft', editor.value);
+    }
+
+    editor.addEventListener('input', () => {
+      clearTimeout(editor.historyTimeout);
+      editor.historyTimeout = setTimeout(pushHistory, 1000);
+      updatePreview();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      editor.value = localStorage.getItem('md_draft') || "";
+      pushHistory(); updatePreview();
+    });
+
+    function clearEditor() {
+      if (confirm('エディタの内容をすべて消去して新規作成しますか？\n※保存していないデータは失われます。')) {
+        editor.value = ""; localStorage.removeItem('md_draft');
+        undoStack = []; redoStack = []; pushHistory(); updatePreview(); editor.focus();
+      }
+    }
+    function undo() { if (undoStack.length > 1) { redoStack.push(undoStack.pop()); editor.value = undoStack[undoStack.length - 1]; updatePreview(); } }
+    function redo() { if (redoStack.length > 0) { const val = redoStack.pop(); undoStack.push(val); editor.value = val; updatePreview(); } }
+
+    function insertMarkdown(prefix, suffix) {
+      pushHistory();
+      const start = editor.selectionStart, end = editor.selectionEnd, text = editor.value;
+      const selectedText = text.substring(start, end);
+      editor.value = text.substring(0, start) + prefix + selectedText + suffix + text.substring(end);
+      editor.focus();
+      const newCursorPos = selectedText.length === 0 ? start + prefix.length : start + prefix.length + selectedText.length + suffix.length;
+      editor.setSelectionRange(newCursorPos, newCursorPos);
+      updatePreview();
+    }
+
+    function insertLink() {
+      const url = prompt('リンク先のURL（または #から始まる見出しID）を入力してください', 'https://');
+      if (url !== null && url.trim() !== "") insertMarkdown('[', `](${url})`);
+    }
+
+    function toggleSearch() {
+      const sb = document.getElementById('search-bar');
+      sb.style.display = sb.style.display === 'flex' ? 'none' : 'flex';
+      if(sb.style.display === 'flex') document.getElementById('search-input').focus();
+    }
+    function findNext() {
+      const query = document.getElementById('search-input').value;
+      if(!query) return;
+      const index = editor.value.indexOf(query, editor.selectionStart + 1);
+      if (index !== -1) { editor.setSelectionRange(index, index + query.length); editor.focus(); }
+    }
+    function replaceText() {
+      const query = document.getElementById('search-input').value;
+      const replacement = document.getElementById('replace-input').value;
+      if (editor.value.substring(editor.selectionStart, editor.selectionEnd) === query) { pushHistory(); editor.setRangeText(replacement); updatePreview(); } else { findNext(); }
+    }
+
+    const editorPanel = document.getElementById('editor-panel');
+    editorPanel.addEventListener('dragover', (e) => { e.preventDefault(); editorPanel.classList.add('dragover'); });
+    editorPanel.addEventListener('dragleave', (e) => { e.preventDefault(); editorPanel.classList.remove('dragover'); });
+    editorPanel.addEventListener('drop', (e) => {
+      e.preventDefault(); editorPanel.classList.remove('dragover');
+      const file = e.dataTransfer.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => { pushHistory(); editor.value = ev.target.result; updatePreview(); };
+      reader.readAsText(file);
+    });
+
+    function validateContent() {
+      if (editor.value.trim() === "") { alert("出力する内容がありません。テキストを入力してください。"); return false; }
+      return true;
+    }
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+    }
+
+    function exportPDF() {
+      if (!validateContent()) return;
+      const opt = { 
+        margin:       15, 
+        filename:     'document.pdf', 
+        image:        { type: 'jpeg', quality: 1.0 }, 
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 }, 
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+      };
+      html2pdf().set(opt).from(preview).save();
+    }
+    
+    function exportWord() {
+      if (!validateContent()) return;
+      const preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'></head><body>";
+      downloadBlob(new Blob(['\ufeff', preHtml + preview.innerHTML + "</body></html>"], { type: 'application/msword' }), 'document.doc');
+    }
+    
+    function exportHTML() {
+      if (!validateContent()) return;
+      const htmlContent = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { max-width: 800px; margin: 40px auto; padding: 0 20px; font-family: 'Noto Sans JP', sans-serif; scroll-behavior: smooth; }
+    ${document.getElementById('preview-style').innerHTML}
+  </style>
+</head>
+<body>
+  <div id="preview-container">
+    ${preview.innerHTML}
+  </div>
+</body>
+</html>`;
+      downloadBlob(new Blob([htmlContent], { type: 'text/html;charset=utf-8' }), 'document.html');
+    }
+    
+    // --- 修正：Markdown保存時のフェイルセーフ（代替ファイル名の生成） ---
+    function exportMarkdown() {
+      if (!validateContent()) return;
+      let filename = 'document.md';
+      const match = editor.value.match(/^#\s+(.+)$/m);
+      
+      if (match && match[1]) { 
+        // 記号を削除してファイル名にする
+        const sanitized = match[1].replace(/[\\/:*?"<>|]/g, '').trim();
+        if (sanitized) filename = sanitized + '.md';
+      } else {
+        // 見出しが無い場合は日付でフォールバック生成
+        const now = new Date();
+        const yyyymmdd = now.getFullYear().toString() + (now.getMonth() + 1).toString().padStart(2, '0') + now.getDate().toString().padStart(2, '0');
+        filename = `markdown_${yyyymmdd}.md`;
+      }
+      
+      downloadBlob(new Blob([editor.value], { type: 'text/markdown;charset=utf-8' }), filename);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); exportMarkdown(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSearch(); }
+    });
+  </script>
+</body>
+</html>

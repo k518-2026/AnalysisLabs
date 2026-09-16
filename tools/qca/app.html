@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>質的比較分析（QCA / fsQCA） — データ分析ラボ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F7F4;
+    --panel:#FFFFFF;
+    --ink:#1C2430;
+    --ink-soft:#5B6472;
+    --line:#DCDFE3;
+    --accent:#2451A6;
+    --accent-soft:#E7EDF9;
+    --amber:#B4750F;
+    --good:#1E7A52;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+    --disp: 'Space Grotesk', var(--sans);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:14px; line-height:1.55;
+  }
+  .wrap{ max-width:1040px; margin:0 auto; padding:36px 24px 80px; }
+
+  header.top{
+    display:flex; align-items:baseline; gap:14px; margin-bottom:6px;
+    border-bottom:2px solid var(--ink); padding-bottom:16px;
+  }
+  header.top .mark{
+    font-family:var(--mono); font-weight:600; font-size:13px; color:var(--paper);
+    background:var(--ink); padding:3px 8px; border-radius:3px; letter-spacing:.04em;
+  }
+  header.top h1{
+    font-family:var(--disp); font-weight:700; font-size:24px; margin:0; letter-spacing:-0.01em;
+  }
+  header.top p{ margin:6px 0 0; color:var(--ink-soft); font-size:13px; }
+
+  .grid{ display:grid; grid-template-columns: 340px 1fr; gap:22px; margin-top:26px; }
+  @media (max-width: 860px){ .grid{ grid-template-columns: 1fr; } }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px 20px 22px;
+  }
+  .panel h2{
+    font-family:var(--disp); font-size:14px; margin:0 0 14px; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--ink-soft); display:flex; align-items:center; gap:8px;
+  }
+  .panel h2 .n{
+    width:18px; height:18px; border-radius:4px; background:var(--accent); color:#fff;
+    font-family:var(--mono); font-size:11px; display:inline-flex; align-items:center; justify-content:center;
+  }
+
+  .drop{
+    border:1.5px dashed var(--line); border-radius:8px; padding:18px; text-align:center;
+    color:var(--ink-soft); cursor:pointer; transition:.15s border-color, .15s background;
+    font-size:13px; display:block;
+  }
+  .drop.drag{ border-color:var(--accent); background:var(--accent-soft); }
+  .drop input[type=file]{ display:none; }
+  .drop .fname{ margin-top:6px; font-family:var(--mono); color:var(--ink); font-size:12px; }
+
+  .or-sep{ display:flex; align-items:center; gap:10px; margin:14px 0; color:var(--ink-soft); font-size:11px; text-transform:uppercase; letter-spacing:.08em;}
+  .or-sep::before, .or-sep::after{ content:''; flex:1; height:1px; background:var(--line); }
+
+  textarea{
+    width:100%; min-height:110px; font-family:var(--mono); font-size:12px;
+    border:1px solid var(--line); border-radius:6px; padding:10px; resize:vertical;
+    background:#FCFCFB;
+  }
+  textarea:focus, select:focus, input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .field{ margin-top:16px; }
+  .field label{ display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:var(--ink); }
+  .hint{ font-size:11.5px; color:var(--ink-soft); margin-top:4px; }
+  select, input[type=number]{
+    width:100%; font-family:var(--sans); font-size:13px; padding:7px 8px;
+    border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  .chips{
+    display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; max-height:160px; overflow:auto;
+    border:1px solid var(--line); border-radius:6px; padding:8px; background:#FCFCFB;
+  }
+  .chip{
+    display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:12px;
+    padding:4px 8px; border-radius:5px; border:1px solid var(--line); background:#fff; cursor:pointer;
+    user-select:none;
+  }
+  .chip input{ margin:0; }
+  .chip.active{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; margin-top:14px; }
+  .toggle-row label{ font-size:12px; font-weight:600; }
+  .switch{ position:relative; display:inline-block; width:38px; height:20px; flex-shrink:0; cursor:pointer; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:var(--line); border-radius:20px; cursor:pointer; transition:.15s; }
+  .slider::before{ content:''; position:absolute; width:16px; height:16px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.15s; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+  input:checked + .slider{ background:var(--accent); }
+  input:checked + .slider::before{ transform:translateX(18px); }
+
+  .runbtn{
+    margin-top:20px; width:100%; padding:12px; border:none; border-radius:7px;
+    background:var(--ink); color:#fff; font-family:var(--disp); font-weight:700;
+    font-size:14px; letter-spacing:.01em; cursor:pointer; transition:.15s background;
+  }
+  .runbtn:hover{ background:var(--accent); }
+  .runbtn:disabled{ background:var(--line); color:var(--ink-soft); cursor:not-allowed; }
+
+  .status{ margin-top:10px; font-size:12.5px; }
+  .status.err{ color:#B23A2E; }
+  .status.ok{ color:var(--good); }
+
+  #results{ min-height:200px; }
+  .results-col{ min-width:0; }
+  .empty{
+    display:flex; align-items:center; justify-content:center; height:100%; min-height:400px;
+    color:var(--ink-soft); font-size:13px; text-align:center; padding:40px 20px;
+    border:1px dashed var(--line); border-radius:10px; background:var(--panel);
+  }
+  .empty .big{ font-family:var(--mono); font-size:34px; color:var(--line); display:block; margin-bottom:10px; }
+
+  .section-title{
+    font-family:var(--disp); font-size:14px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-soft); margin:26px 0 10px; display:flex; align-items:center; gap:8px;
+  }
+  .section-title:first-child{ margin-top:0; }
+
+  table{ width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  thead th{
+    text-align:left; font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-soft); background:#F1F2F0; padding:8px 10px; border-bottom:1px solid var(--line);
+  }
+  tbody td{ padding:8px 10px; border-bottom:1px solid var(--line); font-size:12.5px; vertical-align:top; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:#FAFBFF; }
+  td.mono, th.mono{ font-family:var(--mono); }
+  .outcome-1{ color:var(--good); font-weight:700; }
+  .outcome-0{ color:var(--ink-soft); }
+  .outcome-9{ color:#B23A2E; font-weight:700; }
+
+  .term{ font-family:var(--mono); font-weight:600; color:var(--accent); }
+  .metric{ font-family:var(--mono); }
+  .bar-cell{ display:flex; align-items:center; gap:8px; min-width:110px; }
+  .bar{ flex:1; height:6px; border-radius:3px; background:var(--line); overflow:hidden; }
+  .bar > i{ display:block; height:100%; background:var(--accent); }
+  .bar.cov > i{ background:var(--amber); }
+
+  .solution-card{
+    background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--accent);
+    border-radius:8px; padding:14px 16px; margin-bottom:10px;
+  }
+  .solution-card .formula{ font-family:var(--mono); font-weight:600; font-size:15px; color:var(--ink); }
+  .solution-card .stats{ margin-top:6px; display:flex; gap:16px; font-size:12px; color:var(--ink-soft); }
+  .solution-card .stats b{ color:var(--ink); font-family:var(--mono); }
+
+  .paper-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:16px 18px; font-size:13px; line-height:1.85;
+  }
+  .paper-box p{ margin:0 0 10px; }
+  .paper-box p:last-child{ margin-bottom:0; color:var(--ink-soft); font-size:11.5px; }
+  .copy-btn{
+    font-family:var(--mono); font-size:11.5px; padding:5px 10px; border:1px solid var(--line);
+    border-radius:6px; background:#fff; color:var(--ink); cursor:pointer; margin-bottom:10px;
+  }
+  .copy-btn:hover{ border-color:var(--accent); color:var(--accent); }
+
+  .dl-row{ margin-top:14px; display:flex; gap:8px; }
+  .dl-btn{
+    font-family:var(--mono); font-size:11.5px; padding:6px 10px; border:1px solid var(--line);
+    border-radius:6px; background:#fff; color:var(--ink); cursor:pointer;
+  }
+  .dl-btn:hover{ border-color:var(--accent); color:var(--accent); }
+
+  footer{ margin-top:40px; font-size:11.5px; color:var(--ink-soft); text-align:center; }
+
+  /* === 新規追加：Rコードハイライト用のスタイル === */
+  .r-code-container {
+    background-color: #1e1e1e; /* ダーク背景 */
+    color: #d4d4d4; /* 基本の文字色 */
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .r-comment { color: #6a9955; font-style: italic; } /* コメント: 緑 */
+  .r-string { color: #ce9178; } /* 文字列: オレンジ */
+  .r-keyword { color: #569cd6; font-weight: bold; } /* キーワード: 青 */
+  .r-function { color: #dcdcaa; } /* 関数: 黄色 */
+  .r-number { color: #b5cea8; } /* 数値: 明るい緑 */
+  .r-variable { color: #9cdcfe; } /* 変数っぽく見せる色 */
+
+  @media print{
+    .panel, .no-print, header.top p, footer{ display:none !important; }
+    .grid{ grid-template-columns: 1fr !important; margin-top:0; }
+    body{ background:#fff; }
+    .wrap{ padding:0; max-width:100%; }
+    .r-code-container { background-color: #f5f5f5; color:#000; box-shadow:none; border:1px solid #ccc; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-causal);--paper:var(--al-bg);--panel:var(--al-surface);--ink:var(--al-ink);--ink-soft:var(--al-ink-2);--line:var(--al-line);--accent:var(--al-cat);--accent-soft:var(--al-cat-soft);--sans:var(--al-sans);--disp:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#causal">説明・予測する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>質的比較分析（QCA / fsQCA）</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="wrap">
+
+  <header class="top">
+    <span class="mark">QCA</span>
+    <div>
+      <h1>質的比較分析（QCA / fsQCA）解析ツール</h1>
+      <p>Quine–McCluskey法による主項導出と被覆表の全探索。すべてブラウザ内で完結し、データはサーバーに送信されません。</p>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============ LEFT: input panel ============ -->
+    <div class="panel">
+      <h2><span class="n">1</span>データ入力</h2>
+
+      <label class="drop" id="dropZone">
+        <input type="file" id="fileInput" accept=".csv,text/csv">
+        <div>📄 CSVファイルをドラッグ＆ドロップ<br>またはクリックして選択</div>
+        <div class="fname" id="fileName"></div>
+      </label>
+
+      <div class="or-sep">または</div>
+
+      <textarea id="pasteArea" placeholder="id,A,B,C,Y&#10;c1,1,0,0,1&#10;c2,1,0,1,1&#10;c3,0,1,0,0&#10;...（1行目はヘッダー、カンマ区切り）"></textarea>
+
+      <h2 style="margin-top:22px;"><span class="n">2</span>列の指定</h2>
+
+      <div class="field">
+        <label>ID列（ケース識別子）</label>
+        <select id="idCol"><option value="">-- データを読み込んでください --</option></select>
+      </div>
+
+      <div class="field">
+        <label>結果（Outcome）列</label>
+        <select id="outcomeCol"><option value="">-- データを読み込んでください --</option></select>
+      </div>
+
+      <div class="field">
+        <label>条件（Condition）列 <span class="hint">複数選択可</span></label>
+        <div class="chips" id="condChips"><span class="hint">データを読み込むと表示されます</span></div>
+      </div>
+
+      <h2 style="margin-top:22px;"><span class="n">3</span>分析オプション</h2>
+
+      <div class="toggle-row">
+        <label>fsQCA（ファジィ集合スコア 0〜1）</label>
+        <label class="switch"><input type="checkbox" id="fuzzyToggle" checked><span class="slider"></span></label>
+      </div>
+      <div class="hint">オフにすると crisp / 多値QCA（整数値そのまま）として扱います。</div>
+
+      <div class="field" id="thresholdField">
+        <label>一貫性（consistency）閾値</label>
+        <input type="number" id="threshold" min="0" max="1" step="0.01" value="0.80">
+        <div class="hint">fsQCAモードで、真理表の各行を outcome=1 と判定する consistency の下限。</div>
+      </div>
+
+      <div class="toggle-row">
+        <label>Outcome を反転（0-set を分析）</label>
+        <label class="switch"><input type="checkbox" id="negateToggle"><span class="slider"></span></label>
+      </div>
+
+      <button class="runbtn" id="runBtn" disabled>解析を実行</button>
+      <div class="status" id="statusMsg"></div>
+
+      <div class="dl-row" style="display:none" id="sampleRow">
+        <button class="dl-btn" id="sampleCrisp">crispサンプルを読込</button>
+        <button class="dl-btn" id="sampleFuzzy">fsQCAサンプルを読込</button>
+      </div>
+    </div>
+
+    <!-- ============ RIGHT: results ============ -->
+    <div class="results-col">
+      <div class="dl-row no-print" id="downloadRow" style="display:none; margin-bottom:14px;">
+        <button class="dl-btn" id="downloadMdBtn">⬇ Markdownをダウンロード</button>
+        <button class="dl-btn" id="downloadPdfBtn">⬇ PDFをダウンロード</button>
+      </div>
+      <div id="results">
+        <div class="empty">
+          <span><span class="big">⌁</span>データを読み込み、列を指定して「解析を実行」を押してください。</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Quine–McCluskey 主項導出 + 被覆表の全探索 + Ragin の consistency / coverage 指標 ― ブラウザ内で完結（サーバー通信なし）</footer>
+</div>
+
+<script>
+/* =========================================================================
+ * QCA / fsQCA ENGINE
+ * ========================================================================= */
+(function(QCA){
+
+  var DONT_CARE = -1;
+  var CONTRADICTION = 9;
+
+  function fuzzyMembership(fvals, pattern) {
+    var m = 1.0;
+    for (var i = 0; i < pattern.length; i++) {
+      var p = pattern[i];
+      if (p === 1) m = Math.min(m, fvals[i]);
+      else if (p === 0) m = Math.min(m, 1 - fvals[i]);
+    }
+    return m;
+  }
+
+  function consistencyScore(xScores, yScores) {
+    var num = 0, den = 0;
+    for (var i = 0; i < xScores.length; i++) {
+      num += Math.min(xScores[i], yScores[i]);
+      den += xScores[i];
+    }
+    return den ? num / den : NaN;
+  }
+
+  function coverageScore(xScores, yScores) {
+    var num = 0, den = 0;
+    for (var i = 0; i < xScores.length; i++) {
+      num += Math.min(xScores[i], yScores[i]);
+      den += yScores[i];
+    }
+    return den ? num / den : NaN;
+  }
+
+  function buildTruthTable(data, idCol, outcomeCol, conditionCols, fuzzy,
+                           outcomeIsMembershipIn1, threshold) {
+    var yRaw = data.map(function (r) { return Number(r[outcomeCol]); });
+    var y = outcomeIsMembershipIn1 ? yRaw : yRaw.map(function (v) { return 1 - v; });
+
+    if (fuzzy) {
+      var crispPatterns = data.map(function (r) {
+        return conditionCols.map(function (c) { return Number(r[c]) > 0.5 ? 1 : 0; });
+      });
+      var groups = {};
+      crispPatterns.forEach(function (pattern, i) {
+        var key = pattern.join(',');
+        if (!groups[key]) groups[key] = { pattern: pattern, indices: [] };
+        groups[key].indices.push(i);
+      });
+
+      var rows = Object.keys(groups).map(function (key) {
+        var g = groups[key];
+        var xScores = data.map(function (r) {
+          var fvals = conditionCols.map(function (c) { return Number(r[c]); });
+          return fuzzyMembership(fvals, g.pattern);
+        });
+        var cons = consistencyScore(xScores, y);
+        var ids = g.indices.map(function (i) { return String(data[i][idCol]); });
+        return {
+          id: ids.join(', '),
+          values: g.pattern,
+          consistency: cons,
+          nCases: g.indices.length,
+          outcome: threshold !== null && threshold !== undefined
+            ? (cons >= threshold ? 1 : 0) : null
+        };
+      });
+      rows.sort(function (a, b) { return a.values.join(',').localeCompare(b.values.join(',')); });
+      return rows;
+    } else {
+      var groups2 = {};
+      data.forEach(function (r, i) {
+        var pattern = conditionCols.map(function (c) { return Number(r[c]); });
+        var key = pattern.join(',');
+        if (!groups2[key]) groups2[key] = { pattern: pattern, indices: [] };
+        groups2[key].indices.push(i);
+      });
+      var rows2 = Object.keys(groups2).map(function (key) {
+        var g = groups2[key];
+        var outs = {};
+        g.indices.forEach(function (i) { outs[y[i]] = true; });
+        var outKeys = Object.keys(outs);
+        var outcome = outKeys.length === 1 ? Number(outKeys[0]) : CONTRADICTION;
+        var ids = g.indices.map(function (i) { return String(data[i][idCol]); });
+        return { id: ids.join(', '), values: g.pattern, outcome: outcome, nCases: g.indices.length };
+      });
+      rows2.sort(function (a, b) { return a.values.join(',').localeCompare(b.values.join(',')); });
+      return rows2;
+    }
+  }
+
+  function dimensionsFromRows(rows) {
+    var nVars = rows[0].length;
+    var dims = new Array(nVars).fill(2);
+    rows.forEach(function (r) {
+      r.forEach(function (v, i) { if (v + 1 > dims[i]) dims[i] = v + 1; });
+    });
+    return dims;
+  }
+
+  function reduceLevel(configs, dims) {
+    var configKeys = {};
+    configs.forEach(function (c) { configKeys[c.join(',')] = true; });
+
+    var candidatePos = {};
+    configs.forEach(function (cfg) {
+      cfg.forEach(function (v, pos) {
+        if (v !== DONT_CARE) {
+          var merged = cfg.slice();
+          merged[pos] = DONT_CARE;
+          var key = merged.join(',');
+          if (!(key in candidatePos)) candidatePos[key] = { pattern: merged, pos: pos };
+        }
+      });
+    });
+
+    var valid = [];
+    Object.keys(candidatePos).forEach(function (key) {
+      var c = candidatePos[key];
+      var ok = true;
+      for (var val = 0; val < dims[c.pos]; val++) {
+        var probe = c.pattern.slice();
+        probe[c.pos] = val;
+        if (!(probe.join(',') in configKeys)) { ok = false; break; }
+      }
+      if (ok) valid.push(c.pattern);
+    });
+    return valid;
+  }
+
+  function isPartOf(specific, general) {
+    for (var pos = 0; pos < general.length; pos++) {
+      var v = general[pos];
+      if (v !== DONT_CARE && specific[pos] !== v) return false;
+    }
+    return true;
+  }
+
+  function filterPrimeImplicants(pool) {
+    var seen = {};
+    var uniq = [];
+    pool.forEach(function (p) {
+      var k = p.join(',');
+      if (!seen[k]) { seen[k] = true; uniq.push(p); }
+    });
+
+    var primes = [];
+    for (var i = 0; i < uniq.length; i++) {
+      var subsumed = false;
+      for (var j = 0; j < uniq.length; j++) {
+        if (i !== j && isPartOf(uniq[i], uniq[j])) { subsumed = true; break; }
+      }
+      if (!subsumed) primes.push(uniq[i]);
+    }
+    return primes;
+  }
+
+  function findPrimeImplicants(positiveRows, dims) {
+    var seen = {};
+    var pool = [];
+    positiveRows.forEach(function (r) {
+      var k = r.join(',');
+      if (!seen[k]) { seen[k] = true; pool.push(r); }
+    });
+
+    var current = pool;
+    while (true) {
+      var next = reduceLevel(current, dims);
+      if (next.length === 0) break;
+      next.forEach(function (c) {
+        var k = c.join(',');
+        if (!seen[k]) { seen[k] = true; pool.push(c); }
+      });
+      if (next.length <= 1) break;
+      current = next;
+    }
+    return filterPrimeImplicants(pool);
+  }
+
+  function impliesCase(pattern, caseRow) {
+    for (var pos = 0; pos < pattern.length; pos++) {
+      if (pattern[pos] !== DONT_CARE && pattern[pos] !== caseRow[pos]) return false;
+    }
+    return true;
+  }
+
+  function implicantToString(pattern, varNames, qcaNotation) {
+    var parts = [];
+    pattern.forEach(function (v, i) {
+      var name = varNames[i];
+      if (v === DONT_CARE) return;
+      if (v === 0 || v === 1) {
+        if (qcaNotation) parts.push(v === 1 ? name : name.toLowerCase());
+        else parts.push(v === 1 ? name : ('~' + name));
+      } else {
+        parts.push(name + '{' + v + '}');
+      }
+    });
+    return parts.length ? parts.join('*') : '(universal)';
+  }
+
+  function findMinimalSolutions(implicants, positiveRows) {
+    var coverageSets = implicants.map(function (impl) {
+      var s = {};
+      positiveRows.forEach(function (row, i) { if (impliesCase(impl, row)) s[i] = true; });
+      return s;
+    });
+    var targetSize = positiveRows.length;
+    var n = implicants.length;
+    var solutions = [];
+
+    function coveredCount(covered) { return Object.keys(covered).length; }
+
+    function dfs(idx, chosen, covered) {
+      if (coveredCount(covered) === targetSize) { solutions.push(chosen.slice()); return; }
+      if (idx === n) return;
+      var newCovered = Object.assign({}, covered, coverageSets[idx]);
+      dfs(idx + 1, chosen.concat([idx]), newCovered);
+      dfs(idx + 1, chosen, covered);
+    }
+
+    dfs(0, [], {});
+    if (solutions.length === 0) return [];
+
+    var minLen = Math.min.apply(null, solutions.map(function (s) { return s.length; }));
+    var uniqKeys = {};
+    var uniq = [];
+    solutions.filter(function (s) { return s.length === minLen; }).forEach(function (s) {
+      var key = s.slice().sort(function (a, b) { return a - b; }).join(',');
+      if (!uniqKeys[key]) { uniqKeys[key] = true; uniq.push(s.slice().sort(function (a, b) { return a - b; })); }
+    });
+    return uniq;
+  }
+
+  function computeCaseCoverageStats(primes, positiveRows, positiveNCases, solutionsIdx) {
+    var totalCases = positiveNCases.reduce(function (a, b) { return a + b; }, 0);
+    var primeCoverMasks = primes.map(function (impl) {
+      return positiveRows.map(function (row) { return impliesCase(impl, row); });
+    });
+
+    return solutionsIdx.map(function (sol) {
+      var unionMask = positiveRows.map(function () { return false; });
+      sol.forEach(function (i) {
+        primeCoverMasks[i].forEach(function (v, idx) { if (v) unionMask[idx] = true; });
+      });
+      var solutionCases = 0;
+      unionMask.forEach(function (v, idx) { if (v) solutionCases += positiveNCases[idx]; });
+
+      var paths = sol.map(function (i) {
+        var mask = primeCoverMasks[i];
+        var rawCases = 0, uniqueCases = 0;
+        mask.forEach(function (v, idx) {
+          if (!v) return;
+          rawCases += positiveNCases[idx];
+          var coveredByOthers = sol.some(function (j) { return j !== i && primeCoverMasks[j][idx]; });
+          if (!coveredByOthers) uniqueCases += positiveNCases[idx];
+        });
+        return {
+          index: i,
+          rawCoverage: totalCases ? rawCases / totalCases : NaN,
+          uniqueCoverage: totalCases ? uniqueCases / totalCases : NaN
+        };
+      });
+
+      return { solutionCoverage: totalCases ? solutionCases / totalCases : NaN, paths: paths };
+    });
+  }
+
+  function runQCA(data, options) {
+    var idCol = options.idCol;
+    var outcomeCol = options.outcomeCol;
+    var conditionCols = options.conditionCols;
+    var fuzzy = !!options.fuzzy;
+    var outcomeIsMembershipIn1 = options.outcomeIsMembershipIn1 !== false;
+    var threshold = options.threshold !== undefined ? options.threshold : 0.8;
+    var qcaNotation = options.qcaNotation !== false;
+
+    data.forEach(function(r) {
+      options.conditionCols.forEach(function(c) {
+        if (r[c] === '' || isNaN(Number(r[c]))) {
+          throw new Error('データに欠損値または数値以外の文字が含まれています（列: ' + c + '）。空欄がないか確認してください。');
+        }
+      });
+      if (r[options.outcomeCol] === '' || isNaN(Number(r[options.outcomeCol]))) {
+        throw new Error('結果列（' + options.outcomeCol + '）に欠損値または数値以外の文字が含まれています。空欄がないか確認してください。');
+      }
+    });
+
+    var tt = buildTruthTable(data, idCol, outcomeCol, conditionCols, fuzzy,
+                              outcomeIsMembershipIn1, threshold);
+
+    var positiveTT = tt.filter(function (r) { return r.outcome === 1; });
+    var positiveRows = positiveTT.map(function (r) { return r.values; });
+    var positiveIds = positiveTT.map(function (r) { return r.id; });
+
+    var allRows = tt.map(function (r) { return r.values; });
+    var dims = dimensionsFromRows(allRows);
+
+    var primes = positiveRows.length ? findPrimeImplicants(positiveRows, dims) : [];
+
+    var allX = null, yScores = null, fuzzyCases = null;
+    if (fuzzy) {
+      yScores = data.map(function (r) { return Number(r[outcomeCol]); });
+      if (!outcomeIsMembershipIn1) yScores = yScores.map(function (v) { return 1 - v; });
+      fuzzyCases = data.map(function (r) {
+        return conditionCols.map(function (c) { return Number(r[c]); });
+      });
+      allX = primes.map(function (impl) {
+        return fuzzyCases.map(function (caseVals) { return fuzzyMembership(caseVals, impl); });
+      });
+    }
+
+    var primeRows = primes.map(function (impl, k) {
+      var coveredIds = [];
+      positiveRows.forEach(function (r, i) { if (impliesCase(impl, r)) coveredIds.push(positiveIds[i]); });
+      var row = {
+        term: implicantToString(impl, conditionCols, qcaNotation),
+        pattern: impl,
+        casesCovered: coveredIds.join(', ')
+      };
+      if (fuzzy) {
+        row.consistency = consistencyScore(allX[k], yScores);
+        row.coverage = coverageScore(allX[k], yScores);
+      }
+      return row;
+    });
+
+    var positiveNCases = positiveTT.map(function (r) { return r.nCases; });
+    var solutionsIdx = primes.length ? findMinimalSolutions(primes, positiveRows) : [];
+    var caseStats = primes.length
+      ? computeCaseCoverageStats(primes, positiveRows, positiveNCases, solutionsIdx)
+      : [];
+
+    var solutions = solutionsIdx.map(function (sol, sIdx) {
+      var terms = sol.map(function (i) { return primeRows[i].term; });
+      var row = { solution: terms.join(' + '), nTerms: sol.length };
+
+      var stats = caseStats[sIdx];
+      row.coverage = stats.solutionCoverage; 
+      
+      if (fuzzy) {
+        var unionX = fuzzyCases.map(function (_, k) {
+          var m = 0;
+          sol.forEach(function (i) { m = Math.max(m, allX[i][k]); });
+          return m;
+        });
+        row.consistency = consistencyScore(unionX, yScores);
+        row.coverage = coverageScore(unionX, yScores); 
+
+        var sumY = yScores.reduce(function(a, b) { return a + b; }, 0); 
+
+        row.paths = sol.map(function(i) {
+          var rawNum = 0;
+          yScores.forEach(function(y, idx) {
+            rawNum += Math.min(allX[i][idx], y);
+          });
+          var rawCov = sumY ? (rawNum / sumY) : NaN;
+
+          var withoutThisPathNum = 0;
+          yScores.forEach(function(y, idx) {
+            var maxOtherX = 0;
+            sol.forEach(function(j) {
+              if (j !== i) {
+                maxOtherX = Math.max(maxOtherX, allX[j][idx]); 
+              }
+            });
+            withoutThisPathNum += Math.min(maxOtherX, y);
+          });
+          
+          var totalNum = 0;
+          unionX.forEach(function(ux, idx) {
+            totalNum += Math.min(ux, yScores[idx]);
+          });
+
+          var uniCov = sumY ? Math.max(0, (totalNum - withoutThisPathNum) / sumY) : NaN;
+
+          return {
+            term: primeRows[i].term,
+            rawCoverage: rawCov,
+            uniqueCoverage: uniCov
+          };
+        });
+      } else {
+        row.paths = sol.map(function (i, k) {
+          return {
+            term: primeRows[i].term,
+            rawCoverage: stats.paths[k].rawCoverage,
+            uniqueCoverage: stats.paths[k].uniqueCoverage
+          };
+        });
+      }
+      return row;
+    });
+
+    return { truthTable: tt, primeImplicants: primeRows, solutions: solutions };
+  }
+
+  function parseCsv(text) {
+    var lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
+      .filter(function (l) { return l.trim().length > 0; });
+    if (lines.length < 2) {
+      throw new Error('データが不足しています。ヘッダー行と、少なくとも1行のデータが必要です。');
+    }
+
+    function splitLine(line) {
+      var out = [];
+      var cur = '';
+      var inQuotes = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (inQuotes) {
+          if (ch === '"') {
+            if (line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = false; }
+          } else cur += ch;
+        } else {
+          if (ch === '"') inQuotes = true;
+          else if (ch === ',') { out.push(cur); cur = ''; }
+          else cur += ch;
+        }
+      }
+      out.push(cur);
+      return out.map(function (s) { return s.trim(); });
+    }
+
+    var headers = splitLine(lines[0]);
+    var rows = [];
+    for (var i = 1; i < lines.length; i++) {
+      var cells = splitLine(lines[i]);
+      var row = {};
+      headers.forEach(function (h, j) { row[h] = cells[j] !== undefined ? cells[j] : ''; });
+      rows.push(row);
+    }
+    return { headers: headers, rows: rows };
+  }
+
+  QCA.runQCA = runQCA;
+  QCA.parseCsv = parseCsv;
+
+})(window.QCA = window.QCA || {});
+</script>
+
+<script>
+/* ========================= UI wiring ========================= */
+(function(){
+  var rawCsvText = '';
+  var headers = [];
+
+  var dropZone = document.getElementById('dropZone');
+  var fileInput = document.getElementById('fileInput');
+  var fileNameEl = document.getElementById('fileName');
+  var pasteArea = document.getElementById('pasteArea');
+  var idColSel = document.getElementById('idCol');
+  var outcomeColSel = document.getElementById('outcomeCol');
+  var condChips = document.getElementById('condChips');
+  var fuzzyToggle = document.getElementById('fuzzyToggle');
+  var thresholdField = document.getElementById('thresholdField');
+  var negateToggle = document.getElementById('negateToggle');
+  var runBtn = document.getElementById('runBtn');
+  var statusMsg = document.getElementById('statusMsg');
+  var resultsEl = document.getElementById('results');
+  var sampleCrispBtn = document.getElementById('sampleCrisp');
+  var sampleFuzzyBtn = document.getElementById('sampleFuzzy');
+  document.getElementById('sampleRow').style.display = 'flex';
+
+  var SAMPLE_CRISP = "id,A,B,C,Y\nc1,1,0,0,1\nc2,1,0,1,1\nc3,1,1,0,1\nc4,1,1,1,1\nc5,0,0,1,1\nc6,0,0,0,0\nc7,0,1,0,0\nc8,0,1,1,0\n";
+  var SAMPLE_FUZZY = "id,A,B,C,Y\nc1,0.90,0.20,0.80,0.85\nc2,0.80,0.70,0.90,0.75\nc3,0.10,0.90,0.20,0.10\nc4,0.20,0.10,0.85,0.30\nc5,0.95,0.60,0.10,0.20\nc6,0.60,0.40,0.70,0.65\nc7,0.15,0.80,0.90,0.25\nc8,0.70,0.30,0.75,0.70\n";
+
+  sampleCrispBtn.addEventListener('click', function(){
+    pasteArea.value = SAMPLE_CRISP; fuzzyToggle.checked = false;
+    thresholdField.style.display = 'none';
+    rawCsvText = SAMPLE_CRISP; fileNameEl.textContent = ''; fileInput.value = '';
+    loadHeaders();
+  });
+  sampleFuzzyBtn.addEventListener('click', function(){
+    pasteArea.value = SAMPLE_FUZZY; fuzzyToggle.checked = true;
+    thresholdField.style.display = '';
+    rawCsvText = SAMPLE_FUZZY; fileNameEl.textContent = ''; fileInput.value = '';
+    loadHeaders();
+  });
+
+  fuzzyToggle.addEventListener('change', function(){
+    thresholdField.style.display = fuzzyToggle.checked ? '' : 'none';
+  });
+
+  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag'); });
+  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag'); });
+  dropZone.addEventListener('drop', function(e){
+    e.preventDefault(); dropZone.classList.remove('drag');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function(){
+    if (fileInput.files && fileInput.files[0]) loadFile(fileInput.files[0]);
+  });
+
+  function loadFile(file){
+    fileNameEl.textContent = file.name;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      rawCsvText = e.target.result;
+      pasteArea.value = '';
+      loadHeaders();
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  var pasteTimer = null;
+  pasteArea.addEventListener('input', function(){
+    clearTimeout(pasteTimer);
+    pasteTimer = setTimeout(function(){
+      if (pasteArea.value.trim().length > 0) {
+        rawCsvText = pasteArea.value;
+        fileNameEl.textContent = '';
+        fileInput.value = '';
+        loadHeaders();
+      }
+    }, 350);
+  });
+
+  function loadHeaders(){
+    setStatus('ヘッダーを読み込み中…', '');
+    try {
+      var parsed = window.QCA.parseCsv(rawCsvText);
+      headers = parsed.headers;
+      populateColumnPickers();
+      setStatus(parsed.rows.length + ' 行のデータを検出しました。', 'ok');
+      updateRunBtn();
+    } catch (err) {
+      setStatus('エラー: ' + err.message, 'err');
+    }
+  }
+
+  function populateColumnPickers(){
+    function fillSelect(sel){
+      sel.innerHTML = '';
+      headers.forEach(function(h){
+        var opt = document.createElement('option');
+        opt.value = h; opt.textContent = h;
+        sel.appendChild(opt);
+      });
+    }
+    fillSelect(idColSel);
+    fillSelect(outcomeColSel);
+    if (headers.length > 0) idColSel.value = headers[0];
+    if (headers.length > 1) outcomeColSel.value = headers[headers.length - 1];
+
+    condChips.innerHTML = '';
+    headers.forEach(function(h){
+      var label = document.createElement('label');
+      label.className = 'chip';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = h;
+      cb.addEventListener('change', function(){
+        label.classList.toggle('active', cb.checked);
+        updateRunBtn();
+      });
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(h));
+      condChips.appendChild(label);
+    });
+    Array.prototype.forEach.call(condChips.querySelectorAll('input'), function(cb){
+      if (cb.value !== idColSel.value && cb.value !== outcomeColSel.value) {
+        cb.checked = true;
+        cb.parentElement.classList.add('active');
+      }
+    });
+    updateRunBtn();
+  }
+
+  [idColSel, outcomeColSel].forEach(function(sel){ sel.addEventListener('change', updateRunBtn); });
+
+  function getSelectedConditions(){
+    return Array.prototype.filter.call(condChips.querySelectorAll('input'), function(cb){ return cb.checked; })
+      .map(function(cb){ return cb.value; });
+  }
+
+  function updateRunBtn(){
+    var conds = getSelectedConditions();
+    var ok = rawCsvText && idColSel.value && outcomeColSel.value && conds.length > 0
+      && conds.indexOf(idColSel.value) === -1 && conds.indexOf(outcomeColSel.value) === -1;
+    runBtn.disabled = !ok;
+  }
+
+  function setStatus(msg, cls){
+    statusMsg.textContent = msg;
+    statusMsg.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  runBtn.addEventListener('click', function(){
+    var options = {
+      idCol: idColSel.value,
+      outcomeCol: outcomeColSel.value,
+      conditionCols: getSelectedConditions(),
+      fuzzy: fuzzyToggle.checked,
+      outcomeIsMembershipIn1: !negateToggle.checked,
+      threshold: parseFloat(document.getElementById('threshold').value) || 0.8,
+      qcaNotation: true
+    };
+    runBtn.disabled = true;
+    runBtn.textContent = '解析中…';
+    setStatus('', '');
+    setTimeout(function(){
+      try {
+        var parsed = window.QCA.parseCsv(rawCsvText);
+        [options.idCol, options.outcomeCol].concat(options.conditionCols).forEach(function(c){
+          if (parsed.headers.indexOf(c) === -1) throw new Error('列 "' + c + '" がCSVのヘッダーに見つかりません。');
+        });
+        var result = window.QCA.runQCA(parsed.rows, options);
+        renderResults(result, options);
+        window.__lastResult = result;
+        window.__lastOptions = options;
+        document.getElementById('downloadRow').style.display = 'flex';
+        setStatus('完了（' + parsed.rows.length + ' 行を解析）。', 'ok');
+      } catch (err) {
+        setStatus('エラー: ' + err.message, 'err');
+      } finally {
+        runBtn.disabled = false;
+        runBtn.textContent = '解析を実行';
+      }
+    }, 20);
+  });
+
+  function bar(value, cls){
+    if (value === undefined || value === null || isNaN(value)) return '';
+    var pct = Math.max(0, Math.min(1, value)) * 100;
+    return '<div class="bar-cell"><div class="bar ' + (cls||'') + '"><i style="width:' + pct + '%"></i></div>' +
+      '<span class="metric">' + value.toFixed(3) + '</span></div>';
+  }
+
+  // === 新規追加：Rコードの生成とデータ直接埋め込み ===
+  function generateRCode(options, csvText){
+    var conds = options.conditionCols.map(function(c){ return '"' + c + '"'; }).join(', ');
+    var outcome = '"' + options.outcomeCol + '"';
+    var lines = [];
+    
+    lines.push('# パッケージ「QCA」がインストールされていない場合は自動でネットからダウンロードします');
+    lines.push('if (!requireNamespace("QCA", quietly = TRUE)) {');
+    lines.push('  install.packages("QCA", repos = "https://cloud.r-project.org")');
+    lines.push('}');
+    lines.push('library(QCA)');
+    lines.push('');
+    lines.push('# ツールで読み込んだデータをそのままRコードに埋め込みます');
+    lines.push('csv_data <- "');
+    lines.push(csvText.trim()); // CSVの生データをそのまま展開
+    lines.push('"');
+    lines.push('');
+    lines.push('# テキストデータからデータフレームを作成します');
+    lines.push('data_df <- read.csv(text = csv_data, header = TRUE, stringsAsFactors = FALSE)');
+    lines.push('');
+    lines.push('# 真理表(Truth Table)の作成');
+    if (options.fuzzy) {
+      lines.push('TT <- truthTable(data_df, outcome = ' + outcome + ', conditions = c(' + conds + '), incl.cut = ' + options.threshold + ', show.cases = TRUE)');
+    } else {
+      lines.push('TT <- truthTable(data_df, outcome = ' + outcome + ', conditions = c(' + conds + '), show.cases = TRUE)');
+    }
+    lines.push('print(TT)');
+    lines.push('');
+    lines.push('# 複雑解(Complex Solution)の導出');
+    lines.push('sol <- minimize(TT, details = TRUE)');
+    lines.push('print(sol)');
+    
+    return lines.join('\n');
+  }
+
+  // === 新規追加：簡単な自作シンタックスハイライト（正規表現ベース） ===
+  function highlightRCode(code) {
+    return code
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") // HTMLエスケープ
+      .replace(/(#.*)/g, '<span class="r-comment">$1</span>') // コメント（#以降）
+      .replace(/("(?:\\"|[^"])*"|'(?:\\'|[^'])*')/g, '<span class="r-string">$1</span>') // 文字列
+      .replace(/\b(if|else|for|in|while|function|TRUE|FALSE|NULL|NA)\b/g, '<span class="r-keyword">$1</span>') // キーワード
+      .replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*\()/g, '<span class="r-function">$1</span>') // 関数呼び出し（直後に括弧）
+      .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="r-number">$1</span>'); // 数値
+  }
+
+  function renderResults(result, options){
+    var html = '';
+
+    html += '<div class="section-title">真理表</div>';
+    html += '<table><thead><tr><th>ID</th>';
+    options.conditionCols.forEach(function(c){ html += '<th class="mono">' + esc(c) + '</th>'; });
+    if (options.fuzzy) html += '<th>consistency</th>';
+    html += '<th>n</th><th>outcome</th></tr></thead><tbody>';
+    result.truthTable.forEach(function(r){
+      html += '<tr><td class="mono">' + esc(r.id) + '</td>';
+      r.values.forEach(function(v){ html += '<td class="mono">' + v + '</td>'; });
+      if (options.fuzzy) html += '<td>' + (r.consistency !== undefined ? r.consistency.toFixed(3) : '') + '</td>';
+      html += '<td>' + r.nCases + '</td>';
+      var oc = r.outcome === 9 ? 'C' : r.outcome;
+      var ocClass = r.outcome === 9 ? 'outcome-9' : ('outcome-' + r.outcome);
+      html += '<td class="' + ocClass + '">' + oc + '</td></tr>';
+    });
+    html += '</tbody></table>';
+
+    html += '<div class="section-title">主項（Prime Implicants）</div>';
+    if (result.primeImplicants.length === 0) {
+      html += '<div class="hint">正例（outcome=1）の行がないため、主項は見つかりませんでした。</div>';
+    } else {
+      html += '<table><thead><tr><th>term</th><th>カバーするケース</th>';
+      if (options.fuzzy) html += '<th>consistency</th><th>coverage</th>';
+      html += '</tr></thead><tbody>';
+      result.primeImplicants.forEach(function(p){
+        html += '<tr><td class="term">' + esc(p.term) + '</td><td class="mono">' + esc(p.casesCovered) + '</td>';
+        if (options.fuzzy) {
+          html += '<td>' + bar(p.consistency) + '</td>';
+          html += '<td>' + bar(p.coverage, 'cov') + '</td>';
+        }
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    html += '<div class="section-title">複雑解（Complex Solution）</div>';
+    if (result.solutions.length === 0) {
+      html += '<div class="hint">解が見つかりませんでした。</div>';
+    } else {
+      result.solutions.forEach(function(s){
+        html += '<div class="solution-card"><div class="formula">' + esc(s.solution) + '</div>';
+        html += '<div class="stats"><span>項数: <b>' + s.nTerms + '</b></span>';
+        if (options.fuzzy) {
+          html += '<span>一貫性（Consistency）: <b>' + s.consistency.toFixed(3) + '</b></span>';
+          html += '<span>カバレッジ（Coverage）: <b>' + s.coverage.toFixed(3) + '</b></span>';
+        } else {
+          html += '<span>カバー率（Coverage・解全体）: <b>' + (s.coverage * 100).toFixed(1) + '%</b></span>';
+        }
+        html += '</div>';
+        if (s.paths && s.paths.length > 0) {
+          html += '<table style="margin-top:10px;"><thead><tr><th>経路</th><th>単純カバー率</th><th>独自カバー率</th></tr></thead><tbody>';
+          s.paths.forEach(function(p){
+            html += '<tr><td class="term">' + esc(p.term) + '</td>' +
+              '<td>' + bar(p.rawCoverage) + '</td>' +
+              '<td>' + bar(p.uniqueCoverage, 'cov') + '</td></tr>';
+          });
+          html += '</tbody></table>';
+        }
+        html += '</div>';
+      });
+    }
+
+    html += '<div class="section-title">論文記述例（Example Write-up）</div>';
+    var paperParas = generatePaperText(result, options);
+    html += '<button class="copy-btn no-print" id="copyPaperBtn">📋 テキストをコピー</button>';
+    html += '<div class="paper-box">';
+    paperParas.forEach(function(p){ html += '<p>' + esc(p) + '</p>'; });
+    html += '</div>';
+
+    // === 改修：JASP Rコンソール用コード表示部 ===
+    html += '<div class="section-title">JASP Rコンソール用コード</div>';
+    var rawRCode = generateRCode(options, rawCsvText); // 生のCSVテキストを渡す
+    var highlightedRCode = highlightRCode(rawRCode);   // シンタックスハイライト処理
+    
+    // コピー機能用に元のテキストを保持
+    window.__lastRCode = rawRCode;
+
+    html += '<button class="copy-btn no-print" id="copyRCodeBtn" style="margin-bottom:8px;">📋 Rコードをコピー</button>';
+    html += '<pre class="r-code-container" id="rCodeArea">' + highlightedRCode + '</pre>';
+
+    resultsEl.innerHTML = html;
+
+    var copyBtn = document.getElementById('copyPaperBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function(){
+        copyToClipboard(paperParas.join('\n\n'), copyBtn);
+      });
+    }
+
+    var copyRBtn = document.getElementById('copyRCodeBtn');
+    if (copyRBtn) {
+      copyRBtn.addEventListener('click', function(){
+        copyToClipboard(window.__lastRCode, copyRBtn);
+      });
+    }
+  }
+
+  function generatePaperText(result, options){
+    var outcomeName = options.outcomeCol;
+    var condNames = options.conditionCols;
+    var methodName = options.fuzzy ? 'ファジィセット質的比較分析（fsQCA）' : 'クリスプセット質的比較分析（csQCA）';
+
+    var totalCases = result.truthTable.reduce(function(a, r){ return a + r.nCases; }, 0);
+    var totalPositive = result.truthTable
+      .filter(function(r){ return r.outcome === 1; })
+      .reduce(function(a, r){ return a + r.nCases; }, 0);
+
+    var paras = [];
+
+    var intro = methodName + 'を用いて、' + condNames.join('・') + 'の各条件が' + outcomeName +
+      'を説明する十分条件であるかを分析した';
+    intro += options.fuzzy ? '（一致性の閾値は' + options.threshold + 'に設定した）。' : '。';
+    intro += '全' + totalCases + 'ケースのうち、' + totalPositive + 'ケースが' + outcomeName + 'を示した。';
+    paras.push(intro);
+
+    if (result.solutions.length === 0) {
+      paras.push('分析の結果、' + outcomeName + 'を説明する十分条件の組み合わせは見出されなかった。');
+    } else if (result.solutions.length === 1) {
+      var s = result.solutions[0];
+      paras.push('分析の結果、論理的残余を含めない複雑解（Complex Solution）として以下の解が得られた。');
+      paras.push(outcomeName + ' = ' + s.solution);
+      
+      if (options.fuzzy) {
+        paras.push('本解の一致性（consistency）は' + s.consistency.toFixed(3) + '、カバレッジ（coverage）は' +
+          s.coverage.toFixed(3) + 'であり、' + outcomeName + 'が生起したケースの約' +
+          (s.coverage * 100).toFixed(1) + '%を説明することができた。');
+        
+        if (s.paths && s.paths.length > 1) {
+          var pathText = s.paths.map(function(p, idx){
+            return '経路' + (idx + 1) + '（' + p.term + '）は単純カバレッジ' + p.rawCoverage.toFixed(3) +
+              '、独自カバレッジ' + p.uniqueCoverage.toFixed(3) + 'を示した';
+          }).join('。また、');
+          paras.push(pathText + '。');
+        }
+      } else {
+        paras.push('本解のカバー率（coverage）は' + (s.coverage * 100).toFixed(1) + '%であり、' +
+          outcomeName + 'が生じたケースの' + (s.coverage * 100).toFixed(1) + '%を説明することができた。');
+        if (s.paths && s.paths.length > 1) {
+          var pathTextCrisp = s.paths.map(function(p, idx){
+            return '経路' + (idx + 1) + '（' + p.term + '）は単純カバー率' + (p.rawCoverage * 100).toFixed(1) +
+              '%、独自カバー率' + (p.uniqueCoverage * 100).toFixed(1) + '%を示した';
+          }).join('。また、');
+          paras.push(pathTextCrisp + '。');
+        }
+      }
+    } else {
+      paras.push('分析の結果、以下の' + result.solutions.length + '個の複雑解（Complex Solution）が得られた。');
+      result.solutions.forEach(function(s, i){
+        var line = '解' + (i + 1) + '：' + outcomeName + ' = ' + s.solution;
+        line += options.fuzzy
+          ? '（consistency = ' + s.consistency.toFixed(3) + '、coverage = ' + s.coverage.toFixed(3) + '）'
+          : '（カバー率 = ' + (s.coverage * 100).toFixed(1) + '%）';
+        paras.push(line);
+      });
+    }
+
+    paras.push('※本文はQCA分析結果をもとに自動生成した記述例です。実際の論文執筆にあたっては、分析対象・理論的背景・' +
+      '先行研究（例：Ragin, C. C. (2008). Redesigning Social Inquiry: Fuzzy Sets and Beyond. University of Chicago Press.）' +
+      '等を踏まえて内容を確認・修正のうえご利用ください。');
+
+    return paras;
+  }
+
+  function copyToClipboard(text, btn){
+    var original = btn.textContent;
+    function done(ok){
+      btn.textContent = ok ? '✅ コピーしました' : '⚠ コピーに失敗しました';
+      setTimeout(function(){ btn.textContent = original; }, 1500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, done){
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      done(ok);
+    } catch (e) {
+      done(false);
+    }
+  }
+
+  function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function timestamp(){
+    var d = new Date();
+    function p(n){ return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes());
+  }
+
+  function mdTable(headerCells, rowsOfCells){
+    var lines = [];
+    lines.push('| ' + headerCells.join(' | ') + ' |');
+    lines.push('|' + headerCells.map(function(){ return ' --- '; }).join('|') + '|');
+    rowsOfCells.forEach(function(cells){ lines.push('| ' + cells.join(' | ') + ' |'); });
+    return lines.join('\n');
+  }
+
+  function mdEscapeCell(v){
+    return String(v).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  }
+
+  function generateMarkdown(result, options){
+    var lines = [];
+    lines.push('# QCA 分析結果');
+    lines.push('');
+    lines.push('- 分析日時: ' + new Date().toLocaleString('ja-JP'));
+    lines.push('- モード: ' + (options.fuzzy ? 'fsQCA（ファジィ集合）' : 'crisp / 多値QCA'));
+    lines.push('- ID列: `' + options.idCol + '`');
+    lines.push('- Outcome列: `' + options.outcomeCol + '`' + (options.outcomeIsMembershipIn1 ? '' : '（反転: 0-set を分析）'));
+    lines.push('- 条件列: ' + options.conditionCols.map(function(c){ return '`' + c + '`'; }).join(', '));
+    if (options.fuzzy) lines.push('- 一貫性（consistency）閾値: ' + options.threshold);
+    lines.push('');
+
+    lines.push('## 真理表');
+    lines.push('');
+    var ttHeader = ['ID'].concat(options.conditionCols);
+    if (options.fuzzy) ttHeader.push('consistency');
+    ttHeader.push('n', 'outcome');
+    var ttRows = result.truthTable.map(function(r){
+      var cells = [mdEscapeCell(r.id)].concat(r.values.map(String));
+      if (options.fuzzy) cells.push(r.consistency !== undefined && r.consistency !== null ? r.consistency.toFixed(3) : '');
+      cells.push(String(r.nCases), r.outcome === 9 ? 'C（矛盾）' : String(r.outcome));
+      return cells;
+    });
+    lines.push(mdTable(ttHeader, ttRows));
+    lines.push('');
+
+    lines.push('## 主項（Prime Implicants）');
+    lines.push('');
+    if (result.primeImplicants.length === 0) {
+      lines.push('_正例（outcome=1）の行がないため、主項は見つかりませんでした。_');
+    } else {
+      var piHeader = ['term', 'カバーするケース'];
+      if (options.fuzzy) piHeader.push('consistency', 'coverage');
+      var piRows = result.primeImplicants.map(function(p){
+        var cells = ['`' + p.term + '`', mdEscapeCell(p.casesCovered)];
+        if (options.fuzzy) cells.push(p.consistency.toFixed(3), p.coverage.toFixed(3));
+        return cells;
+      });
+      lines.push(mdTable(piHeader, piRows));
+    }
+    lines.push('');
+
+    lines.push('## 複雑解（Complex Solution）');
+    lines.push('');
+    if (result.solutions.length === 0) {
+      lines.push('_解が見つかりませんでした。_');
+    } else {
+      result.solutions.forEach(function(s, i){
+        lines.push('### 解 ' + (i + 1) + ': `' + s.solution + '`');
+        lines.push('');
+        lines.push('- 項数: ' + s.nTerms);
+        if (options.fuzzy) {
+          lines.push('- 一貫性（Consistency）: ' + s.consistency.toFixed(3));
+          lines.push('- カバレッジ（Coverage）: ' + s.coverage.toFixed(3));
+        } else {
+          lines.push('- カバー率（Coverage・解全体）: ' + (s.coverage * 100).toFixed(1) + '%');
+        }
+        lines.push('');
+        if (s.paths && s.paths.length) {
+          lines.push(mdTable(
+            ['経路', '単純カバー率', '独自カバー率'],
+            s.paths.map(function(p){
+              return ['`' + p.term + '`', (p.rawCoverage * 100).toFixed(1) + '%', (p.uniqueCoverage * 100).toFixed(1) + '%'];
+            })
+          ));
+          lines.push('');
+        }
+      });
+    }
+
+    lines.push('## 論文記述例（Example Write-up）');
+    lines.push('');
+    generatePaperText(result, options).forEach(function(p){
+      lines.push(p);
+      lines.push('');
+    });
+
+    lines.push('---');
+    lines.push('_Quine–McCluskey 主項導出 + 被覆表の全探索 + Ragin の consistency / coverage 指標_');
+    return lines.join('\n');
+  }
+
+  function triggerDownload(blob, filename){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function downloadMarkdown(){
+    if (!window.__lastResult) return;
+    var md = generateMarkdown(window.__lastResult, window.__lastOptions);
+    var blob = new Blob(['\ufeff' + md], { type: 'text/markdown;charset=utf-8' });
+    triggerDownload(blob, 'qca_result_' + timestamp() + '.md');
+  }
+
+  function downloadPdf(){
+    if (!window.__lastResult) return;
+    var btn = document.getElementById('downloadPdfBtn');
+    var original = btn.textContent;
+
+    if (typeof html2canvas === 'undefined' || !window.jspdf) {
+      alert('PDF生成ライブラリの読み込みに失敗しました（オフライン環境の可能性があります）。\n' +
+            '代わりにブラウザの印刷機能をご利用ください（Ctrl/Cmd+P → 送信先を「PDFに保存」）。');
+      window.print();
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '生成中…';
+
+    var target = document.getElementById('results');
+    html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function(canvas){
+      var jsPDF = window.jspdf.jsPDF;
+      var pdf = new jsPDF('p', 'mm', 'a4');
+      var pageWidth = pdf.internal.pageSize.getWidth();
+      var pageHeight = pdf.internal.pageSize.getHeight();
+      var margin = 10;
+      var imgWidth = pageWidth - margin * 2;
+      var imgHeight = canvas.height * imgWidth / canvas.width;
+      var imgData = canvas.toDataURL('image/png');
+      var usablePageHeight = pageHeight - margin * 2;
+
+      var heightLeft = imgHeight;
+      var position = margin;
+      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+      heightLeft -= usablePageHeight;
+
+      while (heightLeft > 0) {
+        position = margin - (imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+        heightLeft -= usablePageHeight;
+      }
+
+      pdf.save('qca_result_' + timestamp() + '.pdf');
+    }).catch(function(err){
+      alert('PDF生成中にエラーが発生しました: ' + err.message);
+    }).finally(function(){
+      btn.disabled = false;
+      btn.textContent = original;
+    });
+  }
+
+  document.getElementById('downloadMdBtn').addEventListener('click', downloadMarkdown);
+  document.getElementById('downloadPdfBtn').addEventListener('click', downloadPdf);
+
+})();
+</script>
+</body>
+</html>

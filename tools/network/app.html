@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ネットワーク分析ラボ — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#F2F3EE;
+  --card:#FBFBF8;
+  --ink:#131A22;
+  --ink-soft:#4C5661;
+  --ink-faint:#8A929B;
+  --rule:#DCDED4;
+  --teal:#16706B;
+  --teal-deep:#0E4D4A;
+  --teal-wash:#E3EFEC;
+  --plum:#6A3E7C;
+  --amber:#B8811A;
+  --warn:#A8402F;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP","Songti SC",serif;
+  --gothic:"Hiragino Sans","Yu Gothic",YuGothic,"Noto Sans JP",Meiryo,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Noto Sans Mono",monospace;
+  --shadow:0 1px 2px rgba(19,26,34,.06),0 8px 24px rgba(19,26,34,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--gothic);
+  font-size:15px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--teal-deep)}
+
+/* ---------- header ---------- */
+.hero{
+  border-bottom:1px solid var(--rule);
+  background:
+    linear-gradient(transparent 23px, rgba(22,112,107,.055) 23px, rgba(22,112,107,.055) 24px),
+    linear-gradient(90deg, transparent 23px, rgba(22,112,107,.055) 23px, rgba(22,112,107,.055) 24px);
+  background-size:24px 24px;
+}
+.hero-inner{max-width:1320px;margin:0 auto;padding:34px 24px 26px}
+.eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--teal-deep);display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 10px
+}
+.eyebrow span::before{content:"◦ ";color:var(--ink-faint)}
+h1{
+  font-family:var(--mincho);font-weight:600;font-size:clamp(28px,4.4vw,44px);
+  letter-spacing:.04em;margin:0 0 8px;line-height:1.24;
+}
+h1 small{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--ink-faint);font-weight:400;margin-top:8px}
+.lead{max-width:66ch;color:var(--ink-soft);margin:0;font-size:14.5px}
+
+/* ---------- layout ---------- */
+.layout{max-width:1320px;margin:0 auto;padding:24px;display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px;align-items:start}
+@media(max-width:1000px){.layout{grid-template-columns:1fr;padding:16px;gap:16px}}
+
+.card{background:var(--card);border:1px solid var(--rule);border-radius:3px;box-shadow:var(--shadow)}
+.panel{position:sticky;top:16px}
+@media(max-width:1000px){.panel{position:static}}
+.panel section{padding:18px 18px 20px;border-bottom:1px solid var(--rule)}
+.panel section:last-child{border-bottom:0}
+.sec-title{
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-faint);margin:0 0 14px;display:flex;justify-content:space-between;align-items:baseline
+}
+.sec-title b{font-family:var(--mincho);font-size:16px;letter-spacing:.06em;color:var(--ink);font-weight:600;text-transform:none}
+
+label{display:block;font-size:12.5px;color:var(--ink-soft);margin:0 0 5px}
+textarea,select,input[type=text],input[type=number]{
+  width:100%;font-family:var(--mono);font-size:12.5px;color:var(--ink);
+  background:#fff;border:1px solid var(--rule);border-radius:2px;padding:8px 9px;line-height:1.6
+}
+textarea{min-height:150px;resize:vertical;white-space:pre;overflow-x:auto}
+select{font-family:var(--gothic);font-size:13px}
+textarea:focus,select:focus,button:focus-visible,input:focus{outline:2px solid var(--teal);outline-offset:1px}
+
+.seg{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;margin-bottom:12px;background:#fff}
+.seg button{flex:1;border:0;background:transparent;padding:8px 4px;font-family:var(--gothic);font-size:12.5px;color:var(--ink-soft);cursor:pointer;border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--teal-wash);color:var(--teal-deep);font-weight:700;box-shadow:inset 0 -2px 0 var(--teal)}
+
+.checks{display:grid;gap:7px;margin:12px 0 2px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-soft);cursor:pointer}
+.check input{margin:5px 0 0;accent-color:var(--teal)}
+.check em{font-style:normal;color:var(--ink)}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  font-family:var(--gothic);font-size:13.5px;font-weight:700;letter-spacing:.03em;
+  border:1px solid var(--teal-deep);background:var(--teal);color:#fff;
+  padding:10px 14px;border-radius:2px;cursor:pointer;transition:background .15s
+}
+.btn:hover{background:var(--teal-deep)}
+.btn.block{width:100%;margin-top:14px;padding:12px}
+.btn.ghost{background:transparent;color:var(--teal-deep);border-color:var(--rule)}
+.btn.ghost:hover{background:var(--teal-wash)}
+.btn.sm{padding:7px 10px;font-size:12px;font-weight:600}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.file-btn{position:relative;overflow:hidden}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+.hint{font-size:11.5px;color:var(--ink-faint);margin:8px 0 0;line-height:1.65}
+.hint code{font-family:var(--mono);background:#EFEFE9;padding:1px 4px;border-radius:2px;color:var(--ink-soft)}
+
+.field{margin-bottom:13px}
+.range-row{display:flex;align-items:center;gap:10px}
+.range-row input[type=range]{flex:1;accent-color:var(--teal)}
+.range-row output{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);min-width:34px;text-align:right}
+
+/* ---------- stage ---------- */
+.stage{display:grid;gap:24px}
+.viz{position:relative;overflow:hidden}
+.viz-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.viz-head h2{font-family:var(--mincho);font-size:17px;letter-spacing:.05em;margin:0;font-weight:600}
+.viz-head .meta{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.06em}
+#net{display:block;width:100%;height:min(62vh,600px);background:
+  radial-gradient(circle at 50% 40%, #fff 0%, #F7F8F4 100%);cursor:grab;touch-action:none}
+#net.dragging{cursor:grabbing}
+.legend{position:absolute;left:14px;bottom:14px;background:rgba(251,251,248,.93);border:1px solid var(--rule);border-radius:2px;padding:8px 10px;font-size:11.5px;max-width:58%;backdrop-filter:blur(2px)}
+.legend b{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-faint);display:block;margin-bottom:5px;text-transform:uppercase;font-weight:400}
+.legend ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px}
+.legend li{display:flex;align-items:center;gap:5px;color:var(--ink-soft)}
+.swatch{width:9px;height:9px;border-radius:50%;display:inline-block}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;padding:7px 10px;border-radius:2px;opacity:0;transition:opacity .12s;max-width:240px;line-height:1.55;z-index:5}
+.tip b{font-family:var(--mincho);font-size:13.5px;letter-spacing:.04em}
+.tip dl{margin:4px 0 0;display:grid;grid-template-columns:auto auto;gap:1px 10px;font-family:var(--mono);font-size:11px;color:#C9D3D2}
+.tip dt{margin:0}.tip dd{margin:0;text-align:right;color:#fff}
+.node circle{cursor:pointer;transition:stroke-width .12s}
+.node text{font-family:var(--gothic);font-size:10.5px;fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;pointer-events:none;user-select:none}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--rule);overflow-x:auto;background:var(--card)}
+.tabs button{
+  border:0;background:transparent;padding:13px 16px;cursor:pointer;white-space:nowrap;
+  font-family:var(--gothic);font-size:13.5px;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px
+}
+.tabs button[aria-selected=true]{color:var(--teal-deep);font-weight:700;border-bottom-color:var(--teal)}
+.tabpanel{padding:20px 22px 26px}
+@media(max-width:600px){.tabpanel{padding:16px 14px 20px}}
+.tabpanel[hidden]{display:none}
+
+h3.blk{font-family:var(--mincho);font-size:17px;letter-spacing:.05em;font-weight:600;margin:26px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+h3.blk:first-child{margin-top:0}
+p.body{margin:0 0 12px;font-size:14px;color:var(--ink-soft)}
+p.body strong{color:var(--ink)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+.stat{background:var(--card);padding:12px 14px}
+.stat dt{font-size:11.5px;color:var(--ink-faint);margin:0 0 3px}
+.stat dd{margin:0;font-family:var(--mono);font-size:20px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stat dd small{font-size:11px;color:var(--ink-faint);font-family:var(--gothic);margin-left:3px;letter-spacing:0}
+
+.tablewrap{overflow:auto;max-height:520px;border:1px solid var(--rule);border-radius:2px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{position:sticky;top:0;background:#EFEFE9;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink-soft);font-weight:400;cursor:pointer;z-index:1}
+th:hover{background:var(--teal-wash);color:var(--teal-deep)}
+th[data-sorted]::after{content:" ▾";color:var(--teal)}
+th[data-sorted=asc]::after{content:" ▴"}
+td:first-child,th:first-child{text-align:left;font-family:var(--gothic)}
+tbody td{font-family:var(--mono);font-variant-numeric:tabular-nums}
+tbody tr:hover{background:var(--teal-wash)}
+tbody tr.hi{background:#FDF4DF}
+.bar{position:relative}
+.bar i{position:absolute;left:0;top:2px;bottom:2px;background:rgba(22,112,107,.14);display:block;border-radius:1px}
+.bar span{position:relative}
+
+.note{border-left:3px solid var(--teal);background:var(--teal-wash);padding:11px 14px;font-size:13px;color:var(--ink-soft);margin:14px 0;border-radius:0 2px 2px 0}
+.note.warn{border-left-color:var(--warn);background:#F8ECE9}
+pre.out{
+  font-family:var(--mono);font-size:12px;line-height:1.75;white-space:pre-wrap;word-break:break-word;
+  background:#fff;border:1px solid var(--rule);border-radius:2px;padding:14px 16px;margin:0;color:var(--ink)
+}
+.comm-card{border:1px solid var(--rule);border-radius:2px;padding:12px 14px;margin-bottom:10px;background:#fff}
+.comm-card h4{margin:0 0 6px;font-family:var(--mincho);font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.comm-card p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.7}
+.chip{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:1px 6px;border:1px solid var(--rule);border-radius:10px;color:var(--ink-soft);margin:2px 3px 0 0}
+.empty{text-align:center;color:var(--ink-faint);padding:60px 20px;font-size:13.5px}
+.empty b{display:block;font-family:var(--mincho);font-size:18px;color:var(--ink-soft);margin-bottom:6px;letter-spacing:.05em}
+footer{max-width:1320px;margin:0 auto;padding:8px 24px 44px;font-size:11.5px;color:var(--ink-faint)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:2px;font-size:13px;opacity:0;pointer-events:none;transition:all .2s;z-index:50}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-relation);--paper:var(--al-bg);--card:var(--al-surface);--ink:var(--al-ink);--ink-soft:var(--al-ink-2);--ink-faint:var(--al-ink-3);--rule:var(--al-line);--teal:var(--al-cat);--teal-deep:var(--al-cat-deep);--teal-wash:var(--al-cat-soft);--mincho:var(--al-serif);--gothic:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#relation">関係を見る</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>ネットワーク分析ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow"><span>ブラウザ内で完結</span><span>データは端末の外に出ません</span></p>
+    <h1>ネットワーク分析ラボ<small>SOCIAL NETWORK ANALYSIS</small></h1>
+    <p class="lead">つながりのデータ（誰と誰が関係しているか）を貼り付けるだけで、中心性・コミュニティ・構造指標をまとめて計算し、図と表と解説文にします。R も Python も要りません。</p>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ============ 操作パネル ============ -->
+  <aside class="card panel">
+    <section>
+      <p class="sec-title">01 / DATA<b>データを読み込む</b></p>
+
+      <div class="seg" role="group" aria-label="入力形式">
+        <button type="button" data-fmt="edge" aria-pressed="true">エッジリスト</button>
+        <button type="button" data-fmt="matrix" aria-pressed="false">隣接行列</button>
+      </div>
+
+      <label for="raw" id="rawLabel">1行に1つの関係。<code>送り手 , 受け手 , 重み</code></label>
+      <textarea id="raw" spellcheck="false"></textarea>
+
+      <div class="btn-row">
+        <button class="btn ghost sm file-btn" type="button">ファイルを選ぶ<input type="file" id="file" accept=".csv,.txt,.tsv"></button>
+        <button class="btn ghost sm" type="button" id="sample1">例：学級の相談相手</button>
+        <button class="btn ghost sm" type="button" id="sample2">例：共著ネットワーク</button>
+      </div>
+
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="directed"><em>向きのある関係として扱う</em>（相談する→される、など）</label>
+        <label class="check"><input type="checkbox" id="weighted"><em>3列目を関係の強さ（重み）として使う</em></label>
+        <label class="check"><input type="checkbox" id="header"><em>1行目は見出し行</em></label>
+      </div>
+
+      <button class="btn block" id="run">分析する</button>
+      <p class="hint">区切りはカンマ・タブ・空白のいずれでも読み取ります。自己ループ（自分自身への線）は取り除いて計算します。</p>
+    </section>
+
+    <section id="viewSec" hidden>
+      <p class="sec-title">02 / VIEW<b>図の見え方</b></p>
+
+      <div class="field">
+        <label for="sizeBy">丸の大きさ</label>
+        <select id="sizeBy">
+          <option value="degree">次数（つながりの数）</option>
+          <option value="strength">重み付き次数（強さの合計）</option>
+          <option value="betweenness">媒介中心性</option>
+          <option value="closeness">近接中心性</option>
+          <option value="eigen">固有ベクトル中心性</option>
+          <option value="pagerank">PageRank</option>
+          <option value="uniform">すべて同じ</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="colorBy">色</label>
+        <select id="colorBy">
+          <option value="community">コミュニティ</option>
+          <option value="metric">大きさと同じ指標の濃淡</option>
+          <option value="mono">単色</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="spread">点の広がり</label>
+        <div class="range-row"><input type="range" id="spread" min="40" max="400" value="150"><output id="spreadOut">150</output></div>
+      </div>
+      <div class="field">
+        <label for="minDeg">次数がこの値未満の点を隠す</label>
+        <div class="range-row"><input type="range" id="minDeg" min="0" max="10" value="0"><output id="minDegOut">0</output></div>
+      </div>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="showLabels" checked><em>名前を表示する</em></label>
+        <label class="check"><input type="checkbox" id="curved"><em>線を曲げる</em>（有向グラフの往復が見やすくなります）</label>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost sm" id="relayout">配置し直す</button>
+        <button class="btn ghost sm" id="fit">全体を表示</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost sm" id="savePng">PNGで保存</button>
+        <button class="btn ghost sm" id="saveSvg">SVGで保存</button>
+        <button class="btn ghost sm" id="saveCsv">指標をCSVで保存</button>
+      </div>
+      <p class="hint">丸はドラッグで動かせます。ホイールで拡大縮小、背景のドラッグで移動。</p>
+    </section>
+  </aside>
+
+  <!-- ============ 本体 ============ -->
+  <div class="stage">
+
+    <div class="card viz">
+      <div class="viz-head">
+        <h2>ネットワーク図</h2>
+        <span class="meta" id="vizMeta">データを読み込んでください</span>
+      </div>
+      <svg id="net" role="img" aria-label="ネットワーク図"></svg>
+      <div class="legend" id="legend" hidden></div>
+      <div class="tip" id="tip"></div>
+    </div>
+
+    <div class="card">
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="overview">全体の特徴</button>
+        <button role="tab" aria-selected="false" data-tab="nodes">個人の指標</button>
+        <button role="tab" aria-selected="false" data-tab="community">コミュニティ</button>
+        <button role="tab" aria-selected="false" data-tab="read">結果の読み方</button>
+        <button role="tab" aria-selected="false" data-tab="paper">論文の記述例</button>
+        <button role="tab" aria-selected="false" data-tab="rcode">Rコード</button>
+      </div>
+      <div class="tabpanel" id="tab-overview">
+        <div class="empty"><b>まだ何も計算していません</b>左のパネルにデータを貼り付けて「分析する」を押すか、サンプルデータをお試しください。</div>
+      </div>
+      <div class="tabpanel" id="tab-nodes" hidden></div>
+      <div class="tabpanel" id="tab-community" hidden></div>
+      <div class="tabpanel" id="tab-read" hidden></div>
+      <div class="tabpanel" id="tab-paper" hidden></div>
+      <div class="tabpanel" id="tab-rcode" hidden></div>
+    </div>
+
+  </div>
+</div>
+
+<footer>ネットワーク分析ラボ｜計算はすべてこのページの中（お使いの端末）で行われ、データが送信されることはありません。</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* --- 画面上のエラー表示（コンソールを開かなくても原因がわかるように） --- */
+function showFatal(msg){
+  let el = document.getElementById("fatal");
+  if(!el){
+    el = document.createElement("div"); el.id = "fatal";
+    el.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:99;background:#A8402F;color:#fff;padding:10px 16px;font:13px/1.6 sans-serif";
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+  el.textContent = "スクリプトエラー：" + msg;
+}
+window.addEventListener("error", function(e){
+  showFatal((e.message || "不明なエラー") + "（" + (e.lineno || "?") + "行目）");
+});
+/* --- SVGの中身を書き換える（innerHTMLが使えない環境への保険つき） --- */
+function setSVG(parent, markup){
+  try{
+    parent.innerHTML = markup;
+    if(!markup || parent.childNodes.length) return;
+  }catch(err){ /* 下のDOMParserにまわす */ }
+  const doc = new DOMParser().parseFromString(
+    '<svg xmlns="http://www.w3.org/2000/svg">' + markup + '<\/svg>', "image/svg+xml");
+  while(parent.firstChild) parent.removeChild(parent.firstChild);
+  if(doc.documentElement && doc.documentElement.nodeName !== "parsererror"){
+    Array.prototype.slice.call(doc.documentElement.childNodes)
+      .forEach(function(n){ parent.appendChild(document.importNode(n, true)); });
+  }
+}
+/* =========================================================
+   0. ユーティリティ
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const fmt = (v, d = 3) => (v === null || v === undefined || Number.isNaN(v)) ? "—" :
+  Number.isInteger(v) ? String(v) : (Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(d));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const PALETTE = ["#16706B","#C05A2B","#6A3E7C","#2E6BA8","#7F8A1C","#B03A5B","#3B7D3A","#9A6A2E","#2C7F9E","#8A4A8A","#5C6B7A","#A03E2A"];
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+function copyText(t){
+  const done=()=>toast("コピーしました");
+  if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(t).then(done, ()=>fallback(t)); }
+  else fallback(t);
+  function fallback(txt){
+    const ta=document.createElement("textarea");
+    ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); done(); }catch(e){ toast("コピーできませんでした。手動で選択してください"); }
+    ta.remove();
+  }
+}
+function download(name, content, type){
+  const blob = content instanceof Blob ? content : new Blob([content], {type: type||"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  try{
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.rel = "noopener"; a.target = "_blank";
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(err){
+    if(!window.open(url, "_blank")) toast("保存がブロックされました。新しいタブの許可が必要です");
+  }
+  setTimeout(()=>URL.revokeObjectURL(url), 8000);
+}
+
+/* =========================================================
+   1. データの読み取り
+   ========================================================= */
+function splitCells(line){
+  if(line.indexOf("\t") >= 0) return line.split("\t");
+  if(line.indexOf(",") >= 0) return line.split(",");
+  return line.trim().split(/\s+/);
+}
+function parseEdgeList(text, opt){
+  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l && !l.startsWith("#"));
+  if(opt.header) lines.shift();
+  const edges = []; let bad = 0;
+  for(const line of lines){
+    const c = splitCells(line).map(s=>s.trim().replace(/^["']|["']$/g,""));
+    if(c.length < 2 || !c[0] || !c[1]){ bad++; continue; }
+    let w = 1;
+    if(opt.weighted && c.length >= 3){ const v = parseFloat(c[2]); if(Number.isFinite(v) && v > 0) w = v; }
+    edges.push({s:c[0], t:c[1], w});
+  }
+  if(!edges.length) throw new Error("関係を1件も読み取れませんでした。1行に「相手A , 相手B」の形式で入力してください。");
+  return {edges, bad};
+}
+function parseMatrix(text, opt){
+  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l && !l.startsWith("#"));
+  if(lines.length < 2) throw new Error("行列を読み取れませんでした。1行目に列名、2行目以降に行名と数値を並べてください。");
+  let names = null, start = 0;
+  const first = splitCells(lines[0]).map(s=>s.trim().replace(/^["']|["']$/g,""));
+  const numericFirst = first.every(v => v==="" || Number.isFinite(parseFloat(v)));
+  if(!numericFirst){ names = first[0]==="" ? first.slice(1) : first; start = 1; }
+  const rows = [], labels = [];
+  for(let i=start;i<lines.length;i++){
+    let c = splitCells(lines[i]).map(s=>s.trim().replace(/^["']|["']$/g,""));
+    if(!c.length) continue;
+    if(!Number.isFinite(parseFloat(c[0]))){ labels.push(c[0]); c = c.slice(1); }
+    else labels.push(names ? (names[rows.length]||("v"+(rows.length+1))) : ("v"+(rows.length+1)));
+    rows.push(c.map(v=>parseFloat(v)||0));
+  }
+  if(!names) names = labels.slice();
+  const edges = [];
+  for(let i=0;i<rows.length;i++) for(let j=0;j<rows[i].length;j++){
+    const v = rows[i][j];
+    if(v && v !== 0){
+      const a = labels[i] || ("v"+(i+1)), b = names[j] || ("v"+(j+1));
+      if(!opt.directed && j < i) continue;      // 無向なら上三角だけ
+      edges.push({s:a, t:b, w: opt.weighted ? Math.abs(v) : 1});
+    }
+  }
+  if(!edges.length) throw new Error("行列の中に0以外の値が見つかりませんでした。");
+  return {edges, bad:0, isolates: labels};
+}
+
+/* =========================================================
+   2. グラフの構築
+   ========================================================= */
+function buildGraph(raw, opt, extraNodes){
+  const index = new Map(), names = [];
+  const id = n => { if(!index.has(n)){ index.set(n, names.length); names.push(n);} return index.get(n); };
+  (extraNodes||[]).forEach(id);
+  const edges = [], seen = new Map(); let selfLoops = 0, merged = 0;
+  for(const e of raw){
+    const s = id(e.s), t = id(e.t);
+    if(s === t){ selfLoops++; continue; }
+    const key = opt.directed ? (s+">"+t) : (Math.min(s,t)+"-"+Math.max(s,t));
+    if(seen.has(key)){ edges[seen.get(key)].w += e.w; merged++; continue; }
+    seen.set(key, edges.length); edges.push({s,t,w:e.w});
+  }
+  const n = names.length;
+  const out = Array.from({length:n}, ()=>new Map());
+  const inn = Array.from({length:n}, ()=>new Map());
+  const und = Array.from({length:n}, ()=>new Map());
+  const add = (m,i,j,w)=> m[i].set(j,(m[i].get(j)||0)+w);
+  for(const e of edges){
+    add(out, e.s, e.t, e.w); add(inn, e.t, e.s, e.w);
+    add(und, e.s, e.t, e.w); add(und, e.t, e.s, e.w);
+  }
+  // 無向グラフでは向きを持たないので、探索用の隣接も対称にしておく
+  const outA = opt.directed ? out : und, innA = opt.directed ? inn : und;
+  return {names, edges, n, m:edges.length, out:outA, inn:innA, und,
+          directed:opt.directed, weighted:opt.weighted, selfLoops, merged};
+}
+
+/* =========================================================
+   3. 指標の計算
+   ========================================================= */
+// --- 最短経路（媒介中心性・近接中心性・距離統計をまとめて）---
+function pathMeasures(g){
+  const {n, directed, weighted} = g;
+  const nbr = i => g.out[i];                 // 無向なら out === 双方向
+  const bet = new Float64Array(n), closeSum = new Float64Array(n), reach = new Int32Array(n);
+  let sumD = 0, pairs = 0, diameter = 0;
+  const dist = new Float64Array(n), sigma = new Float64Array(n), delta = new Float64Array(n);
+  const preds = Array.from({length:n}, ()=>[]);
+  for(let s=0;s<n;s++){
+    dist.fill(Infinity); sigma.fill(0); delta.fill(0);
+    for(let i=0;i<n;i++) preds[i].length = 0;
+    dist[s]=0; sigma[s]=1;
+    const stack = [];
+    if(!weighted){
+      const q=[s]; let head=0;
+      while(head<q.length){
+        const v=q[head++]; stack.push(v);
+        for(const [w,] of nbr(v)){
+          if(dist[w]===Infinity){ dist[w]=dist[v]+1; q.push(w); }
+          if(dist[w]===dist[v]+1){ sigma[w]+=sigma[v]; preds[w].push(v); }
+        }
+      }
+    } else {
+      const done = new Uint8Array(n); const heap=[[0,s]];
+      const push=(d,v)=>{ heap.push([d,v]); let i=heap.length-1; while(i>0){ const p=(i-1)>>1; if(heap[p][0]<=heap[i][0])break; [heap[p],heap[i]]=[heap[i],heap[p]]; i=p; } };
+      const pop=()=>{ const top=heap[0], last=heap.pop(); if(heap.length){ heap[0]=last; let i=0; for(;;){ const l=2*i+1,r=l+1; let m=i; if(l<heap.length&&heap[l][0]<heap[m][0])m=l; if(r<heap.length&&heap[r][0]<heap[m][0])m=r; if(m===i)break; [heap[m],heap[i]]=[heap[i],heap[m]]; i=m; } } return top; };
+      while(heap.length){
+        const [d,v]=pop(); if(done[v])continue; done[v]=1; stack.push(v);
+        for(const [w,wt] of nbr(v)){
+          const nd = d + 1/wt;                       // 重みが大きい＝距離が近い
+          if(nd < dist[w]-1e-12){ dist[w]=nd; sigma[w]=sigma[v]; preds[w]=[v]; push(nd,w); }
+          else if(Math.abs(nd-dist[w])<1e-12){ sigma[w]+=sigma[v]; preds[w].push(v); }
+        }
+      }
+    }
+    let sd=0, r=0;
+    for(let v=0;v<n;v++){ if(v!==s && dist[v]<Infinity){ sd+=dist[v]; r++; if(dist[v]>diameter)diameter=dist[v]; } }
+    closeSum[s]=sd; reach[s]=r; sumD+=sd; pairs+=r;
+    for(let i=stack.length-1;i>=0;i--){
+      const w=stack[i];
+      for(const v of preds[w]) delta[v]+= (sigma[v]/sigma[w])*(1+delta[w]);
+      if(w!==s) bet[w]+=delta[w];
+    }
+  }
+  const betweenness = new Float64Array(n), closeness = new Float64Array(n);
+  const scale = directed ? 1 : 0.5;
+  const norm = n>2 ? (directed ? (n-1)*(n-2) : (n-1)*(n-2)/2) : 1;
+  for(let i=0;i<n;i++){
+    betweenness[i] = bet[i]*scale/ (norm||1);
+    closeness[i] = (closeSum[i]>0 && n>1) ? (reach[i]/closeSum[i])*(reach[i]/(n-1)) : 0; // Wasserman–Faust
+  }
+  return {betweenness, closeness, avgPath: pairs? sumD/pairs : 0, diameter, connectedPairs: pairs};
+}
+
+// --- 固有ベクトル中心性（無向化した行列でべき乗法）---
+function eigenCentrality(g){
+  const n=g.n; let x=new Float64Array(n).fill(1/Math.sqrt(n));
+  for(let it=0; it<300; it++){
+    const y=new Float64Array(n);
+    for(let i=0;i<n;i++) for(const [j,w] of g.und[i]) y[i]+= w*x[j];
+    let norm=0; for(let i=0;i<n;i++) norm+=y[i]*y[i];
+    norm=Math.sqrt(norm); if(norm<1e-12) return x;
+    let diff=0; for(let i=0;i<n;i++){ y[i]/=norm; diff+=Math.abs(y[i]-x[i]); }
+    x=y; if(diff<1e-10) break;
+  }
+  const mx=Math.max(...x)||1; return x.map(v=>v/mx);
+}
+
+// --- PageRank ---
+function pagerank(g, d=0.85){
+  const n=g.n; let x=new Float64Array(n).fill(1/n);
+  const outW=new Float64Array(n);
+  for(let i=0;i<n;i++) for(const [,w] of g.out[i]) outW[i]+=w;
+  for(let it=0; it<200; it++){
+    const y=new Float64Array(n); let dangling=0;
+    for(let i=0;i<n;i++){ if(outW[i]===0){ dangling+=x[i]; continue; } for(const [j,w] of g.out[i]) y[j]+= x[i]*w/outW[i]; }
+    let diff=0;
+    for(let i=0;i<n;i++){ const v=(1-d)/n + d*(y[i]+dangling/n); diff+=Math.abs(v-x[i]); y[i]=v; }
+    x=y; if(diff<1e-12) break;
+  }
+  return x;
+}
+
+// --- クラスター係数（無向・非重み）---
+function clustering(g){
+  const n=g.n, cc=new Float64Array(n); let triangles=0, triples=0;
+  const sets=g.und.map(m=>new Set(m.keys()));
+  for(let i=0;i<n;i++){
+    const nb=Array.from(sets[i]); const k=nb.length;
+    if(k<2){ cc[i]=0; continue; }
+    let links=0;
+    for(let a=0;a<k;a++) for(let b=a+1;b<k;b++) if(sets[nb[a]].has(nb[b])) links++;
+    cc[i]= 2*links/(k*(k-1));
+    triangles += links; triples += k*(k-1)/2;
+  }
+  return {cc, transitivity: triples? triangles/triples : 0};
+}
+
+// --- Burt の制約度（構造的空隙）---
+function constraint(g){
+  const n=g.n, out=new Float64Array(n);
+  const p=[];
+  for(let i=0;i<n;i++){
+    const m=new Map(); let tot=0;
+    for(const [j,w] of g.und[i]){ m.set(j,w); tot+=w; }
+    if(tot>0) for(const [j,w] of m) m.set(j, w/tot);
+    p.push(m);
+  }
+  for(let i=0;i<n;i++){
+    if(!p[i].size){ out[i]=NaN; continue; }
+    let c=0;
+    for(const [j,pij] of p[i]){
+      let indirect=0;
+      for(const [q,piq] of p[i]) if(q!==j && q!==i){ const pqj=p[q].get(j); if(pqj) indirect += piq*pqj; }
+      c += Math.pow(pij+indirect, 2);
+    }
+    out[i]=c;
+  }
+  return out;
+}
+
+// --- 連結成分（無向）---
+function components(g){
+  const n=g.n, comp=new Int32Array(n).fill(-1); let k=0;
+  for(let s=0;s<n;s++){
+    if(comp[s]>=0) continue;
+    const q=[s]; comp[s]=k; let head=0;
+    while(head<q.length){ const v=q[head++]; for(const [w] of g.und[v]) if(comp[w]<0){ comp[w]=k; q.push(w);} }
+    k++;
+  }
+  const sizes=new Array(k).fill(0); for(let i=0;i<n;i++) sizes[comp[i]]++;
+  return {comp, count:k, sizes};
+}
+
+// --- Louvain 法によるコミュニティ検出（無向・重み対応）---
+function louvain(g){
+  const n=g.n;
+  let nodes=Array.from({length:n},(_,i)=>i);
+  let adj=g.und.map(m=>new Map(m));
+  let self=new Float64Array(n);
+  let mapping=Array.from({length:n},(_,i)=>i);
+  let totalW=0; for(let i=0;i<n;i++) for(const [,w] of adj[i]) totalW+=w; totalW/=2;
+  if(totalW===0) return {comm:new Int32Array(n), modularity:0, count:n};
+  for(let level=0; level<12; level++){
+    const N=adj.length;
+    const k=new Float64Array(N);
+    for(let i=0;i<N;i++){ let s=2*self[i]; for(const [,w] of adj[i]) s+=w; k[i]=s; }
+    const m2=2*totalW;
+    const comm=Array.from({length:N},(_,i)=>i);
+    const tot=Float64Array.from(k);
+    let improved=false, moved=true, rounds=0;
+    while(moved && rounds++<30){
+      moved=false;
+      for(let i=0;i<N;i++){
+        const ci=comm[i]; tot[ci]-=k[i];
+        const links=new Map(); links.set(ci,0);
+        for(const [j,w] of adj[i]) links.set(comm[j], (links.get(comm[j])||0)+w);
+        let best=ci, bestGain=(links.get(ci)||0) - tot[ci]*k[i]/m2;
+        for(const [c,wc] of links){
+          const gain = wc - tot[c]*k[i]/m2;
+          if(gain > bestGain+1e-12){ bestGain=gain; best=c; }
+        }
+        tot[best]+=k[i];
+        if(best!==ci){ comm[i]=best; moved=true; improved=true; }
+      }
+    }
+    // 再ラベル
+    const remap=new Map(); const newComm=comm.map(c=>{ if(!remap.has(c)) remap.set(c, remap.size); return remap.get(c); });
+    const C=remap.size;
+    mapping = mapping.map(c => newComm[c]);
+    if(!improved || C===N) break;
+    // 集約
+    const nadj=Array.from({length:C},()=>new Map()); const nself=new Float64Array(C);
+    for(let i=0;i<N;i++){
+      nself[newComm[i]] += self[i];
+      for(const [j,w] of adj[i]){
+        if(i<j || newComm[i]!==newComm[j]){
+          const a=newComm[i], b=newComm[j];
+          if(a===b){ if(i<j) nself[a]+=w; }
+          else nadj[a].set(b,(nadj[a].get(b)||0)+w);
+        }
+      }
+    }
+    adj=nadj; self=nself;
+  }
+  const comm=Int32Array.from(mapping);
+  // モジュラリティ
+  const k=new Float64Array(n); let m2=0;
+  for(let i=0;i<n;i++){ let s=0; for(const [,w] of g.und[i]) s+=w; k[i]=s; m2+=s; }
+  let Q=0;
+  if(m2>0){
+    for(let i=0;i<n;i++) for(const [j,w] of g.und[i]) if(comm[i]===comm[j]) Q += w/m2 - 0;
+    let sumk={}; for(let i=0;i<n;i++) sumk[comm[i]]=(sumk[comm[i]]||0)+k[i];
+    for(const c in sumk) Q -= Math.pow(sumk[c]/m2,2);
+  }
+  const count=new Set(Array.from(comm)).size;
+  return {comm, modularity:Q, count};
+}
+
+// --- 全体指標 ---
+function globalStats(g, deg, comp){
+  const {n,m,directed}=g;
+  const possible = directed ? n*(n-1) : n*(n-1)/2;
+  const density = possible? m/possible : 0;
+  const avgDeg = n? (directed? m/n : 2*m/n) : 0;
+  // 次数中心化（Freeman）
+  let cent=0;
+  if(n>2){
+    const dn = deg.map(d=>d/(n-1)); const mx=Math.max(...dn);
+    cent = dn.reduce((a,v)=>a+(mx-v),0) / (n-2);
+  }
+  // 相互性（有向）
+  let recip=null;
+  if(directed){
+    let both=0; for(const e of g.edges) if(g.out[e.t].has(e.s)) both++;
+    recip = m? both/m : 0;
+  }
+  // 次数の同類性（Newman）
+  let assort=null;
+  if(g.edges.length>1){
+    let s1=0,s2=0,s3=0; const M=g.edges.length;
+    for(const e of g.edges){ const j=deg[e.s], k=deg[e.t]; s1+=j*k; s2+=0.5*(j+k); s3+=0.5*(j*j+k*k); }
+    const num=s1/M-Math.pow(s2/M,2), den=s3/M-Math.pow(s2/M,2);
+    assort = Math.abs(den)>1e-12 ? num/den : null;
+  }
+  return {density, avgDeg, centralization:cent, reciprocity:recip, assortativity:assort,
+          components:comp.count, largest:Math.max(...comp.sizes), isolates:deg.filter(d=>d===0).length};
+}
+
+function analyze(g){
+  const n=g.n;
+  const degOut=new Float64Array(n), degIn=new Float64Array(n), deg=new Float64Array(n);
+  const strOut=new Float64Array(n), strIn=new Float64Array(n), str=new Float64Array(n);
+  for(let i=0;i<n;i++){
+    degOut[i]=g.out[i].size; degIn[i]=g.inn[i].size; deg[i]=g.und[i].size;
+    for(const [,w] of g.out[i]) strOut[i]+=w;
+    for(const [,w] of g.inn[i]) strIn[i]+=w;
+    for(const [,w] of g.und[i]) str[i]+=w;
+  }
+  const paths=pathMeasures(g);
+  const {cc, transitivity}=clustering(g);
+  const eig=eigenCentrality(g);
+  const pr=pagerank(g);
+  const con=constraint(g);
+  const comp=components(g);
+  const com=louvain(g);
+  const gs=globalStats(g, Array.from(deg), comp);
+  const avgCC = n? Array.from(cc).reduce((a,b)=>a+b,0)/n : 0;
+  const rows=[];
+  for(let i=0;i<n;i++) rows.push({
+    i, name:g.names[i],
+    degree: g.directed? degOut[i]+degIn[i] : deg[i],
+    degOut:degOut[i], degIn:degIn[i],
+    strength: g.directed? strOut[i]+strIn[i] : str[i],
+    betweenness:paths.betweenness[i], closeness:paths.closeness[i],
+    eigen:eig[i], pagerank:pr[i], clustering:cc[i], constraint:con[i],
+    community:com.comm[i], component:comp.comp[i], uniform:1
+  });
+  return {rows, global:{...gs, avgPath:paths.avgPath, diameter:paths.diameter, transitivity, avgClustering:avgCC,
+          modularity:com.modularity, communities:com.count}, comm:com, comp};
+}
+
+/* =========================================================
+   4. 描画（力学モデル）
+   ========================================================= */
+const svg=$("#net"), tip=$("#tip");
+let sim=null, rafId=null, view={x:0,y:0,k:1}, G=null, R=null, hidden=new Set();
+
+function ns(tag){ return document.createElementNS("http://www.w3.org/2000/svg", tag); }
+
+function makeSim(){
+  const nodes=R.rows.filter(r=>!hidden.has(r.i)).map(r=>({...r, x:0,y:0,vx:0,vy:0}));
+  const byId=new Map(nodes.map(nd=>[nd.i,nd]));
+  const links=G.edges.filter(e=>byId.has(e.s)&&byId.has(e.t)).map(e=>({s:byId.get(e.s), t:byId.get(e.t), w:e.w}));
+  const W=svg.clientWidth||900, H=svg.clientHeight||560;
+  const rad=Math.min(W,H)/2.6;
+  nodes.forEach((nd,i)=>{ const a=i*2.399963; nd.x=W/2+Math.sqrt(i/nodes.length)*rad*Math.cos(a); nd.y=H/2+Math.sqrt(i/nodes.length)*rad*Math.sin(a); });
+  return {nodes, links, byId, alpha:1, W, H};
+}
+function tick(){
+  const s=sim; if(!s) return;
+  const dist=+$("#spread").value;
+  const charge=-dist*13, a=s.alpha;
+  for(const l of s.links){
+    let dx=l.t.x-l.s.x, dy=l.t.y-l.s.y; let d=Math.hypot(dx,dy)||1e-3;
+    const target = dist*(G.weighted? Math.max(.45, 1/Math.pow(l.w,.35)) : 1);
+    const f=(d-target)/d*a*0.28;
+    const ks=1/(1+l.s.degree), kt=1/(1+l.t.degree), tot=ks+kt;
+    l.s.vx+=dx*f*(kt/tot); l.s.vy+=dy*f*(kt/tot);
+    l.t.vx-=dx*f*(ks/tot); l.t.vy-=dy*f*(ks/tot);
+  }
+  const N=s.nodes;
+  for(let i=0;i<N.length;i++) for(let j=i+1;j<N.length;j++){
+    let dx=N[j].x-N[i].x, dy=N[j].y-N[i].y; let d2=dx*dx+dy*dy;
+    if(d2<1) { d2=1; dx=(Math.random()-.5); dy=(Math.random()-.5); }
+    if(d2>9e5) continue;
+    const f=charge*a/d2;
+    N[i].vx+=dx*f/Math.sqrt(d2)*8; N[i].vy+=dy*f/Math.sqrt(d2)*8;
+    N[j].vx-=dx*f/Math.sqrt(d2)*8; N[j].vy-=dy*f/Math.sqrt(d2)*8;
+  }
+  for(const nd of N){
+    nd.vx+=(s.W/2-nd.x)*0.012*a; nd.vy+=(s.H/2-nd.y)*0.012*a;
+    if(nd.fixed){ nd.x=nd.fx; nd.y=nd.fy; nd.vx=nd.vy=0; continue; }
+    nd.vx*=0.62; nd.vy*=0.62; nd.x+=nd.vx; nd.y+=nd.vy;
+  }
+  s.alpha*=0.982;
+  paint();
+  if(s.alpha>0.008) rafId=requestAnimationFrame(tick); else rafId=null;
+}
+function kick(){ if(!sim) return; sim.alpha=Math.max(sim.alpha,.7); if(!rafId) rafId=requestAnimationFrame(tick); }
+function restart(fit){ if(rafId) cancelAnimationFrame(rafId); rafId=null; sim=makeSim(); rafId=requestAnimationFrame(tick); if(fit!==false) setTimeout(fitView, 850); }
+
+function nodeColor(r){
+  const mode=$("#colorBy").value;
+  if(mode==="mono") return "#16706B";
+  if(mode==="community") return PALETTE[r.community%PALETTE.length];
+  const key=$("#sizeBy").value; const vals=R.rows.map(x=>x[key]||0);
+  const mn=Math.min(...vals), mx=Math.max(...vals);
+  const t=mx>mn? ((r[key]||0)-mn)/(mx-mn) : .5;
+  const c1=[226,239,236], c2=[14,77,74];
+  return `rgb(${c1.map((v,i)=>Math.round(v+(c2[i]-v)*t)).join(",")})`;
+}
+function nodeRadius(r){
+  const key=$("#sizeBy").value;
+  if(key==="uniform") return 8;
+  const vals=R.rows.map(x=>x[key]||0), mx=Math.max(...vals), mn=Math.min(...vals);
+  const t=mx>mn? ((r[key]||0)-mn)/(mx-mn) : .5;
+  return 5+Math.sqrt(t)*17;
+}
+function paint(){
+  if(!sim) return;
+  const curved=$("#curved").checked, showL=$("#showLabels").checked;
+  let g=svg.querySelector("#root");
+  if(!g){
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    const defs=ns("defs");
+    setSVG(defs, '<marker id="arrow" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,-4L9,0L0,4" fill="#9BA6A4"><\/path><\/marker>');
+    svg.appendChild(defs);
+    g=ns("g"); g.id="root"; svg.appendChild(g);
+    const le=ns("g"); le.id="links"; le.setAttribute("fill","none"); g.appendChild(le);
+    const nn=ns("g"); nn.id="nodes"; g.appendChild(nn);
+  }
+  g.setAttribute("transform",`translate(${view.x},${view.y}) scale(${view.k})`);
+  const le=svg.querySelector("#links"), nn=svg.querySelector("#nodes");
+  const maxW=Math.max(1,...sim.links.map(l=>l.w));
+  // links
+  let html="";
+  for(const l of sim.links){
+    const sw=G.weighted? (0.6+2.6*Math.sqrt(l.w/maxW)) : 1.1;
+    let dx=l.t.x-l.s.x, dy=l.t.y-l.s.y;
+    const len=Math.hypot(dx,dy)||1;
+    // 有向グラフでは矢印が丸に隠れないよう、終点を半径のぶん手前で止める
+    const gap=G.directed? nodeRadius(l.t)+4 : 0;
+    const tx=l.t.x-dx/len*gap, ty=l.t.y-dy/len*gap;
+    let d;
+    if(curved){
+      const dr=len*1.6||1;
+      d=`M${l.s.x},${l.s.y}A${dr},${dr} 0 0,1 ${tx},${ty}`;
+    } else d=`M${l.s.x},${l.s.y}L${tx},${ty}`;
+    html+=`<path d="${d}" stroke="#B4BEBC" stroke-width="${sw.toFixed(2)}" stroke-opacity=".75"${G.directed?' marker-end="url(#arrow)"':''}><\/path>`;
+  }
+  setSVG(le, html);
+  // nodes
+  let nh="";
+  for(const nd of sim.nodes){
+    const r=nodeRadius(nd);
+    nh+=`<g class="node" data-i="${nd.i}" transform="translate(${nd.x.toFixed(1)},${nd.y.toFixed(1)})">`
+      + `<circle r="${r.toFixed(1)}" fill="${nodeColor(nd)}" stroke="#fff" stroke-width="1.5"><\/circle>`
+      + (showL? `<text x="0" y="${(r+11).toFixed(1)}" text-anchor="middle">${esc(nd.name)}<\/text>`:"")
+      + `<\/g>`;
+  }
+  setSVG(nn, nh);
+}
+function fitView(){
+  if(!sim||!sim.nodes.length) return;
+  const xs=sim.nodes.map(n=>n.x), ys=sim.nodes.map(n=>n.y);
+  const pad=50, W=svg.clientWidth, H=svg.clientHeight;
+  const w=Math.max(...xs)-Math.min(...xs)||1, h=Math.max(...ys)-Math.min(...ys)||1;
+  const k=Math.min((W-pad*2)/w, (H-pad*2)/h, 2.2);
+  view.k=k;
+  view.x=W/2-k*((Math.max(...xs)+Math.min(...xs))/2);
+  view.y=H/2-k*((Math.max(...ys)+Math.min(...ys))/2);
+  paint();
+}
+
+/* --- 操作（ドラッグ・ズーム・ツールチップ） --- */
+let dragTarget=null, panStart=null;
+svg.addEventListener("pointerdown", e=>{
+  const gEl=e.target.closest(".node");
+  if(gEl){
+    const i=+gEl.dataset.i; dragTarget=sim.nodes.find(n=>n.i===i);
+    if(dragTarget){ dragTarget.fixed=true; dragTarget.fx=dragTarget.x; dragTarget.fy=dragTarget.y; kick(); }
+  } else { panStart={x:e.clientX-view.x, y:e.clientY-view.y}; svg.classList.add("dragging"); }
+  svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener("pointermove", e=>{
+  const rect=svg.getBoundingClientRect();
+  if(dragTarget){
+    dragTarget.fx=(e.clientX-rect.left-view.x)/view.k; dragTarget.fy=(e.clientY-rect.top-view.y)/view.k;
+    dragTarget.x=dragTarget.fx; dragTarget.y=dragTarget.fy; kick(); return;
+  }
+  if(panStart){ view.x=e.clientX-panStart.x; view.y=e.clientY-panStart.y; paint(); return; }
+  const gEl=e.target.closest(".node");
+  if(gEl&&R){
+    const r=R.rows[+gEl.dataset.i];
+    tip.innerHTML=`<b>${esc(r.name)}<\/b><dl>`
+      +`<dt>次数<\/dt><dd>${G.directed? r.degOut+" / "+r.degIn : r.degree}<\/dd>`
+      +`<dt>媒介中心性<\/dt><dd>${fmt(r.betweenness)}<\/dd>`
+      +`<dt>近接中心性<\/dt><dd>${fmt(r.closeness)}<\/dd>`
+      +`<dt>コミュニティ<\/dt><dd>C${r.community+1}<\/dd><\/dl>`;
+    tip.style.opacity=1;
+    tip.style.left=Math.min(e.clientX-rect.left+14, rect.width-250)+"px";
+    tip.style.top=(e.clientY-rect.top+14)+"px";
+  } else tip.style.opacity=0;
+});
+["pointerup","pointercancel","pointerleave"].forEach(ev=>svg.addEventListener(ev, e=>{
+  if(dragTarget){ dragTarget.fixed=false; dragTarget=null; }
+  panStart=null; svg.classList.remove("dragging");
+  if(ev==="pointerleave") tip.style.opacity=0;
+}));
+svg.addEventListener("wheel", e=>{
+  e.preventDefault();
+  const rect=svg.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const f=e.deltaY<0? 1.12 : 1/1.12, nk=Math.max(.15, Math.min(6, view.k*f));
+  view.x=mx-(mx-view.x)*(nk/view.k); view.y=my-(my-view.y)*(nk/view.k); view.k=nk; paint();
+}, {passive:false});
+
+/* =========================================================
+   5. 結果の出力
+   ========================================================= */
+const METRICS=[
+  {key:"degree", label:"次数", desc:"つながっている相手の数"},
+  {key:"strength", label:"重み付き次数", desc:"関係の強さの合計"},
+  {key:"betweenness", label:"媒介中心性", desc:"人と人の間の橋渡しになっている度合い"},
+  {key:"closeness", label:"近接中心性", desc:"他の全員に平均的に近い度合い"},
+  {key:"eigen", label:"固有ベクトル中心性", desc:"影響力のある相手とつながっている度合い"},
+  {key:"pagerank", label:"PageRank", desc:"重要な相手から向けられている度合い"},
+  {key:"clustering", label:"クラスター係数", desc:"友人同士がどれだけ互いに知り合いか"},
+  {key:"constraint", label:"制約度", desc:"低いほど構造的空隙（すき間）を橋渡ししている"}
+];
+function topN(key, n=3, asc=false){
+  const rows=R.rows.filter(r=>Number.isFinite(r[key]));
+  rows.sort((a,b)=> asc? a[key]-b[key] : b[key]-a[key]);
+  return rows.slice(0,n);
+}
+
+function renderOverview(){
+  const s=R.global, d=G.directed;
+  const items=[
+    ["ノード数（人数）", G.n, "人"],
+    ["エッジ数（関係数）", G.m, "本"],
+    ["密度", fmt(s.density), ""],
+    ["平均次数", fmt(s.avgDeg,2), ""],
+    ["連結成分の数", s.components, "個"],
+    ["最大成分の大きさ", s.largest, "人"],
+    ["孤立点", s.isolates, "人"],
+    ["平均経路長", fmt(s.avgPath,2), ""],
+    ["直径", fmt(s.diameter,2), ""],
+    ["平均クラスター係数", fmt(s.avgClustering), ""],
+    ["推移性（全体）", fmt(s.transitivity), ""],
+    ["次数中心化", fmt(s.centralization), ""],
+  ];
+  if(d) items.push(["相互性", fmt(s.reciprocity), ""]);
+  if(s.assortativity!==null) items.push(["次数の同類性", fmt(s.assortativity), ""]);
+  items.push(["コミュニティ数", s.communities, "個"], ["モジュラリティ Q", fmt(s.modularity), ""]);
+
+  let html=`<h3 class="blk">ネットワーク全体の姿<\/h3>
+  <p class="body">${d?"向きのある":"向きのない"}${G.weighted?"重み付き":"重みなし"}ネットワークとして、<strong>${G.n}人・${G.m}本<\/strong>の関係を分析しました。${G.selfLoops?`自己ループ${G.selfLoops}件は除外しています。`:""}${G.merged?`重複した関係${G.merged}件は1本にまとめました。`:""}<\/p>
+  <dl class="stats">`;
+  for(const [k,v,u] of items) html+=`<div class="stat"><dt>${k}<\/dt><dd>${v}${u?`<small>${u}<\/small>`:""}<\/dd><\/div>`;
+  html+=`<\/dl>`;
+
+  html+=`<h3 class="blk">中心にいるのは誰か<\/h3><div class="tablewrap"><table><thead><tr>
+    <th style="cursor:default">指標<\/th><th style="cursor:default;text-align:left">上位3名<\/th><th style="cursor:default;text-align:left">意味<\/th><\/tr><\/thead><tbody>`;
+  for(const m of METRICS){
+    if(m.key==="strength" && !G.weighted) continue;
+    const asc = m.key==="constraint";
+    const t=topN(m.key,3,asc).map(r=>`${esc(r.name)} <span style="color:#8A929B">(${fmt(r[m.key])})<\/span>`).join("、");
+    html+=`<tr><td>${m.label}<\/td><td style="text-align:left;font-family:var(--gothic)">${t}<\/td><td style="text-align:left;font-family:var(--gothic);color:#4C5661">${m.desc}<\/td><\/tr>`;
+  }
+  html+=`<\/tbody><\/table><\/div>`;
+  $("#tab-overview").innerHTML=html;
+}
+
+function renderNodes(){
+  const cols=[{key:"name",label:"名前"}];
+  if(G.directed) cols.push({key:"degOut",label:"出次数"},{key:"degIn",label:"入次数"});
+  else cols.push({key:"degree",label:"次数"});
+  if(G.weighted) cols.push({key:"strength",label:"強度"});
+  cols.push({key:"betweenness",label:"媒介"},{key:"closeness",label:"近接"},{key:"eigen",label:"固有ベクトル"},
+            {key:"pagerank",label:"PageRank"},{key:"clustering",label:"クラスター係数"},{key:"constraint",label:"制約度"},
+            {key:"community",label:"コミュニティ"});
+  let html=`<h3 class="blk">個人ごとの指標<\/h3>
+  <p class="body">列の見出しをクリックすると並べ替えができます。行にカーソルを合わせると図の中の位置がわかります。<\/p>
+  <div class="tablewrap"><table id="nodeTable"><thead><tr>`;
+  cols.forEach(c=>html+=`<th data-key="${c.key}">${c.label}<\/th>`);
+  html+=`<\/tr><\/thead><tbody><\/tbody><\/table><\/div>`;
+  $("#tab-nodes").innerHTML=html;
+  const tbody=$("#nodeTable tbody");
+  let sortKey=G.directed?"degOut":"degree", sortAsc=false;
+  const maxima={}; cols.forEach(c=>{ maxima[c.key]=Math.max(...R.rows.map(r=>Number.isFinite(r[c.key])?r[c.key]:0)); });
+  function draw(){
+    const rows=R.rows.slice().sort((a,b)=>{
+      const x=a[sortKey], y=b[sortKey];
+      if(typeof x==="string") return sortAsc? x.localeCompare(y,"ja") : y.localeCompare(x,"ja");
+      return sortAsc? x-y : y-x;
+    });
+    tbody.innerHTML=rows.map(r=>`<tr data-i="${r.i}">`+cols.map(c=>{
+      if(c.key==="name") return `<td>${esc(r.name)}<\/td>`;
+      if(c.key==="community") return `<td><span class="swatch" style="background:${PALETTE[r.community%PALETTE.length]}"><\/span> C${r.community+1}<\/td>`;
+      const v=r[c.key], mx=maxima[c.key]||1;
+      const pct=Number.isFinite(v)? Math.max(0,Math.min(100, v/mx*100)) : 0;
+      return `<td class="bar"><i style="width:${pct.toFixed(1)}%"><\/i><span>${fmt(v)}<\/span><\/td>`;
+    }).join("")+`<\/tr>`).join("");
+    $$("#nodeTable th").forEach(th=>{ th.removeAttribute("data-sorted"); if(th.dataset.key===sortKey) th.setAttribute("data-sorted", sortAsc?"asc":"desc"); });
+  }
+  $$("#nodeTable th").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.dataset.key; if(k===sortKey) sortAsc=!sortAsc; else { sortKey=k; sortAsc=(k==="name"||k==="constraint"); }
+    draw();
+  }));
+  tbody.addEventListener("mouseover", e=>{
+    const tr=e.target.closest("tr"); if(!tr||!sim) return;
+    const i=+tr.dataset.i;
+    svg.querySelectorAll(".node circle").forEach(c=>c.setAttribute("stroke","#fff"));
+    const g=svg.querySelector(`.node[data-i="${i}"] circle`); if(g){ g.setAttribute("stroke","#131A22"); g.setAttribute("stroke-width","3"); }
+  });
+  draw();
+}
+
+function renderCommunity(){
+  const groups={};
+  R.rows.forEach(r=>{ (groups[r.community]=groups[r.community]||[]).push(r); });
+  const keys=Object.keys(groups).sort((a,b)=>groups[b].length-groups[a].length);
+  let inner=0, cross=0;
+  G.edges.forEach(e=>{ R.rows[e.s].community===R.rows[e.t].community? inner++ : cross++; });
+  let html=`<h3 class="blk">コミュニティ（下位集団）の検出<\/h3>
+  <p class="body">Louvain法でモジュラリティを最大化した結果、<strong>${R.global.communities}個<\/strong>のまとまりが見つかりました（Q = ${fmt(R.global.modularity)}）。関係の${G.m?Math.round(inner/G.m*100):0}%はまとまりの内側、${G.m?Math.round(cross/G.m*100):0}%はまとまりをまたぐ関係です。<\/p>
+  <div class="note">Q は 0〜1 に近い値をとり、おおむね <b>0.3 を超えると意味のある分割<\/b>とみなされます。0.7 を超えることはまれです。<\/div>`;
+  for(const k of keys){
+    const list=groups[k].slice().sort((a,b)=>b.degree-a.degree);
+    const hub=list[0];
+    const bridges=list.filter(r=>r.betweenness>0).sort((a,b)=>b.betweenness-a.betweenness).slice(0,2);
+    html+=`<div class="comm-card"><h4><span class="swatch" style="width:12px;height:12px;background:${PALETTE[k%PALETTE.length]}"><\/span>コミュニティ C${+k+1}（${list.length}人）<\/h4>
+    <p>中心にいるのは <strong>${esc(hub.name)}<\/strong>（次数 ${hub.degree}）。${bridges.length?`外とのつなぎ役は ${bridges.map(b=>esc(b.name)).join("、")}。`:""}<\/p>
+    <p style="margin-top:6px">${list.map(r=>`<span class="chip">${esc(r.name)}<\/span>`).join("")}<\/p><\/div>`;
+  }
+  $("#tab-community").innerHTML=html;
+}
+
+function renderRead(){
+  const s=R.global, d=G.directed;
+  const dens = s.density>=.3? "かなり密":(s.density>=.1? "中くらい":"疎");
+  const hubs=topN("degree",3).map(r=>r.name).join("、");
+  const brok=topN("betweenness",3).map(r=>r.name).join("、");
+  const gap =topN("constraint",3,true).filter(r=>r.degree>1).map(r=>r.name).join("、");
+  const iso =R.rows.filter(r=>r.degree===0).map(r=>r.name);
+  const peri=R.rows.filter(r=>r.degree===1).map(r=>r.name);
+  let html=`<h3 class="blk">この結果をどう読むか<\/h3>
+  <p class="body"><strong>密度 ${fmt(s.density)}<\/strong> は、ありうる関係のうち実際に結ばれているものの割合です。この値は${dens}なネットワークにあたります。参加者が増えるほど密度は下がりやすいので、規模の違うネットワーク同士を密度だけで比べないでください。平均次数（${fmt(s.avgDeg,2)}）の方が比較には向いています。<\/p>
+  <p class="body"><strong>平均経路長 ${fmt(s.avgPath,2)}、直径 ${fmt(s.diameter,2)}<\/strong>。任意の二人が平均 ${fmt(s.avgPath,1)} 歩で到達できることを意味し、情報や噂の伝わりやすさの目安になります。${s.components>1?`ただし全体は ${s.components} 個の島に分かれており、島をまたぐ移動はできません（最大の島は ${s.largest} 人）。`:"全員が1つにつながっています。"}<\/p>
+  <p class="body"><strong>つながりの数が多い人<\/strong>は ${hubs}。人気や活動量の指標になりますが、多いこと自体が影響力を意味するわけではありません。<strong>媒介中心性が高い人<\/strong>（${brok}）は、離れた相手同士を結ぶ経路上にいます。この人が抜けると情報の流れが分断されやすく、逆に情報を止めたり歪めたりする力も持ちます。<\/p>
+  ${gap?`<p class="body"><strong>制約度が低い人<\/strong>（${gap}）は、互いに知り合いでない複数のグループにまたがっています。Burt のいう構造的空隙を埋める位置で、新しい情報や異質なアイデアが集まりやすい立場です。<\/p>`:""}
+  <p class="body"><strong>平均クラスター係数 ${fmt(s.avgClustering)}<\/strong>は「友人の友人が友人である」割合です。値が高いほど閉じた三角関係が多く、規範や信頼が働きやすい一方、情報が内輪で循環しがちです。<\/p>
+  <p class="body"><strong>次数中心化 ${fmt(s.centralization)}<\/strong>は、特定の人物に関係が集中している度合い（1に近いほどスター型、0に近いほど平等）。${s.centralization>=.5?"少数の人物に強く集中した構造です。":"比較的分散した構造です。"}<\/p>
+  ${d?`<p class="body"><strong>相互性 ${fmt(s.reciprocity)}<\/strong>は、向けた関係が返ってきている割合です。${s.reciprocity<.3?"一方通行が目立ち、地位や人気の差が表れている可能性があります。":"多くの関係が双方向で、対等なやりとりが中心です。"}<\/p>`:""}
+  ${s.assortativity!==null?`<p class="body"><strong>次数の同類性 ${fmt(s.assortativity)}<\/strong>。正なら「多くつながる人同士がつながる」（コア－周辺が明確）、負なら「多い人と少ない人がつながる」（ハブ＆スポーク型）傾向です。<\/p>`:""}
+  ${(iso.length||peri.length)?`<div class="note warn"><b>周辺にいる人<\/b><br>${iso.length?`誰ともつながっていない：${iso.map(esc).join("、")}<br>`:""}${peri.length?`つながりが1人だけ：${peri.slice(0,12).map(esc).join("、")}${peri.length>12?" ほか":""}`:""}<br>実践場面では、この人たちへの働きかけが最も効果を持ちやすい部分です。<\/div>`:""}
+  <div class="note"><b>解釈上の注意<\/b><br>中心性の値は、誰を調査対象に含めたか（境界設定）と、関係をどう尋ねたか（設問文）に強く依存します。回答漏れが1件あるだけで媒介中心性は大きく動くため、欠測の扱いを必ず明記してください。また、ネットワーク構造から因果を読み取ることはできません。<\/div>`;
+  $("#tab-read").innerHTML=html;
+}
+
+function renderPaper(){
+  const s=R.global, d=G.directed;
+  const hub=topN("degree",1)[0], bro=topN("betweenness",1)[0];
+  const dstr=d?"有向":"無向", wstr=G.weighted?"重み付き":"重みなし";
+  const text=
+`【方法】
+本研究では、${G.n}名を対象に${d?"「誰に相談するか」等の指名式":"相互の関係"}データを収集し、${dstr}${wstr}ネットワークとして分析した。分析には社会ネットワーク分析の標準的指標を用い、各行為者について次数中心性、媒介中心性、近接中心性、固有ベクトル中心性、およびクラスター係数を算出した。下位集団の検出にはモジュラリティ最大化に基づくLouvain法を用いた。${G.weighted?"最短経路の算出にあたっては、関係の強さの逆数を距離として扱った。":""}媒介中心性および近接中心性は、ネットワークサイズの影響を除くため標準化した値を用いた。
+
+【結果】
+分析対象ネットワークは${G.n}個のノードと${G.m}本のエッジから構成され、密度は${fmt(s.density)}、平均次数は${fmt(s.avgDeg,2)}であった。${s.components>1?`ネットワークは${s.components}個の連結成分に分かれており、最大成分は${s.largest}名（全体の${Math.round(s.largest/G.n*100)}%）を含んでいた。`:"ネットワーク全体は単一の連結成分を形成していた。"}最大成分における平均経路長は${fmt(s.avgPath,2)}、直径は${fmt(s.diameter,2)}であり、平均クラスター係数は${fmt(s.avgClustering)}（推移性${fmt(s.transitivity)}）であった。次数中心化は${fmt(s.centralization)}であり、${s.centralization>=.4?"一部の行為者に関係が集中する構造が示された":"関係は比較的均等に分布していた"}。${d?`関係の相互性は${fmt(s.reciprocity)}であった。`:""}
+　行為者レベルでは、${hub.name}が最も高い次数中心性（${fmt(hub.degree)}）を示し、${bro.name}が最も高い媒介中心性（${fmt(bro.betweenness)}）を示した。${hub.name===bro.name?"すなわち、関係数の多さと橋渡し的位置が同一の行為者に集中していた。":"関係数が多い行為者と、集団間の橋渡し的位置を占める行為者は必ずしも一致しなかった。"}
+　Louvain法による下位集団の検出の結果、${s.communities}個のコミュニティが抽出され、モジュラリティは${fmt(s.modularity)}であった。${s.modularity>=.3?"この値は、当該ネットワークが明確な下位集団構造をもつことを示している。":"この値は、下位集団への分割が比較的弱いことを示している。"}
+
+【考察に向けた記述例】
+本ネットワークでは、${s.centralization>=.4?"少数の行為者に関係が集中しており、これらの行為者を経由しない情報伝達が生じにくい構造となっていた":"関係が分散しており、特定の行為者に依存しない情報伝達が可能な構造となっていた"}。とりわけ${bro.name}は複数の下位集団を媒介する位置を占めており、集団間の情報流通において重要な役割を担っていると考えられる。${s.isolates?`一方で、${s.isolates}名の孤立者が存在し、支援の必要性が示唆される。`:""}ただし本結果は特定時点の断面データに基づくものであり、関係の形成過程や因果関係については言及できない。
+
+【限界】
+本分析の限界として、第一に、ネットワークの境界を${G.n}名に設定したため、対象外の行為者との関係が考慮されていない点が挙げられる。第二に、指名数に上限を設けた場合には次数が過小推定される可能性がある。第三に、欠測回答は当該行為者からの関係のみが欠落した状態として扱われるため、媒介中心性等の推定値に影響を与えうる。`;
+  $("#tab-paper").innerHTML=`<h3 class="blk">論文・報告書での記述例<\/h3>
+  <p class="body">数値を実際の結果に差し替えた文例です。そのまま使わず、研究の文脈に合わせて調整してください。<\/p>
+  <div class="btn-row" style="margin:0 0 12px"><button class="btn ghost sm" id="copyPaper">文章をコピー<\/button><\/div>
+  <pre class="out">${esc(text)}<\/pre>`;
+  $("#copyPaper").addEventListener("click",()=>{
+    copyText(text);
+  });
+}
+
+function renderR(){
+  const q=s=>'"'+String(s).replace(/"/g,'\\"')+'"';
+  const from=G.edges.map(e=>q(G.names[e.s])).join(", ");
+  const to=G.edges.map(e=>q(G.names[e.t])).join(", ");
+  const w=G.edges.map(e=>e.w).join(", ");
+  const all=G.names.map(q).join(", ");
+  const code=
+`# ネットワーク分析ラボ｜igraph で再現するためのコード（データ埋め込み済み）
+# install.packages("igraph")
+library(igraph)
+
+edges <- data.frame(
+  from   = c(${from}),
+  to     = c(${to}),
+  weight = c(${w}),
+  stringsAsFactors = FALSE
+)
+vertices <- data.frame(name = c(${all}), stringsAsFactors = FALSE)
+
+g <- graph_from_data_frame(edges, directed = ${G.directed?"TRUE":"FALSE"}, vertices = vertices)
+${G.weighted?"# 重みが大きいほど「近い」ため、最短経路では逆数を距離として使う\nE(g)$dist <- 1 / E(g)$weight":"E(g)$weight <- 1"}
+
+## 全体の指標
+vcount(g); ecount(g)
+edge_density(g)
+mean(degree(g, mode = "all"))
+components(g)$no
+mean_distance(g, directed = ${G.directed?"TRUE":"FALSE"})
+diameter(g, weights = ${G.weighted?"E(g)$dist":"NA"})
+transitivity(g, type = "global")
+centr_degree(g)$centralization
+${G.directed?"reciprocity(g)":"assortativity_degree(g)"}
+
+## 個人の指標
+res <- data.frame(
+  name        = V(g)$name,
+  degree      = degree(g, mode = "all"),
+  betweenness = betweenness(g, weights = ${G.weighted?"E(g)$dist":"NA"}, normalized = TRUE),
+  closeness   = closeness(g, weights = ${G.weighted?"E(g)$dist":"NA"}, normalized = TRUE),
+  eigen       = eigen_centrality(g, directed = FALSE)$vector,
+  pagerank    = page_rank(g)$vector,
+  clustering  = transitivity(g, type = "local", isolates = "zero"),
+  constraint  = constraint(g)
+)
+res[order(-res$betweenness), ]
+
+## コミュニティ検出（Louvain）
+cl <- cluster_louvain(as.undirected(g, mode = "collapse"))
+modularity(cl); sizes(cl); membership(cl)
+
+## 描画
+set.seed(1)
+plot(g,
+     layout        = layout_with_fr(g),
+     vertex.color  = membership(cl),
+     vertex.size   = 4 + 3 * sqrt(degree(g)),
+     vertex.label.cex = .7,
+     edge.arrow.size  = .3)`;
+  $("#tab-rcode").innerHTML=`<h3 class="blk">Rコード（igraph・データ埋め込み済み）<\/h3>
+  <p class="body">読み込んだデータをそのまま貼り付けてあるので、コピーして実行するだけで同じ分析を再現できます。<\/p>
+  <div class="btn-row" style="margin:0 0 12px"><button class="btn ghost sm" id="copyR">コードをコピー<\/button><button class="btn ghost sm" id="saveR">.Rで保存<\/button><\/div>
+  <pre class="out">${esc(code)}<\/pre>`;
+  $("#copyR").addEventListener("click",()=>copyText(code));
+  $("#saveR").addEventListener("click",()=>download("network_analysis.R", code));
+}
+
+function renderLegend(){
+  const el=$("#legend");
+  if($("#colorBy").value!=="community"){ el.hidden=true; return; }
+  const counts={}; R.rows.forEach(r=>counts[r.community]=(counts[r.community]||0)+1);
+  const keys=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]).slice(0,12);
+  el.hidden=false;
+  el.innerHTML=`<b>コミュニティ<\/b><ul>${keys.map(k=>`<li><span class="swatch" style="background:${PALETTE[k%PALETTE.length]}"><\/span>C${+k+1}・${counts[k]}人<\/li>`).join("")}<\/ul>`;
+}
+
+/* =========================================================
+   6. 実行
+   ========================================================= */
+function run(){
+  const opt={directed:$("#directed").checked, weighted:$("#weighted").checked, header:$("#header").checked};
+  const fmtMode=$$(".seg [data-fmt]").find(b=>b.getAttribute("aria-pressed")==="true").dataset.fmt;
+  let parsed;
+  try{
+    parsed = fmtMode==="edge" ? parseEdgeList($("#raw").value, opt) : parseMatrix($("#raw").value, opt);
+  }catch(err){ toast(err.message); return; }
+  G=buildGraph(parsed.edges, opt, parsed.isolates);
+  if(G.n>600){ toast("ノードが多すぎます（600人まで）"); return; }
+  const t0=performance.now();
+  R=analyze(G);
+  const ms=Math.round(performance.now()-t0);
+  hidden=new Set();
+  $("#viewSec").hidden=false;
+  const maxDeg=Math.max(...R.rows.map(r=>r.degree));
+  $("#minDeg").max=Math.min(20,Math.max(1,maxDeg)); $("#minDeg").value=0; $("#minDegOut").value=0;
+  $("#vizMeta").textContent=`${G.n}ノード／${G.m}エッジ・${G.directed?"有向":"無向"}${G.weighted?"・重み付き":""}・${ms}ms`;
+  view={x:0,y:0,k:1}; restart();
+  renderOverview(); renderNodes(); renderCommunity(); renderRead(); renderPaper(); renderR(); renderLegend();
+  if(parsed.bad) toast(`${parsed.bad}行は読み取れなかったため除外しました`);
+}
+
+/* --- イベント --- */
+$$(".seg [data-fmt]").forEach(b=>b.addEventListener("click",()=>{
+  $$(".seg [data-fmt]").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
+  $("#rawLabel").innerHTML = b.dataset.fmt==="edge"
+    ? '1行に1つの関係。<code>送り手 , 受け手 , 重み<\/code>'
+    : '1行目に列名、2行目以降に行名と数値。<code>, A, B, C<\/code>';
+}));
+$("#run").addEventListener("click", run);
+$("#file").addEventListener("change", e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ $("#raw").value=r.result; toast(`${f.name} を読み込みました`); };
+  r.readAsText(f, "utf-8");
+});
+["sizeBy","colorBy","showLabels","curved"].forEach(id=>$("#"+id).addEventListener("change",()=>{ paint(); renderLegend(); }));
+$("#spread").addEventListener("input", e=>{ $("#spreadOut").value=e.target.value; kick(); });
+$("#minDeg").addEventListener("input", e=>{
+  $("#minDegOut").value=e.target.value;
+  const th=+e.target.value;
+  hidden=new Set(R.rows.filter(r=>r.degree<th).map(r=>r.i));
+  restart();
+});
+$("#relayout").addEventListener("click",()=>restart());
+$("#fit").addEventListener("click", fitView);
+$$(".tabs button").forEach(b=>b.addEventListener("click",()=>{
+  $$(".tabs button").forEach(x=>x.setAttribute("aria-selected", String(x===b)));
+  $$(".tabpanel").forEach(p=>p.hidden = p.id !== "tab-"+b.dataset.tab);
+}));
+$("#saveCsv").addEventListener("click",()=>{
+  if(!R) return;
+  const cols=["name","degree","degOut","degIn","strength","betweenness","closeness","eigen","pagerank","clustering","constraint","community","component"];
+  const head=["名前","次数","出次数","入次数","強度","媒介中心性","近接中心性","固有ベクトル中心性","PageRank","クラスター係数","制約度","コミュニティ","連結成分"];
+  const lines=[head.join(",")].concat(R.rows.map(r=>cols.map(c=>{
+    const v=r[c];
+    if(c==="name") return '"'+String(v).replace(/"/g,'""')+'"';
+    if(c==="community"||c==="component") return v+1;
+    return Number.isFinite(v)? (Math.round(v*1e6)/1e6) : "";
+  }).join(",")));
+  download("network_metrics.csv", new Blob(["\uFEFF"+lines.join("\r\n")], {type:"text/csv;charset=utf-8"}));
+});
+function svgString(){
+  const clone=svg.cloneNode(true);
+  clone.setAttribute("xmlns","http://www.w3.org/2000/svg");
+  clone.setAttribute("width", svg.clientWidth); clone.setAttribute("height", svg.clientHeight);
+  const bg=ns("rect"); bg.setAttribute("width","100%"); bg.setAttribute("height","100%"); bg.setAttribute("fill","#FFFFFF");
+  clone.insertBefore(bg, clone.firstChild);
+  const st=ns("style");
+  st.textContent='.node text{font-family:"Hiragino Sans","Yu Gothic",sans-serif;font-size:10.5px;fill:#131A22;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}';
+  clone.insertBefore(st, clone.firstChild);
+  return new XMLSerializer().serializeToString(clone);
+}
+$("#saveSvg").addEventListener("click",()=>{ if(!sim) return; download("network.svg", new Blob([svgString()],{type:"image/svg+xml;charset=utf-8"})); });
+$("#savePng").addEventListener("click",()=>{
+  if(!sim) return;
+  const s=svgString(), scale=2;
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement("canvas");
+    c.width=svg.clientWidth*scale; c.height=svg.clientHeight*scale;
+    const ctx=c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(img,0,0,c.width,c.height);
+    c.toBlob(b=>{ if(b) download("network.png", b); else toast("画像を作成できませんでした"); });
+  };
+  img.onerror=()=>toast("画像を作成できませんでした");
+  img.src="data:image/svg+xml;base64,"+btoa(unescape(encodeURIComponent(s)));
+});
+window.addEventListener("resize",()=>{ if(sim){ sim.W=svg.clientWidth; sim.H=svg.clientHeight; paint(); } });
+
+/* --- サンプルデータ --- */
+const SAMPLE_A=`# 学級の相談ネットワーク（有向・仮想データ）「困ったとき誰に相談しますか」
+あおい,いつき
+あおい,うみ
+いつき,あおい
+いつき,えいた
+うみ,あおい
+うみ,かえで
+えいた,いつき
+えいた,おとは
+おとは,あおい
+おとは,かえで
+かえで,あおい
+かえで,うみ
+きよし,くみ
+きよし,けんた
+くみ,きよし
+くみ,ことね
+けんた,きよし
+けんた,さとし
+ことね,くみ
+ことね,しおり
+さとし,けんた
+さとし,しおり
+しおり,ことね
+しおり,くみ
+すぐる,せな
+すぐる,そら
+せな,すぐる
+せな,たくみ
+そら,すぐる
+そら,ちなつ
+たくみ,せな
+たくみ,つばさ
+ちなつ,そら
+ちなつ,つばさ
+つばさ,たくみ
+つばさ,ちなつ
+てるみ,あおい
+てるみ,きよし
+てるみ,すぐる
+あおい,てるみ
+きよし,てるみ
+とわ,てるみ
+とわ,かえで
+みなと,とわ
+ゆうき,あおい
+ゆうき,いつき`;
+const SAMPLE_B=`# 共著ネットワーク（無向・重み付き）3列目は共著論文数
+佐藤,鈴木,5
+佐藤,高橋,3
+佐藤,田中,1
+鈴木,高橋,4
+鈴木,伊藤,2
+高橋,渡辺,1
+田中,伊藤,2
+田中,山本,3
+伊藤,中村,1
+渡辺,小林,4
+渡辺,加藤,2
+小林,加藤,5
+小林,吉田,3
+加藤,山田,1
+吉田,山田,4
+吉田,佐々木,2
+山田,佐々木,3
+山本,松本,2
+山本,井上,1
+松本,井上,4
+松本,木村,2
+井上,木村,3
+中村,林,2
+林,清水,3
+清水,山崎,1
+中村,山崎,1
+佐々木,森,2
+森,池田,3
+池田,橋本,1
+森,橋本,2`;
+$("#sample1").addEventListener("click",()=>{
+  $("#raw").value=SAMPLE_A; $("#directed").checked=true; $("#weighted").checked=false; $("#header").checked=false;
+  $$(".seg [data-fmt]").forEach(x=>x.setAttribute("aria-pressed", String(x.dataset.fmt==="edge")));
+  run();
+});
+$("#sample2").addEventListener("click",()=>{
+  $("#raw").value=SAMPLE_B; $("#directed").checked=false; $("#weighted").checked=true; $("#header").checked=false;
+  $$(".seg [data-fmt]").forEach(x=>x.setAttribute("aria-pressed", String(x.dataset.fmt==="edge")));
+  run();
+});
+// 初期表示：サンプルをそのまま動かして見せる
+$("#raw").value=SAMPLE_A;
+$("#directed").checked=true;
+function boot(){ try{ run(); }catch(err){ showFatal(err && err.message ? err.message : String(err)); } }
+if(document.readyState === "complete" || document.readyState === "interactive") setTimeout(boot, 0);
+else window.addEventListener("load", boot);
+</script>
+</body>
+</html>

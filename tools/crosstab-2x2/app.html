@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カテゴリデータ検定 — データ分析ラボ</title>
+    <!-- jStatライブラリの読み込み -->
+    <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
+    <style>
+        :root {
+            --primary: #34495e; --accent: #3498db; --bg: #f9f9f9; --paper: #ffffff;
+            --text: #333333; --text-light: #7f8c8d; --border: #dddddd;
+            --freq: #33587D; --bayes: #BC5F27; --good: #2ecc71; --bad: #e74c3c;
+        }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: var(--text); max-width: 900px; margin: 0 auto; padding: 20px; background-color: var(--bg); }
+        h1, h2, h3, h4 { color: var(--primary); margin-top: 0; }
+        .card { background: var(--paper); padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .radio-group { background: #e8f4f8; padding: 15px; border-radius: 6px; border: 1px solid #bce0fd; display: flex; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
+        .radio-group label { font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;}
+        .controls { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;}
+        .options-bar { background: #fdfdfd; padding: 10px 15px; border: 1px dashed #ccc; border-radius: 4px; margin-bottom: 15px; font-size: 14px;}
+        input[type="number"] { width: 60px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; text-align: right; font-size: 14px; }
+        table { border-collapse: collapse; margin-bottom: 20px; background: var(--paper); }
+        th, td { border: 1px solid var(--border); padding: 10px; text-align: center; }
+        th.header-main { background-color: var(--primary); color: white; }
+        th.header-sub { background-color: #f2f2f2; }
+        input.cell-input { width: 80px; padding: 8px; font-size: 16px; text-align: right; border: 1px solid var(--accent); border-radius: 4px; }
+        button.calc-btn { background-color: var(--accent); color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; }
+        button.calc-btn:hover { background-color: #2980b9; }
+        .result-section { display: none; margin-top: 20px; }
+        .warning { color: var(--bad); font-weight: bold; font-size: 0.9em; padding: 10px; background: #fdf0ed; border-left: 4px solid var(--bad); margin-bottom: 15px;}
+        .highlight-direction { background: #ffeaa7; padding: 10px; border-left: 4px solid #fdcb6e; font-weight: bold; margin-bottom: 15px; }
+        
+        .interp { margin-top: 20px; padding: 16px; border-radius: 8px; background: #fff; border: 1px solid var(--border); font-size: 14px; }
+        .manuscript { margin-top: 20px; padding: 16px; border-radius: 8px; background: #fff; border: 1px solid var(--border); }
+        .manuscript-quote { padding: 12px 16px; margin-bottom: 10px; border-left: 4px solid var(--border); background: #fdfdfd; border-radius: 0 8px 8px 0; }
+        .manuscript-quote.freq { border-left-color: var(--freq); }
+        .manuscript-quote.bayes { border-left-color: var(--bayes); }
+        .mq-label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+        .manuscript-quote.freq .mq-label { color: var(--freq); }
+        .manuscript-quote.bayes .mq-label { color: var(--bayes); }
+        .copy-btn { font-size: 12px; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-top: 10px; }
+        .copy-btn:hover { background: #f0f0f0; }
+        .copy-btn.copied { color: var(--good); border-color: var(--good); }
+        
+        .r-code-block { background: #282c34; color: #abb2bf; padding: 16px; border-radius: 8px; margin-top: 20px; }
+        .r-code-block h4 { color: #61afef; margin-top: 0; margin-bottom: 5px; }
+        .r-code-block p { font-size: 12px; color: #5c6370; margin-top: 0; margin-bottom: 12px; }
+        .r-code-block pre { margin: 0; font-size: 13px; font-family: 'Consolas', 'Courier New', monospace; white-space: pre-wrap; word-break: break-all; }
+        .r-code-block .copy-btn { background: #4b5263; color: white; border: none; }
+        .r-code-block .copy-btn:hover { background: #5c6370; }
+    </style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-compare);--bg:var(--al-bg);--paper:var(--al-surface);--text:var(--al-ink);--text-light:var(--al-ink-3);--border:var(--al-line);--primary:var(--al-cat-deep);--accent:var(--al-cat);}body{font-family:var(--al-sans)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#compare">比べる</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>カテゴリデータ検定</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+    <h1>カテゴリデータ検定ツール</h1>
+    
+    <div class="card">
+        <h2>1. データ入力</h2>
+        <div class="radio-group">
+            <label><input type="radio" name="testType" value="independent" checked onchange="toggleMode()"> 独立したグループ（カイ二乗 / フィッシャー）</label>
+            <label><input type="radio" name="testType" value="paired" onchange="toggleMode()"> 対応のあるデータ（マクネマー / 二項検定）</label>
+        </div>
+
+        <div id="independent-controls">
+            <div class="controls" id="size-controls">
+                <label>行数: <input type="number" id="rows" value="2" min="2" max="10" onchange="buildTable()"></label>
+                <label>列数: <input type="number" id="cols" value="2" min="2" max="10" onchange="buildTable()"></label>
+                <span style="color:var(--text-light); font-size: 0.9em;">※ 2×2表の場合のみフィッシャー検定も実行されます。</span>
+            </div>
+            <div class="options-bar" id="yates-option">
+                <label style="cursor: pointer;">
+                    <input type="checkbox" id="useYates"> イエーツの連続性補正を適用する（2×2表のカイ二乗検定にのみ有効）
+                </label>
+            </div>
+        </div>
+        
+        <div id="table-container"></div>
+        <button class="calc-btn" onclick="runAnalysis()">計算と解釈を生成</button>
+    </div>
+
+    <div id="results" class="result-section">
+        <div id="result-content"></div>
+    </div>
+
+    <!-- 
+      【事実】ここで Code.gs の include関数 を呼び出し、
+      javascript.html の中身をここに展開して合体させます。 
+    -->
+    <script>
+    // 数学関数
+    function logFact(n) {
+        if (n === 0 || n === 1) return 0;
+        let sum = 0; for (let i = 2; i <= n; i++) sum += Math.log(i);
+        return sum;
+    }
+    function logChoose(n, k) {
+        if (k < 0 || k > n) return -Infinity;
+        return logFact(n) - logFact(k) - logFact(n - k);
+    }
+    function logHyper(a, b, c, d) {
+        const n = a + b + c + d;
+        return logFact(a + b) + logFact(c + d) + logFact(a + c) + logFact(b + d) - logFact(n) - logFact(a) - logFact(b) - logFact(c) - logFact(d);
+    }
+    function fmt(val, digits=3) { return Number(val).toFixed(digits); }
+    function fmtp(val) { return val < 0.001 ? "< .001" : "= " + val.toFixed(3).replace(/^0+/, ''); }
+
+    // コピー機能
+    function copyText(text, btn) {
+        const done = () => {
+            const orig = btn.textContent;
+            btn.textContent = '✓ コピーしました'; 
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+        } else {
+            fallbackCopy(text, done);
+        }
+    }
+
+    function fallbackCopy(text, done) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed'; 
+        ta.style.opacity = '0';
+        document.body.appendChild(ta); 
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { alert('コピーに失敗しました。'); }
+        document.body.removeChild(ta);
+    }
+
+    function toggleMode() {
+        const type = document.querySelector('input[name="testType"]:checked').value;
+        const indepControls = document.getElementById('independent-controls');
+        if (type === 'paired') { 
+            indepControls.style.display = 'none'; 
+            buildMcNemarTable(); 
+        } else { 
+            indepControls.style.display = 'block'; 
+            buildTable(); 
+        }
+        document.getElementById('results').style.display = 'none';
+    }
+
+    function buildTable() {
+        const r = parseInt(document.getElementById('rows').value) || 2;
+        const c = parseInt(document.getElementById('cols').value) || 2;
+        const yatesOpt = document.getElementById('yates-option');
+        yatesOpt.style.display = (r === 2 && c === 2) ? 'block' : 'none'; 
+
+        let html = '<table>';
+        for (let i = 0; i < r; i++) {
+            html += '<tr>';
+            for (let j = 0; j < c; j++) html += `<td><input type="number" class="cell-input" id="cell_${i}_${j}" value="0" min="0" step="1"></td>`;
+            html += '</tr>';
+        }
+        html += '</table>';
+        document.getElementById('table-container').innerHTML = html;
+    }
+
+    function buildMcNemarTable() {
+        let html = `
+        <p style="color:var(--text-light); font-size:0.9em;">事実入力: 「事前」と「事後」で状態がどう変化したかを入力してください。</p>
+        <table>
+            <tr><th colspan="2" rowspan="2" style="border:none; background:transparent;"></th><th colspan="2" class="header-main">事後</th></tr>
+            <tr><th class="header-sub">Yes (陽性等)</th><th class="header-sub">No (陰性等)</th></tr>
+            <tr><th rowspan="2" class="header-main">事前</th><th class="header-sub">Yes</th>
+                <td><span style="font-size:0.8em; color:#666;">(Yes維持)</span><br><input type="number" class="cell-input" id="cell_0_0" value="0"></td>
+                <td style="background:#fff9e6;"><span style="font-size:0.8em; color:#d35400; font-weight:bold;">(Yes → No に変化)</span><br><input type="number" class="cell-input" id="cell_0_1" value="0"></td>
+            </tr>
+            <tr><th class="header-sub">No</th>
+                <td style="background:#e8f8f5;"><span style="font-size:0.8em; color:#16a085; font-weight:bold;">(No → Yes に変化)</span><br><input type="number" class="cell-input" id="cell_1_0" value="0"></td>
+                <td><span style="font-size:0.8em; color:#666;">(No維持)</span><br><input type="number" class="cell-input" id="cell_1_1" value="0"></td>
+            </tr>
+        </table>`;
+        document.getElementById('table-container').innerHTML = html;
+    }
+
+    function getInterpretationLevel(bf) {
+        if (bf > 100) return "決定的な";
+        if (bf > 30) return "非常に強い";
+        if (bf > 10) return "強い";
+        if (bf > 3) return "中程度の";
+        if (bf > 1) return "弱い（逸話的な）";
+        return "証拠はない";
+    }
+
+    function runAnalysis() {
+        const type = document.querySelector('input[name="testType"]:checked').value;
+        const r = type === 'paired' ? 2 : (parseInt(document.getElementById('rows').value) || 2);
+        const c = type === 'paired' ? 2 : (parseInt(document.getElementById('cols').value) || 2);
+        
+        let matrix = [], totalN = 0;
+        for (let i = 0; i < r; i++) {
+            let row = [];
+            for (let j = 0; j < c; j++) {
+                let val = parseInt(document.getElementById(`cell_${i}_${j}`).value) || 0;
+                row.push(val); totalN += val;
+            }
+            matrix.push(row);
+        }
+
+        if (totalN === 0) { alert("データを入力してください。"); return; }
+
+        let output = "";
+        const useYates = type === 'independent' ? (document.getElementById('useYates').checked && (r === 2 && c === 2)) : false;
+
+        if (type === 'independent') {
+            output += generateChiSquareReport(matrix, r, c, totalN, useYates);
+            if (r === 2 && c === 2) output += generateFisherReport(matrix);
+        } else {
+            output += generateMcNemarReport(matrix);
+        }
+
+        output += generateRCodeBlock(type, matrix, useYates, r, c);
+
+        document.getElementById('result-content').innerHTML = output;
+        document.getElementById('results').style.display = 'block';
+    }
+
+    function generateChiSquareReport(matrix, r, c, totalN, useYates) {
+        let rowSums = new Array(r).fill(0), colSums = new Array(c).fill(0);
+        for(let i=0; i<r; i++) for(let j=0; j<c; j++) { rowSums[i] += matrix[i][j]; colSums[j] += matrix[i][j]; }
+        
+        let chisq = 0, warning = false;
+        for(let i=0; i<r; i++) for(let j=0; j<c; j++) {
+            let expected = (rowSums[i] * colSums[j]) / totalN;
+            if (expected > 0) {
+                let diff = Math.abs(matrix[i][j] - expected);
+                if (useYates) diff = Math.max(0, diff - 0.5);
+                chisq += Math.pow(diff, 2) / expected;
+            }
+            if (expected < 5) warning = true;
+        }
+        let df = (r - 1) * (c - 1);
+        let pValue = 1 - jStat.chisquare.cdf(chisq, df);
+        let bf10 = Math.exp((chisq - df * Math.log(totalN)) / 2);
+        
+        let cramerV = Math.sqrt(chisq / (totalN * (Math.min(r, c) - 1))); 
+
+        let isSig = pValue < 0.05;
+        let bfSupport = bf10 > 1 ? "対立仮説（関連あり）" : "帰無仮説（関連なし）";
+        let bfStrength = getInterpretationLevel(Math.max(bf10, 1/bf10));
+        let titleSuffix = useYates ? " (イエーツの連続性補正あり)" : "";
+
+        let html = `<div class="card"><h2>ピアソンのカイ二乗検定${titleSuffix}</h2>`;
+        html += `<ul><li>カイ二乗値 (χ²): <b>${fmt(chisq)}</b></li><li>自由度 (df): <b>${df}</b></li>`;
+        html += `<li>p値: <b>${fmtp(pValue)}</b> ${isSig ? "(5%水準で有意)" : "(有意差なし)"}</li>`;
+        html += `<li>効果量 (Cramér's V): <b>${fmt(cramerV)}</b> ${r===2 && c===2 ? "(※2×2表ではファイ係数と同等)" : ""}</li>`;
+        html += `<li>ベイズファクター (BF₁₀): <b>${fmt(bf10)}</b></li></ul>`;
+        
+        if (warning) html += `<div class="warning">⚠️事実: 期待度数が5未満のセルがあります。推測: 近似が不正確になるため、2×2の場合はフィッシャーの正確確率検定の結果を優先してください。</div>`;
+
+        let freqText = `行変数と列変数の間に関連があるかを検討するため、${useYates ? 'イエーツの連続性補正を適用した' : ''}カイ二乗検定を実施した。その結果、両者の間には統計的に有意な関連が${isSig ? '認められた' : '認められなかった'}（χ²(${df}, N = ${totalN}) = ${fmt(chisq)}, p ${fmtp(pValue)}, Cramér's V = ${fmt(cramerV)}）。`;
+        let bayesText = `BIC近似を用いたベイズファクターを算出した結果、BF₁₀ = ${fmt(bf10)} であった。これは、データが${bfSupport}を支持する${bfStrength}証拠であることを示している。`;
+        html += buildManuscriptBlock(freqText, bayesText);
+        html += `</div>`;
+        return html;
+    }
+
+    function generateFisherReport(matrix) {
+        let a = matrix[0][0], b = matrix[0][1], c = matrix[1][0], d = matrix[1][1];
+        let row1 = a + b, col1 = a + c, n = a + b + c + d;
+        let observedLogProb = logHyper(a, b, c, d), pValue = 0;
+        let min_a = Math.max(0, row1 + col1 - n), max_a = Math.min(row1, col1);
+
+        for (let curr_a = min_a; curr_a <= max_a; curr_a++) {
+            let logP = logHyper(curr_a, row1 - curr_a, col1 - curr_a, n - row1 - (col1 - curr_a));
+            if (logP <= observedLogProb + 1e-9) pValue += Math.exp(logP);
+        }
+        pValue = Math.min(1.0, pValue);
+        let isSig = pValue < 0.05;
+
+        let oddsRatio = 0;
+        if (b === 0 || c === 0) {
+            oddsRatio = ((a + 0.5) * (d + 0.5)) / ((b + 0.5) * (c + 0.5));
+        } else {
+            oddsRatio = (a * d) / (b * c);
+        }
+
+        let html = `<div class="card"><h2>フィッシャーの正確確率検定</h2>`;
+        html += `<ul><li>p値 (両側): <b>${fmtp(pValue)}</b> ${isSig ? "(5%水準で有意)" : "(有意差なし)"}</li>`;
+        html += `<li>効果量 (オッズ比): <b>${fmt(oddsRatio)}</b></li></ul>`;
+        
+        let freqText = `セル度数の偏りを考慮し、フィッシャーの正確確率検定を実施した。その結果、2変数間に有意な関連は${isSig ? '認められた' : '認められなかった'}（p ${fmtp(pValue)}, Odds Ratio = ${fmt(oddsRatio)}）。`;
+        html += buildManuscriptBlock(freqText, "（フィッシャーの正確確率検定におけるベイズファクター計算は複雑なため省略しています）");
+        html += `</div>`;
+        return html;
+    }
+
+    function generateMcNemarReport(matrix) {
+        let yesToNo = matrix[0][1], noToYes = matrix[1][0];
+        let discordant = yesToNo + noToYes;
+        let total = matrix[0][0] + yesToNo + noToYes + matrix[1][1];
+        
+        let html = `<div class="card"><h2>マクネマー検定 ＆ 対応のある二項検定（正確検定）</h2>`;
+        if (discordant === 0) return html + `<p>変化したペアが0件のため、検定は実行できません。</p></div>`;
+
+        let chisq = Math.pow(Math.abs(yesToNo - noToYes) - 1, 2) / discordant; 
+        let df = 1, pValueApprox = 1 - jStat.chisquare.cdf(chisq, df);
+        let bf10 = Math.exp((chisq - df * Math.log(discordant)) / 2);
+
+        let minDiscordant = Math.min(yesToNo, noToYes);
+        let pValueExact = 0;
+        for (let k = 0; k <= minDiscordant; k++) {
+             pValueExact += Math.exp(logChoose(discordant, k) + discordant * Math.log(0.5));
+        }
+        pValueExact = Math.min(1.0, pValueExact * 2); 
+
+        let isSigApprox = pValueApprox < 0.05;
+        let isSigExact = pValueExact < 0.05;
+        let isSmallSample = discordant < 25;
+
+        let oddsRatio = (yesToNo === 0) ? "計算不可 (分母が0)" : fmt(noToYes / yesToNo);
+
+        html += `<ul><li>不一致ペア数 (変化した人数): <b>${discordant}</b></li>`;
+        html += `<li>カイ二乗値 (χ², 連続性補正あり): <b>${fmt(chisq)}</b></li>`;
+        html += `<li>p値 (マクネマー近似): <b>${fmtp(pValueApprox)}</b> ${isSigApprox ? "(有意)" : "(有意差なし)"}</li>`;
+        html += `<li>p値 (対応のある二項検定): <b>${fmtp(pValueExact)}</b> ${isSigExact ? "(有意)" : "(有意差なし)"}</li>`;
+        html += `<li>効果量 (ペアデータのオッズ比): <b>${oddsRatio}</b></li>`;
+        html += `<li>ベイズファクター (BF₁₀): <b>${fmt(bf10)}</b></li></ul>`;
+        
+        let targetPValue = isSmallSample ? pValueExact : pValueApprox;
+        let isSigTarget = targetPValue < 0.05;
+        let directionFact = isSigTarget ? (noToYes > yesToNo ? `「No → Yes (${noToYes}件)」が「Yes → No (${yesToNo}件)」より多い` : `「Yes → No (${yesToNo}件)」が「No → Yes (${noToYes}件)」より多い`) : "変化の方向に有意な偏りはない";
+        
+        html += `<div class="highlight-direction">💡 データの読み方（方向性の確認）<br>事実: ${directionFact}</div>`;
+        
+        if (isSmallSample) {
+            html += `<div class="warning">⚠️事実: 不一致ペア数が25未満です。推測: 近似精度が下がるため、カイ二乗検定ではなく「対応のある二項検定」のp値を採用し、論文にもそちらを記述することを強く推奨します（下の記述例は自動で二項検定用に切り替わっています）。</div>`;
+        }
+
+        let bfSupport = bf10 > 1 ? "事前事後での変化" : "事前事後で変化なし";
+        let reportedP = isSmallSample ? pValueExact : pValueApprox;
+        let reportedTest = isSmallSample ? "対応のある二項検定（正確検定）" : "連続性補正を適用したマクネマー検定";
+        let reportedStat = isSmallSample ? `（p ${fmtp(reportedP)}, Odds Ratio = ${oddsRatio}）` : `（χ²(${df}, N = ${total}) = ${fmt(chisq)}, p ${fmtp(reportedP)}, Odds Ratio = ${oddsRatio}）`;
+
+        let freqText = `事前と事後における割合の変化を検証するため、${reportedTest}を実施した。その結果、事前から事後にかけて有意な変化が${isSigTarget ? '認められた' : '認められなかった'}${reportedStat}。内訳を確認すると、NoからYesへ変化したケースが${noToYes}件、YesからNoへ変化したケースが${yesToNo}件であった。`;
+        let bayesText = `不一致ペアを対象としたBIC近似ベイズファクターは BF₁₀ = ${fmt(bf10)} であり、データは${bfSupport}を支持する${getInterpretationLevel(Math.max(bf10, 1/bf10))}証拠であることを示している。`;
+        
+        html += buildManuscriptBlock(freqText, bayesText);
+        html += `</div>`;
+        return html;
+    }
+
+    function buildManuscriptBlock(freqText, bayesText) {
+        let blockId = 'text_' + Math.random().toString(36).substr(2, 9);
+        return `
+        <div class="manuscript">
+            <h4>📝 論文・レポートでの結果の記述例</h4>
+            <div class="manuscript-quote freq"><span class="mq-label">頻度論</span><p id="${blockId}_f">${freqText}</p></div>
+            <div class="manuscript-quote bayes"><span class="mq-label">ベイズ論</span><p id="${blockId}_b">${bayesText}</p></div>
+            <button class="copy-btn" onclick="copyText('【頻度論】\\n' + document.getElementById('${blockId}_f').innerText + '\\n\\n【ベイズ】\\n' + document.getElementById('${blockId}_b').innerText, this)">この文章をコピー</button>
+        </div>`;
+    }
+
+    function generateRCodeBlock(type, matrix, useYates, r, c) {
+        let flatData = [];
+        for (let i = 0; i < r; i++) {
+            for (let j = 0; j < c; j++) {
+                flatData.push(matrix[i][j]);
+            }
+        }
+        
+        let rCode = `# Data Definition\n`;
+        rCode += `data_matrix <- matrix(c(${flatData.join(", ")}), nrow = ${r}, byrow = TRUE)\n\n`;
+
+        if (type === 'independent') {
+            rCode += `# 1. Chi-square Test\n`;
+            rCode += `chisq_res <- chisq.test(data_matrix, correct = ${useYates ? "TRUE" : "FALSE"})\n`;
+            rCode += `print(chisq_res)\n\n`;
+            
+            rCode += `# 2. Effect Size (Cramer's V)\n`;
+            rCode += `n <- sum(data_matrix)\n`;
+            rCode += `chisq_stat_raw <- chisq.test(data_matrix, correct = FALSE)$statistic\n`;
+            rCode += `cramer_v <- sqrt(chisq_stat_raw / (n * (min(nrow(data_matrix), ncol(data_matrix)) - 1)))\n`;
+            rCode += `print(paste("Cramer's V:", round(cramer_v, 3)))\n\n`;
+            
+            rCode += `# 3. Bayes Factor (BIC approximation)\n`;
+            rCode += `df <- (nrow(data_matrix) - 1) * (ncol(data_matrix) - 1)\n`;
+            rCode += `bf10 <- exp((chisq_stat_raw - df * log(n)) / 2)\n`;
+            rCode += `print(paste("Bayes Factor (BF10):", round(bf10, 3)))\n`;
+
+            if (r === 2 && c === 2) {
+                rCode += `\n# 4. Fisher's Exact Test\n`;
+                rCode += `fisher_res <- fisher.test(data_matrix)\n`;
+                rCode += `print(fisher_res)\n`;
+            }
+        } else {
+            rCode += `# 1. McNemar's Test (with continuity correction)\n`;
+            rCode += `mcnemar_res <- mcnemar.test(data_matrix, correct = TRUE)\n`;
+            rCode += `print(mcnemar_res)\n\n`;
+            
+            rCode += `# 2. Bayes Factor (BIC approximation)\n`;
+            rCode += `b <- data_matrix[1, 2]\n`;
+            rCode += `c <- data_matrix[2, 1]\n`;
+            rCode += `discordant <- b + c\n`;
+            rCode += `if (discordant > 0) {\n`;
+            rCode += `  bf10_mc <- exp((mcnemar_res$statistic - 1 * log(discordant)) / 2)\n`;
+            rCode += `  print(paste("Bayes Factor (BF10):", round(bf10_mc, 3)))\n`;
+            rCode += `}\n\n`;
+            
+            rCode += `# 3. Exact McNemar's Test (Binomial Test)\n`;
+            rCode += `if (discordant > 0) {\n`;
+            rCode += `  binom_res <- binom.test(min(b, c), discordant, p = 0.5)\n`;
+            rCode += `  print(binom_res)\n`;
+            rCode += `} else {\n`;
+            rCode += `  print("Cannot calculate: zero discordant pairs")\n`;
+            rCode += `}\n`;
+        }
+        
+        let codeId = 'rcode_' + Math.random().toString(36).substr(2, 9);
+        
+        let html = `
+        <div class="r-code-block">
+            <h4>💻 JASP / Rコンソール用 再現コード</h4>
+            <p>※以下のコードをコピーし、JASPの「R（Beta）」モジュールのコンソール、またはRStudio等に貼り付けてください。</p>
+            <pre><code id="${codeId}">${rCode}</code></pre>
+            <button class="copy-btn" onclick="copyText(document.getElementById('${codeId}').innerText, this)">コードをコピー</button>
+        </div>`;
+        
+        return html;
+    }
+
+    window.onload = toggleMode;
+</script>
+
+</body>
+</html>

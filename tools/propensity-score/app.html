@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>傾向スコアマッチング — データ分析ラボ</title>
+<style>
+:root{
+  --ink:#16233A;
+  --ink2:#43526D;
+  --ink3:#7C889C;
+  --ink4:#A6AFBD;
+  --paper:#F1F2F0;
+  --surface:#FFFFFF;
+  --rule:#D6DBE0;
+  --hair:#E9ECEF;
+  --treat:#5B3FA8;
+  --treat-w:#EFEBFA;
+  --ctrl:#0E7C74;
+  --ctrl-w:#DEF0EE;
+  --flag:#A8501C;
+  --flag-w:#F8EEE6;
+  --gothic:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic Medium","Yu Gothic",Meiryo,"Noto Sans JP",sans-serif;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","MS PMincho",serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Hiragino Mincho ProN",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--gothic);font-size:14px;line-height:1.8;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1260px;margin:0 auto;padding:0 30px}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ============ ヘッダー ============ */
+header{background:var(--ink);color:#fff;padding:30px 0 26px}
+.brand{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.brand h1{
+  font-family:var(--mincho);font-size:27px;font-weight:600;margin:0;
+  letter-spacing:.14em;line-height:1.3;
+}
+.brand .en{
+  font-family:var(--serif);font-size:12px;letter-spacing:.3em;
+  color:#8FA0BC;font-style:italic;
+}
+.lede{margin:12px 0 0;color:#AEBBD0;font-size:12.5px;max-width:64ch;line-height:1.85}
+
+/* 二群の比率を示す帯：マッチング後は 50:50 に近づく */
+.groupbar{display:flex;height:3px;width:100%}
+.groupbar i{display:block;transition:flex-grow .9s cubic-bezier(.22,1,.36,1)}
+.groupbar i.t{background:var(--treat);flex-grow:1}
+.groupbar i.c{background:var(--ctrl);flex-grow:2}
+
+/* ============ 手順レール ============ */
+.rail{background:var(--surface);border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:20}
+.rail .wrap{display:flex;overflow-x:auto;scrollbar-width:none}
+.rail .wrap::-webkit-scrollbar{display:none}
+.step{
+  appearance:none;background:none;border:0;cursor:pointer;flex:none;
+  font-family:var(--gothic);font-size:12.5px;color:var(--ink3);
+  padding:14px 20px 13px;display:flex;align-items:baseline;gap:9px;
+  white-space:nowrap;position:relative;transition:color .18s;
+}
+.step + .step::before{
+  content:"";position:absolute;left:0;top:16px;bottom:14px;width:1px;background:var(--hair);
+}
+.step .idx{font-family:var(--serif);font-size:14px;font-style:italic;color:var(--ink4);transition:color .18s}
+.step::after{
+  content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:2px;
+  background:var(--ink);transform:scaleX(0);transform-origin:left;
+  transition:transform .3s cubic-bezier(.22,1,.36,1);
+}
+.step:hover:not(:disabled){color:var(--ink)}
+.step[aria-current="true"]{color:var(--ink);font-weight:700}
+.step[aria-current="true"] .idx{color:var(--treat)}
+.step[aria-current="true"]::after{transform:scaleX(1)}
+.step:disabled{opacity:.34;cursor:not-allowed}
+
+/* ============ レイアウト ============ */
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 236px;gap:38px;padding:32px 0 100px}
+.panel{display:none}
+.panel.on{display:block;animation:rise .38s cubic-bezier(.22,1,.36,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+
+/* 右マージンの覚え書き */
+aside{position:sticky;top:66px;align-self:start}
+.ledger{border-top:2px solid var(--ink);padding-top:12px}
+.ledger h4{
+  font-family:var(--gothic);font-size:10px;letter-spacing:.22em;color:var(--ink3);
+  margin:0 0 10px;font-weight:700;
+}
+.ledger dl{margin:0}
+.ledger dt{font-size:10.5px;letter-spacing:.1em;color:var(--ink3);margin-top:13px;font-weight:700}
+.ledger dd{
+  margin:1px 0 0;font-size:13px;line-height:1.5;
+  font-family:var(--serif);font-variant-numeric:tabular-nums;
+}
+.ledger dd.dim{color:var(--ink4);font-family:var(--gothic);font-size:12px}
+
+/* ============ カード ============ */
+.card{background:var(--surface);border:1px solid var(--rule);padding:28px 30px 30px;margin-bottom:20px}
+.eyebrow{
+  display:block;font-family:var(--serif);font-style:italic;font-size:12px;
+  letter-spacing:.24em;color:var(--ink4);margin-bottom:7px;
+}
+.card > h2{font-family:var(--mincho);font-size:20px;font-weight:600;margin:0 0 6px;letter-spacing:.07em}
+.card > .sub{color:var(--ink2);font-size:12.5px;margin:0 0 22px;max-width:72ch;line-height:1.85}
+h3{
+  font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--ink2);
+  margin:30px 0 12px;padding-bottom:7px;border-bottom:1px solid var(--hair);
+}
+h3:first-child{margin-top:0}
+
+/* ============ 入力 ============ */
+.row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px;min-width:172px}
+label.lb{font-size:10.5px;letter-spacing:.12em;color:var(--ink3);font-weight:700}
+select,input[type=text],input[type=number]{
+  font-family:var(--gothic);font-size:13px;color:var(--ink);background:#fff;
+  border:0;border-bottom:1.5px solid var(--rule);border-radius:0;padding:6px 2px;
+  transition:border-color .18s;
+}
+select:hover,input:hover{border-bottom-color:var(--ink3)}
+textarea{
+  font-family:var(--mono);font-size:12px;line-height:1.7;width:100%;resize:vertical;
+  color:var(--ink);border:1px solid var(--rule);border-radius:0;padding:14px 16px;background:#FCFDFD;
+}
+select:focus,input:focus,textarea:focus,button:focus-visible{
+  outline:2px solid var(--treat);outline-offset:2px;border-color:var(--treat);
+}
+button{
+  font-family:var(--gothic);font-size:12.5px;font-weight:700;letter-spacing:.06em;
+  border:1px solid transparent;border-radius:0;cursor:pointer;padding:10px 22px;
+  transition:background .18s,color .18s,border-color .18s;
+}
+.btn-main{background:var(--ink);color:#fff}
+.btn-main:hover{background:var(--treat)}
+.btn-line{background:transparent;color:var(--ink);border-color:var(--rule)}
+.btn-line:hover{border-color:var(--ink);background:#fff}
+.btn-sm{padding:7px 15px;font-size:11.5px}
+button:disabled{opacity:.35;cursor:not-allowed}
+.btn-bar{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;align-items:center}
+
+.picker{border:1px solid var(--rule);max-height:262px;overflow:auto;background:#fff}
+.pick{display:flex;align-items:center;gap:11px;padding:7px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--hair)}
+.pick:last-child{border-bottom:0}
+.pick:hover{background:#FAFBFA}
+.pick input{accent-color:var(--treat);width:15px;height:15px;flex:none}
+.pick .tag{
+  font-family:var(--serif);font-size:11px;font-style:italic;color:var(--ink4);
+  margin-left:auto;flex:none;letter-spacing:.06em;
+}
+.pick.dis{opacity:.36;cursor:not-allowed}
+
+/* ============ 表 ============ */
+.scroll{overflow:auto;border:1px solid var(--rule);background:#fff}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:9px 14px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--hair)}
+th{
+  background:#fff;font-size:9.5px;letter-spacing:.14em;color:var(--ink3);font-weight:700;
+  position:sticky;top:0;border-bottom:1px solid var(--ink);line-height:1.5;padding:12px 14px 10px;
+}
+th:first-child,td:first-child{text-align:left}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#FAFBFA}
+td.v{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+tr.grp td{background:#FAFBFA;font-weight:700}
+
+/* ============ 数値の見出し ============ */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid var(--ink)}
+.stat{padding:15px 20px 16px;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.stat:last-child{border-right:0}
+.stat .k{font-size:10px;letter-spacing:.13em;color:var(--ink3);font-weight:700}
+.stat .v{
+  font-family:var(--serif);font-size:27px;line-height:1.25;margin-top:4px;
+  font-variant-numeric:tabular-nums;letter-spacing:-.005em;
+}
+.stat .n{font-size:11px;color:var(--ink3);line-height:1.5;margin-top:2px}
+.stat.t .v{color:var(--treat)}
+.stat.c .v{color:var(--ctrl)}
+
+.pill{
+  display:inline-block;font-family:var(--mono);font-size:11.5px;padding:1px 8px;
+  border-radius:2px;font-variant-numeric:tabular-nums;
+}
+.pill.ok{background:var(--ctrl-w);color:#0A5F59}
+.pill.bad{background:var(--flag-w);color:var(--flag)}
+
+.note{
+  border-left:2px solid var(--treat);background:#FBFAFE;padding:14px 20px;
+  font-size:12.5px;line-height:1.85;color:var(--ink2);margin:18px 0;
+}
+.note.warn{border-left-color:var(--flag);background:var(--flag-w)}
+.note b{color:var(--ink);font-weight:700}
+.legend{display:flex;gap:20px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2);margin:2px 0 16px}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:7px;vertical-align:-1px;border-radius:50%}
+
+.chartbox{border:1px solid var(--rule);background:#fff;padding:18px 20px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+svg{display:block;max-width:100%;height:auto}
+.cap{font-size:11px;color:var(--ink3);margin:10px 0 0;line-height:1.7}
+
+pre.code{
+  background:#101A2B;color:#CBD7E8;font-family:var(--mono);font-size:11.5px;line-height:1.7;
+  padding:20px 22px;overflow:auto;max-height:440px;margin:0;
+}
+.prose{font-size:13.5px;line-height:2.05;max-width:74ch}
+.prose p{margin:0 0 15px}
+.quote{
+  border-left:2px solid var(--ink);background:#FBFCFC;padding:18px 24px;
+  font-family:var(--mincho);font-size:13.5px;line-height:2.2;letter-spacing:.02em;
+}
+.rtabs{display:flex;gap:0;margin-bottom:10px;border-bottom:1px solid var(--rule)}
+.rtab{
+  background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+  padding:8px 16px;font-size:12px;font-weight:700;color:var(--ink3);letter-spacing:.06em;
+}
+.rtab:hover{color:var(--ink)}
+.rtab.on{color:var(--ink);border-bottom-color:var(--treat)}
+.hint{font-size:11.5px;color:var(--ink3);margin-top:9px;line-height:1.75}
+.foot{color:var(--ink4);font-size:11px;text-align:center;padding:0 30px 40px;letter-spacing:.06em}
+
+@media(max-width:1040px){
+  .stage{grid-template-columns:minmax(0,1fr);gap:0}
+  aside{position:static;order:-1;margin-bottom:22px}
+  .ledger dl{display:flex;flex-wrap:wrap;gap:0 32px}
+  .ledger dt{margin-top:8px}
+}
+@media(max-width:720px){
+  .wrap{padding:0 16px}
+  .card{padding:20px 17px 22px}
+  .two{grid-template-columns:1fr}
+  .brand h1{font-size:22px}
+  .stats{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-causal);--paper:var(--al-bg);--surface:var(--al-surface);--ink:var(--al-ink);--ink2:var(--al-ink-2);--ink3:var(--al-ink-3);--ink4:var(--al-line-strong);--rule:var(--al-line);--hair:var(--al-line-2);--gothic:var(--al-sans);--mincho:var(--al-serif);--serif:var(--al-serif);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#causal">説明・予測する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>傾向スコアマッチング</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <h1>傾向スコアマッチング</h1>
+      <span class="en">Propensity Score Matching</span>
+    </div>
+    <p class="lede">似た者どうしを組にして、観察データから処置の効果を取り出します。計算はこのページの中だけで行われ、データはどこにも送信されません。</p>
+  </div>
+</header>
+<div class="groupbar" id="gbar" aria-hidden="true"><i class="t"></i><i class="c"></i></div>
+
+<nav class="rail" aria-label="分析の手順">
+  <div class="wrap">
+    <button class="step" data-p="0" aria-current="true"><span class="idx">i</span>データ</button>
+    <button class="step" data-p="1" disabled><span class="idx">ii</span>変数</button>
+    <button class="step" data-p="2" disabled><span class="idx">iii</span>マッチング</button>
+    <button class="step" data-p="3" disabled><span class="idx">iv</span>バランス</button>
+    <button class="step" data-p="4" disabled><span class="idx">v</span>効果</button>
+    <button class="step" data-p="5" disabled><span class="idx">vi</span>書き出し</button>
+  </div>
+</nav>
+
+<div class="wrap stage">
+<main>
+
+<!-- ============ 01 データ ============ -->
+<section class="panel on" id="p0">
+  <div class="card">
+    <span class="eyebrow">Introduction</span>
+    <h2>似た者を組にするということ</h2>
+    <p class="sub">処置を受けた人と受けなかった人では、そもそもの性質が違います。共変量から「処置を受けやすさ」を求め、その値が近い者どうしを結べば、無作為に割り付けたときに近い比較ができます。</p>
+    <div class="chartbox" id="hero"></div>
+    <p class="cap">上の列が処置群、下の列が対照群。横軸は傾向スコアで、細い線が結ばれた組を表します。相手が見つからなかった人は白抜きのまま残ります。</p>
+  </div>
+
+  <div class="card">
+    <span class="eyebrow">Data</span>
+    <h2>データを読み込む</h2>
+    <p class="sub">1行目が変数名、2行目以降が1ケースぶんのデータです。CSV・タブ区切りのどちらでも読み込めます。</p>
+
+    <div class="row" style="margin-bottom:16px">
+      <button class="btn-line btn-sm" id="btnFile">ファイルを選ぶ</button>
+      <input type="file" id="file" accept=".csv,.tsv,.txt" style="display:none">
+      <button class="btn-line btn-sm" id="btnSample">サンプルデータを入れる</button>
+      <button class="btn-line btn-sm" id="btnClear">消去する</button>
+    </div>
+
+    <textarea id="ta" rows="10" spellcheck="false" placeholder="ここに貼り付けることもできます&#10;&#10;id,参加,学習時間,前期成績,通学時間,性別,後期成績&#10;1,1,12.5,68,25,女,74"></textarea>
+
+    <div class="btn-bar">
+      <button class="btn-main" id="btnLoad">読み込む</button>
+      <span id="loadMsg" class="hint" style="margin-top:0"></span>
+    </div>
+  </div>
+
+  <div class="card" id="previewCard" style="display:none">
+    <span class="eyebrow">Preview</span>
+    <h2>読み込んだデータ</h2>
+    <p class="sub" id="previewSub"></p>
+    <div class="scroll" style="max-height:340px"><table id="previewTbl"></table></div>
+    <div class="btn-bar"><button class="btn-main" id="toStep1">変数の設定へ</button></div>
+  </div>
+</section>
+
+<!-- ============ 02 変数 ============ -->
+<section class="panel" id="p1">
+  <div class="card">
+    <span class="eyebrow">Variables</span>
+    <h2>変数を決める</h2>
+    <p class="sub">処置変数は「介入を受けたかどうか」を表す2値の変数です。共変量には、処置の受けやすさと結果の両方に関係しそうな変数（交絡要因）を選びます。</p>
+
+    <div class="row">
+      <div class="field">
+        <label class="lb" for="selTreat">処置変数</label>
+        <select id="selTreat"></select>
+      </div>
+      <div class="field">
+        <label class="lb" for="selTreatLv">処置群にあたる値</label>
+        <select id="selTreatLv"></select>
+      </div>
+      <div class="field">
+        <label class="lb" for="selOut">アウトカム</label>
+        <select id="selOut"></select>
+      </div>
+      <div class="field" id="outLvWrap" style="display:none">
+        <label class="lb" for="selOutLv">「起きた」とみなす値</label>
+        <select id="selOutLv"></select>
+      </div>
+    </div>
+
+    <h3>共変量　傾向スコアの説明変数</h3>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn-line btn-sm" id="btnAll">すべて選ぶ</button>
+      <button class="btn-line btn-sm" id="btnNone">選択を外す</button>
+      <span class="hint" id="covMsg" style="margin-top:0"></span>
+    </div>
+    <div class="picker" id="covPick"></div>
+    <p class="hint">カテゴリ変数は自動でダミー変数に展開されます（最初の水準が基準）。アウトカムより後に起きた変数は共変量に入れないでください。</p>
+
+    <div class="btn-bar">
+      <button class="btn-main" id="btnSetVars">この設定で進む</button>
+      <span id="varMsg" class="hint" style="margin-top:0"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 マッチング ============ -->
+<section class="panel" id="p2">
+  <div class="card">
+    <span class="eyebrow">Estimation</span>
+    <h2>傾向スコアを推定して組にする</h2>
+    <p class="sub">ロジスティック回帰で処置を受ける確率を求め、その値が近い者どうしを結びます。</p>
+
+    <div class="row">
+      <div class="field">
+        <label class="lb" for="selRatio">1人あたりの対照者数</label>
+        <select id="selRatio">
+          <option value="1" selected>1 : 1</option>
+          <option value="2">1 : 2</option>
+          <option value="3">1 : 3</option>
+          <option value="4">1 : 4</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lb" for="selRep">対照者の再利用</label>
+        <select id="selRep">
+          <option value="0" selected>しない（非復元）</option>
+          <option value="1">する（復元）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lb" for="selCal">キャリパー</label>
+        <select id="selCal">
+          <option value="0.2" selected>0.2 × 標準偏差（推奨）</option>
+          <option value="0.1">0.1 × 標準偏差</option>
+          <option value="0.25">0.25 × 標準偏差</option>
+          <option value="0">使わない</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lb" for="selOrder">マッチングの順番</label>
+        <select id="selOrder">
+          <option value="desc" selected>傾向スコアが高い順</option>
+          <option value="asc">傾向スコアが低い順</option>
+          <option value="data">データの並び順</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint">キャリパーは、傾向スコアのロジット値の標準偏差を基準にした許容幅です。差がこれを超える相手とは組にしません。</p>
+
+    <div class="btn-bar">
+      <button class="btn-main" id="btnRun">推定して組にする</button>
+      <span id="runMsg" class="hint" style="margin-top:0"></span>
+    </div>
+  </div>
+
+  <div id="psOut"></div>
+</section>
+
+<section class="panel" id="p3"><div id="balOut"></div></section>
+<section class="panel" id="p4"><div id="effOut"></div></section>
+<section class="panel" id="p5"><div id="repOut"></div></section>
+
+</main>
+
+<aside>
+  <div class="ledger">
+    <h4>いまの設定</h4>
+    <dl id="ledger">
+      <dt>データ</dt><dd class="dim">未読込</dd>
+    </dl>
+  </div>
+</aside>
+</div>
+
+<p class="foot">計算はすべてこのページの中で行われます。</p>
+<script>
+"use strict";
+
+/* =========================================================
+   数値ユーティリティ
+   ========================================================= */
+const REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function fmt(x, d){
+  if(x===null||x===undefined||!isFinite(x)) return "–";
+  return Number(x).toFixed(d===undefined?3:d);
+}
+function fmtP(p){
+  if(!isFinite(p)) return "–";
+  if(p < 0.001) return "< .001";
+  return p.toFixed(3).replace(/^0/,"");
+}
+function esc(s){
+  return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+function mean(a){ let s=0; for(const v of a) s+=v; return s/a.length; }
+function variance(a){
+  if(a.length<2) return 0;
+  const m=mean(a); let s=0; for(const v of a) s+=(v-m)*(v-m); return s/(a.length-1);
+}
+function wStats(x, w){
+  let sw=0, sw2=0, s=0;
+  for(let i=0;i<x.length;i++){ if(w[i]<=0) continue; sw+=w[i]; sw2+=w[i]*w[i]; s+=w[i]*x[i]; }
+  if(sw<=0) return {m:NaN, v:NaN, sw:0};
+  const m = s/sw;
+  let q=0; for(let i=0;i<x.length;i++){ if(w[i]<=0) continue; q += w[i]*(x[i]-m)*(x[i]-m); }
+  const den = sw - sw2/sw;
+  return {m:m, v: den>0 ? q/den : 0, sw:sw};
+}
+
+/* log gamma / incomplete beta → t 分布 */
+function lgamma(z){
+  const g=[676.5203681218851,-1259.1392167224028,771.32342877765313,
+           -176.61502916214059,12.507343278686905,-0.13857109526572012,
+           9.9843695780195716e-6,1.5056327351493116e-7];
+  if(z<0.5) return Math.log(Math.PI/Math.sin(Math.PI*z)) - lgamma(1-z);
+  z-=1; let x=0.99999999999980993;
+  for(let i=0;i<8;i++) x += g[i]/(z+i+1);
+  const t=z+7.5;
+  return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x);
+}
+function betacf(a,b,x){
+  const FPMIN=1e-300, EPS=3e-12;
+  let qab=a+b, qap=a+1, qam=a-1, c=1, d=1-qab*x/qap;
+  if(Math.abs(d)<FPMIN) d=FPMIN;
+  d=1/d; let h=d;
+  for(let m=1;m<=300;m++){
+    const m2=2*m;
+    let aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d; if(Math.abs(d)<FPMIN) d=FPMIN;
+    c=1+aa/c; if(Math.abs(c)<FPMIN) c=FPMIN;
+    d=1/d; h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d=1+aa*d; if(Math.abs(d)<FPMIN) d=FPMIN;
+    c=1+aa/c; if(Math.abs(c)<FPMIN) c=FPMIN;
+    d=1/d; const del=d*c; h*=del;
+    if(Math.abs(del-1)<EPS) break;
+  }
+  return h;
+}
+function betai(a,b,x){
+  if(x<=0) return 0; if(x>=1) return 1;
+  const bt=Math.exp(lgamma(a+b)-lgamma(a)-lgamma(b)+a*Math.log(x)+b*Math.log(1-x));
+  return x < (a+1)/(a+b+2) ? bt*betacf(a,b,x)/a : 1-bt*betacf(b,a,1-x)/b;
+}
+function tTwoSided(t, df){
+  if(!isFinite(t)||!isFinite(df)||df<=0) return NaN;
+  return betai(df/2, 0.5, df/(df+t*t));
+}
+function tCrit(df){
+  // 95% 両側の t 値（二分法）
+  if(!isFinite(df)||df<=0) return 1.96;
+  let lo=0.5, hi=100;
+  for(let i=0;i<80;i++){
+    const mid=(lo+hi)/2;
+    if(tTwoSided(mid, df) > 0.05) lo=mid; else hi=mid;
+  }
+  return (lo+hi)/2;
+}
+function erf(x){
+  const s=x<0?-1:1; x=Math.abs(x);
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const t=1/(1+p*x);
+  return s*(1-((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*Math.exp(-x*x));
+}
+function zTwoSided(z){ return 2*(1-0.5*(1+erf(Math.abs(z)/Math.SQRT2))); }
+
+/* 連立方程式（部分ピボット付きガウス消去） */
+function solveSym(A, b){
+  const n=b.length;
+  const M=A.map((r,i)=>r.slice().concat([b[i]]));
+  for(let c=0;c<n;c++){
+    let piv=c;
+    for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[piv][c])) piv=r;
+    if(Math.abs(M[piv][c])<1e-14) return null;
+    if(piv!==c){ const t=M[piv]; M[piv]=M[c]; M[c]=t; }
+    const p=M[c][c];
+    for(let j=c;j<=n;j++) M[c][j]/=p;
+    for(let r=0;r<n;r++){
+      if(r===c) continue;
+      const f=M[r][c];
+      if(f===0) continue;
+      for(let j=c;j<=n;j++) M[r][j]-=f*M[c][j];
+    }
+  }
+  return M.map(r=>r[n]);
+}
+function invert(A){
+  const n=A.length;
+  const M=A.map((r,i)=>r.slice().concat(Array.from({length:n},(_,j)=>i===j?1:0)));
+  for(let c=0;c<n;c++){
+    let piv=c;
+    for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[piv][c])) piv=r;
+    if(Math.abs(M[piv][c])<1e-14) return null;
+    if(piv!==c){ const t=M[piv]; M[piv]=M[c]; M[c]=t; }
+    const p=M[c][c];
+    for(let j=0;j<2*n;j++) M[c][j]/=p;
+    for(let r=0;r<n;r++){
+      if(r===c) continue;
+      const f=M[r][c]; if(f===0) continue;
+      for(let j=0;j<2*n;j++) M[r][j]-=f*M[c][j];
+    }
+  }
+  return M.map(r=>r.slice(n));
+}
+
+/* =========================================================
+   ロジスティック回帰（IRLS）
+   ========================================================= */
+function logisticFit(X, y){
+  const n=X.length, p=X[0].length;
+  // 切片以外を標準化して安定化
+  const mu0=new Array(p).fill(0), sd0=new Array(p).fill(1);
+  for(let j=1;j<p;j++){
+    const col=X.map(r=>r[j]);
+    mu0[j]=mean(col);
+    const s=Math.sqrt(variance(col));
+    sd0[j]= s>1e-12 ? s : 1;
+  }
+  const Z=X.map(r=>r.map((v,j)=> j===0 ? 1 : (v-mu0[j])/sd0[j]));
+  let beta=new Array(p).fill(0);
+  beta[0]=Math.log(Math.max(1e-6, mean(y))/Math.max(1e-6,1-mean(y)));
+  let converged=false, iter=0;
+  for(iter=0; iter<60; iter++){
+    const eta=new Array(n), w=new Array(n), z=new Array(n);
+    for(let i=0;i<n;i++){
+      let e=0; for(let j=0;j<p;j++) e+=Z[i][j]*beta[j];
+      e=Math.max(-30,Math.min(30,e));
+      const m=1/(1+Math.exp(-e));
+      const wi=Math.max(m*(1-m), 1e-8);
+      eta[i]=e; w[i]=wi; z[i]=e+(y[i]-m)/wi;
+    }
+    const A=Array.from({length:p},()=>new Array(p).fill(0));
+    const b=new Array(p).fill(0);
+    for(let i=0;i<n;i++){
+      for(let j=0;j<p;j++){
+        b[j]+=w[i]*Z[i][j]*z[i];
+        for(let k=j;k<p;k++) A[j][k]+=w[i]*Z[i][j]*Z[i][k];
+      }
+    }
+    for(let j=0;j<p;j++){ for(let k=0;k<j;k++) A[j][k]=A[k][j]; A[j][j]+=1e-7; }
+    const nb=solveSym(A,b);
+    if(!nb) break;
+    let diff=0; for(let j=0;j<p;j++) diff=Math.max(diff, Math.abs(nb[j]-beta[j]));
+    beta=nb;
+    if(diff<1e-9){ converged=true; break; }
+  }
+  // 予測値
+  const ps=new Array(n);
+  for(let i=0;i<n;i++){
+    let e=0; for(let j=0;j<p;j++) e+=Z[i][j]*beta[j];
+    e=Math.max(-30,Math.min(30,e));
+    ps[i]=1/(1+Math.exp(-e));
+  }
+  // 標準誤差（標準化スケール）
+  const A=Array.from({length:p},()=>new Array(p).fill(0));
+  for(let i=0;i<n;i++){
+    const wi=Math.max(ps[i]*(1-ps[i]),1e-8);
+    for(let j=0;j<p;j++) for(let k=0;k<p;k++) A[j][k]+=wi*Z[i][j]*Z[i][k];
+  }
+  for(let j=0;j<p;j++) A[j][j]+=1e-7;
+  const Ainv=invert(A);
+  // 元スケールへ戻す
+  const coef=new Array(p), se=new Array(p);
+  let b0=beta[0];
+  for(let j=1;j<p;j++){
+    coef[j]=beta[j]/sd0[j];
+    b0 -= beta[j]*mu0[j]/sd0[j];
+    se[j]= Ainv ? Math.sqrt(Math.max(Ainv[j][j],0))/sd0[j] : NaN;
+  }
+  coef[0]=b0;
+  se[0]= Ainv ? Math.sqrt(Math.max(Ainv[0][0],0)) : NaN;
+  // 対数尤度
+  let ll=0, ll0=0;
+  const pbar=mean(y);
+  for(let i=0;i<n;i++){
+    const pi=Math.min(1-1e-12,Math.max(1e-12,ps[i]));
+    ll += y[i]*Math.log(pi)+(1-y[i])*Math.log(1-pi);
+    ll0 += y[i]*Math.log(pbar)+(1-y[i])*Math.log(1-pbar);
+  }
+  return {coef, se, ps, ll, ll0, converged, iter, r2: 1-ll/ll0};
+}
+
+function auc(ps, y){
+  const idx=ps.map((v,i)=>i).sort((a,b)=>ps[a]-ps[b]);
+  const rank=new Array(ps.length);
+  let i=0;
+  while(i<idx.length){
+    let j=i;
+    while(j+1<idx.length && ps[idx[j+1]]===ps[idx[i]]) j++;
+    const r=(i+j)/2+1;
+    for(let k=i;k<=j;k++) rank[idx[k]]=r;
+    i=j+1;
+  }
+  let n1=0,n0=0,s1=0;
+  for(let k=0;k<y.length;k++){ if(y[k]===1){n1++; s1+=rank[k];} else n0++; }
+  if(n1===0||n0===0) return NaN;
+  return (s1-n1*(n1+1)/2)/(n1*n0);
+}
+
+/* =========================================================
+   データ読み込み
+   ========================================================= */
+function parseTable(text){
+  text=text.replace(/\r\n?/g,"\n").replace(/^\uFEFF/,"").trim();
+  if(!text) return null;
+  const first=text.split("\n")[0];
+  const delim = (first.split("\t").length-1) > (first.split(",").length-1) ? "\t" : ",";
+  const rows=[]; let cur=[], field="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else q=false; }
+      else field+=c;
+    }else{
+      if(c==='"') q=true;
+      else if(c===delim){ cur.push(field); field=""; }
+      else if(c==="\n"){ cur.push(field); rows.push(cur); cur=[]; field=""; }
+      else field+=c;
+    }
+  }
+  cur.push(field); rows.push(cur);
+  const clean=rows.filter(r=>r.some(v=>String(v).trim()!==""));
+  if(clean.length<2) return null;
+  const headers=clean[0].map((h,i)=>{ h=String(h).trim(); return h===""?("列"+(i+1)):h; });
+  const body=clean.slice(1).map(r=>{
+    const o=r.map(v=>String(v).trim());
+    while(o.length<headers.length) o.push("");
+    return o.slice(0,headers.length);
+  });
+  return {headers, body};
+}
+const MISS=new Set(["","NA","na","N/A","n/a","NaN","nan","null","NULL","."," ","-","—"]);
+function isMiss(v){ return MISS.has(String(v).trim()); }
+
+function profileColumns(headers, body){
+  return headers.map((h,j)=>{
+    const vals=body.map(r=>r[j]);
+    const nonMiss=vals.filter(v=>!isMiss(v));
+    const nums=nonMiss.filter(v=>isFinite(Number(v)));
+    const numeric = nonMiss.length>0 && nums.length===nonMiss.length;
+    const levels=[...new Set(nonMiss)];
+    levels.sort((a,b)=> numeric ? Number(a)-Number(b) : String(a).localeCompare(String(b),"ja"));
+    return {name:h, index:j, numeric, levels, nLevel:levels.length, nMiss: vals.length-nonMiss.length};
+  });
+}
+
+/* サンプルデータ（学習支援プログラムの効果・架空データ） */
+function makeSample(){
+  let seed=20260814;
+  const rnd=()=>{
+    seed|=0; seed=(seed+0x6D2B79F5)|0;
+    let t=Math.imul(seed^(seed>>>15), 1|seed);
+    t=(t+Math.imul(t^(t>>>7), 61|t))^t;
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+  const nrm=()=>Math.sqrt(-2*Math.log(1-rnd()))*Math.cos(2*Math.PI*rnd());
+  const rows=[["id","参加","前期成績","学習時間","通学時間","アルバイト時間","性別","後期成績"]];
+  for(let i=1;i<=520;i++){
+    const pre = Math.round(Math.max(25, Math.min(98, 62+11*nrm())));
+    const stu = Math.max(0, Math.round((7+3.2*nrm()+0.05*(pre-62))*10)/10);
+    const com = Math.max(5, Math.round(38+18*nrm()));
+    const job = Math.max(0, Math.round(9+6*nrm()));
+    const fem = rnd()<0.52 ? 1 : 0;
+    const eta = -0.95 - 0.055*(pre-62) + 0.19*(stu-7) - 0.018*(com-38) - 0.05*(job-9) + 0.35*fem;
+    const p = 1/(1+Math.exp(-eta));
+    const t = rnd()<p ? 1 : 0;
+    const post = 18 + 0.62*pre + 0.85*stu - 0.16*job + 1.4*fem + 4.2*t + 5.4*nrm();
+    rows.push([i, t, pre, stu, com, job, fem?"女":"男", Math.round(Math.max(0,Math.min(100,post))*10)/10]);
+  }
+  return rows.map(r=>r.join(",")).join("\n");
+}
+</script>
+<script>
+"use strict";
+
+const S = {};           // アプリの状態
+const $ = id => document.getElementById(id);
+
+/* =========================================================
+   画面切り替え
+   ========================================================= */
+function showPanel(k){
+  document.querySelectorAll(".panel").forEach((p,i)=>p.classList.toggle("on", i===k));
+  document.querySelectorAll(".step").forEach((b,i)=>b.setAttribute("aria-current", i===k?"true":"false"));
+  window.scrollTo({top:0, behavior: REDUCED ? "auto" : "smooth"});
+  const cur=document.querySelectorAll(".step")[k];
+  if(cur && cur.scrollIntoView) try{ cur.scrollIntoView({block:"nearest",inline:"center",behavior:REDUCED?"auto":"smooth"}); }catch(e){}
+}
+function unlock(k){ document.querySelectorAll(".step")[k].disabled=false; }
+function lockFrom(k){
+  document.querySelectorAll(".step").forEach((b,i)=>{ if(i>=k) b.disabled=true; });
+}
+document.querySelectorAll(".step").forEach(b=>{
+  b.addEventListener("click",()=>{ if(!b.disabled) showPanel(Number(b.dataset.p)); });
+});
+window.addEventListener("DOMContentLoaded",()=>{
+  const hero=$("hero"); if(hero) hero.innerHTML=heroSVG();
+  updateLedger();
+});
+
+/* =========================================================
+   Step 01 データ
+   ========================================================= */
+$("btnFile").addEventListener("click",()=>$("file").click());
+$("file").addEventListener("change", e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ $("ta").value=r.result; loadData(); };
+  r.readAsText(f, "UTF-8");
+});
+$("btnSample").addEventListener("click",()=>{ $("ta").value=makeSample(); loadData(); });
+$("btnClear").addEventListener("click",()=>{
+  $("ta").value=""; $("previewCard").style.display="none"; $("loadMsg").textContent="";
+  lockFrom(1); S.headers=null; S.match=null; updateLedger();
+});
+$("btnLoad").addEventListener("click", loadData);
+$("toStep1").addEventListener("click", ()=>showPanel(1));
+
+function loadData(){
+  const parsed=parseTable($("ta").value);
+  if(!parsed){ $("loadMsg").textContent="読み込めませんでした。1行目に変数名、2行目以降にデータを入れてください。"; return; }
+  S.headers=parsed.headers; S.body=parsed.body;
+  S.cols=profileColumns(S.headers, S.body);
+  $("loadMsg").textContent="";
+  $("previewSub").textContent = S.body.length+" ケース × "+S.headers.length+" 変数（先頭12ケースを表示）";
+  // プレビュー
+  let h="<thead><tr><th>#</th>"+S.cols.map(c=>
+    "<th>"+esc(c.name)+"<br><span style='font-weight:400;color:#8C99AC'>"+(c.numeric?"数値":"カテゴリ "+c.nLevel)+"</span></th>").join("")+"</tr></thead><tbody>";
+  S.body.slice(0,12).forEach((r,i)=>{
+    h+="<tr><td class='v'>"+(i+1)+"</td>"+r.map((v,j)=>"<td class='"+(S.cols[j].numeric?"v":"")+"'>"+esc(v)+"</td>").join("")+"</tr>";
+  });
+  h+="</tbody>";
+  $("previewTbl").innerHTML=h;
+  $("previewCard").style.display="block";
+  buildVarUI();
+  lockFrom(2);
+  unlock(1);
+  updateLedger();
+}
+
+/* =========================================================
+   Step 02 変数設定
+   ========================================================= */
+function buildVarUI(){
+  const treatCand=S.cols.filter(c=>c.nLevel===2);
+  const outCand=S.cols.filter(c=>c.numeric || c.nLevel===2);
+  $("selTreat").innerHTML=treatCand.length
+    ? treatCand.map(c=>"<option value='"+c.index+"'>"+esc(c.name)+"</option>").join("")
+    : "<option value=''>2値の変数が見つかりません</option>";
+  $("selOut").innerHTML=outCand.map(c=>"<option value='"+c.index+"'>"+esc(c.name)+"</option>").join("");
+  // 初期値の推測
+  const g=treatCand.find(c=>/参加|処置|介入|treat|group|exposure/i.test(c.name));
+  if(g) $("selTreat").value=g.index;
+  const o=outCand.filter(c=>c.numeric).slice(-1)[0];
+  if(o) $("selOut").value=o.index;
+  refreshTreatLevels();
+  refreshOutLevels();
+  buildCovPick();
+}
+function refreshOutLevels(){
+  const c=S.cols[Number($("selOut").value)];
+  const bin = c && (!c.numeric || c.nLevel===2) && c.nLevel===2;
+  $("outLvWrap").style.display = bin ? "flex" : "none";
+  if(!bin) return;
+  $("selOutLv").innerHTML=c.levels.map(v=>"<option value='"+esc(v)+"'>"+esc(v)+"</option>").join("");
+  const one=c.levels.find(v=>String(v)==="1");
+  $("selOutLv").value = one!==undefined ? "1" : String(c.levels[c.levels.length-1]);
+}
+function refreshTreatLevels(){
+  const c=S.cols[Number($("selTreat").value)];
+  if(!c) return;
+  $("selTreatLv").innerHTML=c.levels.map(v=>"<option value='"+esc(v)+"'>"+esc(v)+"</option>").join("");
+  $("selTreatLv").value=String(c.levels[c.levels.length-1]);
+}
+function buildCovPick(){
+  const tI=Number($("selTreat").value), oI=Number($("selOut").value);
+  const prev = S.covIdxs ? new Set(S.covIdxs) : null;
+  const html=S.cols.map(c=>{
+    const bad = c.index===tI || c.index===oI || c.nLevel<2 || c.nLevel>Math.max(12, S.body.length*0.5) && !c.numeric;
+    const reason = c.index===tI ? "処置変数" : c.index===oI ? "アウトカム" : c.nLevel<2 ? "値が1種類" : (!c.numeric && c.nLevel>12) ? "水準が多すぎ" : "";
+    const on = prev ? prev.has(c.index) : (!bad && !/^id$|ID|番号|no$/i.test(c.name));
+    return "<label class='pick"+(bad||reason?" dis":"")+"'>"+
+      "<input type='checkbox' value='"+c.index+"' "+(on&&!reason?"checked":"")+" "+(reason?"disabled":"")+">"+
+      "<span>"+esc(c.name)+"</span>"+
+      "<span class='tag'>"+(reason?esc(reason):(c.numeric?"数値":"カテゴリ "+c.nLevel))+"</span></label>";
+  }).join("");
+  $("covPick").innerHTML=html;
+  $("covPick").onchange = countCov;
+  countCov();
+}
+function countCov(){
+  const n=$("covPick").querySelectorAll("input:checked").length;
+  $("covMsg").textContent = n+" 個を選択中";
+}
+$("selTreat").addEventListener("change", ()=>{ refreshTreatLevels(); S.covIdxs=null; buildCovPick(); });
+$("selOut").addEventListener("change", ()=>{ S.covIdxs=null; refreshOutLevels(); buildCovPick(); });
+$("btnAll").addEventListener("click", ()=>{ $("covPick").querySelectorAll("input:not(:disabled)").forEach(i=>i.checked=true); countCov(); });
+$("btnNone").addEventListener("click", ()=>{ $("covPick").querySelectorAll("input").forEach(i=>i.checked=false); countCov(); });
+
+$("btnSetVars").addEventListener("click", ()=>{
+  const tI=Number($("selTreat").value), oI=Number($("selOut").value);
+  const covIdxs=[...$("covPick").querySelectorAll("input:checked")].map(i=>Number(i.value));
+  if(!isFinite(tI)){ $("varMsg").textContent="処置変数を選んでください。"; return; }
+  if(covIdxs.length===0){ $("varMsg").textContent="共変量を1つ以上選んでください。"; return; }
+  if(covIdxs.length>=S.body.length/3){ $("varMsg").textContent=""; }
+  S.treatIdx=tI; S.outIdx=oI; S.covIdxs=covIdxs; S.treatLevel=$("selTreatLv").value;
+  const ok=prepareMatrix();
+  if(!ok) return;
+  $("varMsg").textContent="";
+  unlock(2); lockFrom(3);
+  updateLedger();
+  showPanel(2);
+});
+
+/* 解析用の行列をつくる */
+function prepareMatrix(){
+  const need=[S.treatIdx, S.outIdx, ...S.covIdxs];
+  const keep=[];
+  for(let i=0;i<S.body.length;i++){
+    if(need.every(j=>!isMiss(S.body[i][j]))) keep.push(i);
+  }
+  if(keep.length<10){ $("varMsg").textContent="欠測を除くと解析できる行が足りません。"; return false; }
+  S.rowsUsed=keep;
+  S.nDropped=S.body.length-keep.length;
+
+  const T=keep.map(i=> String(S.body[i][S.treatIdx])===String(S.treatLevel) ? 1 : 0);
+  if(T.reduce((a,b)=>a+b,0)<3 || T.filter(v=>v===0).length<3){
+    $("varMsg").textContent="処置群または対照群のケース数が少なすぎます。"; return false;
+  }
+  S.T=T;
+
+  const oc=S.cols[S.outIdx];
+  S.outBinary = !oc.numeric || (oc.numeric && oc.nLevel===2);
+  if(S.outBinary){
+    const sel=$("selOutLv").value;
+    S.outPos = (sel!==undefined && sel!=="" && oc.levels.some(v=>String(v)===String(sel)))
+      ? String(sel) : String(oc.levels[oc.levels.length-1]);
+    S.Y = keep.map(i=> String(S.body[i][S.outIdx])===S.outPos ? 1 : 0);
+  }else{
+    S.Y = keep.map(i=> Number(S.body[i][S.outIdx]));
+  }
+
+  // 計画行列（切片 + 共変量／ダミー）
+  const names=[], cols=[], meta=[];
+  for(const j of S.covIdxs){
+    const c=S.cols[j];
+    if(c.numeric){
+      names.push(c.name);
+      cols.push(keep.map(i=>Number(S.body[i][j])));
+      meta.push({name:c.name, kind:"num", src:j});
+    }else{
+      for(let L=1; L<c.levels.length; L++){
+        const lv=c.levels[L];
+        names.push(c.name+" = "+lv);
+        cols.push(keep.map(i=> String(S.body[i][j])===String(lv) ? 1 : 0));
+        meta.push({name:c.name+" = "+lv, kind:"dum", src:j, level:lv});
+      }
+    }
+  }
+  S.xNames=names; S.xMeta=meta;
+  S.X = keep.map((_,r)=> [1, ...cols.map(c=>c[r])]);
+  S.Xcols = cols;
+  return true;
+}
+
+/* =========================================================
+   Step 03 推定＋マッチング
+   ========================================================= */
+$("btnRun").addEventListener("click", runAll);
+
+function runAll(){
+  $("runMsg").textContent="計算中…";
+  setTimeout(()=>{
+    try{
+      const fit=logisticFit(S.X, S.T);
+      S.fit=fit; S.ps=fit.ps;
+      S.logit=S.ps.map(p=>{ const q=Math.min(1-1e-9,Math.max(1e-9,p)); return Math.log(q/(1-q)); });
+      doMatch();
+      doBalance();
+      doEffect();
+      renderPS();
+      renderBalance();
+      renderEffect();
+      renderReport();
+      unlock(3); unlock(4); unlock(5);
+      updateLedger();
+      $("runMsg").textContent="";
+      showPanel(3);
+    }catch(err){
+      $("runMsg").textContent="計算できませんでした："+err.message;
+      console.error(err);
+    }
+  }, 20);
+}
+
+function doMatch(){
+  const ratio=Number($("selRatio").value);
+  const withRep=$("selRep").value==="1";
+  const calF=Number($("selCal").value);
+  const order=$("selOrder").value;
+  const n=S.T.length;
+  const sdL=Math.sqrt(variance(S.logit));
+  const cal = calF>0 ? calF*sdL : Infinity;
+
+  const tIdx=[], cIdx=[];
+  for(let i=0;i<n;i++) (S.T[i]===1?tIdx:cIdx).push(i);
+
+  let order_t=tIdx.slice();
+  if(order==="desc") order_t.sort((a,b)=>S.ps[b]-S.ps[a]);
+  else if(order==="asc") order_t.sort((a,b)=>S.ps[a]-S.ps[b]);
+
+  const used=new Set();
+  const w=new Array(n).fill(0);
+  const pairs=[];          // {t, cs:[...]}
+  const useCount=new Map();
+
+  for(const t of order_t){
+    const cand=[];
+    for(const c of cIdx){
+      if(!withRep && used.has(c)) continue;
+      const d=Math.abs(S.logit[t]-S.logit[c]);
+      if(d<=cal) cand.push([d,c]);
+    }
+    cand.sort((a,b)=>a[0]-b[0]);
+    const picked=cand.slice(0, ratio).map(x=>x[1]);
+    if(picked.length===0) continue;
+    picked.forEach(c=>{ used.add(c); useCount.set(c,(useCount.get(c)||0)+1); });
+    w[t]=1;
+    picked.forEach(c=>{ w[c]+= 1/picked.length; });
+    pairs.push({t, cs:picked});
+  }
+  S.w=w; S.pairs=pairs;
+  S.match={
+    ratio, withRep, calF, cal, sdL, order,
+    nT: tIdx.length, nC: cIdx.length,
+    nTm: pairs.length,
+    nTdrop: tIdx.length - pairs.length,
+    nCused: used.size,
+    exact: pairs.length>0 && pairs.every(p=>p.cs.length===ratio),
+    full11: ratio===1 && !withRep && pairs.every(p=>p.cs.length===1)
+  };
+  // 平均のマッチ距離
+  let sd=0,k=0;
+  pairs.forEach(p=>p.cs.forEach(c=>{ sd+=Math.abs(S.logit[p.t]-S.logit[c]); k++; }));
+  S.match.meanDist = k? sd/k : NaN;
+}
+
+/* =========================================================
+   バランス評価
+   ========================================================= */
+function balanceRow(name, x, w){
+  const t1=[], t0=[];
+  for(let i=0;i<x.length;i++) (S.T[i]===1?t1:t0).push(x[i]);
+  const mt=mean(t1), mc=mean(t0), vt=variance(t1), vc=variance(t0);
+  const pooled=Math.sqrt((vt+vc)/2);
+  const smdB = pooled>1e-12 ? (mt-mc)/pooled : 0;
+
+  const wt=x.map((_,i)=> S.T[i]===1 ? w[i] : 0);
+  const wc=x.map((_,i)=> S.T[i]===0 ? w[i] : 0);
+  const a=wStats(x, wt), b=wStats(x, wc);
+  const smdA = pooled>1e-12 ? (a.m-b.m)/pooled : 0;
+  const vrB = vc>1e-12 ? vt/vc : NaN;
+  const vrA = b.v>1e-12 ? a.v/b.v : NaN;
+  return {name, mtB:mt, mcB:mc, smdB, mtA:a.m, mcA:b.m, smdA, vrB, vrA,
+          impr: Math.abs(smdB)>1e-9 ? (1-Math.abs(smdA)/Math.abs(smdB))*100 : 0};
+}
+function doBalance(){
+  const rows=[balanceRow("傾向スコア", S.ps, S.w)];
+  S.Xcols.forEach((col,j)=> rows.push(balanceRow(S.xNames[j], col, S.w)));
+  S.bal=rows;
+  S.balMaxB=Math.max(...rows.slice(1).map(r=>Math.abs(r.smdB)));
+  S.balMaxA=Math.max(...rows.slice(1).map(r=>Math.abs(r.smdA)));
+  S.nBad = rows.slice(1).filter(r=>Math.abs(r.smdA)>0.1).length;
+}
+
+/* =========================================================
+   効果推定
+   ========================================================= */
+function wlsEffect(Y, T, w){
+  // Y = b0 + b1*T, 重み付き最小二乗＋頑健標準誤差
+  let A=[[0,0],[0,0]], b=[0,0], nEff=0;
+  for(let i=0;i<Y.length;i++){
+    if(w[i]<=0) continue;
+    nEff++;
+    const x=[1,T[i]];
+    for(let j=0;j<2;j++){ b[j]+=w[i]*x[j]*Y[i]; for(let k=0;k<2;k++) A[j][k]+=w[i]*x[j]*x[k]; }
+  }
+  const Ainv=invert(A);
+  if(!Ainv) return null;
+  const beta=[Ainv[0][0]*b[0]+Ainv[0][1]*b[1], Ainv[1][0]*b[0]+Ainv[1][1]*b[1]];
+  let M=[[0,0],[0,0]];
+  for(let i=0;i<Y.length;i++){
+    if(w[i]<=0) continue;
+    const x=[1,T[i]];
+    const e=Y[i]-(beta[0]+beta[1]*T[i]);
+    const c=w[i]*w[i]*e*e;
+    for(let j=0;j<2;j++) for(let k=0;k<2;k++) M[j][k]+=c*x[j]*x[k];
+  }
+  let V=[[0,0],[0,0]];
+  for(let j=0;j<2;j++) for(let k=0;k<2;k++){
+    let s=0; for(let a2=0;a2<2;a2++) for(let b2=0;b2<2;b2++) s+=Ainv[j][a2]*M[a2][b2]*Ainv[b2][k];
+    V[j][k]=s;
+  }
+  const se=Math.sqrt(Math.max(V[1][1],0));
+  const df=Math.max(1,nEff-2);
+  const t=beta[1]/se;
+  const tc=tCrit(df);
+  return {est:beta[1], se, t, df, p:tTwoSided(t,df), lo:beta[1]-tc*se, hi:beta[1]+tc*se, nEff};
+}
+function pairedT(){
+  const d=[];
+  S.pairs.forEach(p=>{ if(p.cs.length===1) d.push(S.Y[p.t]-S.Y[p.cs[0]]); });
+  if(d.length<3) return null;
+  const m=mean(d), v=variance(d), se=Math.sqrt(v/d.length), df=d.length-1;
+  const t=m/se, tc=tCrit(df);
+  return {est:m, se, t, df, p:tTwoSided(t,df), lo:m-tc*se, hi:m+tc*se, n:d.length,
+          d: m/Math.sqrt(v)};
+}
+function binaryDetail(w){
+  let a=0,b=0,c=0,d=0;
+  for(let i=0;i<S.Y.length;i++){
+    if(w[i]<=0) continue;
+    if(S.T[i]===1){ if(S.Y[i]===1) a+=w[i]; else b+=w[i]; }
+    else { if(S.Y[i]===1) c+=w[i]; else d+=w[i]; }
+  }
+  const p1=a/(a+b), p0=c/(c+d);
+  const rr=p0>0? p1/p0 : NaN;
+  const or=(b>0&&c>0)? (a*d)/(b*c) : NaN;
+  const seLogOR=Math.sqrt(1/Math.max(a,.5)+1/Math.max(b,.5)+1/Math.max(c,.5)+1/Math.max(d,.5));
+  const seLogRR=Math.sqrt(1/Math.max(a,.5)-1/Math.max(a+b,.5)+1/Math.max(c,.5)-1/Math.max(c+d,.5));
+  return {a,b,c,d,p1,p0,rr,or,
+    orLo:Math.exp(Math.log(or)-1.96*seLogOR), orHi:Math.exp(Math.log(or)+1.96*seLogOR),
+    rrLo:Math.exp(Math.log(rr)-1.96*seLogRR), rrHi:Math.exp(Math.log(rr)+1.96*seLogRR)};
+}
+function doEffect(){
+  const one=new Array(S.T.length).fill(1);
+  S.eff={
+    before: wlsEffect(S.Y, S.T, one),
+    after : wlsEffect(S.Y, S.T, S.w),
+    paired: S.match.full11 ? pairedT() : null
+  };
+  // 逆確率重み付け（ATT）
+  const ipw=S.T.map((t,i)=> t===1 ? 1 : S.ps[i]/Math.max(1e-6,1-S.ps[i]));
+  S.eff.ipw=wlsEffect(S.Y, S.T, ipw);
+  S.ipwW=ipw;
+  if(S.outBinary){
+    S.eff.binB=binaryDetail(one);
+    S.eff.binA=binaryDetail(S.w);
+  }
+  // 標準化効果量（連続アウトカムのみ・マッチング後）
+  if(!S.outBinary){
+    const t1=[],t0=[];
+    for(let i=0;i<S.Y.length;i++) if(S.w[i]>0) (S.T[i]===1?t1:t0).push(S.Y[i]);
+    const sp=Math.sqrt((variance(t1)+variance(t0))/2);
+    S.eff.d = sp>1e-12 ? S.eff.after.est/sp : NaN;
+  }
+}
+
+/* =========================================================
+   作図
+   ========================================================= */
+const C={ink:"#16233A",ink3:"#7C889C",ink4:"#A6AFBD",rule:"#D6DBE0",hair:"#E9ECEF",
+         treat:"#5B3FA8",ctrl:"#0E7C74",flag:"#A8501C",ctrlW:"#DEF0EE"};
+let UID=0;
+
+/* --- 組を結んだ図（このアプリの中心となる図） --- */
+function pairPlotSVG(spec){
+  const W=760, left=64, right=20, top=30, bot=36;
+  const H=spec.compact?200:250;
+  const yT=top+34, yC=H-bot-36;
+  const x=p=>left+Math.max(0,Math.min(1,p))*(W-left-right);
+  const uid="wp"+(++UID);
+  const anim=!REDUCED;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(spec.label||"マッチングの図")}">`;
+
+  // 目盛り
+  for(const v of [0,0.25,0.5,0.75,1]){
+    s+=`<line x1="${x(v)}" y1="${yT-16}" x2="${x(v)}" y2="${yC+16}" stroke="${C.hair}" stroke-width="1"/>`;
+    s+=`<text x="${x(v)}" y="${H-14}" font-size="10" fill="${C.ink4}" text-anchor="middle" font-family="ui-monospace,monospace">${v}</text>`;
+  }
+  s+=`<text x="${left-12}" y="${yT+4}" font-size="10" fill="${C.treat}" text-anchor="end" font-weight="700" letter-spacing=".08em">処置群</text>`;
+  s+=`<text x="${left-12}" y="${yC+4}" font-size="10" fill="${C.ctrl}" text-anchor="end" font-weight="700" letter-spacing=".08em">対照群</text>`;
+
+  // 結んだ線（左から順に現れる）
+  if(anim){
+    s+=`<clipPath id="${uid}"><rect x="0" y="0" width="0" height="${H}">`+
+       `<animate attributeName="width" from="0" to="${W}" dur="1.15s" begin="0.1s" fill="freeze" `+
+       `calcMode="spline" keyTimes="0;1" keySplines="0.25 1 0.4 1"/></rect></clipPath>`;
+  }
+  s+=`<g${anim?` clip-path="url(#${uid})"`:""} stroke="${C.ink4}" stroke-width="0.8" opacity="0.5">`;
+  const stepL=Math.max(1,Math.ceil(spec.links.length/280));
+  spec.links.filter((_,k)=>k%stepL===0).forEach(l=>{
+    s+=`<line x1="${x(l[0])}" y1="${yT+5}" x2="${x(l[1])}" y2="${yC-5}"/>`;
+  });
+  s+=`</g>`;
+
+  // 点（同じ位置に重なるものは上下に少しずらす）
+  const R=spec.compact?3.6:2.9;
+  const swarm=(list, baseY, dir)=>{
+    const bin=new Map(), out=[];
+    list.slice().sort((a,b)=>a-b).forEach(p=>{
+      const k=Math.round(x(p)/(R*1.7));
+      const n=bin.get(k)||0; bin.set(k,n+1);
+      out.push([p, baseY + dir*Math.min(n,6)*(R*1.55)]);
+    });
+    return out;
+  };
+  const dot=(p,y,fill,stroke)=>`<circle cx="${x(p)}" cy="${y}" r="${R}" fill="${fill}" stroke="${stroke||"none"}" stroke-width="1.1"/>`;
+  swarm(spec.cDrop,yC,1).forEach(d=> s+=dot(d[0],d[1],"#fff",C.rule));
+  swarm(spec.tDrop,yT,-1).forEach(d=> s+=dot(d[0],d[1],"#fff",C.flag));
+  s+=`<g opacity="0.88">`;
+  swarm(spec.cKeep,yC,1).forEach(d=> s+=dot(d[0],d[1],C.ctrl));
+  swarm(spec.tKeep,yT,-1).forEach(d=> s+=dot(d[0],d[1],C.treat));
+  s+=`</g>`;
+  s+=`<text x="${(left+W-right)/2}" y="${H-14}" font-size="10" fill="${C.ink4}" text-anchor="middle" opacity="0"> </text>`;
+  s+="</svg>";
+  return s;
+}
+
+/* 冒頭の説明図（架空の小さな例） */
+function heroSVG(){
+  let sd=7;
+  const r=()=>{ sd|=0; sd=(sd+0x6D2B79F5)|0; let t=Math.imul(sd^(sd>>>15),1|sd);
+    t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; };
+  const tp=[], cp=[];
+  for(let i=0;i<15;i++) tp.push(0.28+0.62*Math.pow(r(),0.75));
+  for(let i=0;i<26;i++) cp.push(0.05+0.72*Math.pow(r(),1.5));
+  tp.sort((a,b)=>a-b); cp.sort((a,b)=>a-b);
+  const used=new Set(), links=[], tKeep=[], tDrop=[];
+  tp.forEach(t=>{
+    let best=-1,bd=1e9;
+    cp.forEach((c,k)=>{ if(used.has(k)) return; const d=Math.abs(c-t); if(d<bd){bd=d;best=k;} });
+    if(best>=0 && bd<0.12){ used.add(best); links.push([t,cp[best]]); tKeep.push(t); }
+    else tDrop.push(t);
+  });
+  return pairPlotSVG({
+    tKeep, tDrop,
+    cKeep: cp.filter((_,k)=>used.has(k)),
+    cDrop: cp.filter((_,k)=>!used.has(k)),
+    links, compact:true, label:"マッチングの考え方"
+  });
+}
+
+/* 実データの組を結んだ図 */
+function matchPlotSVG(){
+  const tKeep=[],tDrop=[],cKeep=[],cDrop=[],links=[];
+  for(let i=0;i<S.T.length;i++){
+    if(S.T[i]===1) (S.w[i]>0?tKeep:tDrop).push(S.ps[i]);
+    else (S.w[i]>0?cKeep:cDrop).push(S.ps[i]);
+  }
+  S.pairs.forEach(p=>p.cs.forEach(c=>links.push([S.ps[p.t], S.ps[c]])));
+  return pairPlotSVG({tKeep,tDrop,cKeep,cDrop,links,label:"マッチングの結果"});
+}
+
+/* --- 共変量バランスの図 --- */
+function loveSVG(){
+  const rows=S.bal;
+  const rowH=22, padT=38, padB=32, left=196, right=28, W=760;
+  const H=padT+padB+rows.length*rowH;
+  const lim=Math.max(0.35, Math.min(1.6, Math.max(S.balMaxB,S.balMaxA,...rows.map(r=>Math.abs(r.smdB)))*1.14));
+  const x=v=>left+((Math.max(-lim,Math.min(lim,v))+lim)/(2*lim))*(W-left-right);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="共変量バランスの図">`;
+  s+=`<rect x="${x(-0.1)}" y="${padT-10}" width="${x(0.1)-x(-0.1)}" height="${rows.length*rowH+8}" fill="${C.ctrlW}" opacity=".7"/>`;
+  [-0.1,0.1].forEach(v=>{
+    s+=`<line x1="${x(v)}" y1="${padT-10}" x2="${x(v)}" y2="${padT+rows.length*rowH-2}" stroke="${C.hair}" stroke-width="1"/>`;
+  });
+  [-lim,-lim/2,0,lim/2,lim].forEach(v=>{
+    s+=`<line x1="${x(v)}" y1="${padT-10}" x2="${x(v)}" y2="${padT+rows.length*rowH-2}" stroke="${v===0?C.ink:C.hair}" stroke-width="1"/>`;
+    s+=`<text x="${x(v)}" y="${padT-17}" font-size="10" fill="${C.ink4}" text-anchor="middle" font-family="ui-monospace,monospace">${v.toFixed(2)}</text>`;
+  });
+  rows.forEach((r,i)=>{
+    const y=padT+i*rowH+8, isPS=i===0;
+    s+=`<text x="${left-12}" y="${y+4}" font-size="11.5" fill="${isPS?C.ink:"#43526D"}" font-weight="${isPS?700:400}" text-anchor="end">${esc(r.name.length>24?r.name.slice(0,23)+"…":r.name)}</text>`;
+    s+=`<line x1="${x(r.smdB)}" y1="${y}" x2="${x(r.smdA)}" y2="${y}" stroke="${C.rule}" stroke-width="1"/>`;
+    s+=`<circle cx="${x(r.smdB)}" cy="${y}" r="4" fill="#fff" stroke="${C.ink4}" stroke-width="1.3"><title>調整前 ${fmt(r.smdB)}</title></circle>`;
+    const cxA=x(r.smdA);
+    s+=`<circle cx="${REDUCED?cxA:x(r.smdB)}" cy="${y}" r="4.4" fill="${Math.abs(r.smdA)>0.1?C.flag:C.treat}">`;
+    if(!REDUCED) s+=`<animate attributeName="cx" from="${x(r.smdB)}" to="${cxA}" dur="0.85s" begin="0.2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/>`;
+    s+=`<title>調整後 ${fmt(r.smdA)}</title></circle>`;
+  });
+  s+=`<text x="${(left+W-right)/2}" y="${H-10}" font-size="10.5" fill="${C.ink4}" text-anchor="middle">標準化平均差</text>`;
+  s+="</svg>";
+  return s;
+}
+
+/* --- 傾向スコアの分布 --- */
+function psHistSVG(w, title){
+  const B=24, W=400, H=250, left=42, right=14, top=30, bot=36;
+  const bt=new Array(B).fill(0), bc=new Array(B).fill(0);
+  for(let i=0;i<S.ps.length;i++){
+    if(w[i]<=0) continue;
+    const k=Math.min(B-1, Math.floor(S.ps[i]*B));
+    if(S.T[i]===1) bt[k]+=w[i]; else bc[k]+=w[i];
+  }
+  const mx=Math.max(1e-9,...bt,...bc);
+  const midY=(top+H-bot)/2, half=(H-bot-top)/2-6, bw=(W-left-right)/B;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">`;
+  s+=`<text x="${left-4}" y="14" font-size="11" font-weight="700" fill="${C.ink}" letter-spacing=".06em">${esc(title)}</text>`;
+  for(let k=0;k<B;k++){
+    const xk=left+k*bw, ht=half*bt[k]/mx, hc=half*bc[k]/mx;
+    if(ht>0) s+=`<rect x="${xk+0.5}" y="${midY-ht}" width="${bw-1}" height="${ht}" fill="${C.treat}" opacity=".85"/>`;
+    if(hc>0) s+=`<rect x="${xk+0.5}" y="${midY}" width="${bw-1}" height="${hc}" fill="${C.ctrl}" opacity=".85"/>`;
+  }
+  s+=`<line x1="${left}" y1="${midY}" x2="${W-right}" y2="${midY}" stroke="${C.ink}" stroke-width="1"/>`;
+  [0,0.5,1].forEach(v=>{
+    const xx=left+v*(W-left-right);
+    s+=`<text x="${xx}" y="${H-14}" font-size="10" fill="${C.ink4}" text-anchor="middle" font-family="ui-monospace,monospace">${v}</text>`;
+  });
+  s+=`<text x="${left-8}" y="${midY-half+12}" font-size="9.5" fill="${C.treat}" text-anchor="end" font-weight="700">処置</text>`;
+  s+=`<text x="${left-8}" y="${midY+half+2}" font-size="9.5" fill="${C.ctrl}" text-anchor="end" font-weight="700">対照</text>`;
+  s+="</svg>";
+  return s;
+}
+
+/* =========================================================
+   右マージンの覚え書き
+   ========================================================= */
+function updateLedger(){
+  const d=[];
+  const item=(k,v,dim)=>d.push("<dt>"+k+"</dt><dd"+(dim?" class='dim'":"")+">"+v+"</dd>");
+  if(!S.headers){ item("データ","未読込",1); }
+  else{
+    item("データ", S.body.length+" ケース<br>"+S.headers.length+" 変数");
+    if(S.treatIdx!==undefined){
+      item("処置", esc(S.headers[S.treatIdx])+" = "+esc(S.treatLevel));
+      item("アウトカム", esc(S.headers[S.outIdx]));
+      item("共変量", S.covIdxs.length+" 変数");
+    }
+    if(S.match){
+      item("マッチング", "1 : "+S.match.ratio+"<br>"+(S.match.withRep?"復元":"非復元")+
+        (S.match.calF>0?"　c = "+S.match.calF:"　c なし"));
+      item("組の数", S.match.nTm+" 組");
+      item("最大 SMD", fmt(S.balMaxA)+"<span style='color:#A6AFBD'>　← "+fmt(S.balMaxB)+"</span>");
+      item("効果", (S.eff.after.est>0?"+":"")+fmt(S.eff.after.est,2));
+    }
+  }
+  $("ledger").innerHTML=d.join("");
+  // ヘッダー下の帯を実際の群の比率に合わせる
+  const g=$("gbar");
+  if(g && S.match){
+    g.querySelector(".t").style.flexGrow=String(Math.max(1,S.match.nTm));
+    g.querySelector(".c").style.flexGrow=String(Math.max(1,S.match.nCused));
+  }else if(g && S.T){
+    g.querySelector(".t").style.flexGrow=String(S.T.filter(v=>v===1).length);
+    g.querySelector(".c").style.flexGrow=String(S.T.filter(v=>v===0).length);
+  }
+}
+</script>
+<script>
+"use strict";
+
+const TNAME = () => S.headers[S.treatIdx];
+const ONAME = () => S.headers[S.outIdx];
+
+/* ---------- Step 03 の出力 ---------- */
+function renderPS(){
+  const f=S.fit, m=S.match;
+  const a=auc(S.ps, S.T);
+  const psT=S.ps.filter((_,i)=>S.T[i]===1), psC=S.ps.filter((_,i)=>S.T[i]===0);
+  const ovLo=Math.max(Math.min(...psT), Math.min(...psC));
+  const ovHi=Math.min(Math.max(...psT), Math.max(...psC));
+
+  let h="";
+  h+="<div class='card'><span class='eyebrow'>Model</span><h2>傾向スコアのモデル</h2>"+
+     "<p class='sub'>「"+esc(TNAME())+" = "+esc(S.treatLevel)+"」になる確率を、選んだ共変量から予測しました。</p>"+
+     "<div class='stats'>"+
+     stat("解析ケース数", S.T.length, "欠測で除外 "+S.nDropped+" ケース")+
+     stat("処置群", m.nT, "", "t")+
+     stat("対照群", m.nC, "", "c")+
+     stat("C統計量 (AUC)", fmt(a), a>0.9?"分離が強い":a<0.6?"予測力は弱い":"標準的")+
+     stat("擬似決定係数", fmt(f.r2), "McFadden")+
+     stat("共通範囲", fmt(ovLo,2)+" – "+fmt(ovHi,2), "両群が重なるスコア")+
+     "</div>";
+  if(!f.converged) h+="<div class='note warn'>ロジスティック回帰が完全には収束しませんでした。共変量を減らすか、水準の少ないカテゴリをまとめてみてください。</div>";
+  if(a>0.9) h+="<div class='note warn'><b>C統計量が高すぎます。</b>両群の性質が離れすぎていて、似た相手が見つかりにくい状態です。共変量を絞るか、共通範囲の外を除くことを検討してください。</div>";
+
+  h+="<h3>ロジスティック回帰係数</h3><div class='scroll' style='max-height:320px'><table><thead><tr>"+
+     "<th>変数</th><th>係数 b</th><th>標準誤差</th><th>オッズ比</th><th>z</th><th>p</th></tr></thead><tbody>";
+  const nm=["（切片）", ...S.xNames];
+  for(let j=0;j<nm.length;j++){
+    const z=f.coef[j]/f.se[j];
+    h+="<tr><td>"+esc(nm[j])+"</td><td class='v'>"+fmt(f.coef[j])+"</td><td class='v'>"+fmt(f.se[j])+
+       "</td><td class='v'>"+(j===0?"–":fmt(Math.exp(f.coef[j]),3))+"</td><td class='v'>"+fmt(z,2)+
+       "</td><td class='v'>"+fmtP(zTwoSided(z))+"</td></tr>";
+  }
+  h+="</tbody></table></div>"+
+     "<p class='hint'>係数は解釈の材料であって、有意かどうかで共変量を選び直す必要はありません。目的は予測ではなくバランスをとることです。</p></div>";
+
+  h+="<div class='card'><span class='eyebrow'>Matching</span><h2>マッチングの結果</h2>"+
+     "<p class='sub'>1 : "+m.ratio+" の最近傍マッチング／"+(m.withRep?"対照者の再利用あり":"再利用なし")+
+     "／"+(m.calF>0?("キャリパー "+m.calF+" × SD（ロジット尺度で "+fmt(m.cal,3)+"）"):"キャリパーなし")+"</p>"+
+     "<div class='stats'>"+
+     stat("マッチした処置群", m.nTm+" / "+m.nT, m.nTdrop>0?("除外 "+m.nTdrop+" ケース"):"全員マッチ", "t")+
+     stat("使われた対照群", m.nCused+" / "+m.nC, "", "c")+
+     stat("平均マッチ距離", fmt(m.meanDist,4), "ロジット尺度")+
+     stat("解析対象の合計", (m.nTm+m.nCused), "重み付きで比較")+
+     "</div>";
+  if(m.nTdrop>0){
+    const r=(m.nTdrop/m.nT*100);
+    h+="<div class='note"+(r>20?" warn":"")+"'>"+
+       "<b>処置群の "+fmt(r,1)+"% が相手を見つけられず除外されました。</b>"+
+       (r>20?"除外が多いと、結果は「相手が見つかった人だけ」の効果になります。キャリパーを広げるか、共変量を絞ってください。"
+            :"推定される効果は、マッチできた処置群についてのもの（ATT）です。")+"</div>";
+  }
+  h+="<h3>できあがった組</h3>"+
+     "<div class='chartbox'>"+matchPlotSVG()+"</div>"+
+     "<p class='cap'>細い線が一組を表します。白抜きの点は相手が見つからなかった処置群（オレンジの縁）と、"+
+     "今回使われなかった対照群（灰色の縁）です。</p>"+
+     "<h3>傾向スコアの分布</h3>"+
+     "<div class='two'>"+
+     "<div class='chartbox'>"+psHistSVG(new Array(S.T.length).fill(1),"調整前")+"</div>"+
+     "<div class='chartbox'>"+psHistSVG(S.w,"マッチング後")+"</div></div>"+
+     "<p class='cap'>上下の山の形が近いほど、両群の性質がそろっています。</p>"+
+     "<div class='btn-bar'><button class='btn-main' id='toBal'>バランスの確認へ進む</button>"+
+     "<button class='btn-line' id='dlMatched'>マッチング後データを保存する</button></div></div>";
+  $("psOut").innerHTML=h;
+  $("toBal").addEventListener("click",()=>showPanel(3));
+  $("dlMatched").addEventListener("click", downloadMatched);
+}
+function stat(k,v,n,cls){
+  const t=String(v);
+  const sz = t.length>13 ? "font-size:18px" : t.length>8 ? "font-size:21px" : "";
+  return "<div class='stat "+(cls||"")+"'><div class='k'>"+esc(k)+"</div>"+
+         "<div class='v' style='"+sz+"'>"+esc(t)+"</div>"+
+         (n?"<div class='n'>"+esc(n)+"</div>":"")+"</div>";
+}
+
+/* ---------- Step 04 バランス ---------- */
+function renderBalance(){
+  const good=S.balMaxA<=0.1;
+  let h="";
+  h+="<div class='card'><span class='eyebrow'>Balance</span><h2>共変量のバランスを確かめる</h2>"+
+     "<p class='sub'>標準化平均差（SMD）の絶対値が 0.1 以下なら、両群の分布がそろっているとみなすのが一般的な目安です。</p>"+
+     "<div class='stats'>"+
+     stat("調整前の最大SMD", fmt(S.balMaxB), S.balMaxB>0.1?"偏りあり":"もともと均衡")+
+     stat("調整後の最大SMD", fmt(S.balMaxA), good?"目安を満たす":"目安を超える")+
+     stat("0.1 を超える変数", S.nBad+" / "+(S.bal.length-1), good?"なし":"要検討")+
+     stat("傾向スコアのSMD", fmt(S.bal[0].smdA), "調整前 "+fmt(S.bal[0].smdB))+
+     "</div>";
+  h+="<div class='note"+(good?"":" warn")+"'>"+
+     (good
+      ? "<b>バランスは良好です。</b>選んだ共変量については、処置群と対照群が比較できる状態になりました。次のステップで効果を推定してください。"
+      : "<b>"+S.nBad+" 個の変数で偏りが残っています。</b>キャリパーを狭くする、1:1 にする、対照者の再利用を許す、共変量を絞る、といった設定変更を試してください。それでも残る場合は、残差の偏りを回帰モデルで調整する（重み付き回帰に共変量を加える）方法もあります。")+
+     "</div></div>";
+
+  h+="<div class='card'><span class='eyebrow'>Love plot</span><h2>調整前と調整後の比較</h2>"+
+     "<p class='sub'>白丸が調整前、色つきの丸がマッチング後です。中央（0）に近いほどバランスがとれています。</p>"+
+     "<div class='legend'><span><i style='background:#fff;border:1.4px solid #6E7C93'></i>調整前</span>"+
+     "<span><i style='background:#6C4BC1'></i>調整後（目安内）</span>"+
+     "<span><i style='background:#B4531B'></i>調整後（0.1超）</span>"+
+     "<span><i style='background:#E0F2F0'></i>±0.10 の帯</span></div>"+
+     "<div class='chartbox'>"+loveSVG()+"</div></div>";
+
+  h+="<div class='card'><span class='eyebrow'>Table</span><h2>バランスの数値</h2>"+
+     "<div class='scroll' style='max-height:460px'><table><thead><tr><th>変数</th>"+
+     "<th>処置群 平均<br>調整前</th><th>対照群 平均<br>調整前</th><th>SMD<br>調整前</th>"+
+     "<th>処置群 平均<br>調整後</th><th>対照群 平均<br>調整後</th><th>SMD<br>調整後</th>"+
+     "<th>分散比<br>調整後</th><th>改善率</th></tr></thead><tbody>";
+  S.bal.forEach((r,i)=>{
+    const bad=Math.abs(r.smdA)>0.1;
+    h+="<tr"+(i===0?" class='grp'":"")+"><td>"+esc(r.name)+"</td>"+
+       "<td class='v'>"+fmt(r.mtB)+"</td><td class='v'>"+fmt(r.mcB)+"</td><td class='v'>"+fmt(r.smdB)+"</td>"+
+       "<td class='v'>"+fmt(r.mtA)+"</td><td class='v'>"+fmt(r.mcA)+"</td>"+
+       "<td class='v'><span class='pill "+(bad?"bad":"ok")+"'>"+fmt(r.smdA)+"</span></td>"+
+       "<td class='v'>"+fmt(r.vrA,2)+"</td><td class='v'>"+(isFinite(r.impr)?fmt(r.impr,0)+"%":"–")+"</td></tr>";
+  });
+  h+="</tbody></table></div>"+
+     "<p class='hint'>SMD の分母には、調整前の全ケースから求めた両群の分散の平均（プールした標準偏差）を使っています。分散比は 0.5〜2.0 に収まるのが望ましいとされます。</p>"+
+     "<div class='btn-bar'><button class='btn-main' id='toEff'>効果の推定へ進む</button>"+
+     "<button class='btn-line' id='backRun'>設定を変えてやり直す</button></div></div>";
+  $("balOut").innerHTML=h;
+  $("toEff").addEventListener("click",()=>showPanel(4));
+  $("backRun").addEventListener("click",()=>showPanel(2));
+}
+
+/* ---------- Step 05 効果 ---------- */
+function renderEffect(){
+  const e=S.eff, unit=S.outBinary?"（割合の差）":"";
+  const label=S.outBinary?"リスク差":"平均の差";
+  const sig=e.after.p<0.05;
+  let h="";
+  h+="<div class='card'><span class='eyebrow'>Effect</span><h2>処置効果を推定する</h2>"+
+     "<p class='sub'>マッチングで作った比較可能な集団の中で、"+esc(ONAME())+
+     (S.outBinary?("（"+esc(S.outPos)+" の割合）"):"")+"を処置群と対照群で比べます。</p>"+
+     "<div class='stats'>"+
+     stat("推定された効果 (ATT)", (e.after.est>0?"+":"")+fmt(e.after.est), label+unit)+
+     stat("95% 信頼区間", fmt(e.after.lo,2)+" 〜 "+fmt(e.after.hi,2), "")+
+     stat("p 値", fmtP(e.after.p), sig?"5%水準で有意":"有意ではない")+
+     (S.outBinary?"":stat("効果量 d", fmt(e.d,2), "標準化平均差"))+
+     "</div>";
+  h+="<div class='note'>"+
+     (sig
+      ? "<b>マッチング後も差は残りました。</b>共変量をそろえた条件のもとで、処置群の"+esc(ONAME())+"は対照群より "+fmt(Math.abs(e.after.est),2)+" "+(e.after.est>0?"高い":"低い")+"と推定されます。"
+      : "<b>マッチング後は、はっきりした差は見られませんでした。</b>信頼区間が 0 をまたいでいるため、効果があるともないとも言い切れません。")+
+     " これは選んだ共変量で説明できる偏りを取り除いたうえでの結果であり、測っていない交絡要因が残っている可能性は消えません。</div>";
+
+  h+="<h3>推定方法による比較</h3><div class='scroll'><table><thead><tr>"+
+     "<th>推定</th><th>効果</th><th>標準誤差</th><th>95% 下限</th><th>95% 上限</th><th>t / z</th><th>p</th><th>n</th></tr></thead><tbody>";
+  h+=effRow("調整前（そのまま比較）", e.before, S.T.length);
+  h+=effRow("マッチング後（重み付き）", e.after, e.after.nEff);
+  if(e.paired) h+=effRow("マッチング後（対応のある t 検定）", e.paired, e.paired.n*2);
+  h+=effRow("逆確率重み付け（IPW・参考）", e.ipw, S.T.length);
+  h+="</tbody></table></div>";
+  h+="<p class='hint'>「マッチング後（重み付き）」を主たる結果として報告するのが標準的です。標準誤差は不均一分散に頑健な方法で求めています。調整前との差が大きいほど、交絡の影響が強かったことを意味します。</p>";
+
+  if(S.outBinary){
+    const A=e.binA, B=e.binB;
+    h+="<h3>2値アウトカムの内訳</h3><div class='scroll'><table><thead><tr><th></th>"+
+       "<th>処置群の割合</th><th>対照群の割合</th><th>リスク差</th><th>リスク比</th><th>オッズ比</th><th>オッズ比 95%CI</th></tr></thead><tbody>"+
+       "<tr><td>調整前</td><td class='v'>"+fmt(B.p1,3)+"</td><td class='v'>"+fmt(B.p0,3)+"</td><td class='v'>"+fmt(B.p1-B.p0,3)+
+       "</td><td class='v'>"+fmt(B.rr,2)+"</td><td class='v'>"+fmt(B.or,2)+"</td><td class='v'>"+fmt(B.orLo,2)+" – "+fmt(B.orHi,2)+"</td></tr>"+
+       "<tr><td>マッチング後</td><td class='v'>"+fmt(A.p1,3)+"</td><td class='v'>"+fmt(A.p0,3)+"</td><td class='v'>"+fmt(A.p1-A.p0,3)+
+       "</td><td class='v'>"+fmt(A.rr,2)+"</td><td class='v'>"+fmt(A.or,2)+"</td><td class='v'>"+fmt(A.orLo,2)+" – "+fmt(A.orHi,2)+"</td></tr>"+
+       "</tbody></table></div><p class='hint'>マッチング後の度数は重み付きの値なので、小数になります。</p>";
+  }
+  h+="<div class='btn-bar'><button class='btn-main' id='toRep'>解説と記述例を見る</button></div></div>";
+  $("effOut").innerHTML=h;
+  $("toRep").addEventListener("click",()=>showPanel(5));
+}
+function effRow(name, r, n){
+  if(!r) return "";
+  return "<tr><td>"+esc(name)+"</td><td class='v'>"+fmt(r.est)+"</td><td class='v'>"+fmt(r.se)+
+    "</td><td class='v'>"+fmt(r.lo)+"</td><td class='v'>"+fmt(r.hi)+"</td><td class='v'>"+fmt(r.t,2)+
+    "</td><td class='v'>"+fmtP(r.p)+"</td><td class='v'>"+n+"</td></tr>";
+}
+</script>
+<script>
+"use strict";
+
+/* ---------- Step 06 レポート ---------- */
+function renderReport(){
+  const m=S.match, e=S.eff, good=S.balMaxA<=0.1;
+  const tn=TNAME(), on=ONAME(), lv=S.treatLevel;
+  const covList=S.covIdxs.map(j=>S.headers[j]).join("、");
+  const dir = e.after.est>0 ? "高い" : "低い";
+  const sig = e.after.p<0.05;
+
+  let h="";
+  /* ---- 解説 ---- */
+  h+="<div class='card'><span class='eyebrow'>Interpretation</span><h2>結果の読み方</h2><div class='prose'>";
+  h+="<p><b>何をしたか。</b>"+esc(covList)+" をもとに、各ケースが「"+esc(tn)+" = "+esc(lv)+
+     "」になる確率（傾向スコア）をロジスティック回帰で求めました。この確率が近い者どうしを組にすることで、"+
+     "処置を受けた人と受けなかった人の背景をそろえ、無作為割付に近い比較ができる状態を作っています。</p>";
+  h+="<p><b>マッチングの成否。</b>処置群 "+m.nT+" ケースのうち "+m.nTm+" ケース（"+fmt(m.nTm/m.nT*100,1)+
+     "%）が相手を見つけました。"+(m.nTdrop>0?("相手が見つからなかった "+m.nTdrop+
+     " ケースは解析から外れているため、結果はマッチできた処置群についての効果（ATT）として読んでください。"):
+     "全員がマッチしたので、処置群全体についての効果（ATT）といえます。")+"</p>";
+  h+="<p><b>バランス。</b>調整前は最大 "+fmt(S.balMaxB)+" だった標準化平均差が、マッチング後は最大 "+fmt(S.balMaxA)+
+     " になりました。"+(good?"すべての共変量が目安の 0.1 以内に収まっており、比較の前提は整っています。"
+     :"0.1 を超える変数が "+S.nBad+" 個残っています。この点は限界として明記するか、設定を変えて再検討してください。")+"</p>";
+  h+="<p><b>効果。</b>マッチング後の"+esc(on)+"の差は "+fmt(e.after.est,2)+"（95%CI "+fmt(e.after.lo,2)+
+     " 〜 "+fmt(e.after.hi,2)+", p "+(e.after.p<0.001?"< .001":"= "+fmtP(e.after.p))+"）でした。"+
+     "調整前の差は "+fmt(e.before.est,2)+" だったので、"+
+     (Math.abs(e.after.est)<Math.abs(e.before.est)
+      ? "見かけの差のうち "+fmt((1-Math.abs(e.after.est)/Math.max(1e-9,Math.abs(e.before.est)))*100,0)+"% ほどは、背景の違いによる見せかけだったことになります。"
+      : "調整によって差はむしろ大きくなりました。背景の違いが効果を打ち消す方向に働いていたと考えられます。")+"</p>";
+  h+="<p><b>限界。</b>傾向スコアがそろえられるのは、モデルに入れた共変量だけです。測定していない要因（意欲、家庭環境、重症度など）による偏りは残ります。"+
+     "結果を因果として述べる際は、この点と、感度分析（未測定交絡がどれくらいあれば結論が覆るか）の必要性にふれるのが通例です。</p>";
+  h+="</div></div>";
+
+  /* ---- 論文記述例 ---- */
+  const meth=
+    "　群間の背景要因の偏りを調整するため、傾向スコアマッチングを行った。"+
+    "「"+tn+"」を従属変数、"+covList+" を独立変数とするロジスティック回帰により各対象者の傾向スコアを推定した（C統計量 = "+fmt(auc(S.ps,S.T))+"）。"+
+    "傾向スコアのロジット値を用いた最近傍マッチング（1:"+m.ratio+"、"+(m.withRep?"復元抽出":"非復元抽出")+
+    (m.calF>0?("、キャリパー幅はロジット値の標準偏差の "+m.calF+" 倍"):"、キャリパーは設定せず")+
+    "）により、処置群 "+m.nT+" 名中 "+m.nTm+" 名が対照群と対応づけられた。"+
+    "共変量のバランスは標準化平均差（standardized mean difference: SMD）により評価し、絶対値 0.10 未満を均衡の基準とした。";
+  const res2=
+    "　マッチング後の標本において、"+on+"の"+(S.outBinary?"発生割合":"平均値")+"は処置群で "+fmt(S.outBinary?e.binA.p1:wStats(S.Y,S.w.map((w,i)=>S.T[i]===1?w:0)).m,2)+
+    "、対照群で "+fmt(S.outBinary?e.binA.p0:wStats(S.Y,S.w.map((w,i)=>S.T[i]===0?w:0)).m,2)+" であり、"+
+    (S.outBinary?"リスク差":"平均差")+"は "+fmt(e.after.est,2)+"（95%CI ["+fmt(e.after.lo,2)+", "+fmt(e.after.hi,2)+"], "+
+    "p "+(e.after.p<0.001?"< .001":"= "+fmtP(e.after.p))+"）であった"+
+    (S.outBinary?"":"（Cohen's d = "+fmt(e.d,2)+"）")+"。"+
+    (sig? "すなわち、"+tn+"は"+on+"を有意に"+dir+"することが示された。"
+        : "すなわち、両群の"+on+"に統計的に有意な差は認められなかった。")+
+    "なお、マッチング前の単純比較では差は "+fmt(e.before.est,2)+" であった。";
+
+  h+="<div class='card'><span class='eyebrow'>Writing</span><h2>論文での記述例</h2>"+
+     "<p class='sub'>そのまま使わず、研究の文脈に合わせて言い回しと変数名を整えてください。</p>"+
+     "<h3>方法（Method）</h3><div class='quote'>"+esc(meth)+"</div>"+
+     "<h3>結果（Result）</h3><div class='quote'>"+esc(res2)+"</div>"+
+     "<h3>限界（Limitation）</h3><div class='quote'>"+
+     esc("　本研究の限界として、傾向スコアによる調整は観測された共変量に基づくものであり、未測定の交絡要因による偏りを排除できない点が挙げられる。また、マッチングにより処置群の一部が解析から除外されているため、得られた推定値は対応づけが可能であった対象者に関する平均処置効果（average treatment effect on the treated）である点にも留意が必要である。")+
+     "</div>"+
+     "<div class='btn-bar'><button class='btn-line btn-sm' id='cpWrite'>記述例をコピーする</button><span class='hint' id='cpWriteMsg'></span></div></div>";
+
+  /* ---- R コード ---- */
+  const rcodeA=buildR(), rcodeB=buildRBase();
+  h+="<div class='card'><span class='eyebrow'>R</span><h2>R で再現するコード</h2>"+
+     "<p class='sub'>データを埋め込んであるので、そのまま貼り付けて実行できます。図は画面に描かず PNG ファイルとして保存されます。</p>"+
+     "<div class='rtabs'>"+
+     "<button class='rtab on' data-r='A'>MatchIt を使う</button>"+
+     "<button class='rtab' data-r='B'>パッケージ不要</button></div>"+
+     "<p class='hint' id='rNote' style='margin:0 0 12px'>"+
+     "論文で標準的に使われるパッケージです。未導入なら自動で導入します（インターネット接続が必要）。</p>"+
+     "<pre class='code' id='rcode'>"+esc(rcodeA)+"</pre>"+
+     "<div class='btn-bar'><button class='btn-line btn-sm' id='cpR'>コードをコピーする</button>"+
+     "<button class='btn-line btn-sm' id='dlR'>.R ファイルで保存する</button>"+
+     "<span class='hint' id='cpRMsg' style='margin-top:0'></span></div></div>";
+
+  /* ---- 書き出し ---- */
+  h+="<div class='card'><span class='eyebrow'>Export</span><h2>データを持ち出す</h2>"+
+     "<p class='sub'>マッチング後のデータには、傾向スコア・重み・ペア番号が付きます。SPSS や Excel での追加分析に使えます。</p>"+
+     "<div class='btn-bar'><button class='btn-main' id='dlM2'>マッチング後データ（CSV）</button>"+
+     "<button class='btn-line' id='dlAll'>全ケース＋傾向スコア（CSV）</button>"+
+     "<button class='btn-line' id='dlBal'>バランス表（CSV）</button></div></div>";
+
+  $("repOut").innerHTML=h;
+  $("cpWrite").addEventListener("click",()=>copyText(meth+"\n\n"+res2, "cpWriteMsg"));
+  let rcur=rcodeA, rname="psm_matchit.R";
+  document.querySelectorAll(".rtab").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(".rtab").forEach(x=>x.classList.toggle("on", x===b));
+    const isA = b.dataset.r==="A";
+    rcur = isA ? rcodeA : rcodeB;
+    rname = isA ? "psm_matchit.R" : "psm_base.R";
+    $("rcode").textContent = rcur;
+    $("rNote").textContent = isA
+      ? "論文で標準的に使われるパッケージです。未導入なら自動で導入します（インターネット接続が必要）。"
+      : "パッケージを一切使わず base R だけで動きます。JASP の R コンソールや、外部からの導入ができない環境向けです。このアプリと同じ手順なので結果も一致します。";
+  }));
+  $("cpR").addEventListener("click",()=>copyText(rcur, "cpRMsg"));
+  $("dlR").addEventListener("click",()=>saveFile(rcur, rname, "text/plain"));
+  $("dlM2").addEventListener("click", downloadMatched);
+  $("dlAll").addEventListener("click", downloadAll);
+  $("dlBal").addEventListener("click", downloadBalance);
+}
+
+/* ---------- R コード生成 ---------- */
+function rq(s){ return "`"+String(s).replace(/`/g,"_")+"`"; }
+function safeCsv(s){
+  s=String(s).replace(/[",\n\r]/g," ");
+  return s;
+}
+function rDataBlock(){
+  const cols=[S.treatIdx, S.outIdx, ...S.covIdxs];
+  const head=cols.map(j=>safeCsv(S.headers[j])).join(",");
+  const body=S.rowsUsed.map(i=>cols.map(j=>safeCsv(S.body[i][j])).join(",")).join("\n");
+  const lvl=safeCsv(S.treatLevel);
+  const xs=S.covIdxs.map((_,k)=>"x"+(k+1));
+  const map=["#   trt_raw = "+safeCsv(S.headers[S.treatIdx])+"（処置変数）",
+             "#   out_raw = "+safeCsv(S.headers[S.outIdx])+"（アウトカム）",
+             ...S.covIdxs.map((j,k)=>"#   "+xs[k]+" = "+safeCsv(S.headers[j]))];
+  return [
+'dat <- read.csv(text = "',
+head,
+body,
+'", check.names = FALSE, stringsAsFactors = TRUE)',
+"",
+"# 環境によって日本語の列名が文字化けするため、扱いやすい名前に付け替えます",
+...map,
+'names(dat) <- c("trt_raw", "out_raw", '+xs.map(v=>'"'+v+'"').join(", ")+')',
+'lab <- c('+S.covIdxs.map((j,k)=>xs[k]+' = "'+safeCsv(S.headers[j])+'"').join(", ")+')',
+"",
+"# 処置変数を 0 / 1 に整える（1 = "+lvl+"）",
+'dat$treat <- ifelse(as.character(dat$trt_raw) == "'+lvl+'", 1L, 0L)',
+S.outBinary ? 'dat$outcome <- ifelse(as.character(dat$out_raw) == "'+safeCsv(S.outPos)+'", 1L, 0L)'
+            : 'dat$outcome <- as.numeric(dat$out_raw)'
+  ].join("\n");
+}
+
+/* 図の保存先を自動判定する共通部分（JASP など ~ が書けない環境への対処） */
+const R_OUTDIR = [
+"# ---- 図の保存先を自動で決める（書き込めるフォルダを探します） ----",
+"pick_dir <- function(){",
+'  cand <- c(file.path(Sys.getenv("USERPROFILE"), "Downloads"),',
+'            file.path(path.expand("~"), "Downloads"),',
+'            Sys.getenv("USERPROFILE"), path.expand("~"), getwd(), tempdir())',
+"  cand <- unique(cand[nzchar(cand)])",
+"  for (d in cand) if (dir.exists(d) && file.access(d, 2) == 0) return(d)",
+"  tempdir()",
+"}",
+"OUT <- pick_dir()",
+'message("図の保存先: ", OUT)'
+].join("\n");
+
+const R_HEAD = (title) => [
+"# ============================================================",
+"#  "+title,
+"#  図は画面に描かず PNG ファイルとして保存します",
+"# ============================================================"
+].join("\n");
+
+/* --- (A) MatchIt を使う版 --- */
+function buildR(){
+  const m=S.match;
+  const rhs=S.covIdxs.map((_,k)=>"x"+(k+1)).join(" + ");
+  return [
+R_HEAD("傾向スコアマッチング — MatchIt による再現"),
+"",
+"# ---- 必要なパッケージを自動で用意する ----",
+'need <- c("MatchIt", "cobalt", "sandwich", "lmtest")',
+"miss <- need[!vapply(need, requireNamespace, logical(1), quietly = TRUE)]",
+"if (length(miss)) {",
+'  message("次のパッケージを導入します: ", paste(miss, collapse = ", "))',
+'  install.packages(miss, repos = "https://cloud.r-project.org")',
+"}",
+"invisible(lapply(need, library, character.only = TRUE))",
+"",
+R_OUTDIR,
+"",
+rDataBlock(),
+"",
+"# ---- 1. 傾向スコアの推定とマッチング ----",
+"m.out <- matchit(",
+"  treat ~ "+rhs+",",
+"  data     = dat,",
+'  method   = "nearest",',
+'  distance = "glm", link = "linear.logit",',
+"  ratio    = "+m.ratio+",",
+"  replace  = "+(m.withRep?"TRUE":"FALSE")+(m.calF>0 ? ",\n  caliper  = "+m.calF+", std.caliper = TRUE" : ""),
+")",
+"summary(m.out, un = TRUE)",
+"",
+"# ---- 2. バランスの確認 ----",
+'bal.tab(m.out, un = TRUE, stats = c("mean.diffs", "variance.ratios"))',
+"",
+'png(file.path(OUT, "psm_loveplot.png"), width = 1800, height = 1300, res = 220)',
+'print(love.plot(m.out, binary = "std", thresholds = c(m = .1), abs = FALSE, var.names = lab))',
+"dev.off()",
+"",
+'png(file.path(OUT, "psm_density.png"), width = 1800, height = 1300, res = 220)',
+'plot(m.out, type = "density")',
+"dev.off()",
+"",
+"# ---- 3. 処置効果の推定（ATT） ----",
+"md <- match.data(m.out)",
+S.outBinary
+ ? "fit <- glm(outcome ~ treat, data = md, weights = weights, family = quasibinomial())"
+ : "fit <- lm(outcome ~ treat, data = md, weights = weights)",
+"coeftest(fit, vcov. = vcovCL, cluster = ~ subclass)   # 頑健標準誤差",
+"coefci (fit, vcov. = vcovCL, cluster = ~ subclass)    # 95% 信頼区間",
+"",
+"# ---- 4. 参考：逆確率重み付け（IPW・ATT） ----",
+"ps <- m.out$distance",
+"wt <- ifelse(dat$treat == 1, 1, ps / (1 - ps))",
+S.outBinary
+ ? "fit2 <- glm(outcome ~ treat, data = dat, weights = wt, family = quasibinomial())"
+ : "fit2 <- lm(outcome ~ treat, data = dat, weights = wt)",
+"coeftest(fit2, vcov. = vcovHC)",
+"",
+'message("図を保存しました: ", OUT)',
+"",
+"# 参考：このアプリでの推定値 = "+fmt(S.eff.after.est,4)+"  (95%CI "+fmt(S.eff.after.lo,3)+", "+fmt(S.eff.after.hi,3)+")",
+"# MatchIt は既定の並び順やタイの扱いが異なるため、値が完全一致しないことがあります。"
+].join("\n");
+}
+
+/* --- (B) パッケージを使わない版（このアプリと同じ手順を base R で実装） --- */
+function buildRBase(){
+  const m=S.match;
+  const rhs=S.covIdxs.map((_,k)=>"x"+(k+1)).join(" + ");
+  return [
+R_HEAD("傾向スコアマッチング — パッケージ不要版（base R のみ）"),
+"#  このアプリと同じ手順・同じ順序で計算するため、結果は一致します",
+"",
+R_OUTDIR,
+"",
+rDataBlock(),
+"",
+"# ---- 設定（アプリと同じ） ----",
+"RATIO   <- "+m.ratio+"                 # 1 人あたりの対照者数",
+"REPLACE <- "+(m.withRep?"TRUE":"FALSE")+"              # 対照者の再利用",
+"CALIPER <- "+(m.calF>0?m.calF:"Inf")+"              # キャリパー（標準偏差の倍数）",
+'ORDER   <- "'+m.order+'"           # desc / asc / data',
+"",
+"# ---- 1. 傾向スコアの推定 ----",
+"ps.fit <- glm(treat ~ "+rhs+", data = dat, family = binomial())",
+"print(summary(ps.fit))",
+'ps <- predict(ps.fit, type = "response")',
+"lg <- log(ps / (1 - ps))",
+"",
+"# ---- 2. 最近傍マッチング ----",
+"cal <- if (is.finite(CALIPER)) CALIPER * sd(lg) else Inf",
+"ti <- which(dat$treat == 1); ci <- which(dat$treat == 0)",
+'ord <- switch(ORDER,',
+'  desc = ti[order(ps[ti], decreasing = TRUE)],',
+'  asc  = ti[order(ps[ti])],',
+'  ti)',
+"used <- rep(FALSE, length(ci))",
+"w <- rep(0, nrow(dat)); sub <- rep(NA_integer_, nrow(dat)); k <- 0L",
+"for (t in ord) {",
+"  avail <- if (REPLACE) seq_along(ci) else which(!used)",
+"  if (!length(avail)) next",
+"  d  <- abs(lg[ci[avail]] - lg[t])",
+"  ok <- avail[d <= cal]",
+"  if (!length(ok)) next",
+"  pick <- ok[order(abs(lg[ci[ok]] - lg[t]))][seq_len(min(RATIO, length(ok)))]",
+"  used[pick] <- TRUE",
+"  k <- k + 1L",
+"  w[t] <- 1; sub[t] <- k",
+"  w[ci[pick]] <- w[ci[pick]] + 1 / length(pick)",
+"  sub[ci[pick]] <- ifelse(is.na(sub[ci[pick]]), k, sub[ci[pick]])",
+"}",
+'cat("組の数:", k, " / 処置群:", length(ti), " 使われた対照群:", sum(used), "\\n")',
+"",
+"# ---- 3. バランス（標準化平均差） ----",
+"X <- model.matrix(~ "+rhs+", data = dat)[, -1, drop = FALSE]",
+"X <- cbind(PS = ps, X)",
+"smd <- function(x, tr, w) {",
+"  s <- sqrt((var(x[tr == 1]) + var(x[tr == 0])) / 2)   # 分母は調整前の全ケース",
+"  if (s < 1e-12) return(0)",
+"  (weighted.mean(x[tr == 1], w[tr == 1]) - weighted.mean(x[tr == 0], w[tr == 0])) / s",
+"}",
+"one <- rep(1, nrow(dat))",
+"vn  <- colnames(X)",
+"vjp <- ifelse(vn %in% names(lab), lab[vn], vn)   # 表示用の日本語名",
+'vjp[1] <- "\u50be\u5411\u30b9\u30b3\u30a2"',
+"bal <- data.frame(variable = vjp,",
+"                  smd_before = apply(X, 2, smd, tr = dat$treat, w = one),",
+"                  smd_after  = apply(X, 2, smd, tr = dat$treat, w = w))",
+"print(bal, digits = 3)",
+"",
+'png(file.path(OUT, "psm_loveplot.png"), width = 1700, height = 1200, res = 220)',
+"op <- par(mar = c(4.5, 11, 2, 2))",
+'if (Sys.info()[["sysname"]] == "Darwin") par(family = "HiraKakuProN-W3")',
+"yy <- seq_len(nrow(bal))",
+"lim <- max(0.35, max(abs(c(bal$smd_before, bal$smd_after))) * 1.15)",
+'plot(NA, xlim = c(-lim, lim), ylim = c(0.5, nrow(bal) + 0.5), yaxt = "n",',
+'     xlab = "標準化平均差", ylab = "", main = "共変量バランス")',
+'rect(-0.1, 0, 0.1, nrow(bal) + 1, col = "#DEF0EE", border = NA)',
+'abline(v = 0, col = "#16233A")',
+"segments(bal$smd_before, yy, bal$smd_after, yy, col = \"#C9D0D8\")",
+'points(bal$smd_before, yy, pch = 21, bg = "white", col = "#7C889C")',
+'points(bal$smd_after, yy, pch = 19, col = ifelse(abs(bal$smd_after) > 0.1, "#A8501C", "#5B3FA8"))',
+'axis(2, at = yy, labels = bal$variable, las = 1, cex.axis = 0.8)',
+"par(op); dev.off()",
+"",
+'png(file.path(OUT, "psm_ps_distribution.png"), width = 1700, height = 1100, res = 220)',
+"op <- par(mfrow = c(1, 2))",
+'if (Sys.info()[["sysname"]] == "Darwin") par(family = "HiraKakuProN-W3")',
+"br <- seq(0, 1, length.out = 25)",
+'h <- function(sel, ttl) {',
+'  hist(ps[dat$treat == 1 & sel], breaks = br, col = "#5B3FA8", border = "white",',
+'       main = ttl, xlab = "傾向スコア")',
+'  hist(ps[dat$treat == 0 & sel], breaks = br, col = "#0E7C74", border = "white", add = TRUE)',
+"}",
+'h(rep(TRUE, nrow(dat)), "調整前")',
+'h(w > 0, "マッチング後")',
+"par(op); dev.off()",
+"",
+"# ---- 4. 処置効果（ATT）と頑健標準誤差 ----",
+"md <- dat[w > 0, ]; md$w <- w[w > 0]; md$sub <- sub[w > 0]",
+S.outBinary
+ ? "fit <- glm(outcome ~ treat, data = md, weights = w, family = quasibinomial())"
+ : "fit <- lm(outcome ~ treat, data = md, weights = w)",
+"Xm <- model.matrix(fit); e <- residuals(fit, type = \"response\"); ww <- md$w",
+"B <- solve(crossprod(Xm * sqrt(ww)))",
+"M <- crossprod(Xm * (ww * e))",
+"V <- B %*% M %*% B",
+"est <- coef(fit)[2]; se <- sqrt(V[2, 2]); df <- nrow(md) - 2",
+"ci <- est + c(-1, 1) * qt(0.975, df) * se",
+'cat(sprintf("ATT = %.4f  SE = %.4f  95%%CI [%.3f, %.3f]  p = %.4g\\n",',
+'            est, se, ci[1], ci[2], 2 * pt(-abs(est / se), df)))',
+"",
+"# ---- 5. 参考：逆確率重み付け（IPW・ATT） ----",
+"wt <- ifelse(dat$treat == 1, 1, ps / (1 - ps))",
+S.outBinary
+ ? "fit2 <- glm(outcome ~ treat, data = dat, weights = wt, family = quasibinomial())"
+ : "fit2 <- lm(outcome ~ treat, data = dat, weights = wt)",
+"print(coef(fit2)[2])",
+"",
+'message("図を保存しました: ", OUT)',
+"",
+"# 参考：このアプリでの推定値 = "+fmt(S.eff.after.est,4)+"  (95%CI "+fmt(S.eff.after.lo,3)+", "+fmt(S.eff.after.hi,3)+")"
+].join("\n");
+}
+
+/* ---------- 書き出し ---------- */
+/* GAS の iframe 内ではサンドボックスによりダウンロードが遮られることがあるため、
+   別ウィンドウを開いて保存する方式に切り替える */
+var IN_SANDBOX = (function(){
+  try{
+    if(typeof google!=="undefined" && google.script) return true;
+    return window.self !== window.top;
+  }catch(e){ return true; }
+})();
+
+function saveFile(text, name, mime){
+  if(IN_SANDBOX){ openExportWindow(text, name, mime); return; }
+  try{
+    const blob=new Blob(["\uFEFF"+text],{type:(mime||"text/csv")+";charset=utf-8"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },800);
+  }catch(err){
+    openExportWindow(text, name, mime);
+  }
+}
+
+function openExportWindow(text, name, mime){
+  var w=null;
+  try{ w=window.open("", "_blank", "width=820,height=620,scrollbars=yes"); }catch(e){}
+  if(!w){ inlineExport(text, name); return; }
+  var d=w.document;
+  d.open();
+  d.write(
+    '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">'+
+    '<title>'+esc(name)+'</title><style>'+
+    'body{margin:0;padding:24px;background:#F2F4F7;color:#14243D;'+
+    'font-family:"Hiragino Kaku Gothic ProN","Yu Gothic Medium",Meiryo,sans-serif;font-size:14px;line-height:1.7}'+
+    'h1{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:18px;margin:0 0 4px;letter-spacing:.04em}'+
+    'p{color:#6E7C93;font-size:12.5px;margin:0 0 14px}'+
+    'button{font:inherit;font-weight:700;font-size:13px;border:1px solid transparent;border-radius:2px;'+
+    'padding:9px 18px;cursor:pointer;margin-right:9px}'+
+    '#dl{background:#6C4BC1;color:#fff}#cp{background:#fff;color:#14243D;border-color:#DEE3EB}'+
+    'textarea{width:100%;height:62vh;margin-top:14px;font-family:ui-monospace,Menlo,Consolas,monospace;'+
+    'font-size:11.5px;line-height:1.6;border:1px solid #DEE3EB;border-radius:2px;padding:12px;background:#fff}'+
+    '#msg{font-size:12px;color:#0F8A82;font-weight:700}'+
+    '</style></head><body>'+
+    '<h1>'+esc(name)+'</h1>'+
+    '<p>「ファイルを保存」を押すと端末にダウンロードされます。うまくいかない場合は、下の内容をコピーして貼り付けてください。</p>'+
+    '<button id="dl">ファイルを保存</button><button id="cp">すべてコピー</button> <span id="msg"></span>'+
+    '<textarea id="t" spellcheck="false"></textarea>'+
+    '</body></html>'
+  );
+  d.close();
+  var ta=d.getElementById("t");
+  ta.value=text;
+  d.getElementById("dl").onclick=function(){
+    try{
+      var blob=new w.Blob(["\uFEFF"+text],{type:(mime||"text/csv")+";charset=utf-8"});
+      var url=w.URL.createObjectURL(blob);
+      var a=d.createElement("a"); a.href=url; a.download=name;
+      d.body.appendChild(a); a.click(); a.remove();
+      w.setTimeout(function(){ w.URL.revokeObjectURL(url); }, 1500);
+      d.getElementById("msg").textContent="保存しました";
+    }catch(err){
+      d.getElementById("msg").textContent="保存できませんでした。下の内容をコピーしてください。";
+    }
+  };
+  d.getElementById("cp").onclick=function(){
+    ta.focus(); ta.select();
+    try{ d.execCommand("copy"); d.getElementById("msg").textContent="コピーしました"; }catch(err){}
+  };
+}
+
+/* ポップアップがブロックされたときの最終手段 */
+function inlineExport(text, name){
+  var box=document.getElementById("exportBox");
+  if(!box){
+    box=document.createElement("div");
+    box.id="exportBox";
+    box.className="card";
+    box.style.marginTop="18px";
+    document.getElementById("repOut").appendChild(box);
+  }
+  box.innerHTML="<span class='eyebrow'>Export</span><h2>"+esc(name)+"</h2>"+
+    "<p class='sub'>別ウィンドウが開けませんでした。下の内容をコピーして、テキストエディタや表計算ソフトに貼り付けて保存してください。</p>"+
+    "<textarea rows='14' id='exportTa' spellcheck='false'></textarea>"+
+    "<div class='btn-bar'><button class='btn-line btn-sm' id='exportCp'>すべてコピー</button>"+
+    "<span class='hint' id='exportMsg'></span></div>";
+  document.getElementById("exportTa").value=text;
+  document.getElementById("exportCp").addEventListener("click",function(){
+    var ta=document.getElementById("exportTa");
+    ta.focus(); ta.select();
+    try{ document.execCommand("copy"); document.getElementById("exportMsg").textContent="コピーしました"; }catch(e){}
+  });
+  box.scrollIntoView({behavior: REDUCED?"auto":"smooth", block:"start"});
+}
+
+function copyText(t, msgId){
+  const done=()=>{ const el=$(msgId); if(el){ el.textContent="コピーしました"; setTimeout(()=>el.textContent="",2200);} };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done,()=>fallback());
+  } else fallback();
+  function fallback(){
+    const ta=document.createElement("textarea");
+    ta.value=t; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); done(); }catch(err){}
+    ta.remove();
+  }
+}
+function pairIdOf(){
+  const id=new Array(S.T.length).fill("");
+  S.pairs.forEach((p,k)=>{ id[p.t]=k+1; p.cs.forEach(c=>{ id[c]= id[c]===""? (k+1) : (id[c]+"/"+(k+1)); }); });
+  return id;
+}
+function downloadMatched(){
+  const id=pairIdOf();
+  const head=[...S.headers, "傾向スコア", "重み", "ペア番号", "群"];
+  const lines=[head.map(csvCell).join(",")];
+  S.rowsUsed.forEach((r,i)=>{
+    if(S.w[i]<=0) return;
+    lines.push([...S.body[r], fmt(S.ps[i],6), fmt(S.w[i],6), id[i], S.T[i]===1?"処置群":"対照群"].map(csvCell).join(","));
+  });
+  saveFile(lines.join("\n"), "matched_data.csv");
+}
+function downloadAll(){
+  const id=pairIdOf();
+  const head=[...S.headers, "傾向スコア", "ロジット", "重み", "ペア番号", "群", "マッチ"];
+  const lines=[head.map(csvCell).join(",")];
+  S.rowsUsed.forEach((r,i)=>{
+    lines.push([...S.body[r], fmt(S.ps[i],6), fmt(S.logit[i],6), fmt(S.w[i],6), id[i],
+                S.T[i]===1?"処置群":"対照群", S.w[i]>0?"1":"0"].map(csvCell).join(","));
+  });
+  saveFile(lines.join("\n"), "propensity_scores.csv");
+}
+function downloadBalance(){
+  const head=["変数","処置群平均_前","対照群平均_前","SMD_前","処置群平均_後","対照群平均_後","SMD_後","分散比_前","分散比_後","改善率"];
+  const lines=[head.join(",")];
+  S.bal.forEach(r=>lines.push([r.name,fmt(r.mtB,4),fmt(r.mcB,4),fmt(r.smdB,4),fmt(r.mtA,4),fmt(r.mcA,4),
+    fmt(r.smdA,4),fmt(r.vrB,4),fmt(r.vrA,4),fmt(r.impr,1)].map(csvCell).join(",")));
+  saveFile(lines.join("\n"), "balance_table.csv");
+}
+function csvCell(v){
+  v=String(v===null||v===undefined?"":v);
+  return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+}
+</script>
+</body>
+</html>

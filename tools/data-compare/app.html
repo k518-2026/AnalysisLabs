@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>データ比較・自動分析 — データ分析ラボ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
+    
+    <style>
+        :root { 
+            --primary: #4F46E5; --primary-hover: #4338CA; 
+            --secondary: #10B981; --secondary-hover: #059669;
+            --bg: #F8FAFC; --surface: #FFFFFF; 
+            --text-main: #1E293B; --text-muted: #64748B;
+            --border: #E2E8F0; --radius: 12px;
+        }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.6; margin: 0; padding: 40px 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .page-title { text-align: center; font-size: 2rem; font-weight: 800; color: var(--text-main); margin-bottom: 40px; letter-spacing: -0.5px; }
+        .step-label { font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
+        
+        .card { background: var(--surface); border-radius: var(--radius); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025); padding: 32px; margin-bottom: 24px; border: 1px solid var(--border); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        
+        #dropZone { border: 2px dashed #CBD5E1; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; background: #F8FAFC; transition: all 0.2s ease; }
+        #dropZone:hover, #dropZone.dragover { border-color: var(--primary); background: #EEF2FF; }
+        .icon-upload { font-size: 3rem; margin-bottom: 12px; color: #94A3B8; transition: color 0.2s; }
+        #dropZone:hover .icon-upload, #dropZone.dragover .icon-upload { color: var(--primary); }
+
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
+        
+        h3 { font-size: 1.1rem; margin: 0 0 16px 0; color: var(--text-main); font-weight: 700; }
+        .checkbox-group { max-height: 200px; overflow-y: auto; padding: 12px; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--border); }
+        .checkbox-item { display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; padding: 6px 8px; border-radius: 6px; transition: background 0.2s; }
+        .checkbox-item:hover { background: #E2E8F0; }
+        .checkbox-item input { margin-right: 12px; width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        
+        select { width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem; background-color: var(--surface); color: var(--text-main); transition: all 0.2s; cursor: pointer; outline: none; appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748B%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.65rem auto; }
+        select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
+        
+        button.btn-primary { width: 100%; padding: 14px; margin-top: 24px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); }
+        button.btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.3); }
+
+        .dashboard-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 20px; gap: 10px; }
+        .badge-container { display: flex; gap: 8px; flex-wrap: wrap; }
+        .badge { padding: 6px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
+        .badge-blue { background: #E0E7FF; color: #3730A3; }
+        .badge-green { background: #D1FAE5; color: #065F46; }
+        .badge-yellow { background: #FEF3C7; color: #92400E; }
+        
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--surface); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1.2; }
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        
+        .magnitude-box { background: #F8FAFC; border-left: 4px solid var(--secondary); padding: 16px 20px; border-radius: 4px; margin: 24px 0; font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
+        .apa-box { background: #EEF2FF; padding: 20px; border-radius: 8px; border: 1px dashed #A5B4FC; color: #3730A3; font-style: italic; }
+
+        .desc-table-wrapper { overflow-x: auto; margin-bottom: 24px; border-radius: 8px; border: 1px solid var(--border); }
+        .desc-table { width: 100%; border-collapse: collapse; text-align: right; font-size: 0.95rem; }
+        .desc-table th, .desc-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .desc-table th:first-child, .desc-table td:first-child { text-align: left; }
+        .desc-table th { background: #F1F5F9; color: var(--text-main); font-weight: 700; white-space: nowrap; }
+        .desc-table tr:last-child td { border-bottom: none; }
+        .desc-table tbody tr:hover { background: #F8FAFC; }
+
+        .code-container { position: relative; margin-top: 12px; }
+        pre { background: #1E293B; color: #F8FAFC; padding: 24px; border-radius: 12px; overflow-x: auto; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.5; margin: 0; }
+        .copy-btn { position: absolute; top: 12px; right: 12px; background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px); }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-compare);--bg:var(--al-bg);--surface:var(--al-surface);--text-main:var(--al-ink);--text-muted:var(--al-ink-2);--border:var(--al-line);--primary:var(--al-cat);--primary-hover:var(--al-cat-deep);}body{font-family:var(--al-sans)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#compare">比べる</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>データ比較・自動分析</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<div class="container">
+    <h1 class="page-title">データ比較・自動分析 Webアプリ</h1>
+    
+    <span class="step-label">Step 1: データ読み込み</span>
+    <div class="card" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon-upload">📥</div>
+        <h3 style="margin-bottom: 4px;">CSVファイルをアップロード</h3>
+        <p style="margin:0; color: var(--text-muted);">クリックするか、ここにファイルをドラッグ＆ドロップしてください</p>
+        <input type="file" id="fileInput" style="display:none;" accept=".csv">
+    </div>
+
+    <div id="settingsWrapper" style="display: none;">
+        <span class="step-label">Step 2: 分析条件の設定</span>
+        <div class="card settings-grid">
+            <div>
+                <h3>比較する値 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">(複数選択可)</span></h3>
+                <div id="checkboxes" class="checkbox-group"></div>
+            </div>
+            <div>
+                <h3>要因の設定 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">(任意)</span></h3>
+                <label style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">群分け (対応なし):</label>
+                <select id="groupSel" style="margin-bottom: 16px; margin-top: 4px;"><option value="">-- 指定しない --</option></select>
+                
+                <label style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">ID (対応あり):</label>
+                <select id="idSel" style="margin-top: 4px;"><option value="">-- 指定しない --</option></select>
+                
+                <button class="btn-primary" onclick="runAnalysis()">統計分析を実行する ✨</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultWrapper" style="display: none;">
+        <span class="step-label">Step 3: 分析結果</span>
+        
+        <div class="card">
+            <div class="dashboard-header">
+                <h3 style="margin: 0; border: none;">🤖 JS Stat Engine 解析レポート</h3>
+                <div class="badge-container" id="logicBadges"></div>
+            </div>
+            
+            <div class="stat-grid" id="statCards"></div>
+
+            <h3 style="margin-top: 10px;">📋 記述統計量</h3>
+            <div id="descTableArea"></div>
+            
+            <div class="magnitude-box" id="magnitudeArea"></div>
+        </div>
+
+        <div class="card">
+            <h3>📈 データの可視化</h3>
+            <div id="plotArea" style="width: 100%; height: 400px;"></div>
+        </div>
+
+        <div class="card">
+            <h3>📝 論文記述テンプレート (APA形式)</h3>
+            <div class="apa-box" id="apaArea"></div>
+            
+            <h3 style="margin-top: 32px;">💻 JASP Rコンソール用 再現コード</h3>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: -10px;">※ 初回実行時に必要なライブラリを自動ダウンロードします。データはコード内に内包されています。</p>
+            <div class="code-container">
+                <button class="copy-btn" onclick="copyRCode()" id="copyBtn">コードをコピー</button>
+                <pre><code id="rCodeArea"></code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let rawData = [], headers = [], csvContent = "";
+
+    const handleFile = (file) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            csvContent = e.target.result.replace(/^\uFEFF/i, '');
+            Papa.parse(csvContent, {
+                header: true, dynamicTyping: true, skipEmptyLines: true,
+                complete: res => {
+                    rawData = res.data; headers = res.meta.fields;
+                    
+                    document.getElementById('checkboxes').innerHTML = headers.map(h => `
+                        <label class="checkbox-item">
+                            <input type="checkbox" value="${h}"> <span>${h}</span>
+                        </label>
+                    `).join('');
+                    
+                    const opts = '<option value="">-- 指定しない --</option>' + headers.map(h => `<option value="${h}">${h}</option>`).join('');
+                    document.getElementById('groupSel').innerHTML = opts;
+                    document.getElementById('idSel').innerHTML = opts;
+                    
+                    document.getElementById('settingsWrapper').style.display = 'block';
+                    document.getElementById('resultWrapper').style.display = 'none';
+                    
+                    const dz = document.querySelector('#dropZone h3');
+                    dz.innerText = `✅ 読み込み完了: ${file.name}`;
+                    dz.style.color = 'var(--secondary)';
+                }
+            });
+        };
+        reader.readAsText(file);
+    };
+
+    document.getElementById('fileInput').addEventListener('change', e => handleFile(e.target.files[0]));
+    
+    const dz = document.getElementById('dropZone');
+    dz.addEventListener('dragover', e => { 
+        e.preventDefault(); 
+        dz.classList.add('dragover'); 
+    });
+    dz.addEventListener('dragleave', e => { 
+        e.preventDefault(); 
+        dz.classList.remove('dragover'); 
+    });
+    dz.addEventListener('drop', e => { 
+        e.preventDefault(); 
+        dz.classList.remove('dragover'); 
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]); 
+        }
+    });
+
+    function checkNormality(arr) {
+        if(arr.length < 4) return true;
+        const m = jStat.mean(arr);
+        const sd = jStat.stdev(arr, true);
+        if(sd === 0) return false;
+        let skew = 0, kurt = 0;
+        arr.forEach(v => { skew += Math.pow((v-m)/sd, 3); kurt += Math.pow((v-m)/sd, 4); });
+        skew = skew * (arr.length / ((arr.length-1)*(arr.length-2)));
+        kurt = kurt * (arr.length*(arr.length+1) / ((arr.length-1)*(arr.length-2)*(arr.length-3))) - (3*Math.pow(arr.length-1,2)/((arr.length-2)*(arr.length-3)));
+        return Math.abs(skew) < 2.0 && Math.abs(kurt) < 3.0; 
+    }
+
+    const StatEngine = {
+        calcTTest: function(arr1, arr2, paired) {
+            if(paired) {
+                let diffs = arr1.map((v, i) => v - arr2[i]).filter(v => !isNaN(v));
+                const mean = jStat.mean(diffs), sd = jStat.stdev(diffs, true), n = diffs.length;
+                const t = mean / (sd / Math.sqrt(n));
+                const df = n - 1;
+                const p = (1 - jStat.studentt.cdf(Math.abs(t), df)) * 2;
+                const d = mean / sd;
+                return { stat: t, p: p, df: df, effectSize: d, effectName: "Cohen's d" };
+            } else {
+                const m1 = jStat.mean(arr1), m2 = jStat.mean(arr2);
+                const v1 = jStat.variance(arr1, true), v2 = jStat.variance(arr2, true);
+                const n1 = arr1.length, n2 = arr2.length;
+                const t = (m1 - m2) / Math.sqrt(v1/n1 + v2/n2);
+                const df = Math.pow(v1/n1 + v2/n2, 2) / (Math.pow(v1/n1, 2)/(n1-1) + Math.pow(v2/n2, 2)/(n2-1));
+                const p = (1 - jStat.studentt.cdf(Math.abs(t), df)) * 2;
+                const s = Math.sqrt(((n1-1)*v1 + (n2-1)*v2) / (n1+n2-2));
+                const d = (m1 - m2) / s;
+                return { stat: t, p: p, df: df, effectSize: d, effectName: "Cohen's d" };
+            }
+        },
+        calcANOVA: function(groupsObj) {
+            const keys = Object.keys(groupsObj);
+            let totalData = [], k = keys.length, n = 0;
+            keys.forEach(k => { totalData = totalData.concat(groupsObj[k]); n += groupsObj[k].length; });
+            const grandMean = jStat.mean(totalData);
+            let ssb = 0, ssw = 0;
+            keys.forEach(key => {
+                const arr = groupsObj[key];
+                const groupMean = jStat.mean(arr);
+                ssb += arr.length * Math.pow(groupMean - grandMean, 2);
+                arr.forEach(v => { ssw += Math.pow(v - groupMean, 2); });
+            });
+            const dfb = k - 1, dfw = n - k;
+            const msb = ssb / dfb, msw = ssw / dfw;
+            const f = msb / msw;
+            const p = 1 - jStat.centralF.cdf(f, dfb, dfw);
+            const eta2 = ssb / (ssb + ssw);
+            return { stat: f, p: p, df1: dfb, df2: dfw, effectSize: eta2, effectName: "η²" };
+        },
+        calcNonPara2: function(arr1, arr2) {
+            return { stat: "算出中", p: "R出力参照", df: "-", effectSize: "-", effectName: "r" };
+        }
+    };
+
+    function runAnalysis() {
+        const checked = Array.from(document.querySelectorAll('#checkboxes input:checked')).map(cb => cb.value);
+        const grpCol = document.getElementById('groupSel').value;
+        let idCol = document.getElementById('idSel').value;
+
+        if (checked.length === 0) return alert("比較する項目をチェックしてください。");
+
+        let groups = {}, isWide = false;
+        if (checked.length === 1 && grpCol !== "") {
+            rawData.forEach(r => {
+                const g = r[grpCol], v = parseFloat(r[checked[0]]);
+                if(g != null && !isNaN(v)) { if(!groups[g]) groups[g] = []; groups[g].push(v); }
+            });
+        } else if (checked.length >= 2) {
+            isWide = true;
+            checked.forEach(c => {
+                groups[c] = [];
+                rawData.forEach(r => { const v = parseFloat(r[c]); if(!isNaN(v)) groups[c].push(v); });
+            });
+        } else {
+            return alert("比較できません。項目を2つ以上選ぶか、群分け項目を指定してください。");
+        }
+
+        const gNames = Object.keys(groups).sort();
+        const nGroups = gNames.length;
+        if(nGroups < 2) return alert("有効な比較群が2つ以上存在しません。データに数値が含まれているか確認してください。");
+
+        const isPaired = idCol !== "" || (isWide && grpCol === "");
+        const isNormal = gNames.every(g => checkNormality(groups[g]));
+
+        let testType = "", postHoc = "-";
+        let jsRes = null;
+
+        if (nGroups === 2) {
+            if (isNormal) {
+                testType = isPaired ? "対応のあるt検定" : "Student / Welchのt検定";
+                jsRes = StatEngine.calcTTest(groups[gNames[0]], groups[gNames[1]], isPaired);
+            } else {
+                testType = isPaired ? "Wilcoxonの符号付順位検定" : "Mann-WhitneyのU検定";
+                jsRes = StatEngine.calcNonPara2(groups[gNames[0]], groups[gNames[1]]);
+            }
+        } else {
+            if (isNormal) {
+                testType = isPaired ? "反復測定分散分析" : "一元配置分散分析 (ANOVA)";
+                postHoc = isPaired ? "Bonferroni補正を伴うt検定" : "TukeyのHSD検定";
+                jsRes = StatEngine.calcANOVA(groups); 
+            } else {
+                testType = isPaired ? "Friedman検定" : "Kruskal-Wallis検定";
+                postHoc = isPaired ? "Nemenyi検定 / 調整済Wilcoxon" : "Dunnの検定";
+                jsRes = StatEngine.calcNonPara2(groups[gNames[0]], groups[gNames[1]]);
+            }
+        }
+
+        document.getElementById('logicBadges').innerHTML = `
+            <span class="badge badge-blue">比較: ${nGroups}群</span>
+            <span class="badge badge-yellow">対応: ${isPaired ? 'あり' : 'なし'}</span>
+            <span class="badge ${isNormal ? 'badge-green' : 'badge-blue'}">分布: ${isNormal ? 'パラメトリック' : 'ノンパラメトリック'}</span>
+            <span class="badge badge-blue" style="background:var(--primary); color:white;">検定: ${testType}</span>
+            ${postHoc !== '-' ? `<span class="badge badge-blue" style="background:#475569; color:white;">事後検定: ${postHoc}</span>` : ''}
+        `;
+
+        document.getElementById('statCards').innerHTML = `
+            <div class="stat-card">
+                <span class="stat-label">統計量 (${nGroups===2?'t':'F'})</span>
+                <span class="stat-value">${typeof jsRes.stat === 'number' ? jsRes.stat.toFixed(3) : jsRes.stat}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">p値 (有意確率)</span>
+                <span class="stat-value" style="color: ${typeof jsRes.p==='number' && jsRes.p<0.05 ? 'var(--secondary)' : 'var(--text-main)'}">${typeof jsRes.p === 'number' ? (jsRes.p < 0.001 ? '< .001' : jsRes.p.toFixed(3)) : jsRes.p}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">効果量 (${jsRes.effectName})</span>
+                <span class="stat-value">${typeof jsRes.effectSize === 'number' ? Math.abs(jsRes.effectSize).toFixed(3) : jsRes.effectSize}</span>
+            </div>
+        `;
+
+        let descTableHtml = '<div class="desc-table-wrapper"><table class="desc-table"><thead>';
+        if (isNormal) {
+            descTableHtml += '<tr><th>群 (Group)</th><th>データ数 (N)</th><th>平均値 (Mean)</th><th>標準偏差 (SD)</th></tr></thead><tbody>';
+            gNames.forEach(g => {
+                const arr = groups[g];
+                descTableHtml += `<tr><td>${g}</td><td>${arr.length}</td><td>${jStat.mean(arr).toFixed(2)}</td><td>${jStat.stdev(arr, true).toFixed(2)}</td></tr>`;
+            });
+        } else {
+            descTableHtml += '<tr><th>群 (Group)</th><th>データ数 (N)</th><th>最小値 (Min)</th><th>第1四分位数 (Q1)</th><th>中央値 (Median)</th><th>第3四分位数 (Q3)</th><th>最大値 (Max)</th></tr></thead><tbody>';
+            gNames.forEach(g => {
+                const arr = groups[g];
+                const quartiles = jStat.quartiles(arr);
+                descTableHtml += `<tr><td>${g}</td><td>${arr.length}</td><td>${jStat.min(arr).toFixed(2)}</td><td>${quartiles[0].toFixed(2)}</td><td>${quartiles[1].toFixed(2)}</td><td>${quartiles[2].toFixed(2)}</td><td>${jStat.max(arr).toFixed(2)}</td></tr>`;
+            });
+        }
+        descTableHtml += '</tbody></table></div>';
+        document.getElementById('descTableArea').innerHTML = descTableHtml;
+
+        let means = gNames.map(g => ({ name: g, mean: jStat.mean(groups[g]), data: groups[g] }));
+        means.sort((a,b) => b.mean - a.mean);
+        
+        let magText = "";
+        if(nGroups === 2 && typeof jsRes.p === 'number' && jsRes.p < 0.05) {
+            magText = `${means[0].name} ＞ ${means[1].name} <span style="font-size:0.9rem; font-weight:normal;">(有意差あり)</span>`;
+        } else if (nGroups === 2 && typeof jsRes.p === 'number') {
+            magText = `${means[0].name} ≒ ${means[1].name} <span style="font-size:0.9rem; font-weight:normal;">(有意差なし)</span>`;
+        } else {
+            magText = means.map(m => m.name).join(" ＞ ");
+            magText += ` <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted); display:block; margin-top:4px;">※上記は標本平均の順位です。有意差の有無はRの事後検定で確認してください。</span>`;
+        }
+        document.getElementById('magnitudeArea').innerHTML = `📊 標本データの平均値比較と簡易判定: <br><span style="color:var(--primary); font-size:1.4rem;">${magText}</span>`;
+
+        let plotData = [], layout = { title: false, margin: {t: 20, b: 40, l: 40, r: 20}, plot_bgcolor: '#F8FAFC', paper_bgcolor: '#FFFFFF' };
+        if (isNormal) {
+            means.forEach(m => {
+                const n = m.data.length;
+                const sd = jStat.stdev(m.data, true);
+                const ci = (sd / Math.sqrt(n)) * 1.96;
+                plotData.push({ x: [m.name], y: [m.mean], type: 'scatter', mode: 'markers', marker: {size: 14, color: '#4F46E5'}, error_y: {type: 'data', array: [ci], visible: true, color: '#1E293B', thickness: 2, width: 8}, name: m.name });
+            });
+        } else {
+            gNames.forEach(g => {
+                plotData.push({ y: groups[g], type: 'box', name: g, boxpoints: 'all', jitter: 0.3, pointpos: -1.8, marker: {color: '#4F46E5'} });
+            });
+        }
+        Plotly.newPlot('plotArea', plotData, layout, {displayModeBar: false});
+
+        let descText = "";
+        if (isNormal) {
+            descText = means.map(m => `${m.name} (M = ${m.mean.toFixed(2)}, SD = ${jStat.stdev(m.data, true).toFixed(2)})`).join("、");
+        } else {
+            descText = means.map(m => {
+                const q = jStat.quartiles(m.data);
+                return `${m.name} (Mdn = ${q[1].toFixed(2)}, IQR = ${(q[2]-q[0]).toFixed(2)})`;
+            }).join("、");
+        }
+
+        let apa = `各群の記述統計量は、${descText} であった。データの正規性を確認した後、${nGroups}群間の比較として${testType}を実施した。`;
+        if (nGroups === 2) {
+            if(isNormal) apa += `結果、両群間に有意な差が認められた (t(${jsRes.df.toFixed(1)}) = ${jsRes.stat.toFixed(2)}, p ${jsRes.p<0.001 ? '< .001' : '= '+jsRes.p.toFixed(3)}, Cohen's d = ${Math.abs(jsRes.effectSize).toFixed(2)}).`;
+            else apa += `結果、両群間に有意な差が認められた (W/U = [R出力値], p = [R出力値], r = [R出力値]).`;
+        } else {
+            if(isNormal) {
+                apa += `結果、主効果は有意であった (F(${jsRes.df1}, ${jsRes.df2}) = ${jsRes.stat.toFixed(2)}, p ${jsRes.p<0.001 ? '< .001' : '= '+jsRes.p.toFixed(3)}, η² = ${jsRes.effectSize.toFixed(2)}). `;
+                apa += `これを受け事後検定として${postHoc}を実施した結果、[群A]は[群B]より有意に高い値を示した (p = [R出力値]).`;
+            } else {
+                apa += `結果、有意な差が認められた (χ²/H = [R出力値], p = [R出力値]). `;
+                apa += `これを受け事後検定として${postHoc}を実施した結果、[群A]は[群B]より有意に高い値を示した (p = [R出力値]).`;
+            }
+        }
+        document.getElementById('apaArea').innerText = apa;
+
+        let rc = `# 1. 必要なライブラリの自動チェックとダウンロード\n`;
+        rc += `pkg <- c("dplyr", "tidyr", "readr", "rstatix", "PMCMRplus")\n`;
+        rc += `new.pkg <- pkg[!(pkg %in% installed.packages()[,"Package"])]\n`;
+        rc += `if(length(new.pkg)) install.packages(new.pkg, repos = "https://cloud.r-project.org/")\n\n`;
+        rc += `library(dplyr)\nlibrary(tidyr)\nlibrary(readr)\nlibrary(rstatix)\nlibrary(PMCMRplus)\n\n`;
+        
+        rc += `# 2. データの読み込み (JSからのテキスト埋め込み)\n`;
+        rc += `csv_text <- "${csvContent.trim().replace(/\n/g, '\\n')}"\n`;
+        rc += `df <- read_csv(csv_text)\n\n`;
+        
+        let tgGrp = grpCol, tgVal = checked[0], dVar = "df";
+        
+        if (isWide) {
+            rc += `# 3. データ構造の変換 (横持ち -> 縦持ち)\n`;
+            const cols = checked.map(c => `\`${c}\``).join(', ');
+            rc += `df_long <- df %>% pivot_longer(cols = c(${cols}), names_to = "Condition", values_to = "Score")\n`;
+            if (isPaired && idCol === "") {
+                rc += `df_long <- df_long %>% group_by(Condition) %>% mutate(ID = as.factor(row_number())) %>% ungroup()\n`;
+                idCol = "ID";
+            }
+            tgGrp = "Condition"; tgVal = "Score"; dVar = "df_long";
+        }
+        
+        rc += `\n# ※ 【バグ回避】rstatixのパースエラーを防ぐため、列名をシステム標準の英語に強制リネームします\n`;
+        rc += `colnames(${dVar})[colnames(${dVar}) == "${tgVal}"] <- "TargetValue"\n`;
+        rc += `colnames(${dVar})[colnames(${dVar}) == "${tgGrp}"] <- "TargetGroup"\n`;
+        if(isPaired && idCol !== "") {
+            rc += `colnames(${dVar})[colnames(${dVar}) == "${idCol}"] <- "TargetID"\n`;
+            rc += `${dVar}$TargetID <- as.factor(${dVar}$TargetID) # IDは要因として扱う\n`;
+        }
+        
+        rc += `\n# ※ 値を確実に数値ベクトルとして認識させる (文字列混入エラー対策)\n`;
+        rc += `${dVar}$TargetValue <- as.numeric(as.character(${dVar}$TargetValue))\n`;
+
+        rc += `\n# 4. 記述統計量の算出\n`;
+        if (isNormal) {
+            rc += `${dVar} %>% group_by(TargetGroup) %>% rstatix::get_summary_stats(TargetValue, type = "mean_sd") %>% print()\n`;
+        } else {
+            rc += `${dVar} %>% group_by(TargetGroup) %>% rstatix::get_summary_stats(TargetValue, type = "median_iqr") %>% print()\n`;
+        }
+
+        rc += `\n# 5. 事実の確認：Shapiro-Wilk検定による厳密な正規性テスト\n`;
+        rc += `${dVar} %>% group_by(TargetGroup) %>% rstatix::shapiro_test(TargetValue) %>% print()\n\n`;
+        rc += `# 6. 統計検定と効果量の算出\n`;
+
+        const fml = `TargetValue ~ TargetGroup`;
+        const pairedStr = isPaired ? 'TRUE' : 'FALSE';
+
+        if (nGroups === 2) {
+            if (isNormal) {
+                rc += `res_stat <- ${dVar} %>% rstatix::t_test(${fml}, paired = ${pairedStr})\nprint(res_stat)\n`;
+                rc += `res_eff <- ${dVar} %>% rstatix::cohens_d(${fml}, paired = ${pairedStr})\nprint(res_eff)\n`;
+            } else {
+                rc += `res_stat <- ${dVar} %>% rstatix::wilcox_test(${fml}, paired = ${pairedStr})\nprint(res_stat)\n`;
+                rc += `res_eff <- ${dVar} %>% rstatix::wilcox_effsize(${fml}, paired = ${pairedStr})\nprint(res_eff)\n`;
+            }
+        } else {
+            if (isNormal) {
+                rc += (isPaired) ? `res_aov <- ${dVar} %>% rstatix::anova_test(${fml} + Error(TargetID/TargetGroup))\nprint(res_aov)\n` : `res_aov <- ${dVar} %>% rstatix::anova_test(${fml}, effect.size = "ges")\nprint(res_aov)\n`; 
+                rc += `\n# --- 事後検定 (${postHoc}) ---\n`;
+                rc += (isPaired) ? `${dVar} %>% rstatix::pairwise_t_test(${fml}, paired = TRUE, p.adjust.method = "bonferroni") %>% print()\n` : `${dVar} %>% rstatix::tukey_hsd(${fml}) %>% print()\n`;
+            } else {
+                if (isPaired) {
+                    rc += `res_np <- ${dVar} %>% rstatix::friedman_test(TargetValue ~ TargetGroup | TargetID)\nprint(res_np)\n`;
+                    rc += `res_eff <- ${dVar} %>% rstatix::friedman_effsize(TargetValue ~ TargetGroup | TargetID)\nprint(res_eff)\n`;
+                    rc += `\n# --- 事後検定 (${postHoc}) ---\n`;
+                    rc += `# 調整済Wilcoxon\n${dVar} %>% rstatix::wilcox_test(${fml}, paired = TRUE, p.adjust.method = "bonferroni") %>% print()\n`;
+                    rc += `# Nemenyi検定\nfrdAllPairsNemenyiTest(${dVar}$TargetValue, groups = as.factor(${dVar}$TargetGroup), blocks = ${dVar}$TargetID) %>% print()\n`;
+                } else {
+                    rc += `res_np <- ${dVar} %>% rstatix::kruskal_test(${fml})\nprint(res_np)\n`;
+                    rc += `res_eff <- ${dVar} %>% rstatix::kruskal_effsize(${fml})\nprint(res_eff)\n`;
+                    rc += `\n# --- 事後検定 (${postHoc}) ---\n`;
+                    rc += `${dVar} %>% rstatix::dunn_test(${fml}, p.adjust.method = "bonferroni") %>% print()\n`;
+                }
+            }
+        }
+        
+        document.getElementById('rCodeArea').innerText = rc;
+        document.getElementById('resultWrapper').style.display = 'block';
+    }
+
+    function copyRCode() {
+        const text = document.getElementById('rCodeArea').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.innerText;
+            const originalBg = btn.style.background;
+            
+            btn.innerText = "✓ コピー完了！";
+            btn.style.background = "var(--secondary)";
+            btn.style.borderColor = "var(--secondary)";
+            
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = originalBg;
+                btn.style.borderColor = "rgba(255, 255, 255, 0.2)";
+            }, 2000);
+        });
+    }
+</script>
+</body>
+</html>

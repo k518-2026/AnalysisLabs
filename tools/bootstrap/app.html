@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ブートストラップ解析 — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#EEF0E9;
+  --paper-deep:#E4E8DF;
+  --grid-line:rgba(31,42,36,0.07);
+  --ink:#1F2A24;
+  --ink-soft:#57645A;
+  --ink-faint:#8A9389;
+  --border:#C9D0C1;
+  --border-strong:#9FAC96;
+  --pine:#1E6F5C;
+  --pine-deep:#134E40;
+  --pine-soft:rgba(30,111,92,0.13);
+  --pine-soft2:rgba(30,111,92,0.28);
+  --vermillion:#A63D2E;
+  --vermillion-soft:rgba(166,61,46,0.12);
+  --brass:#B8892B;
+  --serif:'Iowan Old Style','Palatino Linotype','Hoefler Text',Georgia,serif;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'JetBrains Mono','SF Mono','Consolas','Menlo',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:28px 28px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--pine-soft2);}
+
+.wrap{max-width:1180px;margin:0 auto;padding:36px 24px 90px;}
+
+/* ---------- header ---------- */
+header.site{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:24px;
+  border-bottom:2px solid var(--ink);
+  padding-bottom:18px;
+  margin-bottom:8px;
+  flex-wrap:wrap;
+}
+.site-title{
+  font-family:var(--serif);
+  font-weight:600;
+  font-size:clamp(28px,4vw,40px);
+  letter-spacing:0.01em;
+  margin:0;
+  color:var(--ink);
+}
+.site-title .unit{
+  font-family:var(--mono);
+  font-size:0.4em;
+  vertical-align:super;
+  color:var(--pine);
+  letter-spacing:0.08em;
+}
+.site-sub{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  max-width:520px;
+  margin:6px 0 0;
+}
+.badge-row{display:flex;gap:8px;flex-wrap:wrap;}
+.badge{
+  font-family:var(--mono);
+  font-size:10.5px;
+  letter-spacing:0.06em;
+  border:1px solid var(--border-strong);
+  border-radius:2px;
+  padding:4px 8px;
+  color:var(--ink-soft);
+  background:rgba(255,255,255,0.4);
+  white-space:nowrap;
+}
+
+/* ---------- layout ---------- */
+.layout{
+  display:grid;
+  grid-template-columns:360px 1fr;
+  gap:22px;
+  margin-top:26px;
+  align-items:start;
+}
+@media (max-width:880px){
+  .layout{grid-template-columns:1fr;}
+}
+
+.panel{
+  background:rgba(255,255,255,0.55);
+  border:1px solid var(--border);
+  border-radius:3px;
+  position:relative;
+}
+.panel::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:3px;
+  background:repeating-linear-gradient(90deg, var(--pine) 0 8px, transparent 8px 16px);
+  opacity:0.55;
+}
+.panel-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  padding:14px 16px 10px;
+  border-bottom:1px solid var(--border);
+}
+.panel-num{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--pine);
+  letter-spacing:0.08em;
+}
+.panel-title{
+  font-family:var(--serif);
+  font-size:17px;
+  font-weight:600;
+  margin:0;
+}
+.panel-body{padding:16px;}
+.panel + .panel{margin-top:18px;}
+
+/* ---------- controls ---------- */
+label.field-label{
+  display:block;
+  font-size:12px;
+  font-weight:600;
+  color:var(--ink-soft);
+  letter-spacing:0.02em;
+  margin:14px 0 6px;
+}
+label.field-label:first-child{margin-top:0;}
+.help-text{font-size:11.5px;color:var(--ink-faint);margin:4px 0 0;line-height:1.5;}
+
+.dropzone{
+  border:1.5px dashed var(--border-strong);
+  border-radius:3px;
+  padding:22px 14px;
+  text-align:center;
+  cursor:pointer;
+  background:var(--paper-deep);
+  transition:border-color .15s, background .15s;
+}
+.dropzone:hover, .dropzone.drag{
+  border-color:var(--pine);
+  background:var(--pine-soft);
+}
+.dropzone svg{opacity:0.55;margin-bottom:6px;}
+.dropzone .dz-main{font-size:13px;font-weight:600;}
+.dropzone .dz-sub{font-size:11px;color:var(--ink-faint);margin-top:3px;}
+input[type=file]{display:none;}
+
+textarea#pasteArea{
+  width:100%;
+  min-height:110px;
+  margin-top:10px;
+  font-family:var(--mono);
+  font-size:12px;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:3px;
+  background:#fff;
+  resize:vertical;
+  color:var(--ink);
+}
+textarea#pasteArea:focus{outline:none;border-color:var(--pine);}
+
+.checkbox-row{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:12px;color:var(--ink-soft);}
+.checkbox-row input{accent-color:var(--pine);}
+
+select, input[type=number]{
+  width:100%;
+  font-family:var(--sans);
+  font-size:13px;
+  padding:8px 9px;
+  border:1px solid var(--border);
+  border-radius:3px;
+  background:#fff;
+  color:var(--ink);
+}
+select:focus, input[type=number]:focus{outline:none;border-color:var(--pine);}
+
+.btn{
+  font-family:var(--sans);
+  font-weight:600;
+  font-size:13px;
+  border:1px solid var(--ink);
+  border-radius:3px;
+  padding:9px 14px;
+  background:var(--ink);
+  color:var(--paper);
+  cursor:pointer;
+  transition:transform .06s, background .15s;
+}
+.btn:hover{background:var(--pine-deep);border-color:var(--pine-deep);}
+.btn:active{transform:translateY(1px);}
+.btn.secondary{
+  background:transparent;color:var(--ink);border-color:var(--border-strong);
+  font-weight:500;
+}
+.btn.secondary:hover{border-color:var(--ink);background:rgba(0,0,0,0.03);}
+.btn:disabled{opacity:0.45;cursor:not-allowed;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.btn.full{width:100%;}
+
+.pill-group{display:flex;gap:7px;flex-wrap:wrap;}
+.pill{
+  font-family:var(--mono);
+  font-size:12px;
+  border:1px solid var(--border-strong);
+  border-radius:20px;
+  padding:6px 13px;
+  cursor:pointer;
+  background:#fff;
+  color:var(--ink-soft);
+  transition:all .12s;
+}
+.pill:hover{border-color:var(--pine);}
+.pill.active{background:var(--pine);border-color:var(--pine);color:#fff;}
+
+.mode-toggle{display:flex;border:1px solid var(--border-strong);border-radius:3px;overflow:hidden;}
+.mode-toggle button{
+  flex:1;padding:9px 6px;font-size:12.5px;font-weight:600;border:none;
+  background:#fff;color:var(--ink-soft);cursor:pointer;font-family:var(--sans);
+}
+.mode-toggle button.active{background:var(--ink);color:var(--paper);}
+.mode-toggle button:not(:last-child){border-right:1px solid var(--border-strong);}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* ---------- empty state ---------- */
+.empty-state{
+  padding:60px 20px;text-align:center;color:var(--ink-faint);
+}
+.empty-state .glyph{font-family:var(--serif);font-size:38px;color:var(--border-strong);}
+.empty-state p{font-size:13px;max-width:340px;margin:10px auto 0;}
+
+/* ---------- preview table ---------- */
+.table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:3px;}
+table.preview{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:11.5px;}
+table.preview th{
+  background:var(--paper-deep);text-align:left;padding:6px 10px;
+  border-bottom:1px solid var(--border-strong);white-space:nowrap;color:var(--ink-soft);
+  font-weight:600;
+}
+table.preview td{padding:5px 10px;border-bottom:1px solid var(--grid-line);white-space:nowrap;}
+table.preview tr:last-child td{border-bottom:none;}
+.col-tag{
+  display:inline-block;font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:2px;
+  margin-left:6px;letter-spacing:0.04em;
+}
+.col-tag.num{background:var(--pine-soft);color:var(--pine-deep);}
+.col-tag.txt{background:var(--vermillion-soft);color:var(--vermillion);}
+
+/* ---------- counter / progress ---------- */
+.counter-wrap{
+  display:flex;align-items:center;gap:18px;padding:18px 16px;
+  background:var(--ink);border-radius:3px;color:var(--paper);
+  flex-wrap:wrap;
+}
+.counter-digits{
+  font-family:var(--mono);font-size:30px;letter-spacing:0.03em;
+  font-variant-numeric:tabular-nums;
+}
+.counter-digits .slash{color:var(--ink-faint);padding:0 6px;}
+.counter-label{font-size:11px;color:#B9C4B7;letter-spacing:0.06em;}
+.progress-track{
+  flex:1;min-width:140px;height:6px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;
+}
+.progress-fill{height:100%;width:0%;background:var(--pine);transition:width .05s linear;}
+
+/* ---------- results ---------- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:3px;overflow:hidden;margin-top:14px;}
+.stat-cell{background:#fff;padding:13px 14px;}
+.stat-cell .k{font-size:10.5px;color:var(--ink-faint);letter-spacing:0.05em;text-transform:uppercase;}
+.stat-cell .v{font-family:var(--mono);font-size:19px;color:var(--ink);margin-top:4px;}
+.stat-cell.accent .v{color:var(--pine-deep);}
+.stat-cell.flag .v{color:var(--vermillion);}
+
+canvas#histCanvas{width:100%;height:230px;display:block;background:#fff;border:1px solid var(--border);border-radius:3px;margin-top:14px;}
+
+.notice{
+  font-size:12px;padding:10px 12px;border-radius:3px;margin-top:12px;
+  border:1px solid var(--border-strong);background:var(--paper-deep);color:var(--ink-soft);
+}
+.notice.warn{border-color:var(--brass);background:rgba(184,137,43,0.1);color:#6b4f16;}
+.notice.sig{border-color:var(--pine);background:var(--pine-soft);color:var(--pine-deep);}
+
+/* ---------- text blocks & code blocks ---------- */
+.read-block{font-size:13.5px;color:var(--ink);}
+.read-block h4{
+  font-family:var(--serif);font-size:15px;margin:18px 0 6px;
+  display:flex;align-items:center;gap:8px;
+}
+.read-block h4::before{content:'';width:14px;height:1px;background:var(--pine);}
+.read-block h4:first-child{margin-top:0;}
+.read-block p{margin:4px 0 10px;color:var(--ink-soft);}
+.read-block ul{margin:4px 0 12px;padding-left:18px;color:var(--ink-soft);}
+.read-block li{margin-bottom:4px;}
+
+.example-box{
+  position:relative;
+  background:#fff;
+  border:1px solid var(--border);
+  border-left:3px solid var(--pine);
+  border-radius:0 3px 3px 0;
+  padding:14px 44px 14px 16px;
+  font-size:13px;
+  line-height:1.85;
+  margin:10px 0 16px;
+  color:var(--ink);
+}
+
+/* 追加: Rコード表示用ブロックのスタイル */
+.code-block{
+  background:#1F2A24;
+  color:#EEF0E9;
+  padding:16px 44px 16px 16px;
+  border-radius:3px;
+  font-family:var(--mono);
+  font-size:12px;
+  overflow-x:auto;
+  line-height:1.6;
+  margin:10px 0;
+  white-space:pre;
+}
+
+.copy-btn{
+  position:absolute;top:10px;right:10px;
+  background:transparent;border:1px solid var(--border-strong);border-radius:3px;
+  font-size:10px;font-family:var(--mono);padding:4px 7px;cursor:pointer;color:var(--ink-soft);
+}
+.copy-btn:hover{border-color:var(--pine);color:var(--pine-deep);}
+.copy-btn.copied{border-color:var(--pine);color:var(--pine-deep);background:var(--pine-soft);}
+
+/* 追加: ダークテーマ用のコピーボタン */
+.copy-btn.dark{
+  border-color:#57645A;
+  color:#8A9389;
+}
+.copy-btn.dark:hover{border-color:#C9D0C1;color:#EEF0E9;}
+.copy-btn.dark.copied{border-color:#1E6F5C;color:#EEF0E9;background:#134E40;}
+
+footer.site{
+  margin-top:50px;padding-top:16px;border-top:1px solid var(--border);
+  font-size:11px;color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+
+.hidden{display:none !important;}
+
+@media (max-width:520px){
+  .grid2{grid-template-columns:1fr;}
+  .counter-digits{font-size:24px;}
+}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-synthesis);--paper:var(--al-bg);--paper-deep:var(--al-surface-2);--ink:var(--al-ink);--ink-soft:var(--al-ink-2);--ink-faint:var(--al-ink-3);--border:var(--al-line);--border-strong:var(--al-line-strong);--pine:var(--al-cat);--pine-deep:var(--al-cat-deep);--pine-soft:var(--al-cat-soft);--pine-soft2:var(--al-cat-mid);--serif:var(--al-serif);--sans:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#synthesis">推定を統合する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>ブートストラップ解析</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="wrap">
+
+  <header class="site">
+    <div>
+      <h1 class="site-title">ブートストラップ解析装置<span class="unit">/ B‑resample</span></h1>
+      <p class="site-sub">データを復元抽出で繰り返し再標本化し、統計量の信頼区間を経験的に推定します。CSVのドラッグ&ドロップ、または貼り付けで開始できます。</p>
+    </div>
+    <div class="badge-row">
+      <span class="badge">OFFLINE / 単一HTML</span>
+      <span class="badge">PERCENTILE CI</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- ============ LEFT: CONTROLS ============ -->
+    <div class="controls-col">
+
+      <div class="panel">
+        <div class="panel-head">
+          <p class="panel-title">データ入力</p>
+          <span class="panel-num">01</span>
+        </div>
+        <div class="panel-body">
+          <div class="dropzone" id="dropzone">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1F2A24" stroke-width="1.4"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            <div class="dz-main">CSVファイルをドロップ</div>
+            <div class="dz-sub">またはクリックして選択</div>
+          </div>
+          <input type="file" id="fileInput" accept=".csv,.tsv,.txt">
+
+          <label class="field-label">またはテキストを貼り付け</label>
+          <textarea id="pasteArea" placeholder="group_a,group_b&#10;12.3,15.1&#10;11.8,14.7&#10;13.0,13.9&#10;..."></textarea>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="hasHeader" checked>
+            <label for="hasHeader">先頭行を列名（ヘッダー）として扱う</label>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn full" id="parseBtn">データを読み込む</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn secondary full" id="sampleBtn">サンプルデータを試す</button>
+          </div>
+          <p class="help-text" id="parseMsg"></p>
+        </div>
+      </div>
+
+      <div class="panel" id="setupPanel" style="opacity:0.4;pointer-events:none;">
+        <div class="panel-head">
+          <p class="panel-title">解析設定</p>
+          <span class="panel-num">02</span>
+        </div>
+        <div class="panel-body">
+
+          <label class="field-label">解析モード</label>
+          <div class="mode-toggle">
+            <button type="button" id="modeSingleBtn" class="active" data-mode="single">1群の推定</button>
+            <button type="button" id="modeDiffBtn" data-mode="diff">2群の差</button>
+          </div>
+          <p class="help-text" id="modeHelp">1つの数値列について、統計量の信頼区間を推定します。</p>
+
+          <div id="singleColWrap">
+            <label class="field-label">対象列</label>
+            <select id="colSingle"></select>
+          </div>
+          <div id="diffColWrap" class="hidden">
+            <div class="grid2">
+              <div>
+                <label class="field-label">群 A の列</label>
+                <select id="colA"></select>
+              </div>
+              <div>
+                <label class="field-label">群 B の列</label>
+                <select id="colB"></select>
+              </div>
+            </div>
+            <p class="help-text">各群を別々の列に入力してください。行数（n）が異なっていても、空欄は無視して解析します。</p>
+          </div>
+
+          <label class="field-label">統計量</label>
+          <select id="statSelect">
+            <option value="mean">平均値</option>
+            <option value="median">中央値</option>
+            <option value="sd">標準偏差</option>
+          </select>
+
+          <label class="field-label">再標本化の回数（B）</label>
+          <div class="pill-group" id="iterPills">
+            <span class="pill" data-b="1000">1,000</span>
+            <span class="pill active" data-b="5000">5,000</span>
+            <span class="pill" data-b="10000">10,000</span>
+            <span class="pill" data-b="50000">50,000</span>
+          </div>
+          <input type="number" id="iterCustom" min="100" max="500000" step="100" value="5000" style="margin-top:8px;">
+          <p class="help-text">回数を増やすほど推定は安定しますが、計算時間が長くなります（目安：n×B が 1000万を超えると数秒以上かかることがあります）。</p>
+
+          <label class="field-label">信頼水準</label>
+          <div class="pill-group" id="ciPills">
+            <span class="pill" data-ci="0.90">90%</span>
+            <span class="pill active" data-ci="0.95">95%</span>
+            <span class="pill" data-ci="0.99">99%</span>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn full" id="runBtn">ブートストラップを実行</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ RIGHT: OUTPUT ============ -->
+    <div class="output-col">
+
+      <div class="panel" id="previewPanel">
+        <div class="panel-head">
+          <p class="panel-title">データプレビュー</p>
+          <span class="panel-num">—</span>
+        </div>
+        <div class="panel-body" id="previewBody">
+          <div class="empty-state">
+            <div class="glyph">n = ?</div>
+            <p>左のパネルからCSVをドロップするか、テキストを貼り付けて「データを読み込む」を押してください。数値列が自動で検出されます。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="runPanel">
+        <div class="panel-head">
+          <p class="panel-title">再標本化の進行</p>
+          <span class="panel-num">03</span>
+        </div>
+        <div class="panel-body">
+          <div class="counter-wrap">
+            <div>
+              <div class="counter-digits"><span id="counterCur">0</span><span class="slash">/</span><span id="counterTotal">0</span></div>
+              <div class="counter-label">RESAMPLE ITERATIONS</div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="resultPanel">
+        <div class="panel-head">
+          <p class="panel-title">結果</p>
+          <span class="panel-num">04</span>
+        </div>
+        <div class="panel-body">
+          <div class="stat-grid" id="statGrid"></div>
+          <canvas id="histCanvas"></canvas>
+          <div id="ciNoticeWrap"></div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="interpretPanel">
+        <div class="panel-head">
+          <p class="panel-title">結果の読み方</p>
+          <span class="panel-num">05</span>
+        </div>
+        <div class="panel-body read-block" id="interpretBody"></div>
+      </div>
+
+      <div class="panel hidden" id="writeupPanel">
+        <div class="panel-head">
+          <p class="panel-title">論文・レポートでの記述例</p>
+          <span class="panel-num">06</span>
+        </div>
+        <div class="panel-body read-block">
+          <h4>方法（Methods）の記述例</h4>
+          <div class="example-box" id="methodsExample">
+            <button class="copy-btn" data-target="methodsExample">コピー</button>
+          </div>
+          <h4>結果（Results）の記述例</h4>
+          <div class="example-box" id="resultsExample">
+            <button class="copy-btn" data-target="resultsExample">コピー</button>
+          </div>
+          <p class="help-text">数値は入力データと実行時のパラメータから自動生成されています。実際の執筆では、変数名や群の名称など文脈に合わせて調整してください。</p>
+        </div>
+      </div>
+
+      <!-- 追加: Rコード出力パネル -->
+      <div class="panel hidden" id="rcodePanel">
+        <div class="panel-head">
+          <p class="panel-title">JASP Rコンソール用コード</p>
+          <span class="panel-num">07</span>
+        </div>
+        <div class="panel-body read-block">
+          <p>この画面で行った解析を、JASPのR Betaモジュール内で再現するためのRコードです。設定した反復回数や統計量が自動で反映されています。</p>
+          <div style="position:relative;">
+            <pre class="code-block" id="rcodeBlock"></pre>
+            <button class="copy-btn dark" data-target="rcodeBlock">コピー</button>
+          </div>
+          <p class="help-text">※ <b>重要:</b> JASP側でRモジュールを開いた後、必ず画面左側から対象の変数（列）を右側のデータボックスにドラッグ＆ドロップしてください。そうしないとR環境に <code>dataset</code> が読み込まれず、エラーになります。</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="site">
+    <span>ブートストラップ解析装置 — すべての計算はこのページ内（JavaScript）で完結し、データは外部に送信されません。</span>
+    <span>percentile method</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== 状態 ===================== */
+  const state = {
+    headers: [],
+    columns: {},      
+    numericColumns: {}, 
+    mode: 'single',    
+    stat: 'mean',
+    B: 5000,
+    ciLevel: 0.95,
+    running: false
+  };
+
+  /* ===================== ユーティリティ ===================== */
+  function $(id){ return document.getElementById(id); }
+
+  function splitLine(line, delim){
+    const out = [];
+    let cur = '';
+    let inQ = false;
+    for (let i=0;i<line.length;i++){
+      const c = line[i];
+      if (c === '"'){ inQ = !inQ; }
+      else if (c === delim && !inQ){ out.push(cur); cur=''; }
+      else { cur += c; }
+    }
+    out.push(cur);
+    return out.map(s => s.trim().replace(/^"(.*)"$/,'$1'));
+  }
+
+  function detectDelimiter(sampleLine){
+    const commas = (sampleLine.match(/,/g)||[]).length;
+    const tabs = (sampleLine.match(/\t/g)||[]).length;
+    const semis = (sampleLine.match(/;/g)||[]).length;
+    if (tabs > commas && tabs > semis) return '\t';
+    if (semis > commas && semis > tabs) return ';';
+    return ',';
+  }
+
+  function parseCSVText(text, hasHeader){
+    const lines = text.replace(/\r\n/g,'\n').split('\n').filter(l => l.trim().length > 0);
+    if (lines.length === 0) return null;
+    const delim = detectDelimiter(lines[0]);
+    const rows = lines.map(l => splitLine(l, delim));
+    const width = Math.max(...rows.map(r => r.length));
+    let headers;
+    let dataRows;
+    if (hasHeader){
+      headers = rows[0];
+      dataRows = rows.slice(1);
+    } else {
+      headers = Array.from({length:width}, (_,i) => 'Col' + (i+1));
+      dataRows = rows;
+    }
+    while (headers.length < width) headers.push('Col' + (headers.length+1));
+
+    const columns = {};
+    headers.forEach((h,i) => { columns[h] = dataRows.map(r => (r[i]!==undefined ? r[i] : '')); });
+    return { headers, columns, rowCount: dataRows.length };
+  }
+
+  function toNumericArray(strArr){
+    const out = [];
+    for (const s of strArr){
+      if (s === '' || s === null || s === undefined) continue;
+      const v = Number(String(s).replace(/,/g,''));
+      if (Number.isFinite(v)) out.push(v);
+    }
+    return out;
+  }
+
+  function isNumericColumn(strArr){
+    const nonEmpty = strArr.filter(s => s !== '' && s !== null && s !== undefined);
+    if (nonEmpty.length === 0) return false;
+    let ok = 0;
+    for (const s of nonEmpty){
+      if (Number.isFinite(Number(String(s).replace(/,/g,'')))) ok++;
+    }
+    return (ok / nonEmpty.length) >= 0.8;
+  }
+
+  function fmt(x, d){
+    d = (d===undefined) ? 3 : d;
+    if (!Number.isFinite(x)) return '—';
+    return x.toLocaleString('ja-JP', {minimumFractionDigits:d, maximumFractionDigits:d});
+  }
+  function fmtInt(x){ return Number.isFinite(x) ? x.toLocaleString('ja-JP') : '—'; }
+
+  /* ===================== 統計関数 ===================== */
+  function statMean(arr){ let s=0; for (let i=0;i<arr.length;i++) s+=arr[i]; return s/arr.length; }
+  function statMedian(arr){
+    const a = arr.slice().sort((x,y)=>x-y);
+    const n = a.length;
+    const mid = Math.floor(n/2);
+    return (n % 2 === 1) ? a[mid] : (a[mid-1]+a[mid])/2;
+  }
+  function statSD(arr){
+    const n = arr.length;
+    if (n < 2) return NaN;
+    const m = statMean(arr);
+    let s = 0;
+    for (let i=0;i<n;i++){ const d = arr[i]-m; s += d*d; }
+    return Math.sqrt(s/(n-1));
+  }
+  const STAT_FN = { mean: statMean, median: statMedian, sd: statSD };
+  const STAT_LABEL = { mean: '平均値', median: '中央値', sd: '標準偏差' };
+
+  function resampleArray(data){
+    const n = data.length;
+    const out = new Array(n);
+    for (let i=0;i<n;i++){ out[i] = data[(Math.random()*n) | 0]; }
+    return out;
+  }
+
+  /* ===================== CSV 読み込み UI ===================== */
+  const dropzone = $('dropzone');
+  const fileInput = $('fileInput');
+  const pasteArea = $('pasteArea');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) readFileIntoTextarea(file);
+  });
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) readFileIntoTextarea(file);
+  });
+  function readFileIntoTextarea(file){
+    const reader = new FileReader();
+    reader.onload = ev => {
+      pasteArea.value = ev.target.result;
+      $('parseMsg').textContent = 'ファイル「' + file.name + '」を読み込みました。「データを読み込む」を押してください。';
+      parseAndLoad();
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  $('sampleBtn').addEventListener('click', () => {
+    pasteArea.value =
+"group,dose_mg,response\n" +
+"control,0,12.4\n" +
+"control,0,11.8\n" +
+"control,0,13.1\n" +
+"control,0,12.9\n" +
+"control,0,11.5\n" +
+"control,0,12.7\n" +
+"control,0,13.4\n" +
+"control,0,12.0\n" +
+"treatment,50,15.2\n" +
+"treatment,50,16.0\n" +
+"treatment,50,14.7\n" +
+"treatment,50,15.9\n" +
+"treatment,50,16.4\n" +
+"treatment,50,15.1\n" +
+"treatment,50,14.9\n" +
+"treatment,50,16.8\n";
+    $('hasHeader').checked = true;
+    $('parseMsg').textContent = 'サンプルデータ（対照群 / 処置群の反応値）を読み込みました。列選択では response 列などを使ってください。';
+    parseAndLoad();
+  });
+
+  $('parseBtn').addEventListener('click', parseAndLoad);
+
+  function parseAndLoad(){
+    const text = pasteArea.value;
+    if (!text || !text.trim()){
+      $('parseMsg').textContent = 'データが入力されていません。CSVをドロップするか、テキストを貼り付けてください。';
+      return;
+    }
+    const hasHeader = $('hasHeader').checked;
+    const parsed = parseCSVText(text, hasHeader);
+    if (!parsed || parsed.rowCount === 0){
+      $('parseMsg').textContent = 'データを解釈できませんでした。区切り文字（カンマ/タブ）を確認してください。';
+      return;
+    }
+    state.headers = parsed.headers;
+    state.columns = parsed.columns;
+    state.numericColumns = {};
+    parsed.headers.forEach(h => {
+      if (isNumericColumn(parsed.columns[h])) state.numericColumns[h] = toNumericArray(parsed.columns[h]);
+    });
+
+    renderPreview(parsed);
+    populateColumnSelects();
+    $('setupPanel').style.opacity = '1';
+    $('setupPanel').style.pointerEvents = 'auto';
+    $('parseMsg').textContent = fmtInt(parsed.rowCount) + ' 行 × ' + parsed.headers.length + ' 列を読み込みました（数値列: ' + Object.keys(state.numericColumns).length + '）。';
+
+    /* 隠すパネルに rcodePanel を追加 */
+    ['runPanel','resultPanel','interpretPanel','writeupPanel','rcodePanel'].forEach(id => $(id).classList.add('hidden'));
+  }
+
+  function renderPreview(parsed){
+    const body = $('previewBody');
+    const maxRows = 6;
+    let html = '<div class="table-scroll"><table class="preview"><thead><tr>';
+    parsed.headers.forEach(h => {
+      const numeric = isNumericColumn(parsed.columns[h]);
+      html += '<th>' + escapeHTML(h) + '<span class="col-tag ' + (numeric?'num':'txt') + '">' + (numeric?'数値':'文字') + '</span></th>';
+    });
+    html += '</tr></thead><tbody>';
+    for (let r=0; r<Math.min(maxRows, parsed.rowCount); r++){
+      html += '<tr>';
+      parsed.headers.forEach(h => { html += '<td>' + escapeHTML(parsed.columns[h][r] ?? '') + '</td>'; });
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    if (parsed.rowCount > maxRows){
+      html += '<p class="help-text">先頭 ' + maxRows + ' 行を表示中（全 ' + fmtInt(parsed.rowCount) + ' 行）。</p>';
+    }
+    body.innerHTML = html;
+  }
+
+  function escapeHTML(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function populateColumnSelects(){
+    const names = Object.keys(state.numericColumns);
+    const opts = names.map(n => '<option value="' + escapeHTML(n) + '">' + escapeHTML(n) + ' (n=' + state.numericColumns[n].length + ')</option>').join('');
+    $('colSingle').innerHTML = opts || '<option value="">数値列が見つかりません</option>';
+    $('colA').innerHTML = opts || '<option value="">数値列が見つかりません</option>';
+    $('colB').innerHTML = opts || '<option value="">数値列が見つかりません</option>';
+    if (names.length > 1) $('colB').selectedIndex = 1;
+  }
+
+  /* ===================== 解析設定 UI ===================== */
+  $('modeSingleBtn').addEventListener('click', () => setMode('single'));
+  $('modeDiffBtn').addEventListener('click', () => setMode('diff'));
+  function setMode(mode){
+    state.mode = mode;
+    $('modeSingleBtn').classList.toggle('active', mode==='single');
+    $('modeDiffBtn').classList.toggle('active', mode==='diff');
+    $('singleColWrap').classList.toggle('hidden', mode!=='single');
+    $('diffColWrap').classList.toggle('hidden', mode!=='diff');
+    $('modeHelp').textContent = mode==='single'
+      ? '1つの数値列について、統計量の信頼区間を推定します。'
+      : '2つの独立した群（列）について、統計量の差の信頼区間を推定します（群A − 群B）。';
+    const statSelect = $('statSelect');
+    const cur = state.stat;
+    statSelect.innerHTML = mode==='single'
+      ? '<option value="mean">平均値</option><option value="median">中央値</option><option value="sd">標準偏差</option>'
+      : '<option value="mean">平均値の差（A−B）</option><option value="median">中央値の差（A−B）</option>';
+    statSelect.value = ['mean','median'].includes(cur) ? cur : 'mean';
+    state.stat = statSelect.value;
+  }
+  $('statSelect').addEventListener('change', e => state.stat = e.target.value);
+
+  document.querySelectorAll('#iterPills .pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('#iterPills .pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      $('iterCustom').value = p.dataset.b;
+      state.B = parseInt(p.dataset.b, 10);
+    });
+  });
+  $('iterCustom').addEventListener('input', e => {
+    document.querySelectorAll('#iterPills .pill').forEach(x=>x.classList.remove('active'));
+    state.B = Math.max(100, Math.min(500000, parseInt(e.target.value,10) || 5000));
+  });
+
+  document.querySelectorAll('#ciPills .pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('#ciPills .pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      state.ciLevel = parseFloat(p.dataset.ci);
+    });
+  });
+
+  /* ===================== ブートストラップ実行 ===================== */
+  $('runBtn').addEventListener('click', runBootstrap);
+
+  function getSelectedData(){
+    if (state.mode === 'single'){
+      const name = $('colSingle').value;
+      const data = state.numericColumns[name];
+      if (!data || data.length < 2) return null;
+      return { type:'single', name, data };
+    } else {
+      const nameA = $('colA').value, nameB = $('colB').value;
+      const a = state.numericColumns[nameA], b = state.numericColumns[nameB];
+      if (!a || !b || a.length < 2 || b.length < 2) return null;
+      return { type:'diff', nameA, nameB, a, b };
+    }
+  }
+
+  function runBootstrap(){
+    if (state.running) return;
+    const sel = getSelectedData();
+    if (!sel){
+      alert('有効な数値列を選択してください（各群 n≥2 が必要です）。');
+      return;
+    }
+    const B = state.B;
+    const statFn = STAT_FN[state.stat];
+
+    state.running = true;
+    $('runBtn').disabled = true;
+    $('runPanel').classList.remove('hidden');
+    $('resultPanel').classList.add('hidden');
+    $('interpretPanel').classList.add('hidden');
+    $('writeupPanel').classList.add('hidden');
+    $('rcodePanel').classList.add('hidden'); // 実行中は隠す
+    $('counterTotal').textContent = fmtInt(B);
+    $('counterCur').textContent = '0';
+    $('progressFill').style.width = '0%';
+
+    const results = new Float64Array(B);
+    let i = 0;
+    const chunk = Math.max(200, Math.floor(B/80));
+
+    function pointEstimate(){
+      return sel.type === 'single' ? statFn(sel.data) : (statFn(sel.a) - statFn(sel.b));
+    }
+
+    function step(){
+      const end = Math.min(B, i + chunk);
+      for (; i < end; i++){
+        if (sel.type === 'single'){
+          results[i] = statFn(resampleArray(sel.data));
+        } else {
+          results[i] = statFn(resampleArray(sel.a)) - statFn(resampleArray(sel.b));
+        }
+      }
+      $('counterCur').textContent = fmtInt(i);
+      $('progressFill').style.width = (100*i/B).toFixed(1) + '%';
+      drawHistogram(results.subarray(0,i), null, null, null, false);
+
+      if (i < B){
+        requestAnimationFrame(step);
+      } else {
+        finish();
+      }
+    }
+
+    function finish(){
+      state.running = false;
+      $('runBtn').disabled = false;
+      const pe = pointEstimate();
+      finalizeResults(sel, results, pe, B);
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  function percentileCI(sortedResults, level){
+    const B = sortedResults.length;
+    const alpha = 1 - level;
+    let loIdx = Math.floor((alpha/2) * B);
+    let hiIdx = Math.ceil((1 - alpha/2) * B) - 1;
+    loIdx = Math.max(0, Math.min(B-1, loIdx));
+    hiIdx = Math.max(0, Math.min(B-1, hiIdx));
+    return [sortedResults[loIdx], sortedResults[hiIdx]];
+  }
+
+  function finalizeResults(sel, results, pointEst, B){
+    const sorted = Float64Array.from(results).sort();
+    const [lo, hi] = percentileCI(sorted, state.ciLevel);
+    const bootMean = statMean(results);
+    const bootSE = statSD(results);
+    const bias = bootMean - pointEst;
+    const crossesZero = (sel.type === 'diff') ? (lo <= 0 && hi >= 0) : null;
+
+    // --- 統計サマリー表示 ---
+    const statLabel = sel.type === 'single'
+      ? STAT_LABEL[state.stat] + '（' + sel.name + '）'
+      : STAT_LABEL[state.stat] + '（' + sel.nameA + ' − ' + sel.nameB + '）';
+
+    const grid = $('statGrid');
+    grid.innerHTML =
+      cell('対象統計量', statLabel, false) +
+      cell('点推定値', fmt(pointEst), true) +
+      cell('ブートストラップSE', fmt(bootSE), false) +
+      cell('バイアス（偏り）', fmt(bias), false) +
+      cell(Math.round(state.ciLevel*100)+'% CI 下限', fmt(lo), true) +
+      cell(Math.round(state.ciLevel*100)+'% CI 上限', fmt(hi), true) +
+      cell('反復回数 B', fmtInt(B), false) +
+      cell('標本サイズ', sel.type==='single' ? ('n='+sel.data.length) : ('nA='+sel.a.length+', nB='+sel.b.length), false);
+    function cell(k,v,accent){ return '<div class="stat-cell'+(accent?' accent':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
+
+    drawHistogram(results, lo, hi, pointEst, true, sel.type==='diff');
+
+    const noticeWrap = $('ciNoticeWrap');
+    if (sel.type === 'diff'){
+      noticeWrap.innerHTML = crossesZero
+        ? '<div class="notice warn">信頼区間は 0 をまたいでいます。2群の差が0でないとは言い切れません（帰無仮説「差なし」と矛盾しない結果です）。</div>'
+        : '<div class="notice sig">信頼区間は 0 を含んでいません。データ上、差が0であるとは考えにくいことを示唆します（有意水準 '+((1-state.ciLevel)*100).toFixed(0)+'% 相当の目安）。</div>';
+    } else {
+      noticeWrap.innerHTML = '';
+    }
+
+    $('resultPanel').classList.remove('hidden');
+    
+    renderInterpretation(sel, pointEst, bootSE, bias, lo, hi, B, crossesZero);
+    $('interpretPanel').classList.remove('hidden');
+    
+    renderWriteup(sel, statLabel, pointEst, bootSE, lo, hi, B, crossesZero);
+    $('writeupPanel').classList.remove('hidden');
+
+    // 追加: Rコードの動的生成
+    renderRCode(sel, B);
+    $('rcodePanel').classList.remove('hidden');
+  }
+
+ /* ===================== Rコード動的生成 ===================== */
+  function renderRCode(sel, B) {
+    const isDiff = (sel.type === 'diff');
+    const alpha = 1 - state.ciLevel;
+    const loProb = (alpha / 2).toFixed(3);
+    const hiProb = (1 - alpha / 2).toFixed(3);
+    const ciPercent = Math.round(state.ciLevel * 100);
+    
+    let code = `# JASPのRコンソールでそのまま実行できるブートストラップ解析コード\n`;
+    code += `# アプリ内で読み込んだデータを直接コード内に定義しているため、変数指定のエラーが起きません。\n\n`;
+    code += `set.seed(123) # 再現性を確保するためのシード値\n`;
+    code += `B <- ${B}       # リサンプリング回数\n\n`;
+
+    if (!isDiff) {
+      code += `# --- データ定義 (アプリから自動生成) ---\n`;
+      code += `target <- c(${sel.data.join(', ')})\n`;
+      code += `n <- length(target)\n\n`;
+      code += `# --- リサンプリングの実行 ---\n`;
+      code += `results <- numeric(B)\n`;
+      code += `for (i in 1:B) {\n`;
+      code += `  results[i] <- ${state.stat}(sample(target, size = n, replace = TRUE))\n`;
+      code += `}\n\n`;
+      code += `# --- 点推定値の計算 ---\n`;
+      code += `point_est <- ${state.stat}(target)\n`;
+    } else {
+      code += `# --- データ定義 (アプリから自動生成) ---\n`;
+      code += `groupA <- c(${sel.a.join(', ')})\n`;
+      code += `groupB <- c(${sel.b.join(', ')})\n`;
+      code += `nA <- length(groupA)\n`;
+      code += `nB <- length(groupB)\n\n`;
+      code += `# --- リサンプリングの実行 ---\n`;
+      code += `results <- numeric(B)\n`;
+      code += `for (i in 1:B) {\n`;
+      code += `  sampA <- sample(groupA, size = nA, replace = TRUE)\n`;
+      code += `  sampB <- sample(groupB, size = nB, replace = TRUE)\n`;
+      code += `  results[i] <- ${state.stat}(sampA) - ${state.stat}(sampB)\n`;
+      code += `}\n\n`;
+      code += `# --- 点推定値の計算 ---\n`;
+      code += `point_est <- ${state.stat}(groupA) - ${state.stat}(groupB)\n`;
+    }
+
+    code += `\n# --- 信頼区間と標準誤差の算出 ---\n`;
+    code += `boot_se <- sd(results)\n`;
+    code += `ci <- quantile(results, probs = c(${loProb}, ${hiProb}))\n\n`;
+    code += `# --- 結果の出力 ---\n`;
+    code += `cat("=== ブートストラップ解析結果 ===\\n")\n`;
+    code += `cat("対象統計量:", "${state.stat}", "\\n")\n`;
+    code += `cat("点推定値:", point_est, "\\n")\n`;
+    code += `cat("標準誤差 (SE):", boot_se, "\\n")\n`;
+    code += `cat("${ciPercent}% 信頼区間:\\n")\n`;
+    code += `print(ci)\n`;
+
+    $('rcodeBlock').textContent = code;
+    
+    // コピーボタンのイベント付与(再設定を防ぐために一旦onclickで上書き)
+    const btn = document.querySelector('.copy-btn.dark[data-target="rcodeBlock"]');
+    if (btn) {
+      btn.onclick = () => {
+        const text = $('rcodeBlock').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = '完了';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent='コピー'; btn.classList.remove('copied'); }, 1500);
+        });
+      };
+    }
+  }
+
+  /* ===================== ヒストグラム描画 ===================== */
+  const canvas = $('histCanvas');
+  function drawHistogram(values, lo, hi, pointEst, finalDraw, isDiff){
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || 600;
+    const cssH = 230;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,cssW,cssH);
+
+    if (values.length < 2) return;
+    let min = Infinity, max = -Infinity;
+    for (let i=0;i<values.length;i++){ const v=values[i]; if(v<min)min=v; if(v>max)max=v; }
+    if (min === max){ min -= 1; max += 1; }
+    const pad = (max-min)*0.06;
+    min -= pad; max += pad;
+
+    const bins = 42;
+    const counts = new Array(bins).fill(0);
+    const binW = (max-min)/bins;
+    for (let i=0;i<values.length;i++){
+      let b = Math.floor((values[i]-min)/binW);
+      if (b<0) b=0; if (b>=bins) b=bins-1;
+      counts[b]++;
+    }
+    const maxCount = Math.max(...counts);
+
+    const marginL = 40, marginR = 14, marginT = 12, marginB = 26;
+    const plotW = cssW - marginL - marginR;
+    const plotH = cssH - marginT - marginB;
+
+    // grid
+    ctx.strokeStyle = 'rgba(31,42,36,0.08)';
+    ctx.lineWidth = 1;
+    for (let g=0; g<=4; g++){
+      const y = marginT + plotH - (g/4)*plotH;
+      ctx.beginPath(); ctx.moveTo(marginL, y); ctx.lineTo(marginL+plotW, y); ctx.stroke();
+    }
+
+    function xOf(v){ return marginL + ((v-min)/(max-min))*plotW; }
+
+    // bars
+    ctx.fillStyle = 'rgba(30,111,92,0.55)';
+    const barW = plotW/bins;
+    for (let b=0;b<bins;b++){
+      const h = (counts[b]/maxCount) * plotH;
+      const x = marginL + b*barW;
+      ctx.fillRect(x+0.5, marginT+plotH-h, Math.max(1,barW-1), h);
+    }
+
+    // zero line for diff
+    if (isDiff && min < 0 && max > 0){
+      const zx = xOf(0);
+      ctx.strokeStyle = 'rgba(31,42,36,0.4)';
+      ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(zx, marginT); ctx.lineTo(zx, marginT+plotH); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(31,42,36,0.5)';
+      ctx.font = '10px monospace';
+      ctx.fillText('0', zx-3, marginT+plotH+14);
+    }
+
+    if (finalDraw && lo !== null && hi !== null){
+      const xlo = xOf(lo), xhi = xOf(hi);
+      ctx.fillStyle = 'rgba(166,61,46,0.08)';
+      ctx.fillRect(xlo, marginT, xhi-xlo, plotH);
+      ctx.strokeStyle = '#A63D2E';
+      ctx.lineWidth = 1.4;
+      [xlo,xhi].forEach(x => { ctx.beginPath(); ctx.moveTo(x,marginT); ctx.lineTo(x,marginT+plotH); ctx.stroke(); });
+
+      const xpe = xOf(pointEst);
+      ctx.strokeStyle = '#1F2A24';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(xpe,marginT); ctx.lineTo(xpe,marginT+plotH); ctx.stroke();
+    }
+
+    // axis labels
+    ctx.fillStyle = '#57645A';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(fmt(min,2), marginL, cssH-8);
+    ctx.textAlign = 'right';
+    ctx.fillText(fmt(max,2), marginL+plotW, cssH-8);
+    ctx.textAlign = 'left';
+  }
+  window.addEventListener('resize', () => { /* redrawn on next run */ });
+
+  /* ===================== 読み方テキスト ===================== */
+  function renderInterpretation(sel, pointEst, se, bias, lo, hi, B, crossesZero){
+    const level = Math.round(state.ciLevel*100);
+    const isDiff = sel.type === 'diff';
+    let html = '';
+
+    html += '<h4>この結果が意味すること</h4>';
+    html += '<p>手元のデータから重複を許して同じ大きさの標本を' + fmtInt(B) + '回作り直し（復元抽出）、その都度' + (isDiff ? '2群の統計量の差' : '統計量') + 'を計算しました。この' + fmtInt(B) + '個の値の集まりが「ブートストラップ分布」で、上のヒストグラムがその形です。分布の中央' + level + '%にあたる範囲（パーセンタイル法）を信頼区間としています。</p>';
+
+    html += '<h4>点推定値・SE・信頼区間の読み方</h4>';
+    html += '<ul>';
+    html += '<li><b>点推定値（' + fmt(pointEst) + '）</b>：元データそのものから計算した実際の統計量です。</li>';
+    html += '<li><b>ブートストラップSE（' + fmt(se) + '）</b>：ブートストラップ分布の標準偏差で、点推定値のばらつき（標準誤差）の目安です。値が大きいほど、標本から母集団の値を推定する際の不確実性が大きいことを意味します。</li>';
+    html += '<li><b>バイアス（' + fmt(bias) + '）</b>：ブートストラップ分布の平均と点推定値の差です。0に近いほど、点推定値に系統的な偏りが少ないことを示します。</li>';
+    html += '<li><b>' + level + '%信頼区間 [' + fmt(lo) + ', ' + fmt(hi) + ']</b>：「同じ方法でデータ収集と推定を繰り返した場合、算出される区間のうち約' + level + '%が真の値を含む」と解釈される区間です。「真の値が' + level + '%の確率でこの区間にある」という解釈は厳密には誤りである点に注意してください。</li>';
+    html += '</ul>';
+
+    if (isDiff){
+      html += '<h4>2群の差について</h4>';
+      html += '<p>信頼区間が0を' + (crossesZero ? 'またいでいるため、2群の差が0ではないと積極的には言えません。' : 'またいでいないため、2群の差は0ではなさそうだと示唆されます。') + 'ただし、これは有意性検定そのものではなく、あくまで信頼区間に基づく目安である点に留意してください。</p>';
+    }
+
+    html += '<h4>注意点・限界</h4>';
+    html += '<ul>';
+    html += '<li>ブートストラップ法は「手元のデータが母集団の分布をよく代表している」ことを前提とします。標本サイズが極端に小さい場合や、外れ値の影響が大きい場合は結果が不安定になります。</li>';
+    html += '<li>ここで用いているのはパーセンタイル法によるノンパラメトリック・ブートストラップです。分布が強く歪んでいる場合、より高度なBCa法（バイアス補正・加速法）の方が精度が高いことがあります。</li>';
+    html += '<li>観測値は互いに独立であることを想定しています。時系列データや反復測定など、観測間に依存がある場合は単純な復元抽出は適切でない可能性があります。</li>';
+    html += '</ul>';
+
+    $('interpretBody').innerHTML = html;
+  }
+
+  function renderWriteup(sel, statLabel, pointEst, se, lo, hi, B, crossesZero){
+    const level = Math.round(state.ciLevel*100);
+    const isDiff = sel.type === 'diff';
+
+    const methods = isDiff
+      ? ('統計解析にはノンパラメトリック・ブートストラップ法を用いた。群A（' + escapeHTML(sel.nameA) + ', n = ' + sel.a.length + ')および群B（' + escapeHTML(sel.nameB) + ', n = ' + sel.b.length + '）それぞれから復元抽出により同サイズの標本を生成する操作を独立に行い、両群の' + STAT_LABEL[state.stat] + 'の差（A−B）を算出する試行を B = ' + fmtInt(B) + ' 回繰り返すことで、差のブートストラップ分布を構築した。信頼区間はパーセンタイル法により算出した（信頼水準 ' + level + '%）。解析にはJavaScriptによる実装を用いた。')
+      : ('統計解析にはノンパラメトリック・ブートストラップ法を用いた。原データ（n = ' + sel.data.length + '）から同サイズの標本を復元抽出により生成する操作を B = ' + fmtInt(B) + ' 回繰り返し、各回で' + STAT_LABEL[state.stat] + 'を算出することでブートストラップ分布を構築した。信頼区間はパーセンタイル法により算出した（信頼水準 ' + level + '%）。解析にはJavaScriptによる実装を用いた。');
+
+    let results;
+    if (isDiff){
+      results = (escapeHTML(sel.nameA) + 'と' + escapeHTML(sel.nameB) + 'の' + STAT_LABEL[state.stat].replace('（A−B）','') + 'についてブートストラップ法（B = ' + fmtInt(B) + '）を用いて' + level + '%信頼区間を算出したところ、差の点推定値は ' + fmt(pointEst) + '（' + level + '% CI [' + fmt(lo) + ', ' + fmt(hi) + ']、ブートストラップSE = ' + fmt(se) + '）であった。信頼区間は0を' + (crossesZero ? '含んでいた。' : '含んでいなかった。'));
+    } else {
+      results = (escapeHTML(sel.name) + 'の' + STAT_LABEL[state.stat] + 'についてブートストラップ法（B = ' + fmtInt(B) + '）を用いて' + level + '%信頼区間を推定したところ、[' + fmt(lo) + ', ' + fmt(hi) + ']であった（点推定値 = ' + fmt(pointEst) + '、ブートストラップSE = ' + fmt(se) + '）。');
+    }
+
+    $('methodsExample').innerHTML = methods + '<button class="copy-btn" data-target="methodsExample">コピー</button>';
+    $('resultsExample').innerHTML = results + '<button class="copy-btn" data-target="resultsExample">コピー</button>';
+    attachCopyHandlers();
+  }
+
+  function attachCopyHandlers(){
+    document.querySelectorAll('.copy-btn:not(.dark)').forEach(btn => {
+      btn.onclick = () => {
+        const box = document.getElementById(btn.dataset.target);
+        // HTMLタグを除去するためにtextContentを取得し、コピーのテキストを取り除く
+        const text = box.textContent.replace('コピー','').trim();
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = '完了';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent='コピー'; btn.classList.remove('copied'); }, 1500);
+        });
+      };
+    });
+  }
+
+  /* init */
+  setMode('single');
+})();
+</script>
+</body>
+</html>

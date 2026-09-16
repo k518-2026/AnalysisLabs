@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>数量化理論 — データ分析ラボ</title>
+<style>
+  :root{
+    --paper:#f6f5f1;
+    --panel:#ffffff;
+    --ink:#232733;
+    --sub:#6b7080;
+    --line:#e2e0d8;
+    --line-strong:#c7c4b8;
+    --c1:#33559b; /* I 回帰 */
+    --c1-soft:#e8edf7;
+    --c2:#1d7a63; /* II 判別 */
+    --c2-soft:#e5f2ee;
+    --c3:#a9660f; /* III 主成分/対応分析 */
+    --c3-soft:#f6ecdd;
+    --c4:#7c3f8c; /* IV MDS */
+    --c4-soft:#f2e8f4;
+    --mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+    --serif: "Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",serif;
+    --sans: "Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); line-height:1.65;
+  }
+  header.top{
+    padding:34px 6vw 22px; border-bottom:1px solid var(--line-strong);
+    background:linear-gradient(180deg,#fbfaf7,var(--paper));
+  }
+  header.top h1{
+    font-family:var(--serif); font-weight:700; font-size:1.9rem; margin:0 0 6px;
+    letter-spacing:.03em;
+  }
+  header.top p{ margin:0; color:var(--sub); font-size:.92rem; max-width:72ch;}
+  nav.tabs{
+    display:flex; gap:2px; padding:0 6vw; background:var(--paper);
+    border-bottom:1px solid var(--line-strong); flex-wrap:wrap;
+  }
+  nav.tabs button{
+    appearance:none; border:none; background:transparent; cursor:pointer;
+    padding:14px 20px 12px; font-family:var(--sans); font-size:.95rem; color:var(--sub);
+    border-bottom:3px solid transparent; display:flex; align-items:center; gap:10px;
+    transition:color .15s, border-color .15s;
+  }
+  nav.tabs button .num{
+    font-family:var(--serif); font-weight:700; font-size:1.05rem; color:inherit;
+    border:1.5px solid currentColor; width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:.8rem;
+  }
+  nav.tabs button[data-tab="1"].active, nav.tabs button[data-tab="1"]:hover{ color:var(--c1); border-color:var(--c1);}
+  nav.tabs button[data-tab="2"].active, nav.tabs button[data-tab="2"]:hover{ color:var(--c2); border-color:var(--c2);}
+  nav.tabs button[data-tab="3"].active, nav.tabs button[data-tab="3"]:hover{ color:var(--c3); border-color:var(--c3);}
+  nav.tabs button[data-tab="4"].active, nav.tabs button[data-tab="4"]:hover{ color:var(--c4); border-color:var(--c4);}
+
+  main{ padding:28px 6vw 80px; max-width:1180px; margin:0 auto; }
+  .panel{ display:none; }
+  .panel.active{ display:block; animation:fade .25s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  .method-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:6px;}
+  .method-head .tag{
+    font-family:var(--serif); font-weight:700; font-size:1.1rem; padding:2px 10px; border-radius:3px;
+  }
+  #panel-1 .tag{ background:var(--c1-soft); color:var(--c1);}
+  #panel-2 .tag{ background:var(--c2-soft); color:var(--c2);}
+  #panel-3 .tag{ background:var(--c3-soft); color:var(--c3);}
+  #panel-4 .tag{ background:var(--c4-soft); color:var(--c4);}
+  .method-head h2{ font-family:var(--serif); font-size:1.3rem; margin:0;}
+  .method-sub{ color:var(--sub); font-size:.88rem; margin:0 0 20px;}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:20px 22px; margin-bottom:20px;
+  }
+  .card h3{ margin:0 0 12px; font-size:.98rem; font-family:var(--sans); font-weight:700;
+    display:flex; align-items:center; gap:8px;}
+  .card h3 .stepno{ font-family:var(--mono); font-size:.72rem; color:#fff; background:var(--ink);
+    padding:2px 7px; border-radius:3px;}
+
+  textarea{
+    width:100%; min-height:110px; font-family:var(--mono); font-size:.82rem;
+    border:1px solid var(--line-strong); border-radius:5px; padding:10px; resize:vertical;
+    background:#fdfdfb;
+  }
+  input[type=file]{ font-size:.85rem; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px;}
+  label.chk{ display:inline-flex; align-items:center; gap:6px; font-size:.85rem; color:var(--sub); }
+  button.btn{
+    appearance:none; border:1px solid var(--line-strong); background:#fff; color:var(--ink);
+    padding:8px 16px; border-radius:5px; font-size:.85rem; cursor:pointer; font-family:var(--sans);
+    transition:background .12s, border-color .12s;
+  }
+  button.btn:hover{ background:#f0efe9; }
+  #panel-1 button.btn.primary{ background:var(--c1); border-color:var(--c1); color:#fff;}
+  #panel-2 button.btn.primary{ background:var(--c2); border-color:var(--c2); color:#fff;}
+  #panel-3 button.btn.primary{ background:var(--c3); border-color:var(--c3); color:#fff;}
+  #panel-4 button.btn.primary{ background:var(--c4); border-color:var(--c4); color:#fff;}
+  button.btn.primary:hover{ filter:brightness(1.08); }
+  button.btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+  .dropzone{ transition:background .12s, outline-color .12s; outline:2px dashed transparent; outline-offset:-6px; }
+  .dropzone.dragover{ background:#fbfaf4; }
+  #panel-1 .dropzone.dragover{ outline-color:var(--c1); }
+  #panel-2 .dropzone.dragover{ outline-color:var(--c2); }
+  #panel-3 .dropzone.dragover{ outline-color:var(--c3); }
+  #panel-4 .dropzone.dragover{ outline-color:var(--c4); }
+  .drop-hint{ font-size:.78rem; color:var(--sub); }
+
+  .tablewrap{ overflow:auto; max-height:260px; border:1px solid var(--line); border-radius:6px; }
+  table{ border-collapse:collapse; width:100%; font-size:.82rem; }
+  table.data th, table.data td{ border-bottom:1px solid var(--line); padding:6px 10px; text-align:left; white-space:nowrap;}
+  table.data th{ position:sticky; top:0; background:#f1efe8; font-weight:700; }
+  table.data tr:nth-child(even){ background:#fbfbf9; }
+
+  .result-table th, .result-table td{ border-bottom:1px solid var(--line); padding:7px 12px; font-size:.85rem;}
+  .result-table th{ text-align:left; color:var(--sub); font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em;}
+  .result-table td.num, .result-table th.num{ font-family:var(--mono); text-align:right; }
+  .result-table{ width:100%; border-collapse:collapse;}
+  .item-block{ margin-bottom:14px; }
+  .item-block > .item-name{ font-weight:700; font-size:.88rem; margin-bottom:4px; }
+  .bar-row{ display:flex; align-items:center; gap:8px; margin:3px 0; }
+  .bar-row .cat-label{ width:110px; font-size:.8rem; color:var(--sub); flex-shrink:0; text-align:right;}
+  .bar-track{ position:relative; flex:1; height:16px; background:#efeee7; border-radius:3px; }
+  .bar-fill{ position:absolute; top:0; bottom:0; border-radius:3px; }
+  .bar-val{ font-family:var(--mono); font-size:.76rem; width:64px; flex-shrink:0; }
+
+  .metric-strip{ display:flex; gap:26px; flex-wrap:wrap; margin:6px 0 18px;}
+  .metric{ }
+  .metric .v{ font-family:var(--mono); font-size:1.5rem; font-weight:700; }
+  .metric .l{ font-size:.76rem; color:var(--sub); }
+
+  .varsel{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; margin-top:8px;}
+  .varsel label{ display:flex; align-items:center; gap:6px; font-size:.85rem; border:1px solid var(--line);
+    border-radius:5px; padding:6px 10px; background:#fdfdfb; cursor:pointer; }
+  select{ font-family:var(--sans); padding:6px 10px; border-radius:5px; border:1px solid var(--line-strong); font-size:.87rem;}
+
+  .flex-cols{ display:flex; gap:24px; flex-wrap:wrap; }
+  .flex-cols > div{ flex:1; min-width:280px; }
+
+  canvas.plot{ width:100%; max-width:640px; height:440px; background:#fdfdfb; border:1px solid var(--line); border-radius:6px; display:block;}
+  .legend{ display:flex; gap:16px; font-size:.8rem; color:var(--sub); margin-top:6px; flex-wrap:wrap;}
+  .legend span{ display:inline-flex; align-items:center; gap:6px;}
+  .legend i{ width:11px; height:11px; border-radius:50%; display:inline-block;}
+
+  .note{ font-size:.8rem; color:var(--sub); border-left:3px solid var(--line-strong); padding:4px 12px; margin-top:10px;}
+  .paper-block{ background:#fbfaf5; border:1px solid var(--line); border-left:4px solid var(--line-strong); border-radius:6px; padding:16px 18px; margin-top:8px; }
+  .paper-block p{ margin:0; font-family:var(--serif); font-size:.92rem; line-height:2; text-align:justify; }
+  #panel-1 .paper-block{ border-left-color:var(--c1); }
+  #panel-2 .paper-block{ border-left-color:var(--c2); }
+  #panel-3 .paper-block{ border-left-color:var(--c3); }
+  #panel-4 .paper-block{ border-left-color:var(--c4); }
+  .paper-copy-btn{ margin-top:10px; }
+  .errbox{ background:#fbeaea; border:1px solid #e0b4b4; color:#8a2f2f; padding:10px 14px; border-radius:6px; font-size:.85rem; margin-bottom:14px;}
+  .placeholder{ color:var(--sub); font-size:.86rem; padding:14px 0;}
+  footer{ text-align:center; color:var(--sub); font-size:.78rem; padding:30px 0 50px;}
+  .export-row{ margin-bottom:14px; }
+
+  @media print{
+    body *{ visibility:hidden; }
+    .print-active, .print-active *{ visibility:visible; }
+    .print-active{ position:absolute; left:0; top:0; width:100%; margin:0; border:none; padding:0 4mm; }
+    .print-active .export-row{ display:none; }
+    .print-active .tablewrap{ max-height:none !important; overflow:visible !important; border:none !important; }
+    .print-active .flex-cols{ display:block !important; }
+    .print-active .flex-cols > div{ width:100% !important; }
+    .print-active canvas.plot{ max-width:100% !important; height:360px !important; }
+    .print-active table.result-table{ page-break-inside:auto; }
+    .print-active tr{ page-break-inside:avoid; }
+    .print-active .item-block{ page-break-inside:avoid; }
+  }
+</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-causal);--paper:var(--al-bg);--panel:var(--al-surface);--ink:var(--al-ink);--sub:var(--al-ink-2);--line:var(--al-line-2);--line-strong:var(--al-line);--sans:var(--al-sans);--serif:var(--al-serif);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#causal">説明・予測する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>数量化理論</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<header class="top">
+  <h1>数量化理論 解析ツール</h1>
+  <p>質的データ(カテゴリーデータ)を数量化して分析する、林知己夫による数量化I類〜IV類をブラウザ上だけで計算します。CSVファイルのアップロード、またはカンマ区切りテキストの貼り付けに対応しています。データは一切外部へ送信されず、すべてこのページ内のJavaScriptで計算されます。</p>
+</header>
+
+<nav class="tabs">
+  <button data-tab="1" class="active"><span class="num">I</span>数量化I類(回帰分析)</button>
+  <button data-tab="2"><span class="num">II</span>数量化II類(判別分析)</button>
+  <button data-tab="3"><span class="num">III</span>数量化III類(主成分/対応分析)</button>
+  <button data-tab="4"><span class="num">IV</span>数量化IV類(MDS)</button>
+</nav>
+
+<main>
+
+<!-- ============ PANEL I ============ -->
+<section class="panel active" id="panel-1">
+  <div class="method-head"><span class="tag">I</span><h2>数量化I類 — 質的データによる回帰分析</h2></div>
+  <p class="method-sub">カテゴリー型の説明変数(項目)から量的な目的変数を予測します。重回帰分析の質的データ版に相当します。</p>
+
+  <div class="card dropzone" id="dropzone-1">
+    <h3><span class="stepno">STEP 1</span>データの入力</h3>
+    <div class="row">
+      <input type="file" id="file-1" accept=".csv,text/csv">
+      <button class="btn" id="sample-1">サンプルデータを読み込む</button>
+      <label class="chk"><input type="checkbox" id="header-1" checked>先頭行をヘッダーとして使用する</label>
+      <span class="drop-hint">CSVファイルをこのカードにドラッグ&ドロップしても読み込めます</span>
+    </div>
+    <div class="row" style="margin-top:14px;">
+      <textarea id="text-1" placeholder="ここにカンマ区切り(CSV)のテキストを貼り付けることもできます。例:
+通勤手段,雇用形態,満足度
+電車,正社員,72
+車,契約社員,58"></textarea>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="parse-1">データを読み込む</button>
+    </div>
+    <div id="preview-1" class="tablewrap" style="margin-top:14px; display:none;"></div>
+  </div>
+
+  <div class="card" id="varcard-1" style="display:none;">
+    <h3><span class="stepno">STEP 2</span>変数の選択</h3>
+    <div class="flex-cols">
+      <div>
+        <label style="font-size:.85rem; color:var(--sub);">目的変数(数値・量的変数)</label><br>
+        <select id="yvar-1"></select>
+      </div>
+      <div>
+        <label style="font-size:.85rem; color:var(--sub);">説明変数(カテゴリー項目・複数選択可)</label>
+        <div class="varsel" id="xvars-1"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px;">
+      <button class="btn primary" id="run-1">解析を実行する</button>
+    </div>
+  </div>
+
+  <div id="result-1"></div>
+</section>
+
+<!-- ============ PANEL II ============ -->
+<section class="panel" id="panel-2">
+  <div class="method-head"><span class="tag">II</span><h2>数量化II類 — 質的データによる判別分析</h2></div>
+  <p class="method-sub">カテゴリー型の説明変数から、2群のいずれに属するか(質的な目的変数)を判別します。目的変数を0/1に符号化し数量化I類と同じ枠組みで解いた結果は、2群判別分析の判別得点と等価になります。</p>
+
+  <div class="card dropzone" id="dropzone-2">
+    <h3><span class="stepno">STEP 1</span>データの入力</h3>
+    <div class="row">
+      <input type="file" id="file-2" accept=".csv,text/csv">
+      <button class="btn" id="sample-2">サンプルデータを読み込む</button>
+      <label class="chk"><input type="checkbox" id="header-2" checked>先頭行をヘッダーとして使用する</label>
+      <span class="drop-hint">CSVファイルをこのカードにドラッグ&ドロップしても読み込めます</span>
+    </div>
+    <div class="row" style="margin-top:14px;">
+      <textarea id="text-2" placeholder="例:
+生活習慣,運動習慣,発症
+悪い,なし,有
+良い,あり,無"></textarea>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="parse-2">データを読み込む</button>
+    </div>
+    <div id="preview-2" class="tablewrap" style="margin-top:14px; display:none;"></div>
+  </div>
+
+  <div class="card" id="varcard-2" style="display:none;">
+    <h3><span class="stepno">STEP 2</span>変数の選択</h3>
+    <div class="flex-cols">
+      <div>
+        <label style="font-size:.85rem; color:var(--sub);">目的変数(2群のカテゴリー)</label><br>
+        <select id="yvar-2"></select>
+        <div class="note" id="ynote-2"></div>
+      </div>
+      <div>
+        <label style="font-size:.85rem; color:var(--sub);">説明変数(カテゴリー項目・複数選択可)</label>
+        <div class="varsel" id="xvars-2"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px;">
+      <button class="btn primary" id="run-2">解析を実行する</button>
+    </div>
+  </div>
+
+  <div id="result-2"></div>
+</section>
+
+<!-- ============ PANEL III ============ -->
+<section class="panel" id="panel-3">
+  <div class="method-head"><span class="tag">III</span><h2>数量化III類 — 主成分分析・対応分析への対応</h2></div>
+  <p class="method-sub">目的変数を設定せず、複数のカテゴリー項目の反応パターンから、サンプルとカテゴリーを同一空間に配置します。数学的には対応分析(コレスポンデンス分析)と同一の手続きです。</p>
+
+  <div class="card dropzone" id="dropzone-3">
+    <h3><span class="stepno">STEP 1</span>データの入力</h3>
+    <div class="row">
+      <input type="file" id="file-3" accept=".csv,text/csv">
+      <button class="btn" id="sample-3">サンプルデータを読み込む</button>
+      <label class="chk"><input type="checkbox" id="header-3" checked>先頭行をヘッダーとして使用する</label>
+      <span class="drop-hint">CSVファイルをこのカードにドラッグ&ドロップしても読み込めます</span>
+    </div>
+    <div class="row" style="margin-top:14px;">
+      <textarea id="text-3" placeholder="例:
+好きな飲み物,好きな時間帯,好きな読書
+コーヒー,朝,ビジネス書
+緑茶,夜,小説"></textarea>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="parse-3">データを読み込む</button>
+    </div>
+    <div id="preview-3" class="tablewrap" style="margin-top:14px; display:none;"></div>
+  </div>
+
+  <div class="card" id="varcard-3" style="display:none;">
+    <h3><span class="stepno">STEP 2</span>使用する項目の選択</h3>
+    <div class="varsel" id="xvars-3"></div>
+    <div class="row" style="margin-top:16px;">
+      <button class="btn primary" id="run-3">解析を実行する</button>
+    </div>
+  </div>
+
+  <div id="result-3"></div>
+</section>
+
+<!-- ============ PANEL IV ============ -->
+<section class="panel" id="panel-4">
+  <div class="method-head"><span class="tag">IV</span><h2>数量化IV類 — 多次元尺度構成法(MDS)</h2></div>
+  <p class="method-sub">対象間の類似度・非類似度(親近性)データから、対象同士の距離関係をできるだけ保った形で低次元空間(平面)に配置します。個体×変数のデータではなく、対象×対象の正方行列を入力します。</p>
+
+  <div class="card dropzone" id="dropzone-4">
+    <h3><span class="stepno">STEP 1</span>類似度・非類似度行列の入力</h3>
+    <div class="row">
+      <input type="file" id="file-4" accept=".csv,text/csv">
+      <button class="btn" id="sample-4">サンプルデータを読み込む</button>
+      <label class="chk"><input type="checkbox" id="header-4" checked>1行目・1列目をラベルとして使用する</label>
+      <span class="drop-hint">CSVファイルをこのカードにドラッグ&ドロップしても読み込めます</span>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="radio" name="dtype-4" value="dissim" checked>非類似度(値が大きいほど離れている)</label>
+      <label class="chk"><input type="radio" name="dtype-4" value="sim">類似度(値が大きいほど似ている)</label>
+    </div>
+    <div class="row" style="margin-top:14px;">
+      <textarea id="text-4" placeholder="例(ラベル付き正方行列):
+,東京,大阪,福岡,札幌
+東京,0,3,5,6
+大阪,3,0,4,7
+福岡,5,4,0,8
+札幌,6,7,8,0"></textarea>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="parse-4">データを読み込む</button>
+    </div>
+    <div id="preview-4" class="tablewrap" style="margin-top:14px; display:none;"></div>
+  </div>
+
+  <div class="card" id="varcard-4" style="display:none;">
+    <div class="row">
+      <button class="btn primary" id="run-4">解析を実行する</button>
+    </div>
+  </div>
+
+  <div id="result-4"></div>
+</section>
+
+</main>
+<footer>数量化理論 解析ツール — すべての計算はこのページ内(ブラウザのJavaScript)で完結し、データはどこにも送信されません。</footer>
+
+<!-- GAS特有のインクルード記法：script.html の内容をここに展開する -->
+<script>
+/* =========================================================
+   Rコード生成・コピーユーティリティ
+   ========================================================= */
+let rCodeCounter = 0;
+
+// Rの文字列内でエラーにならないようにエスケープする関数
+function escapeForRString(str) {
+  return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function buildRCodeContainer(title, rCodeText) {
+  rCodeCounter++;
+  const id = 'rcode-text-' + rCodeCounter;
+  
+  // シンタックスハイライト処理
+  let html = escapeHtml(rCodeText);
+  html = html.replace(/(#.*)/g, '<span style="color:#6a9955;">$1</span>');
+  html = html.replace(/("[\s\S]*?")/g, '<span style="color:#ce9178;">$1</span>');
+  html = html.replace(/('[\s\S]*?')/g, '<span style="color:#ce9178;">$1</span>'); 
+  // install.packages や require 等をハイライト対象に追加
+  html = html.replace(/\b(read\.csv|lm|lda|MCA|cmdscale|as\.dist|summary|predict|print|c|install\.packages|require)\b/g, '<span style="color:#dcdcaa;">$1</span>');
+  html = html.replace(/\b(library|TRUE|FALSE|if)\b/g, '<span style="color:#569cd6;">$1</span>');
+
+  let res = '<h3 style="margin-top:22px;"><span class="stepno">R CODE</span>' + escapeHtml(title) + '</h3>';
+  res += '<div style="position:relative; margin-bottom:14px;">';
+  res += '<div style="background:#1e1e1e; color:#d4d4d4; padding:16px; padding-top:42px; border-radius:6px; font-family:var(--mono); font-size:0.85rem; overflow-x:auto; line-height:1.6; white-space:pre-wrap; word-break:break-all;">' + html + '</div>';
+  res += '<textarea id="' + id + '" style="display:none;">' + escapeHtml(rCodeText) + '</textarea>';
+  res += '<button class="btn" style="position:absolute; top:8px; right:8px; padding:6px 12px; font-size:0.75rem; background:#444; color:#fff; border:1px solid #666; font-weight:bold; transition:background 0.2s;" onclick="copyRCodeText(\'' + id + '\', this)">コードをコピー</button>';
+  res += '</div>';
+  return res;
+}
+
+function copyRCodeText(id, btn) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  const text = el.value; 
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      const old = btn.textContent;
+      btn.textContent = 'コピーしました！';
+      btn.style.background = '#2e7d32';
+      setTimeout(()=>{ btn.textContent = old; btn.style.background = '#444'; }, 2000);
+    }).catch(()=>{ fallbackCopy(text); });
+  } else { fallbackCopy(text); }
+}
+
+function toCSVString(headers, rows) {
+  let lines = [];
+  const escape = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+  lines.push(headers.map(escape).join(','));
+  rows.forEach(r => lines.push(r.map(escape).join(',')));
+  return lines.join('\n');
+}
+
+function toDistCSVString(labels, Dmat) {
+  let lines = [];
+  const escape = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+  lines.push('""' + ',' + labels.map(escape).join(','));
+  for(let i=0; i<labels.length; i++){
+    lines.push(escape(labels[i]) + ',' + Dmat[i].join(','));
+  }
+  return lines.join('\n');
+}
+
+/* =========================================================
+   共通:行列演算ユーティリティ
+   ========================================================= */
+function zeros(r,c){ return Array.from({length:r},()=>new Array(c).fill(0)); }
+function identity(n){ const I=zeros(n,n); for(let i=0;i<n;i++) I[i][i]=1; return I; }
+function transpose(A){ const r=A.length,c=A[0].length; const T=zeros(c,r); for(let i=0;i<r;i++)for(let j=0;j<c;j++)T[j][i]=A[i][j]; return T; }
+function matMul(A,B){ const r=A.length,k=B.length,c=B[0].length; const R=zeros(r,c); for(let i=0;i<r;i++){for(let j=0;j<c;j++){let s=0; for(let x=0;x<k;x++) s+=A[i][x]*B[x][j]; R[i][j]=s;}} return R; }
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function correlation(x,y){
+  const mx=mean(x), my=mean(y); let sxy=0,sxx=0,syy=0;
+  for(let i=0;i<x.length;i++){ sxy+=(x[i]-mx)*(y[i]-my); sxx+=(x[i]-mx)**2; syy+=(y[i]-my)**2; }
+  return sxy/Math.sqrt(sxx*syy || 1e-12);
+}
+function solveLinear(Ain,bin){
+  const n=Ain.length; const A=Ain.map(r=>r.slice()); const b=bin.slice();
+  for(let col=0; col<n; col++){
+    let maxRow=col, maxVal=Math.abs(A[col][col]);
+    for(let r=col+1;r<n;r++){ if(Math.abs(A[r][col])>maxVal){maxVal=Math.abs(A[r][col]); maxRow=r;} }
+    if(maxVal<1e-10){ continue; }
+    if(maxRow!==col){ [A[col],A[maxRow]]=[A[maxRow],A[col]]; [b[col],b[maxRow]]=[b[maxRow],b[col]]; }
+    const pivot=A[col][col];
+    for(let j=col;j<n;j++) A[col][j]/=pivot;
+    b[col]/=pivot;
+    for(let r=0;r<n;r++){
+      if(r!==col){
+        const factor=A[r][col];
+        if(Math.abs(factor)>1e-15){ for(let j=col;j<n;j++) A[r][j]-=factor*A[col][j]; b[r]-=factor*b[col]; }
+      }
+    }
+  }
+  return b;
+}
+function jacobiEigen(Ain, maxSweeps=100, tol=1e-12){
+  const n=Ain.length; let A=Ain.map(r=>r.slice()); let V=identity(n);
+  for(let sweep=0; sweep<maxSweeps; sweep++){
+    let off=0;
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) off += A[i][j]*A[i][j];
+    if(off<tol) break;
+    for(let p=0;p<n-1;p++){
+      for(let q=p+1;q<n;q++){
+        if(Math.abs(A[p][q])<1e-15) continue;
+        const theta=(A[q][q]-A[p][p])/(2*A[p][q]);
+        let t; if(theta===0) t=1; else t=Math.sign(theta)/(Math.abs(theta)+Math.sqrt(theta*theta+1));
+        const c=1/Math.sqrt(t*t+1), s=t*c;
+        const app=A[p][p], aqq=A[q][q], apq=A[p][q];
+        A[p][p]=c*c*app-2*s*c*apq+s*s*aqq;
+        A[q][q]=s*s*app+2*s*c*apq+c*c*aqq;
+        A[p][q]=0; A[q][p]=0;
+        for(let i=0;i<n;i++){
+          if(i!==p && i!==q){
+            const aip=A[i][p], aiq=A[i][q];
+            A[i][p]=c*aip-s*aiq; A[p][i]=A[i][p];
+            A[i][q]=s*aip+c*aiq; A[q][i]=A[i][q];
+          }
+        }
+        for(let i=0;i<n;i++){ const vip=V[i][p], viq=V[i][q]; V[i][p]=c*vip-s*viq; V[i][q]=s*vip+c*viq; }
+      }
+    }
+  }
+  const eigenvalues=A.map((row,i)=>row[i]);
+  const idx=eigenvalues.map((v,i)=>i).sort((a,b)=>eigenvalues[b]-eigenvalues[a]);
+  return { values: idx.map(i=>eigenvalues[i]), vectors: idx.map(i=>V.map(row=>row[i])) };
+}
+
+/* =========================================================
+   共通:CSV解析・プレビュー・散布図
+   ========================================================= */
+function parseCSVText(text){
+  return text.split(/\r\n|\n|\r/).filter(l=>l.trim().length>0).map(line=>{
+    const result=[]; let cur=''; let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){ inQ=!inQ; continue; }
+      if(ch===','&&!inQ){ result.push(cur); cur=''; } else cur+=ch;
+    }
+    result.push(cur);
+    return result.map(s=>s.trim());
+  });
+}
+
+function renderPreview(container, headers, rows){
+  let html = '<table class="data"><thead><tr>';
+  headers.forEach(h=> html += '<th>'+escapeHtml(h)+'</th>');
+  html += '</tr></thead><tbody>';
+  rows.slice(0,10).forEach(r=>{
+    html += '<tr>'+r.map(c=>'<td>'+escapeHtml(c)+'</td>').join('')+'</tr>';
+  });
+  html += '</tbody></table>';
+  if(rows.length>10) html += '<div class="placeholder" style="padding:6px 10px;">...他 '+(rows.length-10)+' 行</div>';
+  container.innerHTML = html;
+  container.style.display='block';
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function isNumericColumn(rows, idx){
+  return rows.every(r => r[idx]!=='' && !isNaN(parseFloat(r[idx])) && isFinite(r[idx]));
+}
+
+const PALETTE = ['#33559b','#1d7a63','#a9660f','#7c3f8c','#c0392b','#2c7fb8','#7f8c00','#b83280'];
+
+function drawScatter(canvas, points, opts={}){
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 600, cssH = canvas.clientHeight || 440;
+  canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W=cssW, H=cssH;
+  ctx.clearRect(0,0,W,H);
+  if(points.length===0) return;
+  let xs=points.map(p=>p.x), ys=points.map(p=>p.y);
+  let xmin=Math.min(...xs), xmax=Math.max(...xs), ymin=Math.min(...ys), ymax=Math.max(...ys);
+  let xr=(xmax-xmin)||1, yr=(ymax-ymin)||1;
+  xmin-=xr*0.18; xmax+=xr*0.18; ymin-=yr*0.18; ymax+=yr*0.18;
+  const marginL=54, marginR=24, marginT=20, marginB=40;
+  const plotW=W-marginL-marginR, plotH=H-marginT-marginB;
+  function toPx(x,y){ return [marginL+(x-xmin)/(xmax-xmin)*plotW, H-marginB-(y-ymin)/(ymax-ymin)*plotH]; }
+  ctx.strokeStyle='#dcdad0'; ctx.lineWidth=1;
+  ctx.strokeRect(marginL,marginT,plotW,plotH);
+  if(xmin<0 && xmax>0){ const [x0]=toPx(0,ymin); ctx.beginPath(); ctx.moveTo(x0,marginT); ctx.lineTo(x0,H-marginB); ctx.strokeStyle='#c9c7bc'; ctx.stroke(); }
+  if(ymin<0 && ymax>0){ const [,y0]=toPx(xmin,0); ctx.beginPath(); ctx.moveTo(marginL,y0); ctx.lineTo(W-marginR,y0); ctx.strokeStyle='#c9c7bc'; ctx.stroke(); }
+  points.forEach(p=>{
+    const [px,py]=toPx(p.x,p.y);
+    ctx.beginPath();
+    ctx.arc(px,py, p.r||5, 0, Math.PI*2);
+    ctx.fillStyle=p.color||'#33559b';
+    ctx.globalAlpha = p.alpha!==undefined ? p.alpha : 1;
+    ctx.fill();
+    ctx.globalAlpha=1;
+    if(p.shape==='square'){
+      ctx.fillStyle=p.color||'#33559b';
+      ctx.fillRect(px-4,py-4,8,8);
+    }
+    if(p.label){
+      ctx.fillStyle='#232733';
+      ctx.font='11px sans-serif';
+      ctx.fillText(p.label, px+7, py-6);
+    }
+  });
+  ctx.fillStyle='#6b7080'; ctx.font='11px sans-serif';
+  ctx.fillText(opts.xlabel||'第1軸', W-marginR-58, H-marginB+28);
+  ctx.save(); ctx.translate(14, marginT+18); ctx.rotate(-Math.PI/2); ctx.fillText(opts.ylabel||'第2軸',0,0); ctx.restore();
+}
+
+/* =========================================================
+   タブ切り替え
+   ========================================================= */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* =========================================================
+   汎用:ファイル読み込み配線
+   ========================================================= */
+function wireFileInput(fileId, textId){
+  document.getElementById(fileId).addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=> { document.getElementById(textId).value = reader.result; };
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+wireFileInput('file-1','text-1');
+wireFileInput('file-2','text-2');
+wireFileInput('file-3','text-3');
+wireFileInput('file-4','text-4');
+
+function readDroppedFile(file, textareaId){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=> { document.getElementById(textareaId).value = reader.result; };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function wireDragDrop(zoneId, textareaId){
+  const zone = document.getElementById(zoneId);
+  if(!zone) return;
+  let dragCounter = 0;
+  ['dragenter','dragover'].forEach(evt=>{
+    zone.addEventListener(evt, (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      if(e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+      dragCounter++;
+      zone.classList.add('dragover');
+    });
+  });
+  zone.addEventListener('dragleave', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    dragCounter = Math.max(0, dragCounter-1);
+    if(dragCounter===0) zone.classList.remove('dragover');
+  });
+  zone.addEventListener('drop', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    dragCounter = 0;
+    zone.classList.remove('dragover');
+    const dt = e.dataTransfer;
+    if(!dt) return;
+    const file = dt.files && dt.files[0];
+    readDroppedFile(file, textareaId);
+  });
+}
+wireDragDrop('dropzone-1','text-1');
+wireDragDrop('dropzone-2','text-2');
+wireDragDrop('dropzone-3','text-3');
+wireDragDrop('dropzone-4','text-4');
+window.addEventListener('dragover', (e)=> e.preventDefault());
+window.addEventListener('drop', (e)=> e.preventDefault());
+
+/* =========================================================
+   サンプルデータ
+   ========================================================= */
+const SAMPLE_1 = `通勤手段,雇用形態,満足度
+電車,正社員,72
+車,契約社員,58
+自転車,正社員,80
+電車,パート,55
+車,正社員,75
+自転車,契約社員,63
+電車,正社員,70
+車,パート,50
+自転車,正社員,83
+電車,契約社員,60
+車,正社員,77
+自転車,パート,58
+電車,正社員,74
+車,契約社員,56
+自転車,正社員,85
+電車,パート,52
+車,正社員,78
+自転車,契約社員,61
+電車,正社員,71
+車,パート,48`;
+
+const SAMPLE_2 = `生活習慣,運動習慣,喫煙,発症
+悪い,なし,あり,有
+普通,あり,なし,無
+悪い,なし,あり,有
+良い,あり,なし,無
+普通,なし,あり,有
+悪い,あり,なし,有
+良い,あり,なし,無
+普通,あり,なし,無
+悪い,なし,あり,有
+良い,あり,なし,無
+普通,なし,なし,無
+悪い,なし,あり,有
+良い,あり,なし,無
+悪い,なし,あり,有
+普通,あり,なし,無
+良い,なし,なし,無
+悪い,あり,あり,有
+普通,なし,あり,有
+良い,あり,なし,無
+悪い,なし,あり,有`;
+
+const SAMPLE_3 = `好きな飲み物,好きな時間帯,好きな読書
+コーヒー,朝,ビジネス書
+コーヒー,朝,ビジネス書
+紅茶,昼,小説
+緑茶,夜,小説
+コーヒー,朝,ビジネス書
+紅茶,昼,漫画
+緑茶,夜,小説
+紅茶,昼,漫画
+コーヒー,朝,ビジネス書
+緑茶,夜,小説
+紅茶,昼,漫画
+緑茶,夜,小説
+コーヒー,朝,ビジネス書
+紅茶,昼,小説
+緑茶,夜,漫画`;
+
+const SAMPLE_4 = `,東京,大阪,福岡,札幌,仙台
+東京,0,3,5,6,3
+大阪,3,0,4,7,6
+福岡,5,4,0,8,7
+札幌,6,7,8,0,4
+仙台,3,6,7,4,0`;
+
+document.getElementById('sample-1').addEventListener('click', ()=> document.getElementById('text-1').value = SAMPLE_1);
+document.getElementById('sample-2').addEventListener('click', ()=> document.getElementById('text-2').value = SAMPLE_2);
+document.getElementById('sample-3').addEventListener('click', ()=> document.getElementById('text-3').value = SAMPLE_3);
+document.getElementById('sample-4').addEventListener('click', ()=> document.getElementById('text-4').value = SAMPLE_4);
+
+/* =========================================================
+   PANEL I : 数量化I類
+   ========================================================= */
+const state1 = { headers:[], rows:[] };
+
+document.getElementById('parse-1').addEventListener('click', ()=>{
+  const text = document.getElementById('text-1').value;
+  const hasHeader = document.getElementById('header-1').checked;
+  const table = parseCSVText(text);
+  if(table.length===0){ alert('データが空です。'); return; }
+  let headers, rows;
+  if(hasHeader){ headers = table[0]; rows = table.slice(1); }
+  else { headers = table[0].map((_,i)=>'変数'+(i+1)); rows = table; }
+  state1.headers = headers; state1.rows = rows;
+  renderPreview(document.getElementById('preview-1'), headers, rows);
+  buildVarSelect1();
+  document.getElementById('varcard-1').style.display='block';
+  document.getElementById('result-1').innerHTML='';
+});
+
+function buildVarSelect1(){
+  const ySel = document.getElementById('yvar-1'); ySel.innerHTML='';
+  state1.headers.forEach((h,i)=>{
+    if(isNumericColumn(state1.rows,i)){
+      const opt = document.createElement('option'); opt.value=i; opt.textContent=h; ySel.appendChild(opt);
+    }
+  });
+  const xDiv = document.getElementById('xvars-1'); xDiv.innerHTML='';
+  state1.headers.forEach((h,i)=>{
+    const lab = document.createElement('label');
+    lab.innerHTML = '<input type="checkbox" value="'+i+'" checked> '+escapeHtml(h);
+    xDiv.appendChild(lab);
+  });
+}
+
+function quantI_solve(rows, yIdx, xIdxs, headers){
+  const n = rows.length;
+  const y = rows.map(r=>parseFloat(r[yIdx]));
+  const items = xIdxs.map(idx=>{
+    const cats = [...new Set(rows.map(r=>r[idx]))];
+    return { idx, name: headers[idx], cats };
+  });
+  const colInfo = [];
+  items.forEach((item,ii)=> item.cats.forEach(cat=> colInfo.push({itemIndex:ii, cat})));
+  const p = colInfo.length;
+  const Z = zeros(n,p);
+  for(let i=0;i<n;i++){
+    items.forEach((item,ii)=>{
+      const val = rows[i][item.idx];
+      const cp = colInfo.findIndex(c=>c.itemIndex===ii && c.cat===val);
+      Z[i][cp]=1;
+    });
+  }
+  const ZtZ = matMul(transpose(Z),Z);
+  const Zty = matMul(transpose(Z), y.map(v=>[v])).map(r=>r[0]);
+  const numItems = items.length;
+  const C = zeros(numItems,p);
+  colInfo.forEach((c,j)=>{ const count=Z.reduce((s,row)=>s+row[j],0); C[c.itemIndex][j]=count; });
+  const size = p+numItems;
+  const Aug = zeros(size,size);
+  for(let i=0;i<p;i++) for(let j=0;j<p;j++) Aug[i][j]=ZtZ[i][j];
+  for(let i=0;i<numItems;i++){ for(let j=0;j<p;j++){ Aug[p+i][j]=C[i][j]; Aug[j][p+i]=C[i][j]; } }
+  const rhs = [...Zty, ...new Array(numItems).fill(0)];
+  const sol = solveLinear(Aug, rhs);
+  const b = sol.slice(0,p);
+  const b0 = mean(y);
+  const yhat = rows.map(row=>{
+    let s=b0;
+    items.forEach((item,ii)=>{
+      const val = row[item.idx];
+      const cp = colInfo.findIndex(c=>c.itemIndex===ii && c.cat===val);
+      s += b[cp];
+    });
+    return s;
+  });
+  const R = correlation(y, yhat);
+  const ranges = items.map((item,ii)=>{
+    const vals = colInfo.map((c,j)=> c.itemIndex===ii ? b[j] : null).filter(v=>v!==null);
+    return Math.max(...vals) - Math.min(...vals);
+  });
+  return { items, colInfo, b, b0, yhat, y, R, ranges, yName: headers[yIdx] };
+}
+
+document.getElementById('run-1').addEventListener('click', ()=>{
+  const yIdx = parseInt(document.getElementById('yvar-1').value);
+  const xIdxs = [...document.querySelectorAll('#xvars-1 input:checked')].map(el=>parseInt(el.value)).filter(i=>i!==yIdx);
+  const out = document.getElementById('result-1');
+  if(isNaN(yIdx)){ out.innerHTML='<div class="errbox">目的変数となる数値列がありません。</div>'; return; }
+  if(xIdxs.length===0){ out.innerHTML='<div class="errbox">説明変数を1つ以上選択してください。</div>'; return; }
+  try{
+    const res = quantI_solve(state1.rows, yIdx, xIdxs, state1.headers);
+    renderResult1(res);
+  }catch(e){
+    out.innerHTML='<div class="errbox">解析中にエラーが発生しました: '+escapeHtml(e.message)+'</div>';
+  }
+});
+
+function renderResult1(res){
+  state1.last = res;
+  const out = document.getElementById('result-1');
+  let html = '<div class="card" id="printcard-1"><h3><span class="stepno">RESULT</span>解析結果</h3>';
+  html += '<div class="row export-row"><button class="btn" onclick="downloadMarkdown1()">Markdownでダウンロード</button>'+
+    '<button class="btn" onclick="printResult(1)">PDFとして保存(印刷)</button></div>';
+  html += '<div class="metric-strip">';
+  html += '<div class="metric"><div class="v" style="color:var(--c1)">'+res.R.toFixed(3)+'</div><div class="l">重相関係数 R</div></div>';
+  html += '<div class="metric"><div class="v" style="color:var(--c1)">'+(res.R*res.R).toFixed(3)+'</div><div class="l">決定係数 R²</div></div>';
+  html += '<div class="metric"><div class="v" style="color:var(--c1)">'+res.b0.toFixed(2)+'</div><div class="l">定数項(全体平均)</div></div>';
+  html += '</div>';
+
+  const order = res.items.map((it,ii)=>ii).sort((a,b)=>res.ranges[b]-res.ranges[a]);
+  order.forEach(ii=>{
+    const item = res.items[ii];
+    const rows = res.colInfo.map((c,j)=>({cat:c.cat, score:res.b[j]})).filter((_,j)=>res.colInfo[j].itemIndex===ii);
+    const maxAbs = Math.max(...rows.map(r=>Math.abs(r.score)), 1e-9);
+    html += '<div class="item-block"><div class="item-name">'+escapeHtml(item.name)+' <span style="color:var(--sub); font-weight:400; font-size:.78rem;">(レンジ '+res.ranges[ii].toFixed(2)+')</span></div>';
+    rows.forEach(r=>{
+      const pct = (Math.abs(r.score)/maxAbs)*50;
+      const left = r.score>=0 ? 50 : 50-pct;
+      const w = pct;
+      html += '<div class="bar-row"><div class="cat-label">'+escapeHtml(r.cat)+'</div><div class="bar-track">'+
+        '<div class="bar-fill" style="left:'+left+'%; width:'+w+'%; background:var(--c1);"></div></div>'+
+        '<div class="bar-val">'+r.score.toFixed(2)+'</div></div>';
+    });
+    html += '</div>';
+  });
+
+  html += '<h3 style="margin-top:22px;"><span class="stepno">TABLE</span>実測値と予測値</h3>';
+  html += '<div class="tablewrap"><table class="result-table"><thead><tr><th>No.</th><th class="num">実測値 y</th><th class="num">予測値 ŷ</th><th class="num">残差</th></tr></thead><tbody>';
+  res.y.forEach((v,i)=>{
+    html += '<tr><td>'+(i+1)+'</td><td class="num">'+v.toFixed(2)+'</td><td class="num">'+res.yhat[i].toFixed(2)+'</td><td class="num">'+(v-res.yhat[i]).toFixed(2)+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  
+  // 論文記述例
+  html += paperBlockHtml('paper-1', genPaperText1(res));
+
+  // Rコード出力
+  const csvStr = toCSVString(state1.headers, state1.rows);
+  const safeCsvStr = escapeForRString(csvStr);
+  const xNames = res.items.map(it => '`' + it.name + '`').join(" + ");
+  const yName = '`' + res.yName + '`';
+  const rCodeText = 
+`# JASP / Rコンソール用 (数量化I類 / 重回帰分析)
+raw_data <- '${safeCsvStr}'
+
+# データを読み込み (check.names = FALSE で変数名の自動変換を防ぐ)
+data <- read.csv(text = raw_data, header = TRUE, stringsAsFactors = TRUE, check.names = FALSE)
+
+model <- lm(${yName} ~ ${xNames}, data = data)
+summary(model)`;
+
+  html += buildRCodeContainer('完全実行可能なRコード', rCodeText);
+
+  html += '</div>';
+  out.innerHTML = html;
+}
+
+/* =========================================================
+   PANEL II : 数量化II類
+   ========================================================= */
+const state2 = { headers:[], rows:[] };
+
+document.getElementById('parse-2').addEventListener('click', ()=>{
+  const text = document.getElementById('text-2').value;
+  const hasHeader = document.getElementById('header-2').checked;
+  const table = parseCSVText(text);
+  if(table.length===0){ alert('データが空です。'); return; }
+  let headers, rows;
+  if(hasHeader){ headers = table[0]; rows = table.slice(1); }
+  else { headers = table[0].map((_,i)=>'変数'+(i+1)); rows = table; }
+  state2.headers = headers; state2.rows = rows;
+  renderPreview(document.getElementById('preview-2'), headers, rows);
+  buildVarSelect2();
+  document.getElementById('varcard-2').style.display='block';
+  document.getElementById('result-2').innerHTML='';
+});
+
+function buildVarSelect2(){
+  const ySel = document.getElementById('yvar-2'); ySel.innerHTML='';
+  state2.headers.forEach((h,i)=>{
+    const uniq = new Set(state2.rows.map(r=>r[i]));
+    if(uniq.size===2){ const opt=document.createElement('option'); opt.value=i; opt.textContent=h+'('+[...uniq].join(' / ')+')'; ySel.appendChild(opt); }
+  });
+  document.getElementById('ynote-2').textContent = ySel.options.length===0 ? 'ちょうど2種類の値を持つ列がありません。目的変数には2群のカテゴリー(例:有/無)が必要です。' : '';
+  const xDiv = document.getElementById('xvars-2'); xDiv.innerHTML='';
+  state2.headers.forEach((h,i)=>{
+    const lab = document.createElement('label');
+    lab.innerHTML = '<input type="checkbox" value="'+i+'" checked> '+escapeHtml(h);
+    xDiv.appendChild(lab);
+  });
+}
+
+document.getElementById('run-2').addEventListener('click', ()=>{
+  const yIdx = parseInt(document.getElementById('yvar-2').value);
+  const xIdxs = [...document.querySelectorAll('#xvars-2 input:checked')].map(el=>parseInt(el.value)).filter(i=>i!==yIdx);
+  const out = document.getElementById('result-2');
+  if(isNaN(yIdx)){ out.innerHTML='<div class="errbox">2群の目的変数がありません。</div>'; return; }
+  if(xIdxs.length===0){ out.innerHTML='<div class="errbox">説明変数を1つ以上選択してください。</div>'; return; }
+  try{
+    const groups = [...new Set(state2.rows.map(r=>r[yIdx]))];
+    const yBin = state2.rows.map(r=> r[yIdx]===groups[0] ? 1 : 0);
+    const pseudoRows = state2.rows.map((r,i)=>{ const rr=r.slice(); rr[yIdx]=yBin[i]; return rr; });
+    const res = quantI_solve(pseudoRows, yIdx, xIdxs, state2.headers);
+    const g1vals = res.yhat.filter((v,i)=>yBin[i]===1);
+    const g2vals = res.yhat.filter((v,i)=>yBin[i]===0);
+    const m1 = mean(g1vals), m2 = mean(g2vals);
+    const threshold = (m1+m2)/2;
+    const higherIsG1 = m1>=m2;
+    let correct=0;
+    const preds = res.yhat.map((v,i)=>{
+      const predG1 = higherIsG1 ? v>=threshold : v<=threshold;
+      const predLabel = predG1 ? groups[0] : groups[1];
+      const actualLabel = yBin[i]===1 ? groups[0] : groups[1];
+      if(predLabel===actualLabel) correct++;
+      return predLabel;
+    });
+    renderResult2(res, groups, threshold, preds, correct/res.yhat.length, yBin);
+  }catch(e){
+    out.innerHTML='<div class="errbox">解析中にエラーが発生しました: '+escapeHtml(e.message)+'</div>';
+  }
+});
+
+function renderResult2(res, groups, threshold, preds, hitRate, yBin){
+  state2.last = { res, groups, threshold, preds, hitRate, yBin };
+  const out = document.getElementById('result-2');
+  let html = '<div class="card" id="printcard-2"><h3><span class="stepno">RESULT</span>解析結果</h3>';
+  html += '<div class="row export-row"><button class="btn" onclick="downloadMarkdown2()">Markdownでダウンロード</button>'+
+    '<button class="btn" onclick="printResult(2)">PDFとして保存(印刷)</button></div>';
+  html += '<div class="metric-strip">';
+  html += '<div class="metric"><div class="v" style="color:var(--c2)">'+res.R.toFixed(3)+'</div><div class="l">相関比(判別の分離度)</div></div>';
+  html += '<div class="metric"><div class="v" style="color:var(--c2)">'+(hitRate*100).toFixed(1)+'%</div><div class="l">的中率</div></div>';
+  html += '<div class="metric"><div class="v" style="color:var(--c2)">'+threshold.toFixed(3)+'</div><div class="l">判別のしきい値</div></div>';
+  html += '</div>';
+
+  const order = res.items.map((it,ii)=>ii).sort((a,b)=>res.ranges[b]-res.ranges[a]);
+  order.forEach(ii=>{
+    const item = res.items[ii];
+    const rows = res.colInfo.map((c,j)=>({cat:c.cat, score:res.b[j]})).filter((_,j)=>res.colInfo[j].itemIndex===ii);
+    const maxAbs = Math.max(...rows.map(r=>Math.abs(r.score)), 1e-9);
+    html += '<div class="item-block"><div class="item-name">'+escapeHtml(item.name)+' <span style="color:var(--sub); font-weight:400; font-size:.78rem;">(レンジ '+res.ranges[ii].toFixed(2)+')</span></div>';
+    rows.forEach(r=>{
+      const pct=(Math.abs(r.score)/maxAbs)*50; const left=r.score>=0?50:50-pct; const w=pct;
+      html += '<div class="bar-row"><div class="cat-label">'+escapeHtml(r.cat)+'</div><div class="bar-track">'+
+        '<div class="bar-fill" style="left:'+left+'%; width:'+w+'%; background:var(--c2);"></div></div>'+
+        '<div class="bar-val">'+r.score.toFixed(2)+'</div></div>';
+    });
+    html += '</div>';
+  });
+
+  const actualLabels = yBin.map(v=> v===1?groups[0]:groups[1]);
+  let tt=0,tf=0,ft=0,ff=0;
+  actualLabels.forEach((a,i)=>{
+    const p = preds[i];
+    if(a===groups[0] && p===groups[0]) tt++;
+    if(a===groups[0] && p===groups[1]) tf++;
+    if(a===groups[1] && p===groups[0]) ft++;
+    if(a===groups[1] && p===groups[1]) ff++;
+  });
+  html += '<h3 style="margin-top:20px;"><span class="stepno">TABLE</span>判別的中表(混同行列)</h3>';
+  html += '<div class="tablewrap"><table class="result-table"><thead><tr><th></th><th class="num">予測: '+escapeHtml(groups[0])+'</th><th class="num">予測: '+escapeHtml(groups[1])+'</th></tr></thead><tbody>';
+  html += '<tr><td>実際: '+escapeHtml(groups[0])+'</td><td class="num">'+tt+'</td><td class="num">'+tf+'</td></tr>';
+  html += '<tr><td>実際: '+escapeHtml(groups[1])+'</td><td class="num">'+ft+'</td><td class="num">'+ff+'</td></tr>';
+  html += '</tbody></table></div>';
+
+  html += '<h3 style="margin-top:20px;"><span class="stepno">TABLE</span>個体別の判別得点</h3>';
+  html += '<div class="tablewrap"><table class="result-table"><thead><tr><th>No.</th><th>実際</th><th>予測</th><th class="num">判別得点</th></tr></thead><tbody>';
+  res.yhat.forEach((v,i)=>{
+    html += '<tr><td>'+(i+1)+'</td><td>'+escapeHtml(actualLabels[i])+'</td><td>'+escapeHtml(preds[i])+'</td><td class="num">'+v.toFixed(3)+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  
+  // 論文記述例
+  html += paperBlockHtml('paper-2', genPaperText2({res, groups, threshold, preds, hitRate, yBin}));
+
+  // Rコード出力
+  const csvStr = toCSVString(state2.headers, state2.rows); // オリジナルのデータ
+  const safeCsvStr = escapeForRString(csvStr);
+  const xNames = res.items.map(it => '`' + it.name + '`').join(" + ");
+  const yName = '`' + res.yName + '`';
+  const rCodeText = 
+`# JASP / Rコンソール用 (数量化II類 / MASSパッケージを用いた線形判別分析)
+raw_data <- '${safeCsvStr}'
+
+# データを読み込み
+data <- read.csv(text = raw_data, header = TRUE, stringsAsFactors = TRUE, check.names = FALSE)
+
+# パッケージの確認と自動インストール (CRANミラーを設定してエラー回避)
+if (!require("MASS", character.only = TRUE)) {
+  install.packages("MASS", repos = "https://cloud.r-project.org")
+  library(MASS)
+}
+
+# 判別分析の実行
+model <- lda(${yName} ~ ${xNames}, data = data)
+print(model)
+
+# 個体別の判別スコアを計算して表示
+predict(model)$x`;
+
+  html += buildRCodeContainer('完全実行可能なRコード', rCodeText);
+
+  html += '</div>';
+  out.innerHTML = html;
+}
+
+/* =========================================================
+   PANEL III : 数量化III類
+   ========================================================= */
+const state3 = { headers:[], rows:[] };
+
+document.getElementById('parse-3').addEventListener('click', ()=>{
+  const text = document.getElementById('text-3').value;
+  const hasHeader = document.getElementById('header-3').checked;
+  const table = parseCSVText(text);
+  if(table.length===0){ alert('データが空です。'); return; }
+  let headers, rows;
+  if(hasHeader){ headers = table[0]; rows = table.slice(1); }
+  else { headers = table[0].map((_,i)=>'変数'+(i+1)); rows = table; }
+  state3.headers = headers; state3.rows = rows;
+  renderPreview(document.getElementById('preview-3'), headers, rows);
+  const xDiv = document.getElementById('xvars-3'); xDiv.innerHTML='';
+  headers.forEach((h,i)=>{
+    const lab = document.createElement('label');
+    lab.innerHTML = '<input type="checkbox" value="'+i+'" checked> '+escapeHtml(h);
+    xDiv.appendChild(lab);
+  });
+  document.getElementById('varcard-3').style.display='block';
+  document.getElementById('result-3').innerHTML='';
+});
+
+function quantIII_solve(rows, xIdxs, headers){
+  const n = rows.length;
+  const items = xIdxs.map(idx=>{ const cats=[...new Set(rows.map(r=>r[idx]))]; return {idx, name: headers[idx], cats}; });
+  const colInfo = [];
+  items.forEach((item,ii)=> item.cats.forEach(cat=> colInfo.push({itemIndex:ii, cat})));
+  const p = colInfo.length;
+  const k = items.length;
+  const Z = zeros(n,p);
+  for(let i=0;i<n;i++){
+    items.forEach((item,ii)=>{
+      const val = rows[i][item.idx];
+      const cp = colInfo.findIndex(c=>c.itemIndex===ii && c.cat===val);
+      Z[i][cp]=1;
+    });
+  }
+  const total = n*k;
+  const P = Z.map(row=>row.map(v=>v/total));
+  const r = P.map(row=>row.reduce((a,b)=>a+b,0));
+  const c = new Array(p).fill(0);
+  for(let j=0;j<p;j++) for(let i=0;i<n;i++) c[j]+=P[i][j];
+  const S = zeros(n,p);
+  for(let i=0;i<n;i++) for(let j=0;j<p;j++){
+    const denom = Math.sqrt(r[i]*c[j]);
+    S[i][j] = denom>1e-12 ? (P[i][j]-r[i]*c[j])/denom : 0;
+  }
+  const M = matMul(transpose(S), S);
+  const eig = jacobiEigen(M);
+  const numAxes = Math.min(2, p);
+  const values = eig.values.slice(0,numAxes);
+  const vecs = eig.vectors.slice(0,numAxes);
+  const sigmas = values.map(v=>Math.sqrt(Math.max(v,0)));
+  const rowCoords = [];
+  for(let i=0;i<n;i++){
+    const coord=[];
+    for(let a=0;a<numAxes;a++){
+      let s=0; for(let j=0;j<p;j++) s+=S[i][j]*vecs[a][j];
+      const u = sigmas[a]>1e-10 ? s/sigmas[a] : 0;
+      coord.push( (r[i]>1e-12? u/Math.sqrt(r[i]):0) * sigmas[a] );
+    }
+    rowCoords.push(coord);
+  }
+  const colCoords = [];
+  for(let j=0;j<p;j++){
+    const coord=[];
+    for(let a=0;a<numAxes;a++){
+      const v = vecs[a][j];
+      coord.push( (c[j]>1e-12? v/Math.sqrt(c[j]):0) * sigmas[a] );
+    }
+    colCoords.push(coord);
+  }
+  const totalEig = eig.values.reduce((a,b)=>a+Math.max(b,0),0) || 1e-9;
+  const contrib = values.map(v=>Math.max(v,0)/totalEig*100);
+  return { items, colInfo, values, contrib, rowCoords, colCoords, n };
+}
+
+document.getElementById('run-3').addEventListener('click', ()=>{
+  const xIdxs = [...document.querySelectorAll('#xvars-3 input:checked')].map(el=>parseInt(el.value));
+  const out = document.getElementById('result-3');
+  if(xIdxs.length<2){ out.innerHTML='<div class="errbox">2つ以上の項目を選択してください。</div>'; return; }
+  try{
+    const res = quantIII_solve(state3.rows, xIdxs, state3.headers);
+    renderResult3(res);
+  }catch(e){
+    out.innerHTML='<div class="errbox">解析中にエラーが発生しました: '+escapeHtml(e.message)+'</div>';
+  }
+});
+
+function renderResult3(res){
+  state3.last = res;
+  const out = document.getElementById('result-3');
+  let html = '<div class="card" id="printcard-3"><h3><span class="stepno">RESULT</span>解析結果</h3>';
+  html += '<div class="row export-row"><button class="btn" onclick="downloadMarkdown3()">Markdownでダウンロード</button>'+
+    '<button class="btn" onclick="printResult(3)">PDFとして保存(印刷)</button></div>';
+  html += '<div class="metric-strip">';
+  html += '<div class="metric"><div class="v" style="color:var(--c3)">'+(res.contrib[0]||0).toFixed(1)+'%</div><div class="l">第1軸 寄与率</div></div>';
+  html += '<div class="metric"><div class="v" style="color:var(--c3)">'+(res.contrib[1]||0).toFixed(1)+'%</div><div class="l">第2軸 寄与率</div></div>';
+  html += '<div class="metric"><div class="v" style="color:var(--c3)">'+((res.contrib[0]||0)+(res.contrib[1]||0)).toFixed(1)+'%</div><div class="l">累積寄与率</div></div>';
+  html += '</div>';
+
+  html += '<div class="flex-cols">';
+  html += '<div><h3><span class="stepno">PLOT</span>布置図(カテゴリー・サンプル)</h3><canvas class="plot" id="plot-3"></canvas>';
+  html += '<div class="legend"><span><i style="background:'+PALETTE[0]+'"></i>カテゴリー(項目の水準)</span><span><i style="background:#a9a48f"></i>サンプル</span></div></div>';
+  html += '<div><h3><span class="stepno">TABLE</span>カテゴリースコア</h3><div class="tablewrap"><table class="result-table"><thead><tr><th>項目</th><th>カテゴリー</th><th class="num">第1軸</th><th class="num">第2軸</th></tr></thead><tbody>';
+  res.colInfo.forEach((c,j)=>{
+    html += '<tr><td>'+escapeHtml(res.items[c.itemIndex].name)+'</td><td>'+escapeHtml(c.cat)+'</td><td class="num">'+res.colCoords[j][0].toFixed(3)+'</td><td class="num">'+(res.colCoords[j][1]!==undefined?res.colCoords[j][1].toFixed(3):'-')+'</td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  html += '</div>';
+
+  html += '<h3 style="margin-top:20px;"><span class="stepno">TABLE</span>サンプルスコア</h3>';
+  html += '<div class="tablewrap"><table class="result-table"><thead><tr><th>No.</th><th class="num">第1軸</th><th class="num">第2軸</th></tr></thead><tbody>';
+  res.rowCoords.forEach((rc,i)=>{
+    html += '<tr><td>'+(i+1)+'</td><td class="num">'+rc[0].toFixed(3)+'</td><td class="num">'+(rc[1]!==undefined?rc[1].toFixed(3):'-')+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  
+  // 論文記述例
+  html += paperBlockHtml('paper-3', genPaperText3(res));
+
+  // Rコード出力
+  const csvStr = toCSVString(state3.headers, state3.rows);
+  const safeCsvStr = escapeForRString(csvStr);
+  const xNames = res.items.map(it => '"' + it.name + '"').join(", ");
+  const rCodeText = 
+`# JASP / Rコンソール用 (数量化III類 / FactoMineRを用いた多重対応分析: MCA)
+raw_data <- '${safeCsvStr}'
+data <- read.csv(text = raw_data, header = TRUE, stringsAsFactors = TRUE, check.names = FALSE)
+
+# パッケージの確認と自動インストール (CRANミラーを設定してエラー回避)
+if (!require("FactoMineR", character.only = TRUE)) {
+  install.packages("FactoMineR", dependencies = TRUE, repos = "https://cloud.r-project.org")
+  library(FactoMineR)
+}
+
+target_cols <- c(${xNames})
+res_mca <- MCA(data[, target_cols], graph = FALSE)
+summary(res_mca)`;
+
+  html += buildRCodeContainer('完全実行可能なRコード', rCodeText);
+
+  html += '</div>';
+  out.innerHTML = html;
+
+  const canvas = document.getElementById('plot-3');
+  const pts = [];
+  res.colInfo.forEach((c,j)=>{
+    pts.push({ x: res.colCoords[j][0], y: res.colCoords[j][1]||0, label: c.cat, color: PALETTE[c.itemIndex % PALETTE.length], r:6 });
+  });
+  res.rowCoords.forEach((rc,i)=>{
+    pts.push({ x: rc[0], y: rc[1]||0, color:'#a9a48f', r:3, alpha:.6 });
+  });
+  drawScatter(canvas, pts, {xlabel:'第1軸 ('+ (res.contrib[0]||0).toFixed(1)+'%)', ylabel:'第2軸 ('+(res.contrib[1]||0).toFixed(1)+'%)'});
+}
+
+/* =========================================================
+   PANEL IV : 数量化IV類
+   ========================================================= */
+const state4 = { labels:[], D:null };
+
+document.getElementById('parse-4').addEventListener('click', ()=>{
+  const text = document.getElementById('text-4').value;
+  const hasLabels = document.getElementById('header-4').checked;
+  const table = parseCSVText(text);
+  const out = document.getElementById('result-4');
+  out.innerHTML='';
+  if(table.length===0){ alert('データが空です。'); return; }
+  let labels, matRows;
+  if(hasLabels){
+    labels = table[0].slice(1);
+    matRows = table.slice(1).map(r=>r.slice(1));
+  } else {
+    labels = table.map((_,i)=>'対象'+(i+1));
+    matRows = table;
+  }
+  const n = matRows.length;
+  if(matRows.some(r=>r.length!==n)){
+    document.getElementById('preview-4').style.display='none';
+    out.innerHTML = '<div class="errbox">正方行列(n×n)になっていません。行数と列数を確認してください。</div>';
+    return;
+  }
+  const D = matRows.map(r=>r.map(v=>parseFloat(v)));
+  state4.labels = labels; state4.D = D;
+  renderPreview(document.getElementById('preview-4'), hasLabels? [''].concat(labels) : labels, hasLabels ? table.slice(1) : table );
+  document.getElementById('varcard-4').style.display='block';
+});
+
+function classicalMDS(Dmat){
+  const n = Dmat.length;
+  const D2 = Dmat.map(row=>row.map(v=>v*v));
+  const J = zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) J[i][j] = (i===j?1:0) - 1/n;
+  const JD2 = matMul(J, D2);
+  const B = matMul(JD2, J).map(row=>row.map(v=>-0.5*v));
+  const eig = jacobiEigen(B);
+  const numAxes = Math.min(2, n);
+  const coords = zeros(n, numAxes);
+  for(let a=0;a<numAxes;a++){
+    const val = Math.max(eig.values[a],0);
+    const sigma = Math.sqrt(val);
+    for(let i=0;i<n;i++) coords[i][a] = eig.vectors[a][i]*sigma;
+  }
+  const totalPos = eig.values.reduce((s,v)=>s+Math.max(v,0),0) || 1e-9;
+  const contrib = eig.values.slice(0,numAxes).map(v=>Math.max(v,0)/totalPos*100);
+  return { values: eig.values, coords, contrib };
+}
+
+document.getElementById('run-4').addEventListener('click', ()=>{
+  const out = document.getElementById('result-4');
+  const simType = document.querySelector('input[name="dtype-4"]:checked').value;
+  let D = state4.D.map(r=>r.slice());
+  const n = D.length;
+  
+  if(simType==='sim'){
+    let maxV = -Infinity;
+    D.forEach(row=>row.forEach(v=>{ if(v>maxV) maxV=v; }));
+    D = D.map(row=>row.map(v=> maxV - v));
+  }
+  for(let i=0;i<n;i++) D[i][i]=0;
+  
+  try{
+    const res = classicalMDS(D);
+    renderResult4(res, D);
+  }catch(e){
+    out.innerHTML = '<div class="errbox">解析中にエラーが発生しました: '+escapeHtml(e.message)+'</div>';
+  }
+});
+
+function renderResult4(res, finalD){
+  state4.last = res;
+  const out = document.getElementById('result-4');
+  let html = '<div class="card" id="printcard-4"><h3><span class="stepno">RESULT</span>解析結果</h3>';
+  html += '<div class="row export-row"><button class="btn" onclick="downloadMarkdown4()">Markdownでダウンロード</button>'+
+    '<button class="btn" onclick="printResult(4)">PDFとして保存(印刷)</button></div>';
+  html += '<div class="metric-strip">';
+  html += '<div class="metric"><div class="v" style="color:var(--c4)">'+(res.contrib[0]||0).toFixed(1)+'%</div><div class="l">第1軸 寄与率</div></div>';
+  html += '<div class="metric"><div class="v" style="color:var(--c4)">'+(res.contrib[1]||0).toFixed(1)+'%</div><div class="l">第2軸 寄与率</div></div>';
+  html += '<div class="metric"><div class="v" style="color:var(--c4)">'+((res.contrib[0]||0)+(res.contrib[1]||0)).toFixed(1)+'%</div><div class="l">累積寄与率</div></div>';
+  html += '</div>';
+  const negCount = res.values.filter(v=>v<-1e-6).length;
+  if(negCount>0){
+    html += '<div class="note">固有値に負の値が含まれています(非距離的なデータの可能性があります)。平面への配置は近似であることに留意してください。</div>';
+  }
+
+  html += '<div class="flex-cols">';
+  html += '<div><h3><span class="stepno">PLOT</span>布置図</h3><canvas class="plot" id="plot-4"></canvas></div>';
+  html += '<div><h3><span class="stepno">TABLE</span>座標</h3><div class="tablewrap"><table class="result-table"><thead><tr><th>対象</th><th class="num">第1軸</th><th class="num">第2軸</th></tr></thead><tbody>';
+  state4.labels.forEach((lab,i)=>{
+    html += '<tr><td>'+escapeHtml(lab)+'</td><td class="num">'+res.coords[i][0].toFixed(3)+'</td><td class="num">'+(res.coords[i][1]!==undefined?res.coords[i][1].toFixed(3):'-')+'</td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  
+  // 論文記述例
+  html += paperBlockHtml('paper-4', genPaperText4(res));
+
+  // Rコード出力
+  const csvStr = toDistCSVString(state4.labels, finalD);
+  const safeCsvStr = escapeForRString(csvStr);
+  const rCodeText = 
+`# JASP / Rコンソール用 (数量化IV類 / 古典的多次元尺度構成法: MDS)
+raw_data <- '${safeCsvStr}'
+
+# 1列目を行名(対象名)として読み込む
+data <- read.csv(text = raw_data, header = TRUE, row.names = 1, check.names = FALSE)
+
+# 距離行列に変換してMDSを実行
+dist_mat <- as.dist(data)
+res_mds <- cmdscale(dist_mat, k = 2, eig = TRUE)
+
+# 座標の表示
+print(res_mds$points)
+# 固有値の表示
+print(res_mds$eig)`;
+
+  html += buildRCodeContainer('完全実行可能なRコード', rCodeText);
+
+  html += '</div>';
+  out.innerHTML = html;
+
+  const canvas = document.getElementById('plot-4');
+  const pts = state4.labels.map((lab,i)=>({ x: res.coords[i][0], y: res.coords[i][1]||0, label: lab, color: PALETTE[3], r:6 }));
+  drawScatter(canvas, pts, {xlabel:'第1軸 ('+(res.contrib[0]||0).toFixed(1)+'%)', ylabel:'第2軸 ('+(res.contrib[1]||0).toFixed(1)+'%)'});
+}
+
+/* =========================================================
+   論文記述例の自動生成
+   ========================================================= */
+function fmtPct(v){ return (v||0).toFixed(1); }
+
+function genPaperText1(res){
+  const yName = res.yName || '目的変数';
+  const R = res.R, R2 = R*R;
+  let maxIdx=0; res.ranges.forEach((r,i)=>{ if(r>res.ranges[maxIdx]) maxIdx=i; });
+  const topItem = res.items[maxIdx];
+  const cats = res.colInfo.map((c,j)=> c.itemIndex===maxIdx ? {cat:c.cat, score:res.b[j]} : null).filter(Boolean);
+  cats.sort((a,b)=>b.score-a.score);
+  const top = cats[0], bottom = cats[cats.length-1];
+  const fitWord = R2>=0.7 ? '良好であった' : (R2>=0.4 ? '一定程度みられた' : '限定的であった');
+  return '数量化I類による分析を行った結果、重相関係数は R = '+R.toFixed(3)+'(決定係数 R\u00b2 = '+R2.toFixed(3)+')であり、モデルの当てはまりは'+fitWord+'。各説明変数についてレンジ(カテゴリースコアの最大値と最小値の差)を比較したところ、「'+topItem.name+'」が最も大きいレンジ('+res.ranges[maxIdx].toFixed(2)+')を示し、'+yName+'に対して相対的に強い影響を持つことが示唆された。カテゴリー別にみると、「'+topItem.name+'」のうち「'+top.cat+'」が最も高いスコア('+top.score.toFixed(2)+')を、「'+bottom.cat+'」が最も低いスコア('+bottom.score.toFixed(2)+')を示しており、両カテゴリーの間で'+yName+'に差がみられることが確認された。';
+}
+
+function genPaperText2(last){
+  const { res, groups, threshold, hitRate } = last;
+  let maxIdx=0; res.ranges.forEach((r,i)=>{ if(r>res.ranges[maxIdx]) maxIdx=i; });
+  const topItem = res.items[maxIdx];
+  const cats = res.colInfo.map((c,j)=> c.itemIndex===maxIdx ? {cat:c.cat, score:res.b[j]} : null).filter(Boolean);
+  cats.sort((a,b)=>b.score-a.score);
+  const top = cats[0], bottom = cats[cats.length-1];
+  return '数量化II類による判別分析を行った結果、判別的中率は '+(hitRate*100).toFixed(1)+'%、判別得点と外的基準との相関比は '+res.R.toFixed(3)+' であった。判別への寄与が最も大きかった項目は「'+topItem.name+'」(レンジ '+res.ranges[maxIdx].toFixed(2)+')であり、そのうち「'+top.cat+'」は「'+groups[0]+'」への分類を強める方向に、「'+bottom.cat+'」は「'+groups[1]+'」への分類を強める方向に働いていた。以上の結果から、これらの説明変数は「'+groups[0]+'」と「'+groups[1]+'」の判別に一定の有効性を持つことが示された。';
+}
+
+function genPaperText3(res){
+  const c1 = fmtPct(res.contrib[0]), c2 = fmtPct(res.contrib[1]);
+  const cum = fmtPct((res.contrib[0]||0)+(res.contrib[1]||0));
+  const pts = res.colInfo.map((c,j)=>({ name:c.cat, item:res.items[c.itemIndex].name, x:res.colCoords[j][0], y:(res.colCoords[j][1]||0) }));
+  const byX = pts.slice().sort((a,b)=>b.x-a.x);
+  const posX = byX[0], negX = byX[byX.length-1];
+  let text = '数量化III類(対応分析に相当)による分析を行った結果、第1軸の寄与率は '+c1+'%、第2軸の寄与率は '+c2+'%であり、累積寄与率は '+cum+'%であった。布置図をみると、第1軸は「'+posX.name+'」(項目:'+posX.item+')と「'+negX.name+'」(項目:'+negX.item+')を両極とする軸として解釈でき、これらのカテゴリー間で反応パターンに違いがあることが示唆された。';
+  if(pts.some(p=>p.y!==undefined) && res.contrib.length>1){
+    const byY = pts.slice().sort((a,b)=>b.y-a.y);
+    const posY = byY[0], negY = byY[byY.length-1];
+    text += ' 第2軸については、「'+posY.name+'」(項目:'+posY.item+')と「'+negY.name+'」(項目:'+negY.item+')が対照的な位置に布置されており、第1軸とは別の観点での回答傾向の違いを反映していると考えられる。';
+  }
+  const cumVal = (res.contrib[0]||0)+(res.contrib[1]||0);
+  if(cumVal<50){ text += ' なお、累積寄与率が'+fmtPct(cumVal)+'%と高くないため、解釈にあたっては第3軸以降の情報も併せて検討する必要がある。'; }
+  return text;
+}
+
+function genPaperText4(res){
+  const c1 = fmtPct(res.contrib[0]), c2 = fmtPct(res.contrib[1]);
+  const cum = fmtPct((res.contrib[0]||0)+(res.contrib[1]||0));
+  const n = state4.labels.length;
+  let dmin=Infinity, dmax=-Infinity, pairMin=null, pairMax=null;
+  for(let i=0;i<n;i++){
+    for(let j=i+1;j<n;j++){
+      const dx=res.coords[i][0]-res.coords[j][0], dy=(res.coords[i][1]||0)-(res.coords[j][1]||0);
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if(d<dmin){ dmin=d; pairMin=[i,j]; }
+      if(d>dmax){ dmax=d; pairMax=[i,j]; }
+    }
+  }
+  let text = '数量化IV類(多次元尺度構成法)による分析を行った結果、第1軸の寄与率は '+c1+'%、第2軸の寄与率は '+c2+'%、累積寄与率は '+cum+'%であった。';
+  if(pairMin){
+    text += ' 布置図上で最も近接していたのは「'+state4.labels[pairMin[0]]+'」と「'+state4.labels[pairMin[1]]+'」であり(布置上の距離 = '+dmin.toFixed(3)+')、両者の間には高い類似性があることが示された。';
+  }
+  if(pairMax){
+    text += ' 一方、「'+state4.labels[pairMax[0]]+'」と「'+state4.labels[pairMax[1]]+'」は最も離れた位置に布置されており(布置上の距離 = '+dmax.toFixed(3)+')、両者の間には大きな差異があることが示唆された。';
+  }
+  return text;
+}
+
+function paperBlockHtml(id, text){
+  return '<h3 style="margin-top:22px;"><span class="stepno">EXAMPLE</span>論文記述例</h3>'+
+    '<div class="paper-block"><p id="'+id+'">'+escapeHtml(text)+'</p></div>'+
+    '<div class="row paper-copy-btn"><button class="btn" onclick="copyPaperText(\''+id+'\')">この文章をコピー</button></div>';
+}
+function copyPaperText(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const text = el.textContent;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).catch(()=>{ fallbackCopy(text); });
+  } else { fallbackCopy(text); }
+}
+function fallbackCopy(text){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* =========================================================
+   出力結果のダウンロード(Markdown / PDF)
+   ========================================================= */
+function downloadText(filename, content, mime){
+  const blob = new Blob([content], { type: (mime||'text/plain')+';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+
+function mdTable(headerCells, rows){
+  let md = '| '+headerCells.join(' | ')+' |\n';
+  md += '|'+headerCells.map(()=>'---').join('|')+'|\n';
+  rows.forEach(r=>{ md += '| '+r.join(' | ')+' |\n'; });
+  return md+'\n';
+}
+
+function toMarkdown1(res){
+  let md = '# 数量化I類 解析結果(回帰分析)\n\n';
+  md += '- 重相関係数 R: '+res.R.toFixed(3)+'\n';
+  md += '- 決定係数 R\u00b2: '+(res.R*res.R).toFixed(3)+'\n';
+  md += '- 定数項(全体平均): '+res.b0.toFixed(3)+'\n\n';
+  md += '## カテゴリースコア\n\n';
+  res.items.forEach((item,ii)=>{
+    md += '### '+item.name+'(レンジ '+res.ranges[ii].toFixed(3)+')\n\n';
+    const rows = res.colInfo.map((c,j)=> c.itemIndex===ii ? [c.cat, res.b[j].toFixed(3)] : null).filter(Boolean);
+    md += mdTable(['カテゴリー','スコア'], rows);
+  });
+  md += '## 実測値と予測値\n\n';
+  const rows = res.y.map((v,i)=>[String(i+1), v.toFixed(3), res.yhat[i].toFixed(3), (v-res.yhat[i]).toFixed(3)]);
+  md += mdTable(['No.','実測値 y','予測値 ŷ','残差'], rows);
+  md += '## 論文記述例\n\n'+genPaperText1(res)+'\n';
+  return md;
+}
+function downloadMarkdown1(){ if(!state1.last) return; downloadText('quantification1_result.md', toMarkdown1(state1.last), 'text/markdown'); }
+
+function toMarkdown2(last){
+  const { res, groups, threshold, preds, hitRate, yBin } = last;
+  const actualLabels = yBin.map(v=> v===1?groups[0]:groups[1]);
+  let tt=0,tf=0,ft=0,ff=0;
+  actualLabels.forEach((a,i)=>{
+    const p = preds[i];
+    if(a===groups[0] && p===groups[0]) tt++;
+    if(a===groups[0] && p===groups[1]) tf++;
+    if(a===groups[1] && p===groups[0]) ft++;
+    if(a===groups[1] && p===groups[1]) ff++;
+  });
+  let md = '# 数量化II類 解析結果(判別分析)\n\n';
+  md += '- 相関比(判別の分離度): '+res.R.toFixed(3)+'\n';
+  md += '- 的中率: '+(hitRate*100).toFixed(1)+'%\n';
+  md += '- 判別のしきい値: '+threshold.toFixed(3)+'\n\n';
+  md += '## カテゴリースコア\n\n';
+  res.items.forEach((item,ii)=>{
+    md += '### '+item.name+'(レンジ '+res.ranges[ii].toFixed(3)+')\n\n';
+    const rows = res.colInfo.map((c,j)=> c.itemIndex===ii ? [c.cat, res.b[j].toFixed(3)] : null).filter(Boolean);
+    md += mdTable(['カテゴリー','スコア'], rows);
+  });
+  md += '## 判別的中表(混同行列)\n\n';
+  md += mdTable(['', '予測: '+groups[0], '予測: '+groups[1]], [
+    ['実際: '+groups[0], String(tt), String(tf)],
+    ['実際: '+groups[1], String(ft), String(ff)]
+  ]);
+  md += '## 個体別の判別得点\n\n';
+  const rows2 = res.yhat.map((v,i)=>[String(i+1), actualLabels[i], preds[i], v.toFixed(3)]);
+  md += mdTable(['No.','実際','予測','判別得点'], rows2);
+  md += '## 論文記述例\n\n'+genPaperText2(last)+'\n';
+  return md;
+}
+function downloadMarkdown2(){ if(!state2.last) return; downloadText('quantification2_result.md', toMarkdown2(state2.last), 'text/markdown'); }
+
+function toMarkdown3(res){
+  let md = '# 数量化III類 解析結果(対応分析)\n\n';
+  md += '- 第1軸 寄与率: '+(res.contrib[0]||0).toFixed(1)+'%\n';
+  md += '- 第2軸 寄与率: '+(res.contrib[1]||0).toFixed(1)+'%\n';
+  md += '- 累積寄与率: '+((res.contrib[0]||0)+(res.contrib[1]||0)).toFixed(1)+'%\n\n';
+  md += '## カテゴリースコア\n\n';
+  const catRows = res.colInfo.map((c,j)=>[res.items[c.itemIndex].name, c.cat, res.colCoords[j][0].toFixed(3), (res.colCoords[j][1]!==undefined?res.colCoords[j][1].toFixed(3):'-')]);
+  md += mdTable(['項目','カテゴリー','第1軸','第2軸'], catRows);
+  md += '## サンプルスコア\n\n';
+  const sRows = res.rowCoords.map((rc,i)=>[String(i+1), rc[0].toFixed(3), (rc[1]!==undefined?rc[1].toFixed(3):'-')]);
+  md += mdTable(['No.','第1軸','第2軸'], sRows);
+  md += '## 論文記述例\n\n'+genPaperText3(res)+'\n';
+  return md;
+}
+function downloadMarkdown3(){ if(!state3.last) return; downloadText('quantification3_result.md', toMarkdown3(state3.last), 'text/markdown'); }
+
+function toMarkdown4(res){
+  let md = '# 数量化IV類 解析結果(多次元尺度構成法)\n\n';
+  md += '- 第1軸 寄与率: '+(res.contrib[0]||0).toFixed(1)+'%\n';
+  md += '- 第2軸 寄与率: '+(res.contrib[1]||0).toFixed(1)+'%\n';
+  md += '- 累積寄与率: '+((res.contrib[0]||0)+(res.contrib[1]||0)).toFixed(1)+'%\n\n';
+  md += '## 座標\n\n';
+  const rows = state4.labels.map((lab,i)=>[lab, res.coords[i][0].toFixed(3), (res.coords[i][1]!==undefined?res.coords[i][1].toFixed(3):'-')]);
+  md += mdTable(['対象','第1軸','第2軸'], rows);
+  md += '## 論文記述例\n\n'+genPaperText4(res)+'\n';
+  return md;
+}
+function downloadMarkdown4(){ if(!state4.last) return; downloadText('quantification4_result.md', toMarkdown4(state4.last), 'text/markdown'); }
+
+function printResult(panelNum){
+  document.querySelectorAll('.print-active').forEach(el=>el.classList.remove('print-active'));
+  const el = document.getElementById('printcard-'+panelNum);
+  if(!el) return;
+  el.classList.add('print-active');
+  window.print();
+}
+window.addEventListener('afterprint', ()=>{
+  document.querySelectorAll('.print-active').forEach(el=>el.classList.remove('print-active'));
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ネットワーク分析ラボ — データ分析ラボ</title>
+<meta name="description" content="「誰と誰がつながっているか」を貼るだけで、中心性・コミュニティ・構造指標を図と表と解説に。">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<link rel="stylesheet" href="../../assets/site.css?v=b63567b0">
+<style>:root{--al-cat:var(--al-c-relation)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#relation">関係を見る</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>ネットワーク分析ラボ</span><span class="al-gap"></span><a class="al-link al-primary" href="app.html">ツールを開く</a></div>
+<main>
+  <header class="tool-hero">
+    <div class="wrap">
+      <a class="chip" href="../../#relation"><i></i>関係を見る</a>
+      <h1>ネットワーク分析ラボ</h1>
+      <p class="en">Social Network Analysis</p>
+      <p class="lead">「誰と誰がつながっているか」を貼るだけで、中心性・コミュニティ・構造指標を図と表と解説に。</p>
+      <div class="actions">
+        <a class="btn primary" href="app.html">ツールを開く <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        
+      </div>
+    </div>
+  </header>
+  <div class="wrap doc">
+    <article>
+      <section>
+        <h2><span class="n">01</span>概要</h2>
+        <p>人と人、組織と組織などの関係データから、中心性・コミュニティ・ネットワーク全体の構造指標をまとめて計算します。ネットワーク図は動かして見やすく整えられ、結果の読み方、論文の記述例、R コードも出力します。</p>
+      </section>
+      <section>
+        <h2><span class="n">02</span>できること</h2>
+        <ul><li>エッジリスト・隣接行列の読み込み（有向・重み付きに対応）</li><li>次数・媒介・近接・固有ベクトル中心性、PageRank</li><li>コミュニティの検出と色分け</li><li>全体の特徴・個人の指標・コミュニティの表、結果の読み方、論文の記述例、R コード</li><li>ネットワーク図を PNG・SVG、指標を CSV で保存</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">03</span>使い方</h2>
+        <ol class="steps"><li>関係のデータを貼り付けるかファイルを選ぶ</li><li>有向か、重みを使うかを指定して「分析する」</li><li>図の見え方（丸の大きさ・色）を調整する</li><li>下のタブで指標や記述例を確認する</li></ol><p class="note-box" style="margin-top:14px">「学級の相談相手」「共著ネットワーク」の例があります。まずはそれで動きを確かめるのがおすすめです。</p>
+      </section>
+      <section>
+        <h2><span class="n">04</span>読み込めるデータ</h2>
+        <p>エッジリスト（1行に1つの関係：送り手, 受け手, 重み）または隣接行列。カンマ・タブ・空白区切り。</p>
+      </section>
+      <section>
+        <h2><span class="n">05</span>書き出せるもの</h2>
+        <ul><li>ネットワーク図（PNG／SVG）</li><li>指標の CSV</li><li>結果の読み方</li><li>論文の記述例</li><li>R コード</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">06</span>注意</h2>
+        <ul class="notes"><li>自分自身への線（自己ループ）は取り除いて計算します。</li><li>計算はブラウザーの中で行われ、入力したデータがサーバーに送られることはありません。</li><li>出力される記述例や R コードは下書きです。数値と解釈は、研究の文脈と照らし合わせて確かめてください。</li></ul>
+      </section>
+    </article>
+    <aside class="side">
+      <div class="box">
+        <h3>このツール</h3>
+        <dl>
+          <dt>カテゴリ</dt><dd>関係を見る</dd>
+          <dt>入力</dt><dd>エッジリスト</dd>
+          <dt>マニュアル</dt><dd>この説明ページのみ</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h3>関係を見るのツール</h3>
+        <ul><li><a href="../correlation/">相関分析と散布図</a></li><li aria-current="page"><a href="../network/">ネットワーク分析ラボ</a></li></ul>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <div>
+      <b>データ分析ラボ</b>
+      <p>ブラウザーだけで動く、統計解析と質的分析のツール集。どのツールもインストール不要で、計算はブラウザーの中で完結します。</p>
+      <p><a href="../../">ツールの一覧へ</a> ・ <a href="https://github.com/k518-2026/AnalysisLabs">ソースコード（GitHub）</a></p>
+    </div>
+    <div>
+      <p>© 2026 K.Yamamoto ・ MIT License</p>
+      <p>「SQS ソースエディタ Web」「SQS マーク読み取り」は、Apache License 2.0 で公開されている SQS（Shared Questionnaire System）をもとに作り直したものです。</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

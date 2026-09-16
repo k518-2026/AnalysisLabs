@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>回帰分析・自動判定 — データ分析ラボ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.6/jstat.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e293b; --secondary: #64748b; --accent: #2563eb;
+            --accent-hover: #1d4ed8; --bg: #f8fafc; --card-bg: #ffffff;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+        }
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--bg); color: var(--primary); line-height: 1.6; margin: 0; padding: 40px 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 1.8rem; text-align: center; margin-bottom: 40px; color: var(--primary); font-weight: 700; }
+        .card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); padding: 30px; margin-bottom: 30px; border: 1px solid #e2e8f0; transition: all 0.3s ease; }
+        .step-title { font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-top: 0; margin-bottom: 20px; display: flex; align-items: center; }
+        .step-title span { background: var(--accent); color: white; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; justify-content: center; align-items: center; font-size: 0.9rem; margin-right: 10px; }
+        .alert { background: #fffbeb; border-left: 4px solid var(--warning); padding: 16px 20px; border-radius: 0 8px 8px 0; margin-bottom: 30px; font-size: 0.95rem; color: #b45309; }
+        
+        #drop-zone { border: 2px dashed #cbd5e1; padding: 50px 20px; text-align: center; background: #f1f5f9; border-radius: 12px; cursor: pointer; color: var(--secondary); font-weight: 500; transition: all 0.2s ease; }
+        #drop-zone.hover { background: #e0f2fe; border-color: var(--accent); color: var(--accent); }
+        
+        table { width: 100%; border-collapse: collapse; margin: 15px 0 30px 0; font-size: 0.95rem; }
+        th, td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f8fafc; color: var(--secondary); font-weight: 500; text-align: left; }
+        
+        .btn { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; display: inline-flex; justify-content: center; font-family: inherit; }
+        .btn:hover { background: var(--accent-hover); }
+        .btn-copy { background: var(--primary); margin-bottom: 15px; }
+        .btn-copy:hover { background: #334155; }
+        .btn-copy.success { background: var(--success); }
+        label.radio-label { display: inline-block; margin-right: 20px; cursor: pointer; font-size: 0.95rem; }
+        pre { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.5; }
+        .hidden { display: none; }
+        
+        .formula-box { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 20px; border-radius: 8px; font-size: 1.15rem; text-align: center; font-weight: bold; font-family: 'Consolas', monospace; color: #0f172a; margin-bottom: 15px; letter-spacing: 0.5px; }
+        .interpretation-box { background: #e0f2fe; border-left: 4px solid #0284c7; padding: 15px 20px; border-radius: 4px; font-size: 0.95rem; color: #075985; margin-bottom: 25px; }
+    </style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-causal);--bg:var(--al-bg);--card-bg:var(--al-surface);--primary:var(--al-ink);--secondary:var(--al-ink-2);--accent:var(--al-cat);--accent-hover:var(--al-cat-deep);}body{font-family:var(--al-sans)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#causal">説明・予測する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>回帰分析・自動判定</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="container">
+    <h1>回帰分析・自動判定ツール</h1>
+    
+    <div class="alert">
+        <strong>💡 エラーを防ぐデータの作り方</strong><br>
+        「100点」「20代」「1,000（カンマ入り）」などは計算できません。純粋な半角数字のみにしてください。また、氏名などの文字データの列があっても、チェックを入れなければ安全に計算されます。
+    </div>
+
+    <div class="card" id="step1">
+        <h2 class="step-title"><span>1</span>データの読み込み</h2>
+        <div id="drop-zone">
+            📄 ここにCSVファイルをドラッグ＆ドロップしてください<br>
+            <span style="font-size: 0.85em; font-weight: normal; margin-top: 8px; display: inline-block;">またはクリックしてファイルを選択</span>
+            <input type="file" id="file-input" accept=".csv" style="display: none;">
+        </div>
+        <div id="system-error" style="color: var(--danger); margin-top: 10px; font-weight: bold;"></div>
+    </div>
+
+    <div class="card hidden" id="variable-selection">
+        <h2 class="step-title"><span>2</span>変数の設定</h2>
+        <p style="font-size: 0.95rem; color: var(--secondary);">
+            説明変数の投入方法: 
+            <label class="radio-label"><input type="radio" name="entryMethod" value="enter" checked> 強制投入法</label>
+            <label class="radio-label"><input type="radio" name="entryMethod" value="stepwise"> ステップワイズ法（Rのみ）</label>
+        </p>
+        <table id="var-table">
+            <thead>
+                <tr>
+                    <th>変数名</th>
+                    <th style="text-align: center;">目的変数(1つ)</th>
+                    <th style="text-align: center;">説明変数(複数)</th>
+                    <th>判定</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <div style="text-align: right;">
+            <button id="calc-btn" class="btn">分析を実行する</button>
+        </div>
+    </div>
+
+    <div id="results-section" class="hidden">
+        <div class="card">
+            <h2 class="step-title"><span>3</span>導き出された予測式</h2>
+            <div id="js-results"></div>
+        </div>
+
+        <div class="card">
+            <h2 class="step-title"><span>4</span>論文への記述例（APA記法）</h2>
+            <div id="apa-guide" style="font-size: 0.95rem;"></div>
+        </div>
+
+        <div class="card">
+            <h2 class="step-title"><span>5</span>詳細な統計指標 (JASP / R用コード)</h2>
+            <p style="font-size: 0.9rem; color: var(--secondary); margin-bottom: 15px;">
+                論文に記載するための<strong>分散分析表、係数のp値、標準化係数、VIF（多重共線性）などの詳細な数値</strong>は、以下のコードをJASP等のRコンソールに貼り付けて取得してください。
+            </p>
+            <button class="btn btn-copy" id="copy-btn" onclick="copyRCode()">📋 Rコードをコピー</button>
+            <pre id="r-code"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    let headers = [];
+    let dataColumns = {};
+    let rawRowCount = 0;
+    let currentFileName = "";
+
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const systemError = document.getElementById('system-error');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', (e) => {
+        systemError.innerText = "";
+        handleFile(e.target.files[0]);
+        e.target.value = '';
+    });
+    
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('hover'); });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('hover'); });
+    dropZone.addEventListener('drop', (e) => { 
+        e.preventDefault(); 
+        dropZone.classList.remove('hover'); 
+        systemError.innerText = "";
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+    });
+
+    function handleFile(file) {
+        if(!file) return;
+        if(!file.name.toLowerCase().endsWith('.csv')) {
+            alert("【エラー：ファイル形式が異なります】\nCSVファイルを選択してください。");
+            return;
+        }
+        currentFileName = file.name;
+        dropZone.innerHTML = `⏳ 「${currentFileName}」を読み込んでいます...`;
+        dropZone.style.border = '2px dashed var(--accent)';
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                parseCSV(event.target.result);
+            } catch(e) {
+                systemError.innerText = "ファイルの解析中にエラーが発生しました。";
+                dropZone.innerHTML = `📄 ここにCSVファイルをドラッグ＆ドロップしてください`;
+                dropZone.style.border = '2px dashed #cbd5e1';
+            }
+        };
+        reader.readAsText(file, 'Shift_JIS'); 
+    }
+
+    function parseCSV(csvText) {
+        csvText = csvText.replace(/^\uFEFF/, '');
+        const lines = csvText.trim().split('\n');
+        headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g, ''));
+        headers.forEach(h => dataColumns[h] = []);
+        rawRowCount = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+            if(lines[i].trim() === "") continue;
+            const values = lines[i].split(',');
+            if(values.length >= headers.length) {
+                headers.forEach((h, index) => {
+                    dataColumns[h].push(values[index].trim());
+                });
+                rawRowCount++;
+            }
+        }
+        buildTable();
+    }
+
+    function getColumnTypeInfo(arr) {
+        let hasText = false;
+        let validCount = 0;
+        let dummyCount = 0;
+        
+        for(let val of arr) {
+            let t = val.trim();
+            if(t === "") continue;
+            if(!isNaN(Number(t))) {
+                validCount++;
+                let n = Number(t);
+                if(n === 0 || n === 1) dummyCount++;
+            } else {
+                hasText = true;
+                break;
+            }
+        }
+        if(hasText || validCount === 0) return { type: 'text', label: "⚠️文字データ混入", color: "#fecaca" };
+        if(validCount === dummyCount) return { type: 'dummy', label: "ダミー変数 (0/1)", color: "#fef08a" };
+        return { type: 'numeric', label: "量的変数", color: "#e2e8f0" };
+    }
+
+    function buildTable() {
+        const tbody = document.querySelector('#var-table tbody');
+        tbody.innerHTML = '';
+        
+        headers.forEach(h => {
+            const info = getColumnTypeInfo(dataColumns[h]);
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${h}</strong></td>
+                    <td style="text-align: center;"><input type="radio" name="dv" value="${h}"></td>
+                    <td style="text-align: center;"><input type="checkbox" class="iv" value="${h}"></td>
+                    <td><span style="font-size:0.85rem; padding: 4px 8px; border-radius: 4px; background: ${info.color}; color: #334155;">${info.label}</span></td>
+                </tr>`;
+        });
+        
+        document.getElementById('drop-zone').style.border = '2px solid var(--success)';
+        document.getElementById('drop-zone').innerHTML = `✅ 「${currentFileName}」読み込み完了 (全 ${rawRowCount}件)`;
+        document.getElementById('variable-selection').classList.remove('hidden');
+    }
+
+    document.getElementById('calc-btn').addEventListener('click', () => {
+        const dvRadio = document.querySelector('input[name="dv"]:checked');
+        const ivCheckboxes = document.querySelectorAll('.iv:checked');
+        
+        if (!dvRadio || ivCheckboxes.length === 0) { alert("目的変数を1つ、説明変数を1つ以上選択してください。"); return; }
+
+        const dv = dvRadio.value;
+        const ivs = Array.from(ivCheckboxes).map(cb => cb.value);
+        const selectedVars = [dv, ...ivs];
+        const method = document.querySelector('input[name="entryMethod"]:checked').value;
+
+        let validRows = [];
+        let errorExamples = new Set();
+
+        for (let i = 0; i < rawRowCount; i++) {
+            let rowIsValid = true;
+            for (let v of selectedVars) {
+                let val = dataColumns[v][i].trim();
+                if (val === "" || isNaN(Number(val))) {
+                    rowIsValid = false;
+                    if (val !== "" && isNaN(Number(val))) errorExamples.add(`「${val}」`);
+                    break;
+                }
+            }
+            if (rowIsValid) validRows.push(i);
+        }
+
+        if (validRows.length < 3) {
+            let ex = Array.from(errorExamples).slice(0, 3).join(", ");
+            alert(`【エラー：有効なデータが不足しています】\n\n選択した変数の中に、計算できない文字や空欄が多数含まれています。\n例: ${ex} などの文字\nエクセル等で純粋な半角数値のみにして再度読み込んでください。`);
+            return;
+        }
+
+        let cleanData = {};
+        selectedVars.forEach(v => cleanData[v] = []);
+        for (let idx of validRows) {
+            selectedVars.forEach(v => cleanData[v].push(Number(dataColumns[v][idx].trim())));
+        }
+
+        const dvInfo = getColumnTypeInfo(dataColumns[dv]);
+        const ivsAllDummy = ivs.every(iv => getColumnTypeInfo(dataColumns[iv]).type === 'dummy');
+        
+        let analysisType = ""; let rFunc = "lm";
+        if (dvInfo.type === 'dummy' && ivsAllDummy) { analysisType = "数量化2類（判別分析）"; rFunc = "glm"; }
+        else if (dvInfo.type === 'dummy' && !ivsAllDummy) { analysisType = "ロジスティック回帰分析"; rFunc = "glm"; }
+        else if (dvInfo.type !== 'dummy' && ivsAllDummy) { analysisType = "数量化1類（ダミー重回帰）"; rFunc = "lm"; }
+        else { analysisType = "線形回帰分析（重回帰）"; rFunc = "lm"; }
+
+        let jsResultHTML = `<p style="color: var(--secondary); margin-top:0; font-size: 0.95rem;">判定された分析手法: <strong>${analysisType}</strong></p>`;
+        
+        if(rFunc === "lm" && method === "enter") {
+            jsResultHTML += calculateLinearRegressionFormulaJS(dv, ivs, cleanData, validRows.length);
+        } else {
+            jsResultHTML += `<div class="interpretation-box">
+                <p style="margin: 0;">※ステップワイズ法やロジスティック回帰分析（確率の予測）の場合、ブラウザ上でのシンプルな予測式の提示をスキップします。ページ下部のJASP用コードを実行して詳細を確認してください。</p>
+            </div>`;
+        }
+        
+        document.getElementById('js-results').innerHTML = jsResultHTML;
+        generateAPA(dv, ivs, analysisType, rFunc, method);
+        generateRCode(dv, ivs, method, rFunc, validRows);
+        
+        document.getElementById('results-section').classList.remove('hidden');
+        document.getElementById('results-section').scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+
+    function calculateLinearRegressionFormulaJS(dv, ivs, cleanData, n) {
+        try {
+            const k = ivs.length;
+            let Y = cleanData[dv];
+            let X = [];
+            for(let i=0; i<n; i++) {
+                let row = [1];
+                ivs.forEach(iv => row.push(cleanData[iv][i]));
+                X.push(row);
+            }
+            
+            let Y_mat = math.matrix(Y).resize([n, 1]);
+            let X_mat = math.matrix(X);
+            let XT = math.transpose(X_mat);
+            let XTX = math.multiply(XT, X_mat);
+            
+            let XTX_inv;
+            let hasMulticollinearity = false;
+
+            try {
+                XTX_inv = math.inv(XTX);
+            } catch (e) {
+                hasMulticollinearity = true;
+                let diag_max = 0;
+                for(let i=0; i<k+1; i++) {
+                    if (XTX.get([i, i]) > diag_max) diag_max = XTX.get([i, i]);
+                }
+                let lambda = diag_max * 1e-8;
+                if (lambda === 0) lambda = 1e-8;
+                let ridge_I = math.multiply(math.identity(k+1), lambda);
+                XTX_inv = math.inv(math.add(XTX, ridge_I));
+            }
+            
+            let XTX_inv_XT = math.multiply(XTX_inv, XT);
+            let beta_mat = math.multiply(XTX_inv_XT, Y_mat);
+            let beta = beta_mat.toArray().map(r => r[0]);
+
+            if (hasMulticollinearity) {
+                return `
+                <div style="background: #fffbeb; border-left: 4px solid var(--warning); padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #b45309;">⚠️ 多重共線性（ダミー変数の罠など）を検知しました</h4>
+                    <p style="margin: 0; font-size: 0.95rem; color: #92400e;">
+                        変数同士の関連性が強すぎるため、正しい予測式を作れませんでした。<br>
+                        （例：「男性ダミー」と「女性ダミー」を両方入れている等）<br>
+                        変数を減らして再度実行するか、下部のRコードを実行してVIFが異常に高い変数（> 5.0）を特定してください。
+                    </p>
+                </div>`;
+            }
+
+            let formulaHtml = `<div class="formula-box">`;
+            formulaHtml += `${dv} = ${beta[0].toFixed(2)}`;
+            for (let i = 0; i < k; i++) {
+                let coef = beta[i+1];
+                if (coef >= 0) {
+                    formulaHtml += ` + ${coef.toFixed(2)} × ${ivs[i]}`;
+                } else {
+                    formulaHtml += ` - ${Math.abs(coef).toFixed(2)} × ${ivs[i]}`;
+                }
+            }
+            formulaHtml += `</div>`;
+
+            let interpText = `<p style="margin:0 0 8px 0;"><strong>💡 この式から読み取れること：</strong></p><ul style="margin:0; padding-left: 20px;">`;
+            for (let i = 0; i < k; i++) {
+                let coef = beta[i+1];
+                let isDummy = getColumnTypeInfo(dataColumns[ivs[i]]).type === 'dummy';
+                let absCoef = Math.abs(coef).toFixed(2);
+                
+                if (isDummy) {
+                    if (coef >= 0) {
+                        interpText += `<li>「${ivs[i]}」が <strong>1（あり等）</strong> の場合、「${dv}」は <strong>${absCoef} 増加</strong> すると予測されます。</li>`;
+                    } else {
+                        interpText += `<li>「${ivs[i]}」が <strong>1（あり等）</strong> の場合、「${dv}」は <strong>${absCoef} 減少</strong> すると予測されます。</li>`;
+                    }
+                } else {
+                    if (coef >= 0) {
+                        interpText += `<li>「${ivs[i]}」が <strong>1単位増える</strong> ごとに、「${dv}」は <strong>${absCoef} 増加</strong> すると予測されます。</li>`;
+                    } else {
+                        interpText += `<li>「${ivs[i]}」が <strong>1単位増える</strong> ごとに、「${dv}」は <strong>${absCoef} 減少</strong> すると予測されます。</li>`;
+                    }
+                }
+            }
+            interpText += `</ul><p style="margin: 8px 0 0 0; font-size:0.85em; color:var(--secondary);">※これは計算上の予測です。統計的に意味がある影響（有意差）かどうかは、下のJASPコードを実行して <strong>p値</strong> を確認してください。</p>`;
+
+            let resultHtml = formulaHtml + `<div class="interpretation-box">${interpText}</div>`;
+            return resultHtml;
+
+        } catch (error) {
+            return `<p style="color:var(--danger);">計算エラーが発生しました。データの分散が無いなどの可能性があります。</p>`;
+        }
+    }
+
+    function generateAPA(dv, ivs, analysisType, rFunc, method) {
+        let html = `
+        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <p style="margin-top:0;">従属変数である「<strong>${dv}</strong>」を予測するため、独立変数として「<strong>${ivs.join("、")}</strong>」を用いた${method === 'enter' ? '強制投入法' : 'ステップワイズ法'}による${analysisType}を実施した。</p>
+        <p>分析の結果、モデル全体は統計的に有意であり、各独立変数の効果を確認したところ、「${ivs[0]}」は「${dv}」に対して有意な影響を示した（$p = [p値]$）。</p>
+        <p style="font-size: 0.85em; color: var(--secondary); margin-bottom: 0;">※ 以下のJASP用コードを実行して得られた数値を当てはめて完成させてください。</p>
+        </div>`;
+        document.getElementById('apa-guide').innerHTML = html;
+    }
+
+    // ★ 改善: エスケープ文字（\n や \）を完全に排除したRコード生成
+    function generateRCode(dv, ivs, method, rFunc, validRows) {
+        const selectedVars = [dv, ...ivs];
+        
+        let dfBuilder = "df <- data.frame(\n";
+        let colStrings = [];
+        for (let v of selectedVars) {
+            let nums = validRows.map(idx => dataColumns[v][idx].trim()).join(", ");
+            colStrings.push(`  \`${v}\` = c(${nums})`);
+        }
+        dfBuilder += colStrings.join(",\n");
+        dfBuilder += ",\n  check.names = FALSE\n)";
+
+        const safeDv = "`" + dv + "`";
+        const safeIvs = ivs.map(iv => "`" + iv + "`").join(" + ");
+        const formula = `${safeDv} ~ ${safeIvs}`;
+        let rFunctionStr = rFunc === "glm" ? "glm(..., family=binomial)" : "lm(...)";
+        let stepCode = method === 'stepwise' ? `\nmodel <- step(model, direction="both", trace=0)` : "";
+
+        let code = `
+# ===================================================================
+# 1. 必要なライブラリの読み込み
+# ===================================================================
+if(!require(car)) install.packages("car", repos="http://cran.us.r-project.org")
+if(!require(lmtest)) install.packages("lmtest", repos="http://cran.us.r-project.org")
+library(car); library(lmtest)
+
+# ===================================================================
+# 2. データの構築 (ブラウザ側で数値化・クリーン化済み)
+# ===================================================================
+${dfBuilder}
+
+# ===================================================================
+# 3. モデルの構築
+# ===================================================================
+model <- ${rFunctionStr.replace("...", "formula = " + formula + ", data = df")}
+${stepCode}
+
+# ===================================================================
+# 4. 結果の出力
+# ===================================================================
+
+# --- 分散分析表と係数 (ANOVA & Coefficients) ---
+print(summary(model))
+
+if(inherits(model, "lm") && !inherits(model, "glm")) {
+    # --- 標準化偏回帰係数 (Beta) ---
+    tryCatch({
+        b <- coef(model)[-1]
+        iv_names <- c("${ivs.join('", "')}")
+        sx <- sapply(df[, iv_names, drop=FALSE], sd, na.rm=TRUE)
+        sy <- sd(df[[ "${dv}" ]], na.rm=TRUE)
+        print("【標準化偏回帰係数 (Beta)】")
+        print(b * sx / sy)
+    }, error = function(e) print("（エラーによりBetaの計算をスキップ）"))
+} else {
+    # --- オッズ比 (Odds Ratios) ---
+    print("【オッズ比】")
+    print(exp(coef(model)))
+}
+
+# --- 多重共線性 (VIF) ---
+if(length(coef(model)) > 2) {
+    tryCatch({ 
+        print("【VIF】")
+        print(vif(model)) 
+    }, error = function(e) print("（計算スキップ）"))
+} else {
+    print("説明変数が1つのためVIFは計算されません。")
+}
+
+# --- 残差の検定 (独立性と正規性) ---
+tryCatch({ 
+    print("【Durbin-Watson検定】")
+    print(dwtest(model)) 
+}, error = function(e) print("（DW検定スキップ）"))
+
+if(inherits(model, "lm") && !inherits(model, "glm")) {
+    if(nrow(df) >= 3 && nrow(df) <= 5000) {
+        tryCatch({ 
+            print("【Shapiro-Wilk検定】")
+            print(shapiro.test(residuals(model))) 
+        }, error = function(e) print("（Shapiro検定スキップ）"))
+    }
+}
+`;
+        document.getElementById('r-code').textContent = code.trim();
+        document.getElementById('copy-btn').innerHTML = "📋 Rコードをコピー";
+    }
+
+    function copyRCode() {
+        navigator.clipboard.writeText(document.getElementById('r-code').textContent).then(() => {
+            const btn = document.getElementById('copy-btn');
+            btn.innerHTML = "✅ コピーしました！"; btn.classList.add('success');
+            setTimeout(() => { btn.innerHTML = "📋 Rコードをコピー"; btn.classList.remove('success'); }, 2500);
+        });
+    }
+</script>
+</body>
+</html>

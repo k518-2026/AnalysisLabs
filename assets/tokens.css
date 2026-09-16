@@ -1,0 +1,35 @@
+/* データ分析ラボ — 共通の配色・書体
+   サイトのページと各ツール（app.html）の両方が読み込む。
+   ツール側は、自分の変数（--paper, --ink など）をここの値に置き換えて使う。 */
+
+:root{
+  --al-bg:#EDEFEA;          /* 紙面 */
+  --al-surface:#FAFAF7;     /* カード */
+  --al-surface-2:#F2F3EE;   /* 一段沈んだ面 */
+  --al-ink:#1B2320;         /* 見出し・本文 */
+  --al-ink-2:#4E5955;       /* 補足 */
+  --al-ink-3:#838D88;       /* 注記 */
+  --al-line:#D3D8CF;        /* 罫線 */
+  --al-line-2:#E4E7E0;      /* 薄い罫線 */
+  --al-line-strong:#B6BEB3; /* 強い罫線 */
+
+  --al-sans:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,Meiryo,system-ui,sans-serif;
+  --al-serif:"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",YuMincho,serif;
+  --al-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  /* カテゴリの色。ツールでは --al-cat に1つが入る */
+  --al-c-compare:#2F5C8A;
+  --al-c-relation:#1D6B64;
+  --al-c-causal:#9B5A1F;
+  --al-c-structure:#574A8E;
+  --al-c-text:#8E3A57;
+  --al-c-synthesis:#4D6A2C;
+  --al-c-prep:#4B5866;
+
+  --al-cat:var(--al-c-relation);
+  --al-cat-deep:color-mix(in srgb, var(--al-cat) 76%, #000);
+  --al-cat-soft:color-mix(in srgb, var(--al-cat) 11%, #fff);
+  --al-cat-mid:color-mix(in srgb, var(--al-cat) 30%, #fff);
+
+  --al-bar-h:42px;
+}

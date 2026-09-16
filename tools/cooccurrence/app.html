@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共起ネットワーク比較ラボ — データ分析ラボ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@400;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  :root{
+    --paper:#EDF0F1;
+    --paper-deep:#E3E8EA;
+    --line:#CBD5D9;
+    --ink:#1B2430;
+    --ink-soft:#5B6672;
+    --panel:#FFFFFF;
+    --a:#2B6CB0;
+    --a-soft:#DCE8F5;
+    --a-deep:#1D4D80;
+    --b:#B5541A;
+    --b-soft:#F5E4D8;
+    --b-deep:#8A3F11;
+    --common:#B8901F;
+    --common-soft:#F1E6C8;
+    --common-deep:#8C6B12;
+    --radius:10px;
+    --display: 'Zen Kaku Gothic New', sans-serif;
+    --body: 'Noto Sans JP', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--body);
+    color:var(--ink);
+    background:
+      repeating-linear-gradient(0deg, var(--line) 0px, var(--line) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, var(--line) 0px, var(--line) 1px, transparent 1px, transparent 28px),
+      var(--paper);
+    min-height:100vh;
+    padding:28px 20px 60px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  header.top{
+    display:flex; justify-content:space-between; align-items:flex-end; gap:16px;
+    border-bottom:3px solid var(--ink); padding-bottom:14px; margin-bottom:22px; flex-wrap:wrap;
+  }
+  .brand-eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em; color:var(--ink-soft);
+    text-transform:uppercase; margin-bottom:6px;
+  }
+  h1{
+    font-family:var(--display); font-weight:900; font-size:clamp(24px,3.4vw,36px);
+    margin:0; letter-spacing:.01em;
+  }
+  .lede{max-width:480px; font-size:13.5px; color:var(--ink-soft); line-height:1.6; margin:0;}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:0 1px 0 rgba(27,36,48,.04);
+  }
+
+  .input-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+  @media (max-width:760px){ .input-grid{grid-template-columns:1fr;} }
+
+  .text-panel{padding:16px; border-top:5px solid var(--a);}
+  .text-panel.b{border-top-color:var(--b);}
+  .text-panel .label-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .tag{
+    font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.08em;
+    padding:3px 9px; border-radius:100px; color:#fff; background:var(--a);
+  }
+  .text-panel.b .tag{background:var(--b);}
+  .charcount{font-family:var(--mono); font-size:11px; color:var(--ink-soft);}
+  textarea{
+    width:100%; min-height:150px; resize:vertical; font-family:var(--body); font-size:13.5px;
+    line-height:1.6; padding:10px 12px; border:1px solid var(--line); border-radius:6px;
+    background:#FBFCFC; color:var(--ink);
+  }
+  textarea:focus{outline:2px solid var(--a); outline-offset:1px;}
+  .text-panel.b textarea:focus{outline-color:var(--b);}
+  .file-row{display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap;}
+  .drop{
+    flex:1; border:1.5px dashed var(--line); border-radius:6px; padding:8px 10px;
+    font-size:11.5px; color:var(--ink-soft); text-align:center; cursor:pointer; transition:.15s;
+  }
+  .drop:hover, .drop.drag{background:var(--a-soft); border-color:var(--a); color:var(--a-deep);}
+  .text-panel.b .drop:hover, .text-panel.b .drop.drag{background:var(--b-soft); border-color:var(--b); color:var(--b-deep);}
+  input[type=file]{display:none;}
+
+  .settings{padding:16px 20px; margin-bottom:16px;}
+  .settings-title{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 12px;}
+  .settings-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px 18px;}
+  @media (max-width:900px){ .settings-grid{grid-template-columns:repeat(2,1fr);} }
+  .field label{display:block; font-size:12px; font-weight:700; margin-bottom:5px;}
+  .field .hint{font-size:10.5px; color:var(--ink-soft); margin-top:3px; line-height:1.4;}
+  .field select, .field input[type=number]{
+    width:100%; padding:7px 8px; border:1px solid var(--line); border-radius:6px; font-family:var(--mono); font-size:13px; background:#fff;
+  }
+  .radio-row{display:flex; gap:14px; align-items:center; font-size:12.5px;}
+  .radio-row label{display:flex; align-items:center; gap:5px; font-weight:500;}
+  .stopword-field{grid-column:1 / -1;}
+  .stopword-field textarea{min-height:52px; font-family:var(--mono); font-size:12px;}
+  .pos-field{grid-column:1 / -1;}
+  .pos-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .pos-chk{
+    display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:700;
+    padding:5px 11px; border-radius:100px; border:1.5px solid var(--line); cursor:pointer; user-select:none;
+    background:#fff; color:var(--ink-soft);
+  }
+  .pos-chk input{accent-color:currentColor; margin:0;}
+  .pos-chk.noun:has(input:checked){border-color:#2B6CB0; color:#2B6CB0; background:#EAF2FA;}
+  .pos-chk.verb:has(input:checked){border-color:#B5541A; color:#B5541A; background:#FBEEE4;}
+  .pos-chk.adj:has(input:checked){border-color:#8C6B12; color:#8C6B12; background:#F7F0DC;}
+  .pos-chk.adv:has(input:checked){border-color:#3B7A57; color:#3B7A57; background:#E9F3ED;}
+  .pos-chk.other:has(input:checked){border-color:#5B6672; color:#5B6672; background:#EEF1F2;}
+  .pos-badge{
+    display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:100px;
+    color:#fff; margin-left:6px; vertical-align:middle; font-family:var(--body);
+  }
+  .field input[type=range]{width:100%; accent-color:var(--a); margin-top:2px;}
+  .pval{font-family:var(--mono); font-weight:700; color:var(--a-deep);}
+
+  .run-row{display:flex; justify-content:center; margin:22px 0 30px;}
+  button.run{
+    font-family:var(--display); font-weight:700; font-size:15px; letter-spacing:.02em;
+    background:var(--ink); color:#fff; border:none; padding:13px 34px; border-radius:100px;
+    cursor:pointer; transition:.15s; box-shadow:0 3px 0 rgba(27,36,48,.35);
+  }
+  button.run:hover{transform:translateY(-1px); box-shadow:0 4px 0 rgba(27,36,48,.35);}
+  button.run:active{transform:translateY(2px); box-shadow:0 1px 0 rgba(27,36,48,.35);}
+  button.run:disabled{opacity:.5; cursor:not-allowed;}
+  .ghost-btn{
+    font-family:var(--mono); font-size:11.5px; background:none; border:1px solid var(--line);
+    border-radius:100px; padding:5px 12px; cursor:pointer; color:var(--ink-soft);
+  }
+  .ghost-btn:hover{border-color:var(--ink); color:var(--ink);}
+  .hidden{display:none !important;}
+  .mode-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:-10px 0 20px;}
+  .mode-pill{
+    font-family:var(--mono); font-size:11px; letter-spacing:.04em;
+    border:1px solid var(--line); border-radius:100px; padding:5px 12px;
+    background:#fff; color:var(--ink-soft);
+  }
+  .mode-pill.on{border-color:var(--a); color:var(--a); background:var(--a-soft);}
+  .mode-msg{font-size:11.5px; color:var(--ink-soft);}
+  .mode-msg .err{color:var(--b-deep);}
+  #kuroBaseRow{margin:-14px 0 20px;}
+  #kuroBaseRow label{font-size:10.5px; color:var(--ink-soft);}
+  #kuroBaseRow input{
+    flex:1 1 300px; min-width:200px; font-size:11.5px; font-family:var(--mono);
+    border:1px solid var(--line); border-radius:6px; padding:6px 9px; background:#fff; color:var(--ink);
+  }
+
+  #results{display:none;}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-bottom:14px; font-size:12px; font-family:var(--mono);}
+  .legend .dot{width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:middle;}
+
+  .net-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;}
+  @media (max-width:900px){ .net-grid{grid-template-columns:1fr;} }
+  .net-panel{padding:0; overflow:hidden;}
+  .net-head{display:flex; justify-content:space-between; align-items:baseline; padding:12px 16px 0;}
+  .net-head h3{font-family:var(--display); font-size:15px; margin:0;}
+  .net-head .stat{font-family:var(--mono); font-size:11px; color:var(--ink-soft);}
+  .head-right{display:flex; align-items:center; gap:10px;}
+  .dl-btn{
+    font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.03em;
+    background:var(--ink); color:#fff; border:none; border-radius:100px; padding:4px 11px;
+    cursor:pointer; transition:.12s; white-space:nowrap;
+  }
+  .dl-btn:hover{background:#000; transform:translateY(-1px);}
+  .dl-btn:active{transform:translateY(1px);}
+  .net-panel.a{border-top:4px solid var(--a);}
+  .net-panel.b{border-top:4px solid var(--b);}
+  svg.net{width:100%; height:340px; display:block; cursor:grab;}
+  svg.net:active{cursor:grabbing;}
+
+  .compare-wrap{display:grid; grid-template-columns:1.5fr 1fr; gap:16px; margin-bottom:18px;}
+  @media (max-width:900px){ .compare-wrap{grid-template-columns:1fr;} }
+  .compare-panel{border-top:4px solid var(--common); padding:0;}
+  .side-panel{padding:16px;}
+  svg.net-big{width:100%; height:440px; display:block;}
+
+  .gauge-box{text-align:center; padding-bottom:6px;}
+  .gauge-label{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:2px;}
+  .gauge-value{font-family:var(--display); font-weight:900; font-size:30px; margin-top:-6px;}
+
+  .stat-list{list-style:none; margin:14px 0 0; padding:0; font-size:12.5px;}
+  .stat-list li{display:flex; justify-content:space-between; padding:6px 0; border-top:1px dashed var(--line);}
+  .stat-list li .n{font-family:var(--mono); font-weight:700;}
+
+  table.pairs{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:8px;}
+  table.pairs th{
+    text-align:left; font-family:var(--mono); font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--ink-soft); border-bottom:1px solid var(--ink); padding:6px 8px;
+  }
+  table.pairs td{padding:6px 8px; border-bottom:1px solid var(--line);}
+  table.pairs td.num{font-family:var(--mono); text-align:right;}
+  .pairs-panel{padding:16px 18px 20px;}
+  .pairs-panel h3{font-family:var(--display); font-size:15px; margin:0 0 4px;}
+  .pairs-panel .note{font-size:11.5px; color:var(--ink-soft); margin:0 0 6px;}
+
+  .rank-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;}
+  @media (max-width:760px){ .rank-grid{grid-template-columns:1fr;} }
+  .pairs-panel.rank{border-top:4px solid var(--a);}
+  .pairs-panel.rank.b{border-top:4px solid var(--b);}
+  .rank-head{display:flex; justify-content:space-between; align-items:baseline;}
+  .rank-head h3{margin:0;}
+  .mini{font-family:var(--mono); font-size:11px; color:var(--ink-soft); letter-spacing:.08em;}
+  table.pairs td .star{color:var(--common-deep); font-weight:700;}
+  table.pairs tr.is-common td:nth-child(2){font-weight:700;}
+  .rank-bar{display:inline-block; height:7px; border-radius:4px; background:var(--a-soft); vertical-align:middle; margin-left:6px;}
+  .pairs-panel.rank.b .rank-bar{background:var(--b-soft);}
+
+  .common-list-panel{border-top:4px solid var(--common); margin-bottom:18px;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;}
+  .chip{
+    display:inline-flex; align-items:center; gap:7px; background:var(--common-soft);
+    border:1px solid var(--common); color:var(--common-deep); border-radius:100px;
+    padding:5px 12px; font-size:13px; font-weight:700;
+  }
+  .chip .cnt{font-family:var(--mono); font-size:11px; font-weight:500; color:var(--ink-soft);}
+
+  .interp-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;}
+  @media (max-width:760px){ .interp-grid{grid-template-columns:1fr;} }
+  .interp.a{border-top:4px solid var(--a);}
+  .interp.b{border-top:4px solid var(--b);}
+  .interp.compare{border-top:4px solid var(--common); margin-bottom:18px;}
+  .interp-body{font-size:13px; line-height:1.75; color:var(--ink); margin-top:6px;}
+  .interp-body p{margin:0 0 8px;}
+  .interp-body .kw{font-weight:700; border-bottom:2px solid var(--common-soft);}
+  .interp-body ul{margin:6px 0 0; padding-left:18px;}
+  .interp-body li{margin-bottom:5px;}
+  .metric-inline{font-family:var(--mono); font-weight:700; color:var(--a-deep);}
+
+  .academic-panel{border-top:4px solid var(--ink); margin-bottom:18px;}
+  .rcode-panel{border-top:4px solid #3B7A57; margin-bottom:18px;}
+  .rcode{
+    background:#1B2430; color:#E3E8EA; border-radius:8px; padding:14px 16px; overflow-x:auto;
+    font-family:var(--mono); font-size:12px; line-height:1.6; margin:8px 0 0;
+  }
+  .rcode code{white-space:pre; display:block;}
+  .note code{font-family:var(--mono); font-size:11.5px; background:var(--paper-deep); padding:1px 5px; border-radius:4px;}
+  .academic-block{margin-top:14px; padding-left:14px; border-left:3px solid var(--paper-deep);}
+  .academic-head{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:5px;}
+  .academic-text{
+    font-family:'Noto Serif JP','Noto Sans JP',serif; font-size:13.5px; line-height:1.95;
+    margin:0; color:var(--ink); text-align:justify;
+  }
+
+  .empty-note{
+    text-align:center; color:var(--ink-soft); font-size:13px; padding:40px 10px; border:1px dashed var(--line);
+    border-radius:var(--radius); background:var(--panel);
+  }
+  .tooltip{
+    position:fixed; pointer-events:none; background:var(--ink); color:#fff; padding:6px 10px;
+    border-radius:6px; font-family:var(--mono); font-size:11.5px; z-index:50; opacity:0; transition:opacity .1s;
+    max-width:220px; line-height:1.5;
+  }
+  footer.note{text-align:center; font-size:11px; color:var(--ink-soft); margin-top:30px; font-family:var(--mono);}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-text);--paper:var(--al-bg);--paper-deep:var(--al-surface-2);--panel:var(--al-surface);--ink:var(--al-ink);--ink-soft:var(--al-ink-2);--line:var(--al-line-2);--display:var(--al-sans);--body:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#text">質的・テキスト</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>共起ネットワーク比較ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="brand-eyebrow">Text Mining / Co-occurrence Diff</div>
+      <h1>共起ネットワーク比較ラボ</h1>
+    </div>
+    <p class="lede">2つのテキストを読み込み、語の共起関係をネットワークとして可視化。共通する語彙・共起ペアと、それぞれに固有の語を色分けして比較します。</p>
+  </header>
+
+  <div class="mode-row">
+    <span class="mode-pill" id="modePill">形態素解析：簡易モード（内蔵）</span>
+    <button class="ghost-btn" id="loadKuromoji">高精度モードを読み込む（kuromoji.js）</button>
+    <span class="mode-msg" id="kuroMsg"></span>
+  </div>
+  <div class="mode-row hidden" id="kuroBaseRow">
+    <label for="kuroBase">辞書の配布元URL（校内・社内ネットワークでCDNが遮断される場合に指定）</label>
+    <input type="text" id="kuroBase" placeholder="例: https://example.org/kuromoji-0.1.2" spellcheck="false">
+  </div>
+
+  <div class="input-grid">
+    <div class="card text-panel a">
+      <div class="label-row">
+        <span class="tag">TEXT A</span>
+        <span class="charcount" id="countA">0 文字</span>
+      </div>
+      <textarea id="textA" placeholder="テキストAを貼り付け、またはファイルを読み込んでください…"></textarea>
+      <div class="file-row">
+        <label class="drop" id="dropA">.txt をドラッグ&ドロップ、またはクリックして選択
+          <input type="file" id="fileA" accept=".txt">
+        </label>
+        <button class="ghost-btn" id="clearA">クリア</button>
+      </div>
+    </div>
+    <div class="card text-panel b">
+      <div class="label-row">
+        <span class="tag">TEXT B</span>
+        <span class="charcount" id="countB">0 文字</span>
+      </div>
+      <textarea id="textB" placeholder="テキストBを貼り付け、またはファイルを読み込んでください…"></textarea>
+      <div class="file-row">
+        <label class="drop" id="dropB">.txt をドラッグ&ドロップ、またはクリックして選択
+          <input type="file" id="fileB" accept=".txt">
+        </label>
+        <button class="ghost-btn" id="clearB">クリア</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="run-row" style="margin-bottom:6px;">
+    <button class="ghost-btn" id="loadSample">サンプルテキストを読み込む（宇宙探査 vs 海洋探査）</button>
+  </div>
+
+  <div class="card settings">
+    <p class="settings-title">解析設定</p>
+    <div class="settings-grid">
+      <div class="field">
+        <label>共起の単位</label>
+        <div class="radio-row">
+          <label><input type="radio" name="mode" value="sentence" checked> 文単位</label>
+          <label><input type="radio" name="mode" value="window"> スライド窓</label>
+        </div>
+        <div class="hint">文単位＝同じ文に出現する語同士を共起とみなす（日本語向け）</div>
+      </div>
+      <div class="field">
+        <label for="windowSize">窓幅（スライド窓時）</label>
+        <input type="number" id="windowSize" value="5" min="1" max="20">
+        <div class="hint">前後何語以内を共起とみなすか</div>
+      </div>
+      <div class="field">
+        <label for="minLen">最小文字数</label>
+        <input type="number" id="minLen" value="2" min="1" max="10">
+        <div class="hint">これより短い語は除外</div>
+      </div>
+      <div class="field">
+        <label for="topN">上位ノード数</label>
+        <input type="number" id="topN" value="25" min="5" max="60">
+        <div class="hint">出現頻度上位N語のみ表示</div>
+      </div>
+      <div class="field">
+        <label for="minEdge">最小共起回数</label>
+        <input type="number" id="minEdge" value="2" min="1" max="20">
+        <div class="hint">これ未満の共起は線を引かない</div>
+      </div>
+      <div class="field pos-field">
+        <label>共起に使用する品詞</label>
+        <div class="pos-row">
+          <label class="pos-chk noun"><input type="checkbox" class="posBox" value="noun" checked> 名詞</label>
+          <label class="pos-chk verb"><input type="checkbox" class="posBox" value="verb"> 動詞</label>
+          <label class="pos-chk adj"><input type="checkbox" class="posBox" value="adj"> 形容詞</label>
+          <label class="pos-chk adv"><input type="checkbox" class="posBox" value="adv"> 副詞</label>
+          <label class="pos-chk other"><input type="checkbox" class="posBox" value="other"> その他</label>
+        </div>
+        <div class="hint" id="posHint">チェックした品詞の語だけをネットワークに使用（形態素解析器なしのため品詞は推定値）</div>
+      </div>
+      <div class="field stopword-field">
+        <label for="stopwords">ストップワード（カンマ区切り・編集可）</label>
+        <textarea id="stopwords">私,自分,今日,昨日,明日,今,方,的,化,人,事,物,時,場合,達,様,等,中,内,間,後,前,上,下,者,the,a,an,and,or,but,is,are,was,were,be,been,to,of,in,on,at,for,with,as,by,that,this,it,its,from,not,have,has,had,do,does,did,will,would,can,could,should,may,might,than,then,there,here,which,who,what,when,where,why,how,i,you,he,she,we,they</textarea>
+      </div>
+    </div>
+
+    <p class="settings-title" style="margin-top:20px;">ネットワーク描画パラメーター</p>
+    <div class="settings-grid">
+      <div class="field">
+        <label for="pCharge">反発力（Charge）: <span class="pval" id="vCharge">-220</span></label>
+        <input type="range" id="pCharge" min="-600" max="-40" step="10" value="-220">
+        <div class="hint">大きいほどノード同士が広がる</div>
+      </div>
+      <div class="field">
+        <label for="pDistance">リンク距離: <span class="pval" id="vDistance">70</span></label>
+        <input type="range" id="pDistance" min="30" max="180" step="5" value="70">
+        <div class="hint">共起で結ばれた語同士の間隔</div>
+      </div>
+      <div class="field">
+        <label for="pCollide">衝突半径の余白: <span class="pval" id="vCollide">8</span></label>
+        <input type="range" id="pCollide" min="0" max="30" step="1" value="8">
+        <div class="hint">ノードの重なりにくさ</div>
+      </div>
+      <div class="field">
+        <label for="pLinkStrength">リンク強度: <span class="pval" id="vLinkStrength">0.5</span></label>
+        <input type="range" id="pLinkStrength" min="0.05" max="1" step="0.05" value="0.5">
+        <div class="hint">結びつきの引き寄せの強さ</div>
+      </div>
+      <div class="field">
+        <label for="pNodeMin">ノード最小サイズ: <span class="pval" id="vNodeMin">6</span></label>
+        <input type="range" id="pNodeMin" min="3" max="16" step="1" value="6">
+        <div class="hint">最も低頻度の語の円の半径</div>
+      </div>
+      <div class="field">
+        <label for="pNodeMax">ノード最大サイズ: <span class="pval" id="vNodeMax">22</span></label>
+        <input type="range" id="pNodeMax" min="14" max="46" step="1" value="22">
+        <div class="hint">最も高頻度の語の円の半径</div>
+      </div>
+      <div class="field">
+        <label for="pEdgeMax">リンク最大太さ: <span class="pval" id="vEdgeMax">6</span></label>
+        <input type="range" id="pEdgeMax" min="2" max="14" step="1" value="6">
+        <div class="hint">共起回数が最多のときの線の太さ</div>
+      </div>
+      <div class="field">
+        <label for="pLabel">ラベル文字サイズ: <span class="pval" id="vLabel">10.5</span></label>
+        <input type="range" id="pLabel" min="7" max="18" step="0.5" value="10.5">
+        <div class="hint">語のラベルの大きさ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="run-row">
+    <button class="run" id="runBtn">共起ネットワークを生成</button>
+  </div>
+
+  <div id="results">
+    <div class="legend">
+      <span><span class="dot" style="background:var(--a)"></span>Aのみ</span>
+      <span><span class="dot" style="background:var(--b)"></span>Bのみ</span>
+      <span><span class="dot" style="background:var(--common)"></span>共通</span>
+      <span style="color:var(--ink-soft)">｜ノードの大きさ＝出現頻度、線の太さ＝共起回数</span>
+    </div>
+
+    <div class="net-grid">
+      <div class="card net-panel a">
+        <div class="net-head"><h3>ネットワークA</h3><span class="head-right"><span class="stat" id="statA">–</span><button class="dl-btn" data-svg="svgA" data-name="network_A">PNG保存</button></span></div>
+        <svg class="net" id="svgA"></svg>
+      </div>
+      <div class="card net-panel b">
+        <div class="net-head"><h3>ネットワークB</h3><span class="head-right"><span class="stat" id="statB">–</span><button class="dl-btn" data-svg="svgB" data-name="network_B">PNG保存</button></span></div>
+        <svg class="net" id="svgB"></svg>
+      </div>
+    </div>
+
+    <div class="compare-wrap">
+      <div class="card compare-panel">
+        <div class="net-head"><h3>比較ネットワーク（重ね合わせ）</h3><span class="head-right"><span class="stat" id="statCompare">–</span><button class="dl-btn" data-svg="svgCompare" data-name="network_compare">PNG保存</button></span></div>
+        <svg class="net-big" id="svgCompare"></svg>
+      </div>
+      <div class="card side-panel">
+        <div class="gauge-box">
+          <div class="gauge-label">共起パターンの類似度</div>
+          <svg id="gauge" width="220" height="130" viewBox="0 0 220 130"></svg>
+          <div class="gauge-value" id="gaugeValue">–</div>
+        </div>
+        <ul class="stat-list" id="statList"></ul>
+      </div>
+    </div>
+
+    <div class="rank-grid">
+      <div class="card pairs-panel rank">
+        <div class="rank-head"><h3>ワードランキング A</h3><span class="mini">TEXT A</span></div>
+        <p class="note">出現頻度（延べ）が多い順。★は両テキストに共通する語</p>
+        <table class="pairs">
+          <thead><tr><th style="width:36px">#</th><th>語</th><th style="text-align:right">頻度</th><th>品詞</th><th style="text-align:right">共通</th></tr></thead>
+          <tbody id="rankA"></tbody>
+        </table>
+      </div>
+      <div class="card pairs-panel rank b">
+        <div class="rank-head"><h3>ワードランキング B</h3><span class="mini">TEXT B</span></div>
+        <p class="note">出現頻度（延べ）が多い順。★は両テキストに共通する語</p>
+        <table class="pairs">
+          <thead><tr><th style="width:36px">#</th><th>語</th><th style="text-align:right">頻度</th><th>品詞</th><th style="text-align:right">共通</th></tr></thead>
+          <tbody id="rankB"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card pairs-panel common-list-panel">
+      <div class="rank-head"><h3>共通語リスト（上位10語）</h3><span class="mini" id="commonCount">0 語</span></div>
+      <p class="note">両テキストに共通して出現した語のうち、合計頻度が多い上位10語。チップの数値は A / B の頻度</p>
+      <div id="commonChips" class="chips"></div>
+      <div id="commonEmpty" class="empty-note" style="display:none; margin-top:10px;">共通語が見つかりませんでした。上位ノード数を増やすか、ストップワードを見直してください。</div>
+    </div>
+
+    <div class="card pairs-panel">
+      <h3>共通の共起ペア（上位）</h3>
+      <p class="note">両方のテキストで共に出現した語のペアを、共起回数の合計が多い順に表示</p>
+      <table class="pairs">
+        <thead><tr><th>語1</th><th>語2</th><th style="text-align:right">Aでの回数</th><th style="text-align:right">Bでの回数</th></tr></thead>
+        <tbody id="pairsBody"></tbody>
+      </table>
+      <div id="pairsEmpty" class="empty-note" style="display:none; margin-top:10px;">共通の共起ペアは見つかりませんでした。設定（最小共起回数・上位ノード数）を緩めてみてください。</div>
+    </div>
+
+    <div class="interp-grid">
+      <div class="card pairs-panel interp a">
+        <div class="rank-head"><h3>ネットワークAの特徴</h3><span class="mini">TEXT A</span></div>
+        <div id="interpA" class="interp-body"></div>
+      </div>
+      <div class="card pairs-panel interp b">
+        <div class="rank-head"><h3>ネットワークBの特徴</h3><span class="mini">TEXT B</span></div>
+        <div id="interpB" class="interp-body"></div>
+      </div>
+    </div>
+
+    <div class="card pairs-panel interp compare">
+      <div class="rank-head"><h3>2つのネットワークの比較</h3><span class="mini">A × B</span></div>
+      <div id="interpCompare" class="interp-body"></div>
+    </div>
+
+    <div class="card pairs-panel academic-panel">
+      <div class="rank-head"><h3>論文での記述例</h3><span class="mini">DRAFT</span></div>
+      <p class="note">下記は本解析結果に基づく記述のたたき台です。数値・語は自動挿入されます。実際の投稿時は表現・引用・手法の記載をご自身で調整してください。</p>
+      <div class="academic-block">
+        <div class="academic-head">方法（Methods）</div>
+        <p id="acMethods" class="academic-text"></p>
+      </div>
+      <div class="academic-block">
+        <div class="academic-head">結果（Results）</div>
+        <p id="acResults" class="academic-text"></p>
+      </div>
+      <div class="academic-block">
+        <div class="academic-head">考察（Discussion）</div>
+        <p id="acDiscussion" class="academic-text"></p>
+      </div>
+      <button class="ghost-btn" id="copyAcademic" style="margin-top:12px;">記述例をまとめてコピー</button>
+    </div>
+
+    <div class="card pairs-panel rcode-panel">
+      <div class="rank-head"><h3>Rで実行できるコード</h3><span class="mini">R / igraph</span></div>
+      <p class="note">現在の解析設定（共起単位・品詞・上位語数・最小共起回数など）を反映したRスクリプトです。<code>text_a.txt</code> / <code>text_b.txt</code> を同じフォルダに置いて実行してください。日本語の形態素解析には RMeCab を使用します。</p>
+      <pre class="rcode"><code id="rcodeBlock"></code></pre>
+      <button class="ghost-btn" id="copyRcode" style="margin-top:12px;">Rコードをコピー</button>
+    </div>
+  </div>
+
+  <div id="emptyState" class="empty-note">まだ結果がありません。テキストA・Bを入力して「共起ネットワークを生成」を押してください。</div>
+
+  <footer class="note" id="engineNote">RE:JA-TOKEN — 漢字・カタカナ・英数字の連続を語として抽出し、字種・語尾・語彙ヒントから品詞を推定する簡易解析（形態素解析器は不使用）</footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- force / render parameters ----------
+  const FORCE_PARAMS = {
+    charge:-220, distance:70, collide:8, linkStrength:0.5,
+    nodeMin:6, nodeMax:22, edgeMax:6, label:10.5
+  };
+  const SLIDERS = [
+    ['pCharge','vCharge','charge', v=>v],
+    ['pDistance','vDistance','distance', v=>v],
+    ['pCollide','vCollide','collide', v=>v],
+    ['pLinkStrength','vLinkStrength','linkStrength', v=>v],
+    ['pNodeMin','vNodeMin','nodeMin', v=>v],
+    ['pNodeMax','vNodeMax','nodeMax', v=>v],
+    ['pEdgeMax','vEdgeMax','edgeMax', v=>v],
+    ['pLabel','vLabel','label', v=>v],
+  ];
+  let hasRun = false;
+  SLIDERS.forEach(([sliderId, labelId, key]) => {
+    const el = $(sliderId);
+    el.addEventListener('input', () => {
+      const val = parseFloat(el.value);
+      FORCE_PARAMS[key] = val;
+      $(labelId).textContent = val;
+      if(hasRun) redrawNetworks(); // live update after first generation
+    });
+  });
+
+  // ---------- sample data ----------
+  const SAMPLE_A = `人類は長年にわたり宇宙探査に挑戦してきた。ロケット技術の進歩により、探査機は火星や木星の衛星まで到達できるようになった。国際宇宙ステーションでは、宇宙飛行士が微小重力環境で様々な実験を行っている。近年は民間企業も宇宙開発に参入し、再使用型ロケットの技術が急速に進化している。月面基地の建設計画も進んでおり、将来的には火星への有人探査も視野に入っている。宇宙探査には莫大な費用がかかるが、新素材や通信技術など、地上の生活に応用される技術も数多く生まれている。国際協力による探査プロジェクトも増加しており、各国の宇宙機関がデータを共有している。人工衛星は気象観測や通信インフラにも重要な役割を果たしている。今後は小惑星の資源開発や宇宙居住の研究も進むと期待されている。探査技術の発展は、人類の未来を大きく左右する分野である。`;
+  const SAMPLE_B = `海洋探査もまた、人類にとって重要な挑戦の一つである。深海には未知の生物や地形が広がっており、探査船や無人潜水機を用いた調査が続けられている。深海探査には高い水圧に耐える技術が必要であり、耐圧構造や新素材の研究が進んでいる。海洋には気候変動を理解する手がかりも多く、海水温や海流のデータは気象予測に活用されている。近年は民間の研究機関も海洋調査に参入し、環境保全のためのプロジェクトが増加している。海底資源の開発も注目されており、レアメタルなどの採掘技術が研究されている。国際協力による海洋観測網の整備も進んでおり、各国の研究機関がデータを共有している。海洋生態系の保全は、地球全体の環境にとって重要な課題である。探査技術の発展により、これまで到達できなかった深海の世界が明らかになりつつある。海洋探査は、人類の未来の資源と環境を守る鍵となる分野である。`;
+
+  $('loadSample').addEventListener('click', () => {
+    $('textA').value = SAMPLE_A;
+    $('textB').value = SAMPLE_B;
+    updateCounts();
+  });
+
+  // ---------- text input wiring ----------
+  function updateCounts(){
+    $('countA').textContent = $('textA').value.length + ' 文字';
+    $('countB').textContent = $('textB').value.length + ' 文字';
+  }
+  $('textA').addEventListener('input', updateCounts);
+  $('textB').addEventListener('input', updateCounts);
+  $('clearA').addEventListener('click', () => { $('textA').value=''; updateCounts(); });
+  $('clearB').addEventListener('click', () => { $('textB').value=''; updateCounts(); });
+
+  function wireUpload(dropId, fileId, textId){
+    const drop = $(dropId), file = $(fileId), text = $(textId);
+    drop.addEventListener('click', () => file.click());
+    file.addEventListener('change', () => { if(file.files[0]) readFile(file.files[0]); });
+    ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+    drop.addEventListener('drop', e => { if(e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); });
+    function readFile(f){
+      const reader = new FileReader();
+      reader.onload = () => { text.value = reader.result; updateCounts(); };
+      reader.readAsText(f, 'UTF-8');
+    }
+  }
+  wireUpload('dropA','fileA','textA');
+  wireUpload('dropB','fileB','textB');
+
+  // ---------- tokenizer + heuristic part-of-speech tagger ----------
+  // Note: no external morphological analyzer is used (fully self-contained / offline).
+  // POS is inferred heuristically from script, character shape, and small word lists.
+  const RE_JP = /[\u4E00-\u9FAF\u3005]+|[\u30A0-\u30FF\u31F0-\u31FF\u30FC]+|[A-Za-zＡ-Ｚａ-ｚ0-9０-９]+/g;
+  const RE_EN = /[a-z][a-z'-]*[a-z]|[a-z]/g;
+
+  const POS_LABELS = { noun:'名詞', verb:'動詞', adj:'形容詞', adv:'副詞', other:'その他' };
+  const POS_COLORS = { noun:'#2B6CB0', verb:'#B5541A', adj:'#8C6B12', adv:'#3B7A57', other:'#7A828C' };
+
+  // small lexical hints
+  const VERB_SURU = new Set(['する','される','できる','なる','いる','ある','行う','用いる','進む','進める','守る','耐える','広がる','続ける','活用','参入','増加','注目','採掘','整備','共有','到達','達する','理解','活動','研究','開発','観測','建設','応用','保全','調査','挑戦','期待','必要']);
+  const ADJ_WORDS = new Set(['高い','低い','大きい','小さい','新しい','古い','多い','少ない','重要','必要','急速','未知','莫大','様々','明らか','有人','無人','微小','小さな','大きな']);
+  const ADV_WORDS = new Set(['近年','今後','将来','これまで','特に','非常','急速','数多く','大きく','また','さらに','すでに']);
+  const EN_ADV = /ly$/;
+  const EN_ADJ = /(ous|ful|ive|able|ible|al|ic|ical|ish|less|ent|ant)$/;
+  const EN_VERB = /(ize|ise|ify|ate)$/;
+  const EN_NOUN = /(tion|sion|ment|ness|ity|ship|ance|ence|ism|er|or|ing)$/;
+
+  function guessPOS(token, lang){
+    if(lang === 'en'){
+      const w = token.toLowerCase();
+      if(EN_ADV.test(w) && w.length>3) return 'adv';
+      if(EN_VERB.test(w)) return 'verb';
+      if(EN_ADJ.test(w)) return 'adj';
+      if(EN_NOUN.test(w)) return 'noun';
+      return 'noun';
+    }
+    // Japanese
+    if(/^[0-9０-９]+$/.test(token)) return 'other';
+    if(/^[A-Za-zＡ-Ｚａ-ｚ]+$/.test(token)) return 'noun'; // latin word inside JP text
+    if(ADV_WORDS.has(token)) return 'adv';
+    if(ADJ_WORDS.has(token)) return 'adj';
+    if(VERB_SURU.has(token)) return 'verb';
+    // katakana-only → usually noun (loanword)
+    if(/^[\u30A0-\u30FF\u30FC]+$/.test(token)) return 'noun';
+    // ends with 的 → adjectival noun-ish; ～る/～む/～ぶ kanji verbs handled above
+    // default: kanji/compound → noun
+    return 'noun';
+  }
+
+  function detectLang(text){
+    return /[\u3040-\u30FF\u4E00-\u9FFF]/.test(text) ? 'ja' : 'en';
+  }
+  function splitSentences(text){
+    return text.split(/[\n。！？!?]+/).map(s => s.trim()).filter(Boolean);
+  }
+  // returns array of {word, pos}
+  let kuroTokenizer = null;   // 高精度モードが読み込まれると入る
+
+  // kuromojiの品詞体系を、このアプリの noun/verb/adj/adv/other に対応させる
+  // （助詞・助動詞・記号・非自立語は分析対象から外す）
+  function mapKuroPOS(t){
+    const p1 = t.pos, p2 = t.pos_detail_1;
+    if(p1 === '名詞'){
+      if(p2 === '非自立' || p2 === '代名詞' || p2 === '接尾' || p2 === '特殊') return null;
+      if(p2 === '数') return 'other';
+      if(p2 === '形容動詞語幹') return 'adj';
+      return 'noun';
+    }
+    if(p1 === '動詞')   return (p2 === '非自立' || p2 === '接尾') ? null : 'verb';   // れる・られる等は除外
+    if(p1 === '形容詞') return p2 === '非自立' ? null : 'adj';
+    if(p1 === '副詞')   return 'adv';
+    if(p1 === '連体詞' || p1 === '接続詞' || p1 === '感動詞') return 'other';
+    return null;   // 助詞・助動詞・記号・接頭詞・フィラーなど
+  }
+
+  function tokenizeSentenceKuro(sentence, stopSet, minLen, allowedPOS){
+    const out = [];
+    let raw;
+    try{ raw = kuroTokenizer.tokenize(sentence); }
+    catch(e){ return null; }   // 失敗したら簡易モードに落とす
+    raw.forEach(t => {
+      const pos = mapKuroPOS(t);
+      if(!pos) return;
+      const word = (t.basic_form && t.basic_form !== '*') ? t.basic_form : t.surface_form;
+      if(word.length < minLen || stopSet.has(word)) return;
+      if(allowedPOS && !allowedPOS.has(pos)) return;
+      out.push({word, pos});
+    });
+    return out;
+  }
+
+  function tokenizeSentence(sentence, lang, stopSet, minLen, allowedPOS){
+    if(lang === 'ja' && kuroTokenizer){
+      const r = tokenizeSentenceKuro(sentence, stopSet, minLen, allowedPOS);
+      if(r) return r;
+    }
+    let raw;
+    if(lang === 'ja'){
+      raw = sentence.match(RE_JP) || [];
+    } else {
+      raw = (sentence.toLowerCase().match(RE_EN)) || [];
+    }
+    const out = [];
+    raw.forEach(t => {
+      const key = lang === 'ja' ? t : t.toLowerCase();
+      if(t.length < minLen || stopSet.has(key)) return;
+      const pos = guessPOS(t, lang);
+      if(allowedPOS && !allowedPOS.has(pos)) return;
+      out.push({word:t, pos});
+    });
+    return out;
+  }
+
+  function pairKey(a,b){ return a < b ? a+'\u0000'+b : b+'\u0000'+a; }
+
+  function buildRawGraph(text, opts){
+    const lang = detectLang(text);
+    const sentences = splitSentences(text);
+    const freq = new Map();
+    const posMap = new Map(); // word -> pos
+    const coOccur = new Map();
+
+    sentences.forEach(sentence => {
+      const toks = tokenizeSentence(sentence, lang, opts.stopSet, opts.minLen, opts.allowedPOS);
+      toks.forEach(tk => posMap.set(tk.word, tk.pos));
+      if(opts.mode === 'sentence'){
+        const seen = new Set();
+        const uniqWords = [];
+        toks.forEach(tk => { if(!seen.has(tk.word)){ seen.add(tk.word); uniqWords.push(tk.word); } });
+        uniqWords.forEach(w => freq.set(w, (freq.get(w)||0) + 1));
+        for(let i=0;i<uniqWords.length;i++){
+          for(let j=i+1;j<uniqWords.length;j++){
+            const k = pairKey(uniqWords[i], uniqWords[j]);
+            coOccur.set(k, (coOccur.get(k)||0) + 1);
+          }
+        }
+      } else {
+        const words = toks.map(tk => tk.word);
+        words.forEach(w => freq.set(w, (freq.get(w)||0) + 1));
+        for(let i=0;i<words.length;i++){
+          for(let j=i+1;j<=Math.min(i+opts.windowSize, words.length-1);j++){
+            if(words[i] === words[j]) continue;
+            const k = pairKey(words[i], words[j]);
+            coOccur.set(k, (coOccur.get(k)||0) + 1);
+          }
+        }
+      }
+    });
+
+    return { lang, freq, posMap, coOccur, totalTokens: [...freq.values()].reduce((a,b)=>a+b,0) };
+  }
+
+  function trimGraph(raw, topN, minEdge){
+    const topNodes = [...raw.freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0, topN).map(d=>d[0]);
+    const nodeSet = new Set(topNodes);
+    const edges = [];
+    raw.coOccur.forEach((w, k) => {
+      const [s,t] = k.split('\u0000');
+      if(nodeSet.has(s) && nodeSet.has(t) && w >= minEdge){
+        edges.push({source:s, target:t, weight:w});
+      }
+    });
+    // drop isolated nodes (no edges) to keep the view legible, unless graph is tiny
+    const connected = new Set();
+    edges.forEach(e => { connected.add(e.source); connected.add(e.target); });
+    const nodes = topNodes.filter(n => connected.has(n)).map(id => ({id, freq: raw.freq.get(id)}));
+    return { nodes, edges, nodeSet: new Set(nodes.map(n=>n.id)) };
+  }
+
+  // ---------- rendering ----------
+  const tooltip = $('tooltip');
+  function showTip(html, x, y){
+    tooltip.innerHTML = html;
+    tooltip.style.left = (x+14)+'px';
+    tooltip.style.top = (y+10)+'px';
+    tooltip.style.opacity = 1;
+  }
+  function hideTip(){ tooltip.style.opacity = 0; }
+
+  function renderNetwork(svgEl, nodes, edges, opts){
+    const svg = d3.select(svgEl);
+    svg.selectAll('*').remove();
+    const bbox = svgEl.getBoundingClientRect();
+    const width = bbox.width || 400, height = svgEl.clientHeight || 340;
+    svg.attr('viewBox', [0,0,width,height]);
+
+    const g = svg.append('g');
+    svg.call(d3.zoom().scaleExtent([0.4,4]).on('zoom', (ev) => g.attr('transform', ev.transform)));
+
+    if(nodes.length === 0){
+      svg.append('text').attr('x', width/2).attr('y', height/2).attr('text-anchor','middle')
+        .attr('fill', 'var(--ink-soft)').attr('font-size', 12).text('表示できる共起関係がありません');
+      return;
+    }
+
+    const P = FORCE_PARAMS;
+    const freqExtent = d3.extent(nodes, d => d.freq);
+    const rScale = d3.scaleSqrt().domain(freqExtent[0]===freqExtent[1]?[0,freqExtent[1]]:freqExtent).range([P.nodeMin, P.nodeMax]);
+    const wExtent = d3.extent(edges, d => d.weight);
+    const wScale = d3.scaleLinear().domain(wExtent[0]===wExtent[1]?[0,wExtent[1]]:wExtent).range([1, P.edgeMax]);
+
+    const sim = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(edges).id(d=>d.id).distance(d => P.distance - Math.min(P.distance*0.55, wScale(d.weight)*8)).strength(P.linkStrength))
+      .force('charge', d3.forceManyBody().strength(P.charge))
+      .force('center', d3.forceCenter(width/2, height/2))
+      .force('collide', d3.forceCollide(d => rScale(d.freq) + P.collide));
+
+    const link = g.append('g').selectAll('line').data(edges).join('line')
+      .attr('stroke', d => opts.edgeColor ? opts.edgeColor(d) : '#9AA6AE')
+      .attr('stroke-opacity', 0.65)
+      .attr('stroke-width', d => wScale(d.weight));
+
+    const node = g.append('g').selectAll('circle').data(nodes).join('circle')
+      .attr('r', d => rScale(d.freq))
+      .attr('fill', d => opts.nodeColor(d))
+      .attr('stroke', '#fff').attr('stroke-width', 1.5)
+      .call(d3.drag()
+        .on('start', (ev,d) => { if(!ev.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+        .on('drag', (ev,d) => { d.fx=ev.x; d.fy=ev.y; })
+        .on('end', (ev,d) => { if(!ev.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }));
+
+    node.on('mouseenter', function(ev,d){
+      d3.select(this).attr('stroke', '#1B2430').attr('stroke-width', 2.5);
+      link.attr('stroke-opacity', l => (l.source.id===d.id || l.target.id===d.id) ? 0.95 : 0.12);
+      showTip(`<b>${d.id}</b><br>出現頻度: ${d.freq}`, ev.clientX, ev.clientY);
+    }).on('mousemove', ev => { tooltip.style.left=(ev.clientX+14)+'px'; tooltip.style.top=(ev.clientY+10)+'px'; })
+      .on('mouseleave', function(){
+      d3.select(this).attr('stroke', '#fff').attr('stroke-width', 1.5);
+      link.attr('stroke-opacity', 0.65);
+      hideTip();
+    });
+
+    link.on('mouseenter', function(ev,d){
+      showTip(`<b>${d.source.id||d.source}</b> – <b>${d.target.id||d.target}</b><br>共起回数: ${d.weight}`, ev.clientX, ev.clientY);
+    }).on('mousemove', ev => { tooltip.style.left=(ev.clientX+14)+'px'; tooltip.style.top=(ev.clientY+10)+'px'; })
+      .on('mouseleave', hideTip);
+
+    const label = g.append('g').selectAll('text').data(nodes).join('text')
+      .text(d => d.id)
+      .attr('font-size', P.label)
+      .attr('font-family', 'var(--body)')
+      .attr('fill', '#1B2430')
+      .attr('text-anchor','middle')
+      .attr('pointer-events','none')
+      .attr('dy', d => -(rScale(d.freq)+6));
+
+    sim.on('tick', () => {
+      link.attr('x1', d=>d.source.x).attr('y1', d=>d.source.y).attr('x2', d=>d.target.x).attr('y2', d=>d.target.y);
+      node.attr('cx', d=>d.x).attr('cy', d=>d.y);
+      label.attr('x', d=>d.x).attr('y', d=>d.y);
+    });
+  }
+
+  // Latest computed graphs, so parameter sliders can re-render without recomputing.
+  let LAST = null;
+
+  function cloneNodes(nodes){ return nodes.map(n => ({id:n.id, freq:n.freq})); }
+  function cloneEdges(edges){ return edges.map(e => ({source:(e.source.id||e.source), target:(e.target.id||e.target), weight:e.weight, origin:e.origin})); }
+
+  function redrawNetworks(){
+    if(!LAST) return;
+    const {graphA, graphB, nodeIdsA, nodeIdsB, edgeKeyA, edgeKeyB, colorForNode} = LAST;
+
+    renderNetwork($('svgA'), cloneNodes(graphA.nodes), cloneEdges(graphA.edges), {
+      nodeColor: d => (nodeIdsB.has(d.id) ? 'var(--common)' : 'var(--a)'),
+      edgeColor: d => edgeKeyB.has(pairKey(d.source.id||d.source, d.target.id||d.target)) ? 'var(--common)' : '#9AA6AE'
+    });
+    renderNetwork($('svgB'), cloneNodes(graphB.nodes), cloneEdges(graphB.edges), {
+      nodeColor: d => (nodeIdsA.has(d.id) ? 'var(--common)' : 'var(--b)'),
+      edgeColor: d => edgeKeyA.has(pairKey(d.source.id||d.source, d.target.id||d.target)) ? 'var(--common)' : '#9AA6AE'
+    });
+
+    const combinedNodeMap = new Map();
+    graphA.nodes.forEach(n => combinedNodeMap.set(n.id, {id:n.id, freq:n.freq}));
+    graphB.nodes.forEach(n => {
+      if(combinedNodeMap.has(n.id)) combinedNodeMap.get(n.id).freq += n.freq;
+      else combinedNodeMap.set(n.id, {id:n.id, freq:n.freq});
+    });
+    const combinedEdgeMap = new Map();
+    graphA.edges.forEach(e => combinedEdgeMap.set(pairKey(e.source,e.target), {source:e.source, target:e.target, weight:e.weight, origin:'a'}));
+    graphB.edges.forEach(e => {
+      const k = pairKey(e.source,e.target);
+      if(combinedEdgeMap.has(k)){ combinedEdgeMap.get(k).origin = 'both'; }
+      else combinedEdgeMap.set(k, {source:e.source, target:e.target, weight:e.weight, origin:'b'});
+    });
+    renderNetwork($('svgCompare'), [...combinedNodeMap.values()], [...combinedEdgeMap.values()], {
+      nodeColor: d => colorForNode(d.id),
+      edgeColor: d => d.origin==='both' ? 'var(--common)' : (d.origin==='a' ? 'var(--a)' : 'var(--b)')
+    });
+  }
+
+  function drawGauge(value){
+    // value 0..1
+    const svg = d3.select('#gauge');
+    svg.selectAll('*').remove();
+    const cx=110, cy=110, r=80;
+    const scale = d3.scaleLinear().domain([0,1]).range([Math.PI, 2*Math.PI]);
+    const arc = d3.arc().innerRadius(r-14).outerRadius(r);
+
+    const bg = d3.arc().innerRadius(r-14).outerRadius(r).startAngle(-Math.PI/2).endAngle(Math.PI/2);
+    svg.append('path').attr('d', bg).attr('transform', `translate(${cx},${cy})`).attr('fill', '#E3E8EA');
+
+    const fg = d3.arc().innerRadius(r-14).outerRadius(r).startAngle(-Math.PI/2).endAngle(-Math.PI/2 + Math.PI*value);
+    svg.append('path').attr('d', fg).attr('transform', `translate(${cx},${cy})`).attr('fill', 'var(--common)');
+
+    // ticks
+    for(let i=0;i<=4;i++){
+      const a = -Math.PI/2 + (Math.PI*i/4);
+      const x1 = cx + Math.cos(a)*(r-18), y1 = cy + Math.sin(a)*(r-18);
+      const x2 = cx + Math.cos(a)*(r+4), y2 = cy + Math.sin(a)*(r+4);
+      svg.append('line').attr('x1',x1).attr('y1',y1).attr('x2',x2).attr('y2',y2).attr('stroke','#B7C1C6').attr('stroke-width',1.5);
+    }
+    // needle
+    const angle = -Math.PI/2 + Math.PI*value;
+    const nx = cx + Math.cos(angle)*(r-20), ny = cy + Math.sin(angle)*(r-20);
+    svg.append('line').attr('x1',cx).attr('y1',cy).attr('x2',nx).attr('y2',ny)
+      .attr('stroke','#1B2430').attr('stroke-width',2.5).attr('stroke-linecap','round');
+    svg.append('circle').attr('cx',cx).attr('cy',cy).attr('r',4).attr('fill','#1B2430');
+
+    svg.append('text').attr('x',cx-r+2).attr('y',cy+18).attr('font-size',10).attr('font-family','var(--mono)').attr('fill','#5B6672').text('0%');
+    svg.append('text').attr('x',cx+r-14).attr('y',cy+18).attr('font-size',10).attr('font-family','var(--mono)').attr('fill','#5B6672').text('100%');
+  }
+
+  // ---------- main run ----------
+  $('runBtn').addEventListener('click', () => {
+    const rawA = $('textA').value.trim();
+    const rawB = $('textB').value.trim();
+    if(!rawA || !rawB){
+      alert('テキストAとテキストBの両方を入力してください。');
+      return;
+    }
+
+    const stopSet = new Set($('stopwords').value.split(',').map(s=>s.trim()).filter(Boolean));
+    const mode = document.querySelector('input[name=mode]:checked').value;
+    const allowedPOS = new Set([...document.querySelectorAll('.posBox:checked')].map(c => c.value));
+    if(allowedPOS.size === 0){
+      alert('共起に使用する品詞を1つ以上選択してください。');
+      return;
+    }
+    const opts = {
+      mode,
+      windowSize: parseInt($('windowSize').value)||5,
+      minLen: parseInt($('minLen').value)||2,
+      stopSet,
+      allowedPOS
+    };
+    const topN = parseInt($('topN').value)||25;
+    const minEdge = parseInt($('minEdge').value)||2;
+
+    const rawGraphA = buildRawGraph(rawA, opts);
+    const rawGraphB = buildRawGraph(rawB, opts);
+    const graphA = trimGraph(rawGraphA, topN, minEdge);
+    const graphB = trimGraph(rawGraphB, topN, minEdge);
+
+    // ---- comparison sets ----
+    const edgeKeyA = new Set(graphA.edges.map(e => pairKey(e.source, e.target)));
+    const edgeKeyB = new Set(graphB.edges.map(e => pairKey(e.source, e.target)));
+    const nodeIdsA = graphA.nodeSet, nodeIdsB = graphB.nodeSet;
+
+    const commonNodes = [...nodeIdsA].filter(n => nodeIdsB.has(n));
+    const unionNodeCount = new Set([...nodeIdsA, ...nodeIdsB]).size;
+    const commonEdgeKeys = [...edgeKeyA].filter(k => edgeKeyB.has(k));
+    const unionEdgeCount = new Set([...edgeKeyA, ...edgeKeyB]).size;
+
+    const nodeJaccard = unionNodeCount ? commonNodes.length/unionNodeCount : 0;
+    const edgeJaccard = unionEdgeCount ? commonEdgeKeys.length/unionEdgeCount : 0;
+
+    function colorForNode(id){
+      const inA = nodeIdsA.has(id), inB = nodeIdsB.has(id);
+      if(inA && inB) return 'var(--common)';
+      return inA ? 'var(--a)' : 'var(--b)';
+    }
+
+    // store for slider-driven redraws (fresh copies each time so the sim can mutate freely)
+    LAST = { graphA, graphB, nodeIdsA, nodeIdsB, edgeKeyA, edgeKeyB, colorForNode,
+             rawGraphA, rawGraphB, commonNodes };
+    hasRun = true;
+    redrawNetworks();
+
+    // ---- stats text ----
+    $('statA').textContent = `語彙 ${graphA.nodes.length} / 共起 ${graphA.edges.length}`;
+    $('statB').textContent = `語彙 ${graphB.nodes.length} / 共起 ${graphB.edges.length}`;
+    $('statCompare').textContent = `共通語彙 ${commonNodes.length} / 共通共起 ${commonEdgeKeys.length}`;
+
+    drawGauge(edgeJaccard);
+    $('gaugeValue').textContent = Math.round(edgeJaccard*100) + '%';
+
+    const statList = $('statList');
+    statList.innerHTML = '';
+    const rows = [
+      ['テキストA 総語数（延べ）', rawGraphA.totalTokens],
+      ['テキストB 総語数（延べ）', rawGraphB.totalTokens],
+      ['共通語彙数', commonNodes.length],
+      ['Aのみの語彙数', nodeIdsA.size - commonNodes.length],
+      ['Bのみの語彙数', nodeIdsB.size - commonNodes.length],
+      ['共通の共起ペア数', commonEdgeKeys.length],
+      ['語彙のJaccard類似度', Math.round(nodeJaccard*100) + '%'],
+    ];
+    rows.forEach(([label, val]) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${label}</span><span class="n">${val}</span>`;
+      statList.appendChild(li);
+    });
+
+    // ---- common pairs table ----
+    const pairRows = commonEdgeKeys.map(k => {
+      const [w1,w2] = k.split('\u0000');
+      const eA = graphA.edges.find(e => pairKey(e.source,e.target)===k);
+      const eB = graphB.edges.find(e => pairKey(e.source,e.target)===k);
+      return {w1, w2, wa: eA.weight, wb: eB.weight, sum: eA.weight+eB.weight};
+    }).sort((a,b) => b.sum - a.sum).slice(0, 15);
+
+    const tbody = $('pairsBody');
+    tbody.innerHTML = '';
+    if(pairRows.length === 0){
+      $('pairsEmpty').style.display = 'block';
+    } else {
+      $('pairsEmpty').style.display = 'none';
+      pairRows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.w1}</td><td>${r.w2}</td><td class="num">${r.wa}</td><td class="num">${r.wb}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ---- word ranking tables (full vocabulary by frequency) ----
+    const freqA = rawGraphA.freq, freqB = rawGraphB.freq;
+    const rankedA = [...freqA.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 30);
+    const rankedB = [...freqB.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 30);
+    const maxA = rankedA.length ? rankedA[0][1] : 1;
+    const maxB = rankedB.length ? rankedB[0][1] : 1;
+
+    function fillRank(tbodyId, ranked, maxFreq, otherFreq, posMap){
+      const tb = $(tbodyId);
+      tb.innerHTML = '';
+      ranked.forEach(([word, cnt], i) => {
+        const isCommon = otherFreq.has(word);
+        const barW = Math.max(4, Math.round((cnt/maxFreq)*46));
+        const pos = posMap.get(word) || 'other';
+        const badge = `<span class="pos-badge" style="background:${POS_COLORS[pos]}">${POS_LABELS[pos]}</span>`;
+        const tr = document.createElement('tr');
+        if(isCommon) tr.className = 'is-common';
+        tr.innerHTML = `<td class="num">${i+1}</td>`+
+          `<td>${word}</td>`+
+          `<td class="num">${cnt}<span class="rank-bar" style="width:${barW}px"></span></td>`+
+          `<td>${badge}</td>`+
+          `<td class="num">${isCommon ? '<span class="star">★</span>' : '<span style="color:var(--line)">–</span>'}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+    fillRank('rankA', rankedA, maxA, freqB, rawGraphA.posMap);
+    fillRank('rankB', rankedB, maxB, freqA, rawGraphB.posMap);
+
+    // ---- common word list (present in both full vocabularies) ----
+    const commonWords = [...freqA.keys()].filter(w => freqB.has(w))
+      .map(w => ({w, a:freqA.get(w), b:freqB.get(w), sum:freqA.get(w)+freqB.get(w)}))
+      .sort((x,y)=>y.sum - x.sum);
+    $('commonCount').textContent = commonWords.length + ' 語';
+    const chips = $('commonChips');
+    chips.innerHTML = '';
+    if(commonWords.length === 0){
+      $('commonEmpty').style.display = 'block';
+    } else {
+      $('commonEmpty').style.display = 'none';
+      commonWords.slice(0, 10).forEach(c => {
+        const span = document.createElement('span');
+        span.className = 'chip';
+        span.innerHTML = `${c.w}<span class="cnt">A${c.a} / B${c.b}</span>`;
+        chips.appendChild(span);
+      });
+    }
+
+    // ---- network characterization ----
+    function describe(graph, raw, label){
+      const nodes = graph.nodes, edges = graph.edges;
+      const n = nodes.length, m = edges.length;
+      // degree
+      const deg = new Map(nodes.map(nd => [nd.id, 0]));
+      edges.forEach(e => { deg.set(e.source, (deg.get(e.source)||0)+1); deg.set(e.target, (deg.get(e.target)||0)+1); });
+      const degArr = [...deg.entries()].sort((a,b)=>b[1]-a[1]);
+      const hub = degArr[0] || ['—',0];
+      const avgDeg = n ? (2*m/n) : 0;
+      const density = n>1 ? (2*m)/(n*(n-1)) : 0;
+      // top frequency words
+      const topWords = [...raw.freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5).map(d=>d[0]);
+      // strongest edge
+      const strongest = [...edges].sort((a,b)=>b.weight-a.weight)[0];
+      return {n, m, avgDeg, density, hub, topWords, strongest, degArr};
+    }
+    const dA = describe(graphA, rawGraphA, 'A');
+    const dB = describe(graphB, rawGraphB, 'B');
+
+    const posSel = [...allowedPOS].map(p => POS_LABELS[p]).join('・');
+    const modeLabel = mode === 'sentence' ? '文単位' : `スライド窓（窓幅${opts.windowSize}）`;
+
+    function kw(w){ return `<span class="kw">${w}</span>`; }
+    function mi(v){ return `<span class="metric-inline">${v}</span>`; }
+
+    function interpHTML(d, name){
+      const hubTxt = d.hub[1] > 0 ? `${kw(d.hub[0])}（次数${d.hub[1]}）が最も多くの語と結びつく中心的なハブ語となっている` : '突出したハブ語は見られない';
+      const strong = d.strongest ? `最も強い共起は ${kw(d.strongest.source)}–${kw(d.strongest.target)}（${d.strongest.weight}回）` : '強い共起ペアは検出されなかった';
+      return `
+        <p>テキスト${name}のネットワークはノード数 ${mi(d.n)}、リンク数 ${mi(d.m)}、平均次数 ${mi(d.avgDeg.toFixed(2))}、密度 ${mi(d.density.toFixed(3)) } で構成される。</p>
+        <p>頻度上位の語は ${d.topWords.map(kw).join('、')} であり、${hubTxt}。</p>
+        <p>${strong} で、この語対がテキスト${name}の主題的な結びつきを表している。</p>`;
+    }
+    $('interpA').innerHTML = interpHTML(dA, 'A');
+    $('interpB').innerHTML = interpHTML(dB, 'B');
+
+    // comparison narrative
+    const onlyA = [...nodeIdsA].filter(x => !nodeIdsB.has(x));
+    const onlyB = [...nodeIdsB].filter(x => !nodeIdsA.has(x));
+    const commonTop = commonWords.slice(0,5).map(c=>c.w);
+    const denser = dA.density === dB.density ? null : (dA.density > dB.density ? 'A' : 'B');
+    const simWord = edgeJaccard >= 0.4 ? '高く' : (edgeJaccard >= 0.15 ? 'ある程度' : '低く');
+    $('interpCompare').innerHTML = `
+      <p>両ネットワークは語彙のJaccard類似度 ${mi(Math.round(nodeJaccard*100)+'%')}、共起パターンのJaccard類似度 ${mi(Math.round(edgeJaccard*100)+'%')} を示し、両テキストの共起構造の重なりは${simWord}評価される。</p>
+      <p>共通して中心的に現れる語は ${commonTop.length? commonTop.map(kw).join('、') : '（該当なし）'} であり、${commonEdgeKeys.length>0 ? `共通の共起ペアは ${mi(commonEdgeKeys.length)} 組検出された` : '共通の共起ペアは検出されなかった'}。</p>
+      <p>一方、テキストAに固有の語には ${onlyA.slice(0,5).map(kw).join('、')||'（なし）'}、テキストBに固有の語には ${onlyB.slice(0,5).map(kw).join('、')||'（なし）'} が挙げられ、両者の主題的な差異を反映している。</p>
+      ${denser ? `<p>ネットワークの密度はテキスト${denser}の方が高く、語彙間の結びつきがより緊密であることを示唆する。</p>` : ''}`;
+
+    // ---- academic writing examples ----
+    const methodsTxt = `本研究では、2種類のテキストデータ（テキストA・テキストB）を対象に共起ネットワーク分析を行った。テキストを文単位に分割したうえで、${kuroTokenizer ? '形態素解析器kuromoji.js（IPADIC辞書）を用いて語を抽出し、活用語は基本形に統一したうえで' : '字種・語尾・語彙ヒントにもとづく簡易的な語抽出をおこない、'}品詞が${posSel}である語を分析対象とした。共起の判定は${modeLabel}を単位とし、同一単位内に出現する語の組を共起とみなした。出現頻度上位${topN}語をノードとして採用し、共起回数が${minEdge}回以上の語対をエッジとして描画した。ネットワークの可視化には力学モデル（force-directed layout）を用い、ノードの大きさを出現頻度、エッジの太さを共起回数に対応させた。`;
+
+    const resultsTxt = `テキストAのネットワークはノード数${dA.n}、エッジ数${dA.m}（平均次数${dA.avgDeg.toFixed(2)}、密度${dA.density.toFixed(3)}）であり、${dA.hub[0]}が次数${dA.hub[1]}で最大の中心性を示した。テキストBのネットワークはノード数${dB.n}、エッジ数${dB.m}（平均次数${dB.avgDeg.toFixed(2)}、密度${dB.density.toFixed(3)}）であり、${dB.hub[0]}が中心的な語として観察された。両テキストに共通する語は${commonWords.length}語、共通する共起ペアは${commonEdgeKeys.length}組であり、語彙のJaccard係数は${nodeJaccard.toFixed(2)}、共起ペアのJaccard係数は${edgeJaccard.toFixed(2)}であった。`;
+
+    const discussionTxt = `共起ネットワークの比較から、両テキストは${commonTop.length? `「${commonTop.slice(0,3).join('」「')}」`:'一部の語'}を共通の主題として共有しつつ、テキストAでは${onlyA.slice(0,3).map(w=>`「${w}」`).join('')}、テキストBでは${onlyB.slice(0,3).map(w=>`「${w}」`).join('')}といった固有の語群がそれぞれの特徴を形成していることが示された。共起パターンのJaccard係数が${edgeJaccard.toFixed(2)}であったことは、両テキストの結びつきの構造が${simWord === '高く' ? '相当程度共通している' : simWord === 'ある程度' ? '部分的に共通している' : '大きく異なっている'}ことを示唆する。${kuroTokenizer ? '本分析では形態素解析器kuromoji.js（IPADIC辞書）により語の切り出しと品詞判定をおこない、活用語は基本形に正規化した。ただし辞書に依存する解析である以上、固有名詞や新語の扱いには限界がある点に留意が必要である。' : 'ただし、本分析は形態素解析器を用いない簡易的な語抽出・品詞推定に基づくため、語の区切りや品詞判定には一定の誤差が含まれる点に留意が必要である。'}`;
+
+    $('acMethods').textContent = methodsTxt;
+    $('acResults').textContent = resultsTxt;
+    $('acDiscussion').textContent = discussionTxt;
+
+    $('copyAcademic').onclick = () => {
+      const full = `【方法】\n${methodsTxt}\n\n【結果】\n${resultsTxt}\n\n【考察】\n${discussionTxt}`;
+      navigator.clipboard.writeText(full).then(() => {
+        $('copyAcademic').textContent = 'コピーしました ✓';
+        setTimeout(()=>{ $('copyAcademic').textContent = '記述例をまとめてコピー'; }, 1800);
+      }).catch(()=>{ $('copyAcademic').textContent = 'コピーに失敗しました'; });
+    };
+
+    // ---- R code generation (reflects current settings) ----
+    const posJaMap = { noun:'名詞', verb:'動詞', adj:'形容詞', adv:'副詞' };
+    const rPOS = [...allowedPOS].filter(p => posJaMap[p]).map(p => `"${posJaMap[p]}"`).join(', ');
+    const rPOSvec = rPOS || '"名詞"';
+    const rMinLen = opts.minLen;
+    const rTopN = topN;
+    const rMinEdge = minEdge;
+    const rWindow = opts.windowSize;
+    const rMode = mode; // 'sentence' | 'window'
+    const stopArr = [...stopSet];
+    const rStop = stopArr.length ? stopArr.map(s => `"${s.replace(/"/g,'\\"')}"`).join(', ') : '';
+
+    const coBlock = rMode === 'sentence'
+? `# --- 共起の集計：文単位（同一文に共出現する語ペア）---
+cooccur <- list()
+for (i in seq_along(sentences)) {
+  words <- extract_words(sentences[i])
+  words <- unique(words)                       # 文内の重複を除去
+  if (length(words) < 2) next
+  pairs <- t(combn(sort(words), 2))
+  for (r in seq_len(nrow(pairs))) {
+    key <- paste(pairs[r, 1], pairs[r, 2], sep = "\\t")
+    cooccur[[key]] <- (if (is.null(cooccur[[key]])) 0 else cooccur[[key]]) + 1
+  }
+}`
+: `# --- 共起の集計：スライド窓（前後 ${rWindow} 語以内）---
+window_size <- ${rWindow}
+cooccur <- list()
+for (i in seq_along(sentences)) {
+  words <- extract_words(sentences[i])
+  n <- length(words)
+  if (n < 2) next
+  for (a in seq_len(n)) {
+    for (b in (a + 1):min(a + window_size, n)) {
+      if (words[a] == words[b]) next
+      key <- paste(sort(c(words[a], words[b])), collapse = "\\t")
+      cooccur[[key]] <- (if (is.null(cooccur[[key]])) 0 else cooccur[[key]]) + 1
+    }
+  }
+}`;
+
+    const rcode = `# ============================================================
+#  共起ネットワーク比較（テキストA / テキストB）
+#  R + RMeCab + igraph
+#  ※ このアプリの設定を反映して自動生成されたスクリプトです
+# ============================================================
+
+# --- パッケージ ---
+# install.packages("igraph")
+# RMeCab のインストールは https://github.com/IshidaMotohiro/RMeCab を参照
+library(RMeCab)
+library(igraph)
+
+# --- 解析パラメータ（アプリの設定に対応）---
+target_pos <- c(${rPOSvec})   # 対象品詞
+min_len    <- ${rMinLen}                    # 最小文字数
+top_n      <- ${rTopN}                   # 上位ノード数（頻度上位）
+min_edge   <- ${rMinEdge}                    # 最小共起回数
+stopwords  <- c(${rStop})
+
+# --- 語の抽出関数（品詞・文字数・ストップワードでフィルタ）---
+extract_words <- function(sentence) {
+  if (nchar(sentence) == 0) return(character(0))
+  res <- unlist(RMeCabC(sentence))
+  pos <- names(res)
+  keep <- pos %in% target_pos &
+          nchar(res) >= min_len &
+          !(res %in% stopwords)
+  as.character(res[keep])
+}
+
+# --- ネットワーク構築関数 ---
+build_network <- function(path) {
+  text <- paste(readLines(path, encoding = "UTF-8"), collapse = "\\n")
+  sentences <- unlist(strsplit(text, "[\\n。！？!?]+"))
+  sentences <- trimws(sentences)
+  sentences <- sentences[nchar(sentences) > 0]
+
+  # 出現頻度
+  all_words <- unlist(lapply(sentences, extract_words))
+  freq <- sort(table(all_words), decreasing = TRUE)
+  top_words <- names(head(freq, top_n))
+
+${coBlock}
+
+  # data.frame 化 → 上位語・最小共起回数でフィルタ
+  if (length(cooccur) == 0) return(list(graph = make_empty_graph(), freq = freq))
+  edges <- do.call(rbind, lapply(names(cooccur), function(k) {
+    parts <- strsplit(k, "\\t")[[1]]
+    data.frame(from = parts[1], to = parts[2],
+               weight = cooccur[[k]], stringsAsFactors = FALSE)
+  }))
+  edges <- edges[edges$from %in% top_words &
+                 edges$to   %in% top_words &
+                 edges$weight >= min_edge, ]
+
+  g <- graph_from_data_frame(edges, directed = FALSE)
+  # ノード頻度を属性として付与
+  V(g)$freq <- as.integer(freq[V(g)$name])
+  list(graph = g, freq = freq, edges = edges)
+}
+
+# --- テキストA / B を解析 ---
+netA <- build_network("text_a.txt")
+netB <- build_network("text_b.txt")
+gA <- netA$graph
+gB <- netB$graph
+
+# --- 描画（ノードサイズ=頻度、エッジ太さ=共起回数）---
+plot_network <- function(g, title, node_col = "#2B6CB0") {
+  if (gorder(g) == 0) { plot.new(); title(title); return(invisible()) }
+  set.seed(1)
+  plot(g,
+       layout            = layout_with_fr(g),          # 力学モデル
+       vertex.size       = 4 + 6 * sqrt(V(g)$freq / max(V(g)$freq)),
+       vertex.color      = node_col,
+       vertex.label      = V(g)$name,
+       vertex.label.cex  = 0.8,
+       vertex.label.color= "black",
+       vertex.label.family = "Japan1GothicBBB",         # PDF出力時の日本語フォント
+       edge.width        = 1 + 3 * (E(g)$weight / max(E(g)$weight)),
+       edge.color        = "#9AA6AE",
+       main              = title)
+}
+
+# 画像ファイルに保存（PNG）
+png("network_A.png", width = 1200, height = 900, res = 150)
+plot_network(gA, "ネットワークA", "#2B6CB0")
+dev.off()
+
+png("network_B.png", width = 1200, height = 900, res = 150)
+plot_network(gB, "ネットワークB", "#B5541A")
+dev.off()
+
+# --- 2つのネットワークの比較指標 ---
+nodes_A <- V(gA)$name; nodes_B <- V(gB)$name
+common_nodes <- intersect(nodes_A, nodes_B)
+jaccard_node <- length(common_nodes) /
+                length(union(nodes_A, nodes_B))
+
+edge_key <- function(g) apply(as_edgelist(g), 1, function(r) paste(sort(r), collapse = "\\t"))
+eA <- edge_key(gA); eB <- edge_key(gB)
+jaccard_edge <- length(intersect(eA, eB)) / length(union(eA, eB))
+
+cat("共通語彙数        :", length(common_nodes), "\\n")
+cat("語彙 Jaccard 係数 :", round(jaccard_node, 3), "\\n")
+cat("共起 Jaccard 係数 :", round(jaccard_edge, 3), "\\n")
+
+# 中心性（次数）の確認
+cat("\\n[A] 次数上位:\\n"); print(head(sort(degree(gA), decreasing = TRUE), 5))
+cat("\\n[B] 次数上位:\\n"); print(head(sort(degree(gB), decreasing = TRUE), 5))
+`;
+    $('rcodeBlock').textContent = rcode;
+    $('copyRcode').onclick = () => {
+      navigator.clipboard.writeText(rcode).then(() => {
+        $('copyRcode').textContent = 'コピーしました ✓';
+        setTimeout(()=>{ $('copyRcode').textContent = 'Rコードをコピー'; }, 1800);
+      }).catch(()=>{ $('copyRcode').textContent = 'コピーに失敗しました'; });
+    };
+
+    $('results').style.display = 'block';
+    $('emptyState').style.display = 'none';
+    $('results').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  // ---------- export network SVG as PNG ----------
+  function exportSVGtoPNG(svgEl, filename, scale){
+    scale = scale || 2;
+    const clone = svgEl.cloneNode(true);
+    const vb = (svgEl.getAttribute('viewBox') || '').split(/[ ,]+/).map(Number);
+    const w = vb.length===4 ? vb[2] : (svgEl.clientWidth || 600);
+    const h = vb.length===4 ? vb[3] : (svgEl.clientHeight || 400);
+
+    // resolve CSS custom-property colors on the clone, since var(--x) won't survive serialization
+    const srcEls = svgEl.querySelectorAll('*');
+    const dstEls = clone.querySelectorAll('*');
+    dstEls.forEach((el, i) => {
+      const cs = getComputedStyle(srcEls[i]);
+      ['fill','stroke'].forEach(prop => {
+        const attr = el.getAttribute(prop);
+        if(attr && attr.indexOf('var(') !== -1){
+          el.setAttribute(prop, cs[prop]);
+        }
+      });
+    });
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('width', w);
+    clone.setAttribute('height', h);
+    // white background rect so PNG isn't transparent
+    const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x', vb.length===4?vb[0]:0); bg.setAttribute('y', vb.length===4?vb[1]:0);
+    bg.setAttribute('width', w); bg.setAttribute('height', h); bg.setAttribute('fill', '#ffffff');
+    clone.insertBefore(bg, clone.firstChild);
+
+    const svgStr = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w*scale; canvas.height = h*scale;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename + '.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+      }, 'image/png');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); alert('画像の生成に失敗しました。'); };
+    img.src = url;
+  }
+
+  document.querySelectorAll('.dl-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const svgEl = $(btn.dataset.svg);
+      if(!svgEl || !svgEl.querySelector('circle')){
+        alert('先に「共起ネットワークを生成」を実行してください。');
+        return;
+      }
+      const original = btn.textContent;
+      btn.textContent = '生成中…';
+      setTimeout(() => {
+        exportSVGtoPNG(svgEl, btn.dataset.name, 2);
+        btn.textContent = '保存 ✓';
+        setTimeout(()=>{ btn.textContent = original; }, 1500);
+      }, 30);
+    });
+  });
+
+
+  /* ============================================================
+     kuromoji（高精度モード）
+     ------------------------------------------------------------
+     Google Apps Script（HtmlService のサンドボックス iframe）で
+     止まってしまう問題への対応。
+
+     原因：kuromoji 内部の辞書読み込みは XMLHttpRequest の onload の中で
+     gunzip している。CDN が .gz を Content-Encoding: gzip で返すと
+     ブラウザ側で先に解凍されるため gunzip が例外を投げ、その例外が
+     onload の中で捨てられてコールバックが呼ばれない。結果 build() が
+     永久に返らず「読み込んでいます…」のまま停止する。
+
+     対策：辞書取得の間だけ XMLHttpRequest を差し替え、素の
+     XMLHttpRequest で取得し直す。解凍済みなら gzip し直して kuromoji に
+     渡し、必ず onload か onerror のどちらかを呼ぶ。加えて全体に
+     タイムアウトをかけ、どんな失敗でも必ず画面に理由を出して
+     停止しないようにする。なお GAS 内では fetch が postMessage 経由の
+     代理実装に差し替わっており AbortSignal を渡せないため、fetch は
+     使わない。
+     ============================================================ */
+  const KURO_BASES = [
+    'https://cdn.jsdelivr.net/npm/kuromoji@0.1.2',
+    'https://fastly.jsdelivr.net/npm/kuromoji@0.1.2',
+    'https://unpkg.com/kuromoji@0.1.2'
+  ];
+  const KURO_FILE_TIMEOUT  = 60000;   // 辞書1ファイルあたり
+  const KURO_SCRIPT_TIMEOUT= 30000;   // 本体スクリプト
+  const KURO_TOTAL_TIMEOUT = 240000;  // 辞書12ファイル全体
+
+  function withTimeout(promise, ms, label){
+    return new Promise((res, rej)=>{
+      const t = setTimeout(()=> rej(new Error(label + 'がタイムアウトしました')), ms);
+      promise.then(v=>{ clearTimeout(t); res(v); }, e=>{ clearTimeout(t); rej(e); });
+    });
+  }
+  function loadScript(src){
+    return withTimeout(new Promise((res,rej)=>{
+      const s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = ()=> res();
+      s.onerror = ()=> rej(new Error('本体スクリプトを取得できません'));
+      document.head.appendChild(s);
+    }), KURO_SCRIPT_TIMEOUT, '本体スクリプトの取得');
+  }
+  function shortHost(u){ try{ return u.replace(/^https?:\/+/,'').split('/')[0]; }catch(e){ return u; } }
+
+  /* kuromoji は内部で path.join を使うため https:// が https:/ に潰れる。
+     fetch に渡す前に戻す。 */
+  function fixUrl(u){ return String(u).replace(/^(https?:)\/(?!\/)/i, '$1//'); }
+  const isGzip = u8 => u8.length > 2 && u8[0] === 0x1f && u8[1] === 0x8b;
+
+  /* CDN 側で解凍済みだった場合に、kuromoji が期待する gzip へ戻す */
+  async function regzip(u8){
+    if(typeof CompressionStream === 'undefined'){
+      throw new Error('辞書が解凍済みで、この環境では再圧縮できません');
+    }
+    const stream = new Blob([u8]).stream().pipeThrough(new CompressionStream('gzip'));
+    if(typeof Response !== 'undefined'){
+      try{ return new Uint8Array(await new Response(stream).arrayBuffer()); }catch(e){ /* 下の手順へ */ }
+    }
+    const reader = stream.getReader(), chunks = [];
+    let len = 0, r;
+    while(!(r = await reader.read()).done){ chunks.push(r.value); len += r.value.length; }
+    const out = new Uint8Array(len);
+    let at = 0;
+    for(const c of chunks){ out.set(c, at); at += c.length; }
+    return out;
+  }
+
+  /* 辞書ファイル（*.dat.gz）の取得だけを横取りする XMLHttpRequest */
+  function installDictFetcher(onProgress){
+    const Real = window.XMLHttpRequest;
+    const inflight = [];
+    let failed = false;   // 1つ失敗したら以降は通知せず、残りの通信も止める
+    function ShimXHR(){
+      this.status = 0; this.response = null; this.responseType = '';
+      this.onload = null; this.onerror = null; this.ontimeout = null;
+      this._url = ''; this._method = 'GET'; this._real = null;
+    }
+    ShimXHR.prototype.open = function(method, url){ this._method = method; this._url = String(url); };
+    ShimXHR.prototype.setRequestHeader = function(){};
+    ShimXHR.prototype.abort = function(){ if(this._real){ try{ this._real.abort(); }catch(e){} } };
+    ShimXHR.prototype.send = function(body){
+      const self = this, url = fixUrl(this._url);
+
+      // 辞書以外は本物の XMLHttpRequest に任せる
+      if(!/\.dat\.gz(\?|$)/i.test(url)){
+        const r = new Real(); this._real = r;
+        try{ r.responseType = this.responseType; }catch(e){}
+        r.onload = function(){
+          self.status = r.status; self.response = r.response;
+          try{ self.responseText = r.responseText; }catch(e){}
+          if(self.onload) self.onload.call(self);
+        };
+        r.onerror = function(e){ self.status = r.status; if(self.onerror) self.onerror.call(self, e); };
+        r.open(this._method, url, true);
+        r.send(body);
+        return;
+      }
+
+      /* 取得は必ず「本物の XMLHttpRequest」で行う。
+         GAS のサンドボックス内では fetch が postMessage 経由の代理実装に
+         差し替わっており、init に AbortSignal を渡すと構造化クローンに
+         失敗して DataCloneError になるため、fetch は使わない。 */
+      const file = url.split('/').pop();
+      const fail = err =>{
+        self.status = 0;
+        if(failed) return;            // 二重通知を避ける
+        failed = true;
+        inflight.forEach(r=>{ try{ r.abort(); }catch(e){} });
+        if(self.onerror) self.onerror.call(self, err instanceof Error ? err : new Error(String(err)));
+      };
+      const finish = u8 =>{
+        self.status = 200;
+        self.response = (u8.byteOffset === 0 && u8.byteLength === u8.buffer.byteLength)
+          ? u8.buffer
+          : u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+        if(onProgress) onProgress();
+        // onload 内の例外（kuromoji 側の解凍失敗など）を握り潰さない
+        try{ if(self.onload) self.onload.call(self); }
+        catch(e){ fail(e); }
+      };
+
+      try{
+        const r = new Real();
+        this._real = r;
+        inflight.push(r);
+        r.open('GET', url, true);
+        r.responseType = 'arraybuffer';
+        try{ r.timeout = KURO_FILE_TIMEOUT; }catch(e){}
+        r.onload = function(){
+          if(failed) return;
+          if(r.status && r.status !== 200){ fail(new Error('HTTP ' + r.status + '（' + file + '）')); return; }
+          if(!r.response){ fail(new Error('空の応答（' + file + '）')); return; }
+          let u8;
+          try{ u8 = new Uint8Array(r.response); }
+          catch(e){ fail(new Error('応答を読めません（' + file + '）')); return; }
+          if(isGzip(u8)) finish(u8);
+          else regzip(u8).then(finish).catch(fail);   // 自動解凍されていたら戻す
+        };
+        r.onerror   = ()=> fail(new Error('通信できません（' + file + '）'));
+        r.ontimeout = ()=> fail(new Error('タイムアウト（' + file + '）'));
+        r.send();
+      }catch(e){ fail(e); }
+    };
+    window.XMLHttpRequest = ShimXHR;
+    return (cancel)=>{
+      window.XMLHttpRequest = Real;
+      if(cancel){ failed = true; inflight.forEach(r=>{ try{ r.abort(); }catch(e){} }); }
+    };
+  }
+
+
+  $('loadKuromoji').addEventListener('click', async () => {
+    const btn = $('loadKuromoji'), msg = $('kuroMsg');
+    btn.disabled = true;
+
+    const customEl = $('kuroBase');
+    const custom = customEl ? customEl.value.trim().replace(/\/+$/, '') : '';
+    const bases = custom ? [custom].concat(KURO_BASES) : KURO_BASES.slice();
+    const errors = [];
+
+    for(const base of bases){
+      let restore = null;
+      try{
+        msg.textContent = '本体を読み込み中…（' + shortHost(base) + '）';
+        if(!window.kuromoji) await loadScript(base + '/build/kuromoji.js');
+        if(!window.kuromoji) throw new Error('kuromoji本体を読み込めません');
+
+        let done = 0;
+        restore = installDictFetcher(() => {
+          done++;
+          msg.textContent = '辞書を読み込み中… ' + done + '/12（約15MB、初回のみ）';
+        });
+        msg.textContent = '辞書を読み込み中… 0/12（約15MB、初回のみ）';
+
+        await withTimeout(new Promise((res, rej) => {
+          try{
+            kuromoji.builder({dicPath: base + '/dict/'}).build((err, tk) => {
+              if(err) rej(err instanceof Error ? err : new Error(String(err && err.message || err)));
+              else { kuroTokenizer = tk; res(); }
+            });
+          }catch(e){ rej(e); }
+        }), KURO_TOTAL_TIMEOUT, '辞書の読み込み');
+
+        restore(); restore = null;
+        break;
+      }catch(e){
+        if(restore) restore(true);
+        errors.push(shortHost(base) + '：' + (e && e.message ? e.message : e));
+      }
+    }
+
+    if(kuroTokenizer){
+      $('modePill').textContent = '形態素解析：高精度モード（kuromoji.js）';
+      $('modePill').classList.add('on');
+      btn.classList.add('hidden');
+      $('kuroBaseRow').classList.add('hidden');
+      $('posHint').textContent = 'チェックした品詞の語だけをネットワークに使用（kuromoji.jsによる形態素解析。活用語は基本形にそろえます）';
+      // 補助動詞はノードにしても意味を持ちにくいので、目に見える形でストップワードに足す
+      const sw = $('stopwords');
+      const have = new Set(sw.value.split(',').map(s => s.trim()).filter(Boolean));
+      const added = ['する','ある','いる','なる','できる','いう','行う','思う'].filter(w => !have.has(w));
+      if(added.length) sw.value = sw.value.replace(/,\s*$/, '') + ',' + added.join(',');
+      $('engineNote').textContent = 'kuromoji.js（IPADIC辞書）— 形態素解析により語を切り出し、品詞を判定して活用語を基本形に正規化';
+      if(hasRun){
+        msg.textContent = '読み込みました。高精度モードで生成し直しています…';
+        setTimeout(() => { $('runBtn').click(); msg.textContent = '読み込みました。'; }, 30);
+      }else{
+        msg.textContent = '読み込みました。「共起ネットワークを生成」を押してください。' +
+          (added.length ? '（補助動詞をストップワードに追加しました）' : '');
+      }
+    }else{
+      btn.disabled = false;
+      $('kuroBaseRow').classList.remove('hidden');
+      msg.innerHTML = '<span class="err">辞書を取得できませんでした（' +
+        errors.join(' / ').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) +
+        '）。簡易モードのままでも分析は進められます。</span>';
+    }
+  });
+
+  updateCounts();
+})();
+</script>
+</body>
+</html>

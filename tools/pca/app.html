@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>主成分分析ラボ — データ分析ラボ</title>
+<style>
+:root{
+  /* インクと紙 ------------------------------------------------ */
+  --ink:#12161A;          /* 見出し・主線 */
+  --ink-2:#333D45;        /* 本文 */
+  --mute:#6C7680;         /* 補助 */
+  --paper:#E9E9E3;        /* 背景（淡いグレージュ） */
+  --card:#FCFCFA;
+  --rule:#D5D6CD;
+  --rule-2:#E6E6DF;
+  --sel:#F1F3EE;
+  /* 主成分の正負を表す二極色（深緑 ↔ 梅紫） -------------------- */
+  --pos:#1B6B5A;
+  --pos-d:#12503F;
+  --neg:#7B3C7E;
+  --gold:#8F6B14;         /* 変数ベクトル・累積寄与率 */
+  --font-disp:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP","Songti SC","Times New Roman",serif;
+  --font-ui:"Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic",Meiryo,system-ui,-apple-system,sans-serif;
+  --font-num:ui-monospace,"SF Mono",SFMono-Regular,Consolas,"Roboto Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);color:var(--ink-2);
+  font-family:var(--font-ui);font-size:13.5px;line-height:1.85;
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px 110px}
+.num,td,pre,.stat .v{font-variant-numeric:tabular-nums}
+
+/* ── ヘッダー ─────────────────────────────────── */
+header.top{padding:52px 0 0}
+.eyebrow{
+  font-family:var(--font-num);font-size:10.5px;letter-spacing:.3em;
+  color:var(--mute);margin:0 0 14px;text-transform:uppercase;
+}
+h1{
+  font-family:var(--font-disp);font-weight:600;
+  font-size:clamp(30px,5.2vw,47px);letter-spacing:.02em;line-height:1.26;margin:0;
+  color:var(--ink);
+}
+h1 em{font-style:normal;color:var(--pos)}
+.lede em{font-style:normal;font-weight:700;color:var(--pos-d)}
+.lede{
+  margin:16px 0 0;max-width:44em;font-size:13.5px;color:var(--mute);line-height:1.9;
+}
+#hero{display:block;width:100%;height:170px;margin:22px 0 0}
+header.top .rule{height:1px;background:var(--rule);margin:26px 0 30px}
+@media(max-width:640px){#hero{height:132px}header.top{padding-top:34px}}
+
+/* ── レイアウト ───────────────────────────────── */
+.cols{display:grid;grid-template-columns:326px 1fr;gap:30px;align-items:start}
+@media(max-width:960px){.cols{grid-template-columns:1fr;gap:22px}}
+.rail{position:sticky;top:18px}
+@media(max-width:960px){.rail{position:static}}
+
+/* ── パネル（操作側） ─────────────────────────── */
+.panel{
+  background:var(--card);border:1px solid var(--rule);border-radius:3px;
+  padding:20px 20px 22px;margin-bottom:16px;
+}
+.panel > h2{
+  display:flex;align-items:center;gap:10px;margin:0 0 16px;
+  font-size:12px;font-weight:700;letter-spacing:.13em;color:var(--ink);
+}
+.panel > h2 .n{
+  font-family:var(--font-num);font-size:10.5px;letter-spacing:.08em;color:var(--pos);
+}
+.panel > h2::after{content:"";flex:1;height:1px;background:var(--rule-2)}
+
+label.fld{display:block;font-size:11.5px;font-weight:700;color:var(--mute);letter-spacing:.06em;margin:16px 0 6px}
+label.fld:first-of-type{margin-top:0}
+textarea,select,input[type=text],input[type=number]{
+  width:100%;font-family:var(--font-num);font-size:12.5px;color:var(--ink);
+  background:#fff;border:1px solid var(--rule);border-radius:2px;padding:8px 10px;
+  transition:border-color .15s,box-shadow .15s;
+}
+textarea{min-height:148px;resize:vertical;line-height:1.65;white-space:pre;overflow-wrap:normal;overflow-x:auto}
+select{font-family:var(--font-ui);cursor:pointer;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--mute) 50%),linear-gradient(135deg,var(--mute) 50%,transparent 50%);
+  background-position:calc(100% - 15px) center,calc(100% - 10px) center;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:28px;
+}
+textarea:focus,select:focus,input:focus{
+  outline:none;border-color:var(--pos);box-shadow:0 0 0 3px rgba(27,107,90,.13);
+}
+button:focus-visible,a:focus-visible{outline:2px solid var(--pos);outline-offset:2px}
+
+.drop{
+  border:1px dashed var(--rule);background:#fff;border-radius:2px;
+  padding:16px;text-align:center;font-size:12px;color:var(--mute);cursor:pointer;
+  transition:border-color .15s,background .15s,color .15s;
+}
+.drop:hover,.drop.on{border-color:var(--pos);background:var(--sel);color:var(--pos-d)}
+
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row > *{flex:1 1 0;min-width:0}
+
+button{
+  font-family:var(--font-ui);font-size:12.5px;font-weight:600;cursor:pointer;
+  border:1px solid var(--rule);background:#fff;color:var(--ink);
+  padding:7px 13px;border-radius:2px;transition:border-color .15s,background .15s,color .15s;
+}
+button:hover{border-color:var(--ink);background:var(--ink);color:#fff}
+button.ghost{color:var(--mute);font-weight:600}
+button.ghost:hover{background:var(--ink-2);border-color:var(--ink-2);color:#fff}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.run{
+  width:100%;background:var(--ink);color:#fff;border-color:var(--ink);
+  padding:14px;font-size:13.5px;letter-spacing:.14em;font-weight:700;
+  transition:background .18s,transform .12s;
+}
+button.run:hover{background:var(--pos-d);border-color:var(--pos-d);transform:translateY(-1px)}
+button.run:active{transform:translateY(0)}
+
+.chk{display:flex;align-items:flex-start;gap:8px;font-size:13px;margin:7px 0;cursor:pointer;color:var(--ink-2)}
+.chk input{margin:5px 0 0;accent-color:var(--pos);flex:none}
+.varlist{max-height:232px;overflow-y:auto;border:1px solid var(--rule-2);border-radius:2px;padding:9px 11px;background:#fff}
+.varlist .chk{margin:2px 0}
+.varlist .tag{font-family:var(--font-num);font-size:10px;color:#9AA3AB;margin-left:auto;flex:none;padding-top:3px;letter-spacing:.04em}
+
+.hint{font-size:11.5px;color:var(--mute);line-height:1.75;margin:10px 0 0}
+.err{
+  background:#fff;border:1px solid var(--neg);border-left-width:3px;border-radius:2px;
+  color:#5D2A60;padding:10px 12px;font-size:12.5px;margin:12px 0 0;
+}
+
+/* ── 結果 ─────────────────────────────────────── */
+.empty{
+  background:var(--card);border:1px solid var(--rule);border-radius:3px;
+  padding:78px 30px;text-align:center;
+}
+.empty h3{font-family:var(--font-disp);font-weight:600;margin:0 0 10px;font-size:19px;color:var(--ink);letter-spacing:.02em}
+.empty p{margin:0;color:var(--mute);font-size:13px}
+
+section.res{
+  background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-bottom:16px;
+}
+section.res > .hd{
+  display:flex;align-items:baseline;gap:12px;padding:16px 22px 13px;flex-wrap:wrap;
+  border-bottom:1px solid var(--rule-2);
+}
+section.res > .hd .idx{
+  font-family:var(--font-num);font-size:10.5px;letter-spacing:.14em;color:var(--pos);
+  flex:none;padding-top:2px;
+}
+section.res > .hd h2{
+  font-family:var(--font-disp);font-weight:600;font-size:18px;letter-spacing:.02em;
+  color:var(--ink);margin:0;line-height:1.4;
+}
+section.res > .hd .sp{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+section.res > .hd .sp button{font-size:11.5px;padding:5px 11px}
+section.res > .hd .sp select{font-size:11.5px;padding:5px 26px 5px 9px}
+section.res > .bd{padding:20px 22px 22px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border-bottom:1px solid var(--rule-2)}
+.stat{padding:15px 22px;border-right:1px solid var(--rule-2)}
+.stat:last-child{border-right:none}
+.stat .k{font-size:10.5px;color:var(--mute);letter-spacing:.08em;line-height:1.5}
+.stat .v{font-family:var(--font-num);font-size:21px;font-weight:500;color:var(--ink);letter-spacing:-.01em;line-height:1.45}
+.stat .v small{font-size:11px;color:var(--mute);letter-spacing:0;margin-left:1px}
+
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:7px 11px;text-align:right;white-space:nowrap}
+th{
+  font-size:10.5px;letter-spacing:.07em;color:var(--mute);font-weight:700;
+  border-bottom:1px solid var(--ink);position:sticky;top:0;background:var(--card);padding-bottom:6px;
+}
+td{font-family:var(--font-num);border-bottom:1px solid var(--rule-2);color:var(--ink-2)}
+th:first-child,td:first-child{text-align:left;font-family:var(--font-ui);color:var(--ink)}
+tbody tr:hover td{background:var(--sel)}
+tr.keep td{background:rgba(27,107,90,.045)}
+tr.keep td:first-child{box-shadow:inset 2px 0 0 var(--pos)}
+tr.keep:hover td{background:rgba(27,107,90,.08)}
+
+canvas{display:block;width:100%;touch-action:none}
+.plotwrap{border:1px solid var(--rule-2);border-radius:2px;background:#fff;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--mute);padding:11px 2px 0}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+.interp{font-size:13.5px;line-height:1.95;color:var(--ink-2)}
+.interp h4{
+  font-family:var(--font-disp);font-weight:600;font-size:14.5px;color:var(--ink);
+  letter-spacing:.03em;margin:22px 0 10px;
+}
+.interp h4:first-child{margin-top:0}
+.interp p{margin:0 0 12px}
+.interp b{color:var(--ink)}
+.interp .quote{
+  border:1px solid var(--rule-2);border-left:2px solid var(--pos);border-radius:2px;
+  background:#fff;padding:15px 17px;font-size:13px;line-height:2;
+}
+.naming{
+  display:flex;flex-wrap:wrap;gap:7px;align-items:center;
+  margin:-4px 0 16px;padding:11px 13px;background:var(--sel);border-radius:2px;
+}
+.naming .lbl{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--pos-d);margin-right:3px}
+.naming .chip{
+  border:1px solid rgba(27,107,90,.45);color:var(--pos-d);background:#fff;
+  font-size:12px;padding:4px 12px;border-radius:999px;font-weight:600;
+}
+.naming .chip:hover{background:var(--pos);border-color:var(--pos);color:#fff}
+.naming .nm{width:auto;flex:1 1 150px;min-width:118px;font-family:var(--font-ui);font-size:12.5px;padding:5px 9px}
+.naming button.ghost{font-size:11.5px;padding:5px 10px;background:transparent}
+
+pre{
+  background:#11161A;color:#DCE2DF;font-family:var(--font-num);font-size:12px;line-height:1.75;
+  padding:20px 22px;overflow-x:auto;margin:0;border-radius:0 0 3px 3px;
+}
+pre .cm{color:#7C8A86}
+pre .fn{color:#8ECCB6}
+pre .st{color:#D7B98A}
+.muted{color:var(--mute);font-size:12px}
+
+#toast{
+  position:fixed;right:18px;bottom:18px;z-index:99;max-width:min(420px,86vw);
+  background:var(--ink);color:#F2F3EF;font-size:12.5px;line-height:1.7;
+  padding:13px 16px;border-radius:3px;box-shadow:0 6px 24px rgba(18,22,26,.25);display:none;
+}
+#toast.on{display:block;animation:rise .3s ease both}
+#toast.bad{background:#5D2A60}
+#toast a{color:#9FD8C6;font-weight:700}
+#toast .x{float:right;margin-left:14px;cursor:pointer;opacity:.55}
+#toast .x:hover{opacity:1}
+
+/* ── 動き（控えめに） ─────────────────────────── */
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#out.fresh > section.res{animation:rise .4s cubic-bezier(.2,.7,.3,1) both}
+#out.fresh > section.res:nth-child(2){animation-delay:.05s}
+#out.fresh > section.res:nth-child(3){animation-delay:.1s}
+#out.fresh > section.res:nth-child(4){animation-delay:.15s}
+#out.fresh > section.res:nth-child(5){animation-delay:.2s}
+#out.fresh > section.res:nth-child(6){animation-delay:.25s}
+#out.fresh > section.res:nth-child(7){animation-delay:.3s}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+
+/* ── 印刷 ─────────────────────────────────────── */
+@media print{
+  body{background:#fff}
+  .rail,#hero,#toast,section.res .sp{display:none}
+  .cols{grid-template-columns:1fr}
+  section.res{break-inside:avoid;border-color:#bbb}
+  .wrap{padding:0}
+}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-structure);--paper:var(--al-bg);--card:var(--al-surface);--sel:var(--al-surface-2);--ink:var(--al-ink);--ink-2:var(--al-ink-2);--mute:var(--al-ink-3);--rule:var(--al-line);--rule-2:var(--al-line-2);--font-disp:var(--al-serif);--font-ui:var(--al-sans);--font-num:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#structure">構造と測定</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>主成分分析ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Principal Component Analysis</p>
+  <h1>主成分分析ラボ</h1>
+  <p class="lede">たくさんの変数を、少ない<em>軸</em>にまとめ直します。データを貼り付ければ、固有値から主成分負荷量、主成分得点、バイプロット、論文での記述例までひと続きで出ます。計算はこのブラウザーの中だけで行われ、データはどこにも送られません。</p>
+  <canvas id="hero" aria-label="散らばったデータに第1主成分と第2主成分の軸が引かれる図"></canvas>
+  <div class="rule"></div>
+</header>
+
+<div class="cols">
+<!-- ============ 左：操作パネル ============ -->
+<div class="rail">
+
+<div class="panel">
+  <h2><span class="n">01</span>データを入れる</h2>
+  <div class="drop" id="drop">CSV / TSV ファイルをここにドロップ<br>またはクリックして選択</div>
+  <input type="file" id="file" accept=".csv,.tsv,.txt" hidden>
+  <label class="fld" for="data">データ（1行目に変数名、1列目にIDや氏名）</label>
+  <textarea id="data" spellcheck="false" placeholder="ID,国語,数学,理科,社会,英語
+A,72,55,60,78,70
+B,58,88,85,52,60
+..."></textarea>
+  <div class="row" style="margin-top:8px">
+    <button class="ghost" id="s1">例：学力テスト</button>
+    <button class="ghost" id="s2">例：商品評価</button>
+  </div>
+  <div id="gasload" hidden>
+    <label class="fld" for="ssurl">Googleスプレッドシートから読み込む</label>
+    <input type="text" id="ssurl" placeholder="シートのURL（空欄なら開いているシート）" spellcheck="false">
+    <div class="row" style="margin-top:6px">
+      <select id="sslist" hidden></select>
+      <button class="ghost" id="ssload">シートを読み込む</button>
+    </div>
+  </div>
+  <label class="chk" style="margin-top:10px"><input type="checkbox" id="hdr" checked>1行目を変数名として読む</label>
+</div>
+
+<div class="panel">
+  <h2><span class="n">02</span>変数を選ぶ</h2>
+  <div id="vars" class="varlist"><p class="muted" style="margin:4px 0">データを入力すると変数一覧が出ます。</p></div>
+  <div class="row" style="margin-top:8px">
+    <button class="ghost" id="allon">すべて選択</button>
+    <button class="ghost" id="alloff">すべて解除</button>
+  </div>
+  <label class="fld" for="idcol">ケース名に使う列</label>
+  <select id="idcol"><option value="-1">（連番を使う）</option></select>
+  <label class="fld" for="grpcol">グループ分け（散布図の色分け）に使う列</label>
+  <select id="grpcol"><option value="-1">（分けない）</option></select>
+</div>
+
+<div class="panel">
+  <h2><span class="n">03</span>分析の設定</h2>
+  <label class="fld" for="mat">計算に使う行列</label>
+  <select id="mat">
+    <option value="cor">相関行列（変数を標準化する・推奨）</option>
+    <option value="cov">分散共分散行列（単位をそのまま使う）</option>
+  </select>
+  <label class="fld" for="crit">残す主成分の決め方</label>
+  <select id="crit">
+    <option value="kaiser">固有値1以上（カイザー基準）</option>
+    <option value="cum">累積寄与率で決める</option>
+    <option value="num">個数を指定する</option>
+  </select>
+  <div class="row" style="margin-top:8px">
+    <div><label class="fld" for="cumv" style="margin-top:0">累積寄与率(%)</label><input type="number" id="cumv" value="80" min="10" max="100" step="5"></div>
+    <div><label class="fld" for="numv" style="margin-top:0">主成分の個数</label><input type="number" id="numv" value="2" min="1" max="20" step="1"></div>
+  </div>
+  <label class="fld" for="rot">回転</label>
+  <select id="rot">
+    <option value="none">回転なし（主成分分析そのまま）</option>
+    <option value="varimax">バリマックス回転（直交回転）</option>
+  </select>
+  <label class="chk" style="margin-top:12px"><input type="checkbox" id="zscore">主成分得点を標準化する（平均0・分散1）</label>
+  <p class="hint">欠測のあるケースは分析から除きます（リストワイズ除去）。除いた件数は結果に表示します。</p>
+</div>
+
+<button class="run" id="run">主成分分析を実行</button>
+<div id="err"></div>
+
+</div>
+
+<!-- ============ 右：結果 ============ -->
+<div id="out">
+  <div class="empty">
+    <h3>結果はここに表示されます</h3>
+    <p>左にデータを貼り付けて「主成分分析を実行」を押してください。<br>まずは例のデータで動きを確かめるのがおすすめです。</p>
+  </div>
+</div>
+
+</div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- ============================================================
+     数値計算（DOMに触らない純粋な関数群）
+     ============================================================ -->
+<script id="mathcore">
+/* ---------- 行列ユーティリティ ---------- */
+function eye(n){const m=[];for(let i=0;i<n;i++){m.push(new Array(n).fill(0));m[i][i]=1;}return m;}
+function matT(A){return A[0].map((_,j)=>A.map(r=>r[j]));}
+function matMul(A,B){
+  const n=A.length,m=B[0].length,k=B.length,C=[];
+  for(let i=0;i<n;i++){const row=new Array(m).fill(0);
+    for(let t=0;t<k;t++){const a=A[i][t]; if(a===0)continue; for(let j=0;j<m;j++) row[j]+=a*B[t][j];}
+    C.push(row);}
+  return C;
+}
+/* Gauss-Jordan による逆行列。特異なら null */
+function matInv(A){
+  const n=A.length, M=A.map((r,i)=>r.concat(eye(n)[i]));
+  for(let c=0;c<n;c++){
+    let piv=c;
+    for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[piv][c])) piv=r;
+    if(Math.abs(M[piv][c])<1e-12) return null;
+    [M[c],M[piv]]=[M[piv],M[c]];
+    const d=M[c][c];
+    for(let j=0;j<2*n;j++) M[c][j]/=d;
+    for(let r=0;r<n;r++){
+      if(r===c) continue;
+      const f=M[r][c]; if(f===0) continue;
+      for(let j=0;j<2*n;j++) M[r][j]-=f*M[c][j];
+    }
+  }
+  return M.map(r=>r.slice(n));
+}
+
+/* ---------- 固有値分解（ヤコビ法・対称行列） ---------- */
+function jacobiEigen(A0){
+  const n=A0.length;
+  const a=A0.map(r=>r.slice());
+  let v=eye(n);
+  for(let sweep=0;sweep<200;sweep++){
+    let off=0;
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) off+=a[i][j]*a[i][j];
+    if(off<1e-24) break;
+    for(let p=0;p<n-1;p++) for(let q=p+1;q<n;q++){
+      if(Math.abs(a[p][q])<1e-18) continue;
+      const theta=(a[q][q]-a[p][p])/(2*a[p][q]);
+      const sgn=theta>=0?1:-1;
+      const t=sgn/(Math.abs(theta)+Math.sqrt(theta*theta+1));
+      const c=1/Math.sqrt(t*t+1), s=t*c;
+      for(let k=0;k<n;k++){const akp=a[k][p],akq=a[k][q];a[k][p]=c*akp-s*akq;a[k][q]=s*akp+c*akq;}
+      for(let k=0;k<n;k++){const apk=a[p][k],aqk=a[q][k];a[p][k]=c*apk-s*aqk;a[q][k]=s*apk+c*aqk;}
+      for(let k=0;k<n;k++){const vkp=v[k][p],vkq=v[k][q];v[k][p]=c*vkp-s*vkq;v[k][q]=s*vkp+c*vkq;}
+    }
+  }
+  const idx=[...Array(n).keys()].sort((x,y)=>a[y][y]-a[x][x]);
+  const values=idx.map(i=>a[i][i]);
+  const vectors=[];               // vectors[変数][成分]
+  for(let r=0;r<n;r++) vectors.push(idx.map(i=>v[r][i]));
+  // 符号の向きをそろえる（絶対値最大の要素が正になるように）
+  for(let c2=0;c2<n;c2++){
+    let mx=0,mi=0;
+    for(let r=0;r<n;r++) if(Math.abs(vectors[r][c2])>mx){mx=Math.abs(vectors[r][c2]);mi=r;}
+    if(vectors[mi][c2]<0) for(let r=0;r<n;r++) vectors[r][c2]*=-1;
+  }
+  return {values,vectors};
+}
+
+/* ---------- バリマックス回転（カイザーの正規化つき） ---------- */
+function varimax(L0){
+  const p=L0.length, k=L0[0].length;
+  if(k<2) return {loadings:L0.map(r=>r.slice()),rot:eye(k)};
+  const h=L0.map(r=>Math.sqrt(r.reduce((s,x)=>s+x*x,0))||1e-12);
+  const L=L0.map((r,i)=>r.map(x=>x/h[i]));
+  let R=eye(k);
+  for(let iter=0;iter<200;iter++){
+    let moved=0;
+    for(let i=0;i<k-1;i++) for(let j=i+1;j<k;j++){
+      let A=0,B=0,C=0,D=0;
+      for(let r=0;r<p;r++){
+        const x=L[r][i],y=L[r][j];
+        const u=x*x-y*y, w=2*x*y;
+        A+=u;B+=w;C+=u*u-w*w;D+=2*u*w;
+      }
+      const num=D-2*A*B/p, den=C-(A*A-B*B)/p;
+      const phi=Math.atan2(num,den)/4;
+      if(Math.abs(phi)<1e-9) continue;
+      moved++;
+      const c=Math.cos(phi),s=Math.sin(phi);
+      for(let r=0;r<p;r++){
+        const x=L[r][i],y=L[r][j];
+        L[r][i]=c*x+s*y; L[r][j]=-s*x+c*y;
+      }
+      for(let r=0;r<k;r++){
+        const x=R[r][i],y=R[r][j];
+        R[r][i]=c*x+s*y; R[r][j]=-s*x+c*y;
+      }
+    }
+    if(!moved) break;
+  }
+  let out=L.map((r,i)=>r.map(x=>x*h[i]));
+  // 回転後は分散の大きい順に並べ替え、符号もそろえる
+  const ss=[...Array(k).keys()].map(c=>out.reduce((s,r)=>s+r[c]*r[c],0));
+  const ord=[...Array(k).keys()].sort((x,y)=>ss[y]-ss[x]);
+  out=out.map(r=>ord.map(c=>r[c]));
+  R=R.map(r=>ord.map(c=>r[c]));
+  for(let c=0;c<k;c++){
+    let mx=0,mi=0;
+    for(let r=0;r<p;r++) if(Math.abs(out[r][c])>mx){mx=Math.abs(out[r][c]);mi=r;}
+    if(out[mi][c]<0){for(let r=0;r<p;r++) out[r][c]*=-1; for(let r=0;r<k;r++) R[r][c]*=-1;}
+  }
+  return {loadings:out,rot:R};
+}
+
+/* ---------- χ²分布の上側確率 ---------- */
+function lgamma(x){
+  const g=[676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,
+           12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(x<0.5) return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);
+  x-=1;let a=0.99999999999980993,t=x+7.5;
+  for(let i=0;i<8;i++) a+=g[i]/(x+i+1);
+  return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);
+}
+function gammaQ(s,x){ // 正則化不完全ガンマ Q(s,x)
+  if(x<0||s<=0) return NaN;
+  if(x===0) return 1;
+  if(x<s+1){ // 級数展開で P を求める
+    let ap=s,sum=1/s,del=sum;
+    for(let n=0;n<500;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-15)break;}
+    return 1-sum*Math.exp(-x+s*Math.log(x)-lgamma(s));
+  }else{ // 連分数
+    let b=x+1-s,c=1e300,d=1/b,h=d;
+    for(let i=1;i<500;i++){
+      const an=-i*(i-s); b+=2; d=an*d+b; if(Math.abs(d)<1e-300)d=1e-300;
+      c=b+an/c; if(Math.abs(c)<1e-300)c=1e-300;
+      d=1/d; const del=d*c; h*=del;
+      if(Math.abs(del-1)<1e-15) break;
+    }
+    return h*Math.exp(-x+s*Math.log(x)-lgamma(s));
+  }
+}
+function chisqP(chi,df){ if(!(chi>0)||!(df>0)) return NaN; return gammaQ(df/2,chi/2); }
+
+/* ---------- 相関・共分散 ---------- */
+function colStats(X){
+  const n=X.length,p=X[0].length,mean=[],sd=[];
+  for(let j=0;j<p;j++){
+    let s=0; for(let i=0;i<n;i++) s+=X[i][j];
+    const m=s/n; let v=0;
+    for(let i=0;i<n;i++) v+=(X[i][j]-m)**2;
+    mean.push(m); sd.push(Math.sqrt(v/(n-1)));
+  }
+  return {mean,sd};
+}
+function covMatrix(X){
+  const n=X.length,p=X[0].length,{mean}=colStats(X),S=[];
+  for(let a=0;a<p;a++){
+    const row=[];
+    for(let b=0;b<p;b++){
+      let s=0; for(let i=0;i<n;i++) s+=(X[i][a]-mean[a])*(X[i][b]-mean[b]);
+      row.push(s/(n-1));
+    }
+    S.push(row);
+  }
+  return S;
+}
+function corMatrix(X){
+  const S=covMatrix(X),p=S.length;
+  return S.map((row,a)=>row.map((v,b)=>{
+    const d=Math.sqrt(S[a][a]*S[b][b]);
+    return d>0? v/d : 0;
+  }));
+}
+
+/* ---------- KMO と Bartlett の球面性検定 ---------- */
+function kmoIndex(R){
+  const Ri=matInv(R); if(!Ri) return null;
+  const p=R.length; let sr=0,sp=0; const perVar=[];
+  for(let i=0;i<p;i++){
+    let ri=0,pi=0;
+    for(let j=0;j<p;j++){
+      if(i===j) continue;
+      const pc=-Ri[i][j]/Math.sqrt(Ri[i][i]*Ri[j][j]);
+      ri+=R[i][j]**2; pi+=pc*pc;
+    }
+    perVar.push(ri/(ri+pi)); sr+=ri; sp+=pi;
+  }
+  return {overall:sr/(sr+sp),perVar};
+}
+function bartlett(eigen,n,p){
+  let ld=0;
+  for(const e of eigen){ if(e<=1e-12) return null; ld+=Math.log(e); }
+  const chi=-((n-1)-(2*p+5)/6)*ld;
+  const df=p*(p-1)/2;
+  return {chi,df,p:chisqP(chi,df)};
+}
+
+/* ---------- 主成分分析の本体 ---------- */
+function runPCA(X,opt){
+  const n=X.length,p=X[0].length;
+  const {mean,sd}=colStats(X);
+  const useCor=opt.matrix!=='cov';
+  const M=useCor?corMatrix(X):covMatrix(X);
+  const {values,vectors}=jacobiEigen(M);
+  const eig=values.map(v=>Math.max(v,0));
+  const total=eig.reduce((a,b)=>a+b,0);
+  const prop=eig.map(v=>v/total);
+  const cum=[]; prop.reduce((a,b,i)=>cum[i]=a+b,0);
+
+  // 残す主成分の数
+  let k;
+  if(opt.criterion==='kaiser'){
+    k=useCor? eig.filter(v=>v>=1).length : eig.filter(v=>v>=total/p).length;
+  }else if(opt.criterion==='cum'){
+    k=cum.findIndex(c=>c>=opt.cumTarget/100)+1; if(k<=0)k=p;
+  }else{
+    k=opt.numComp;
+  }
+  k=Math.max(1,Math.min(k,p));
+
+  // 標準化（または中心化）した行列
+  const Z=X.map(r=>r.map((v,j)=>useCor? (sd[j]>0?(v-mean[j])/sd[j]:0) : v-mean[j]));
+
+  // 主成分負荷量 = 固有ベクトル × √固有値
+  let load=[];
+  for(let i=0;i<p;i++) load.push([...Array(k).keys()].map(c=>vectors[i][c]*Math.sqrt(eig[c])));
+
+  let rotated=false, rotMat=null;
+  if(opt.rotate==='varimax'&&k>=2){
+    const vr=varimax(load); load=vr.loadings; rotMat=vr.rot; rotated=true;
+  }
+
+  // 主成分得点
+  let scores;
+  if(!rotated){
+    scores=Z.map(r=>[...Array(k).keys()].map(c=>{
+      let s=0; for(let j=0;j<p;j++) s+=r[j]*vectors[j][c]; return s;
+    }));
+  }else{
+    // 回転後は W = V Λ^-1/2 R を係数行列にする（回帰法と一致）
+    const W=[];
+    for(let j=0;j<p;j++) W.push([...Array(k).keys()].map(c=>{
+      let s=0; for(let t=0;t<k;t++) s+=vectors[j][t]/Math.sqrt(eig[t])*rotMat[t][c]; return s;
+    }));
+    scores=matMul(Z,W);
+  }
+  // 得点の分散
+  const sStat=colStats(scores);
+  if(opt.zscore) scores=scores.map(r=>r.map((v,c)=>sStat.sd[c]>0?(v-sStat.mean[c])/sStat.sd[c]:0));
+
+  // 回転後の説明力（負荷量の二乗和）
+  const ssl=[...Array(k).keys()].map(c=>load.reduce((s,r)=>s+r[c]*r[c],0));
+  const comm=load.map(r=>r.reduce((s,x)=>s+x*x,0));
+
+  const kmo=useCor?kmoIndex(M):null;
+  const bar=useCor?bartlett(eig,n,p):null;
+
+  // 回転した場合、各成分の寄与率は負荷量平方和から計算し直す
+  const propShow=rotated? ssl.map(s=>s/total) : prop.slice(0,k);
+
+  // 散布図用：主成分が1つしか残らないときも2軸で描けるようにしておく
+  let pl;
+  if(k>=2){
+    pl={k,load,scores,prop:propShow,rot:rotated};
+  }else{
+    const k2=Math.min(p,2);
+    const l2=[],s2=[];
+    for(let i=0;i<p;i++) l2.push([...Array(k2).keys()].map(c=>vectors[i][c]*Math.sqrt(eig[c])));
+    for(const row of Z) s2.push([...Array(k2).keys()].map(c=>{
+      let t=0; for(let j=0;j<p;j++) t+=row[j]*vectors[j][c]; return t;
+    }));
+    pl={k:k2,load:l2,scores:s2,prop:prop.slice(0,k2),rot:false};
+  }
+
+  return {n,p,k,useCor,mean,sd,matrix:M,eig,prop,cum,total,vectors,load,scores,
+          rotated,ssl,comm,propShow,pl,kmo,bartlett:bar,scoreSD:sStat.sd};
+}
+</script>
+
+<!-- ============================================================
+     画面まわり
+     ============================================================ -->
+<script>
+const $=s=>document.querySelector(s);
+const state={rows:[],headers:[],numeric:[],use:new Set(),res:null,idTouched:false,grpTouched:false,pcNames:{},names:[],groups:null,
+             pcX:0,pcY:1,view:'biplot',labels:true};
+
+/* ---------- 読み込み ---------- */
+function splitLine(line,d){
+  const out=[];let cur='',q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===d){ out.push(cur); cur=''; }
+    else cur+=ch;
+  }
+  out.push(cur); return out.map(s=>s.trim());
+}
+function parseData(text){
+  const lines=text.replace(/\r\n?/g,'\n').split('\n').filter(l=>l.trim()!=='');
+  if(!lines.length) return null;
+  const t=(lines[0].match(/\t/g)||[]).length, c=(lines[0].match(/,/g)||[]).length;
+  const d=t>c?'\t':',';
+  const grid=lines.map(l=>splitLine(l,d));
+  const w=Math.max(...grid.map(r=>r.length));
+  grid.forEach(r=>{while(r.length<w)r.push('');});
+  return grid;
+}
+const numOf=s=>{
+  if(s==null) return NaN;
+  const t=String(s).replace(/[,\s　]/g,'');
+  if(t===''||t==='.'||/^(NA|na|NaN|null|-|ー|—|\?)$/.test(t)) return NaN;
+  return Number(t);
+};
+
+function refreshVars(){
+  const grid=parseData($('#data').value);
+  const box=$('#vars');
+  if(!grid){ box.innerHTML='<p class="muted" style="margin:4px 0">データを入力すると変数一覧が出ます。</p>'; return; }
+  const hasHdr=$('#hdr').checked;
+  const headers=hasHdr?grid[0].map((h,i)=>h||`列${i+1}`):grid[0].map((_,i)=>`列${i+1}`);
+  const body=hasHdr?grid.slice(1):grid;
+  const numeric=headers.map((_,j)=>{
+    let ok=0,tot=0;
+    for(const r of body){ const v=r[j]; if(v==='')continue; tot++; if(!isNaN(numOf(v)))ok++; }
+    return tot>0 && ok/tot>=0.8;
+  });
+  const keepUse=state.headers.join('\u0001')===headers.join('\u0001');
+  state.headers=headers; state.rows=body; state.numeric=numeric;
+  if(!keepUse){ state.use=new Set(headers.map((_,j)=>j).filter(j=>numeric[j])); }
+
+  box.innerHTML='';
+  headers.forEach((h,j)=>{
+    const lab=document.createElement('label'); lab.className='chk';
+    const cb=document.createElement('input'); cb.type='checkbox';
+    cb.checked=state.use.has(j); cb.disabled=!numeric[j];
+    cb.onchange=()=>{cb.checked?state.use.add(j):state.use.delete(j);};
+    const sp=document.createElement('span'); sp.textContent=h;
+    const tg=document.createElement('span'); tg.className='tag'; tg.textContent=numeric[j]?'数値':'文字';
+    lab.append(cb,sp,tg); box.append(lab);
+  });
+  ['#idcol','#grpcol'].forEach(sel=>{
+    const el=$(sel), prev=el.value;
+    el.innerHTML='';
+    const o=document.createElement('option'); o.value='-1';
+    o.textContent=sel==='#idcol'?'（連番を使う）':'（分けない）'; el.append(o);
+    headers.forEach((h,j)=>{const op=document.createElement('option');op.value=j;op.textContent=h;el.append(op);});
+    const touched=(sel==='#idcol')?state.idTouched:state.grpTouched;
+    if(touched&&[...el.options].some(o2=>o2.value===prev)) el.value=prev;
+    else if(sel==='#idcol'){
+      const j=headers.findIndex((_,i)=>!numeric[i]);
+      el.value=j>=0?String(j):'-1';
+    } else el.value='-1';
+  });
+}
+
+/* ---------- 実行 ---------- */
+function showErr(msg){ $('#err').innerHTML=msg?`<div class="err">${msg}</div>`:''; }
+
+function execute(){
+  showErr('');
+  refreshVars();
+  const cols=[...state.use].sort((a,b)=>a-b);
+  if(cols.length<2){ showErr('分析に使う数値の変数を2つ以上選んでください。'); return; }
+  const idCol=+$('#idcol').value, grpCol=+$('#grpcol').value;
+
+  const X=[],names=[],groups=[]; let dropped=0;
+  state.rows.forEach((r,i)=>{
+    const v=cols.map(j=>numOf(r[j]));
+    if(v.some(x=>!isFinite(x))){ dropped++; return; }
+    X.push(v);
+    names.push(idCol>=0?(r[idCol]||`#${i+1}`):`#${i+1}`);
+    groups.push(grpCol>=0?(r[grpCol]||'（未記入）'):null);
+  });
+  if(X.length<3){ showErr('分析できるケースが足りません（欠測を除いて3件以上必要です）。'); return; }
+  if(X.length<=cols.length) showErr('ケース数が変数の数以下です。結果が不安定になるため、参考程度に見てください。');
+
+  const opt={matrix:$('#mat').value,criterion:$('#crit').value,
+             cumTarget:+$('#cumv').value,numComp:+$('#numv').value,
+             rotate:$('#rot').value,zscore:$('#zscore').checked};
+  let res;
+  try{ res=runPCA(X,opt); }
+  catch(e){ showErr('計算に失敗しました：'+e.message); return; }
+
+  res.varNames=cols.map(j=>state.headers[j]);
+  res.caseNames=names; res.groups=grpCol>=0?groups:null; res.dropped=dropped; res.opt=opt;
+  res.X=X;
+  state.pcNames={}; state.fresh=true;
+  state.res=res; state.pcX=0; state.pcY=res.pl.k>1?1:0;
+  bipView={zoom:1,ox:0,oy:0,drag:null};
+  render();
+  try{ $('#out').scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+}
+
+/* ---------- 表示 ---------- */
+const f2=x=>(x==null||!isFinite(x))?'—':x.toFixed(2);
+const f3=x=>(x==null||!isFinite(x))?'—':x.toFixed(3);
+const pct=x=>(x*100).toFixed(1)+'%';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const PCBASE=(i,rot)=>(rot?`RC${i+1}`:`PC${i+1}`);
+const PCNAME=(i,rot)=>(state.pcNames&&state.pcNames[i])?state.pcNames[i]:PCBASE(i,rot);
+function setPCName(c,name){
+  if(!state.pcNames) state.pcNames={};
+  const t=(name||'').trim();
+  if(t) state.pcNames[c]=t.slice(0,24); else delete state.pcNames[c];
+  render();
+}
+function setPCNameFromInput(c){ setPCName(c,document.getElementById('nm'+c).value); }
+
+/* ---- 変数名から因子名の候補をつくる ---- */
+function commonSub(names){
+  if(names.length<2) return '';
+  let best='';
+  const need=Math.max(2,Math.ceil(names.length*0.6));
+  for(const base of names){
+    for(let i=0;i<base.length;i++) for(let j=i+2;j<=base.length;j++){
+      const sub=base.slice(i,j);
+      if(sub.length<=best.length) continue;
+      if(/^[ぁ-んー・（）()\s]+$/.test(sub)) continue;
+      if(names.filter(n=>n.includes(sub)).length>=need) best=sub;
+    }
+  }
+  return best;
+}
+function groupLabel(list){
+  const c=commonSub(list);
+  if(c && c.length>=2) return c;
+  return list.slice(0,2).join('・');
+}
+function nameCandidates(r,c){
+  const items=r.varNames.map((v,i)=>[v,r.load[i][c]]);
+  const pos=items.filter(x=>x[1]>=0.4).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+  const neg=items.filter(x=>x[1]<=-0.4).sort((a,b)=>a[1]-b[1]).map(x=>x[0]);
+  if(!pos.length&&!neg.length){
+    const t=items.slice().sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,2).map(x=>x[0]);
+    return [`${t[0]}・${t[1]}の軸`,`${t[0]}に関する成分`];
+  }
+  if(pos.length&&neg.length){
+    const P=groupLabel(pos),N=groupLabel(neg);
+    return [`${P}志向 ↔ ${N}志向`,`${P}優位の傾向`];
+  }
+  const S=pos.length?pos:neg, sign=pos.length?'':'（値が小さいほど強い）';
+  const g=groupLabel(S), single=S.length===1;
+  return [ single?`${S[0]}の高さ${sign}`:`${g}の高さ${sign}`,
+           single?`${S[0]}に関する成分`:`${S[0]}を中心とする総合的な傾向${sign}` ];
+}
+
+function loadColor(v){
+  const a=Math.min(Math.abs(v),1);
+  if(a<0.3) return {bg:'transparent',fg:'#9AA3AB'};
+  const c=v>0?'27,107,90':'123,60,126';
+  return {bg:`rgba(${c},${(a*0.8).toFixed(2)})`,fg:a>0.58?'#FCFCFA':'#12161A'};
+}
+
+function render(){
+  const r=state.res; if(!r) return;
+  const rot=r.rotated;
+  const kmoTxt=r.kmo?f3(r.kmo.overall):'—';
+  const barTxt=r.bartlett?`χ²(${r.bartlett.df})=${r.bartlett.chi.toFixed(1)}`:'—';
+  const barP=r.bartlett?(r.bartlett.p<0.001?'p < .001':'p = '+r.bartlett.p.toFixed(3)):'';
+
+  let html='';
+
+  /* 概要 */
+  html+=`<section class="res"><div class="hd"><span class="idx">概要</span><h2>データと適合性</h2>
+    <div class="sp"><button class="ghost" onclick="dlAll()">結果をCSVでまとめて保存</button></div></div>
+    <div class="stats">
+      <div class="stat"><div class="k">ケース数</div><div class="v">${r.n}<small> 件</small></div></div>
+      <div class="stat"><div class="k">変数の数</div><div class="v">${r.p}<small> 個</small></div></div>
+      <div class="stat"><div class="k">残した主成分</div><div class="v">${r.k}<small> 個</small></div></div>
+      <div class="stat"><div class="k">累積寄与率</div><div class="v">${(r.cum[r.k-1]*100).toFixed(1)}<small>%</small></div></div>
+      <div class="stat"><div class="k">KMO の標本妥当性</div><div class="v">${kmoTxt}</div></div>
+      <div class="stat"><div class="k">Bartlett の球面性検定</div><div class="v" style="font-size:15px">${barTxt}<small> ${barP}</small></div></div>
+    </div>
+    <div class="bd" style="padding-top:12px">
+      <p class="muted" style="margin:0">
+      ${r.useCor?'相関行列':'分散共分散行列'}をもとに計算しました。${rot?'バリマックス回転を行っています。':''}
+      ${r.dropped?`欠測のため ${r.dropped} 件を分析から除いています。`:'欠測による除外はありません。'}
+      ${r.kmo?` KMO は .70 以上あれば主成分分析に向いたデータとみなすのが一般的です。`:''}</p>
+    </div></section>`;
+
+  /* 固有値 + スクリープロット */
+  html+=`<section class="res"><div class="hd"><span class="idx">01</span><h2>固有値と寄与率</h2>
+    <div class="sp"><button class="ghost" onclick="dlPNG('scree','スクリープロット')">図をPNGで保存</button></div></div>
+    <div class="bd">
+      <div class="plotwrap"><canvas id="scree"></canvas></div>
+      <div class="legend"><span><i style="background:var(--pos)"></i>固有値（棒）</span>
+        <span><i style="background:var(--gold)"></i>累積寄与率（折れ線）</span>
+        <span>棒をクリックすると散布図の横軸、Shift＋クリックで縦軸になります</span></div>
+      <div class="scroll" style="margin-top:14px;max-height:320px"><table><thead><tr>
+        <th>主成分</th><th>固有値</th><th>寄与率</th><th>累積寄与率</th>${rot?'<th>回転後の負荷量平方和</th>':''}
+      </tr></thead><tbody>`;
+  r.eig.forEach((e,i)=>{
+    html+=`<tr class="${i<r.k?'keep':''}"><td>第${i+1}主成分</td><td>${f3(e)}</td><td>${pct(r.prop[i])}</td><td>${pct(r.cum[i])}</td>${rot?`<td>${i<r.k?f3(r.ssl[i]):'—'}</td>`:''}</tr>`;
+  });
+  html+=`</tbody></table></div>
+    <p class="hint">青くなっている行が、残した主成分です。</p></div></section>`;
+
+  /* 負荷量 */
+  html+=`<section class="res"><div class="hd"><span class="idx">02</span><h2>主成分負荷量${rot?'（バリマックス回転後）':''}</h2>
+    <div class="sp"><button class="ghost" onclick="dlCSV('load')">CSVで保存</button></div></div>
+    <div class="bd"><div class="scroll"><table><thead><tr><th>変数</th>`;
+  for(let c=0;c<r.k;c++) html+=`<th>${PCNAME(c,rot)}</th>`;
+  html+=`<th>共通性</th></tr></thead><tbody>`;
+  const ord=[...Array(r.p).keys()].sort((a,b)=>{
+    const ma=r.load[a].reduce((m,x,i)=>Math.abs(x)>Math.abs(r.load[a][m])?i:m,0);
+    const mb=r.load[b].reduce((m,x,i)=>Math.abs(x)>Math.abs(r.load[b][m])?i:m,0);
+    if(ma!==mb) return ma-mb;
+    return Math.abs(r.load[b][mb])-Math.abs(r.load[a][ma]);
+  });
+  ord.forEach(i=>{
+    html+=`<tr><td>${esc(r.varNames[i])}</td>`;
+    for(let c=0;c<r.k;c++){
+      const col=loadColor(r.load[i][c]);
+      html+=`<td style="background:${col.bg};color:${col.fg}">${f3(r.load[i][c])}</td>`;
+    }
+    html+=`<td>${f3(r.comm[i])}</td></tr>`;
+  });
+  html+=`</tbody></table></div>
+    <p class="hint">色が濃いほど関連が強い変数です（青＝正、赤＝負）。絶対値が .40 以上を目安に、主成分の意味を読み取ります。負荷量の大きい主成分ごとに変数を並べ替えて表示しています。</p>
+    </div></section>`;
+
+  /* 散布図 */
+  const axOpts=c=>[...Array(r.pl.k).keys()].map(i=>`<option value="${i}" ${c===i?'selected':''}>${PCNAME(i,r.pl.rot)}（${pct(r.pl.prop[i])}）</option>`).join('');
+  html+=`<section class="res"><div class="hd"><span class="idx">03</span><h2>散布図・バイプロット</h2>
+    <div class="sp">
+      <select id="vsel" style="width:auto" onchange="state.view=this.value;drawBiplot()">
+        <option value="biplot">バイプロット（得点＋変数）</option>
+        <option value="score">主成分得点のみ</option>
+        <option value="load">変数の位置のみ</option>
+      </select>
+      <select id="axx" style="width:auto" onchange="state.pcX=+this.value;drawBiplot()">${axOpts(state.pcX)}</select>
+      <select id="axy" style="width:auto" onchange="state.pcY=+this.value;drawBiplot()">${axOpts(state.pcY)}</select>
+      <button class="ghost" onclick="state.labels=!state.labels;drawBiplot()">ケース名の表示切替</button>
+      <button class="ghost" onclick="dlPNG('bip','バイプロット')">図をPNGで保存</button>
+    </div></div>
+    <div class="bd">
+      <div class="plotwrap"><canvas id="bip"></canvas></div>
+      <div class="legend" id="biplegend"></div>
+      <p class="hint">ホイールで拡大縮小、ドラッグで移動できます（ダブルクリックで元に戻ります）。矢印は変数、点はケースです。矢印が同じ向きに伸びている変数どうしは、似た動きをしています。${r.k<2?'<br><b>残った主成分は1つですが、図では第2主成分（回転なし）も軸に使っています。</b>':''}</p>
+    </div></section>`;
+
+  /* 主成分得点 */
+  html+=`<section class="res"><div class="hd"><span class="idx">04</span><h2>主成分得点</h2>
+    <div class="sp"><button class="ghost" onclick="dlCSV('score')">CSVで保存</button></div></div>
+    <div class="bd"><div class="scroll" style="max-height:420px"><table><thead><tr><th>ケース</th>${r.groups?'<th>グループ</th>':''}`;
+  for(let c=0;c<r.k;c++) html+=`<th>${PCNAME(c,rot)}</th>`;
+  html+=`</tr></thead><tbody>`;
+  r.scores.forEach((s,i)=>{
+    html+=`<tr><td>${esc(r.caseNames[i])}</td>${r.groups?`<td style="text-align:left;font-family:var(--font-ui)">${esc(r.groups[i])}</td>`:''}`;
+    html+=s.map(v=>`<td>${f3(v)}</td>`).join('')+`</tr>`;
+  });
+  html+=`</tbody></table></div>
+   <p class="hint">${rot?'回転後の得点は平均0・分散1に標準化されています。':(r.opt.zscore?'標準化した得点（平均0・分散1）です。':'固有値の大きさを反映した得点です。各主成分の得点の分散は固有値と一致します。')}</p>
+   </div></section>`;
+
+  /* 解釈 */
+  html+=`<section class="res"><div class="hd"><span class="idx">05</span><h2>読み取りと記述例</h2></div>
+    <div class="bd interp">${interpretation(r)}</div></section>`;
+
+  /* Rコード */
+  html+=`<section class="res"><div class="hd"><span class="idx">06</span><h2>同じ分析をRで行うコード</h2>
+    <div class="sp"><button class="ghost" onclick="copyR(this)">コードをコピー</button></div></div>
+    <div class="bd" style="padding:0"><pre id="rcode">${rCode(r)}</pre></div></section>`;
+
+  const outEl=$('#out');
+  outEl.innerHTML=html;
+  if(state.fresh){
+    outEl.classList.add('fresh'); state.fresh=false;
+    clearTimeout(window._fresh);
+    window._fresh=setTimeout(()=>outEl.classList.remove('fresh'),1400);
+  }
+  const vs=$('#vsel'); if(vs) vs.value=state.view;
+  drawScree(); drawBiplot();
+}
+
+/* ---------- 解釈文 ---------- */
+function interpretation(r){
+  const rot=r.rotated;
+  let h='<h4>各主成分の意味と因子名の候補</h4>';
+  state.cands={};
+  for(let c=0;c<r.k;c++){
+    const pos=[],neg=[];
+    r.varNames.forEach((v,i)=>{
+      const l=r.load[i][c];
+      if(l>=0.4) pos.push([v,l]); else if(l<=-0.4) neg.push([v,l]);
+    });
+    pos.sort((a,b)=>b[1]-a[1]); neg.sort((a,b)=>a[1]-b[1]);
+    const fmt=a=>a.map(([v,l])=>`${v}（${l.toFixed(2)}）`).join('、');
+    let s=`<p><b>${PCNAME(c,rot)}：寄与率 ${pct(r.propShow[c])}</b><br>`;
+    if(!pos.length&&!neg.length){
+      s+='負荷量が .40 を超える変数がなく、意味づけが難しい成分です。';
+    }else{
+      if(pos.length) s+=`${fmt(pos)} が高い正の負荷量を示しています。`;
+      if(neg.length) s+=`一方で ${fmt(neg)} は負の負荷量です。`;
+      s+= (pos.length&&neg.length)
+        ? 'この成分は、前者が高く後者が低いケースほど値が大きくなる「対比」の軸として読めます。'
+        : `これらに共通する側面を表す軸として解釈できます。`;
+    }
+    s+='</p>';
+    const cd=nameCandidates(r,c); state.cands[c]=cd;
+    const cur=(state.pcNames&&state.pcNames[c])||'';
+    s+=`<div class="naming"><span class="lbl">因子名の候補</span>`
+     + cd.map((t,i)=>`<button class="chip" onclick="setPCName(${c},state.cands[${c}][${i}])">${esc(t)}</button>`).join('')
+     + `<input id="nm${c}" class="nm" value="${esc(cur)}" placeholder="自分で名前を付ける" onkeydown="if(event.key==='Enter')setPCNameFromInput(${c})">`
+     + `<button class="ghost" onclick="setPCNameFromInput(${c})">この名前を使う</button>`
+     + (cur?`<button class="ghost" onclick="setPCName(${c},'')">${PCBASE(c,rot)}に戻す</button>`:'')
+     + `</div>`;
+    h+=s;
+  }
+  h+='<p class="muted" style="margin:-2px 0 4px">候補は負荷量の高い変数名から機械的に作ったものです。名前を決めると、表・図・R コードの見出しにもその名前を使います。</p>';
+  h+='<h4>論文・レポートでの記述例</h4><div class="quote">';
+  const kmoS=r.kmo?`KMO の標本妥当性は ${f3(r.kmo.overall)}、`:'';
+  const barS=r.bartlett?`Bartlett の球面性検定は有意であった（χ²(${r.bartlett.df}) = ${r.bartlett.chi.toFixed(2)}, ${r.bartlett.p<0.001?'p < .001':'p = '+r.bartlett.p.toFixed(3)}）。`:'';
+  const critS=r.opt.criterion==='kaiser'?'固有値1以上を基準として':
+              r.opt.criterion==='cum'?`累積寄与率が${r.opt.cumTarget}%に達することを基準として`:'あらかじめ定めた基準により';
+  h+=`${r.p}項目について${r.useCor?'相関行列に基づく':'分散共分散行列に基づく'}主成分分析を行った（N = ${r.n}${r.dropped?`、欠測のため${r.dropped}名を除外`:''}）。${kmoS}${barS}`;
+  h+=`${critS}${r.k}つの主成分を抽出したところ、累積寄与率は ${(r.cum[r.k-1]*100).toFixed(1)}% であった。`;
+  if(rot) h+='解釈を容易にするため、バリマックス回転を行った。';
+  for(let c=0;c<Math.min(r.k,3);c++){
+    const top=r.varNames.map((v,i)=>[v,r.load[i][c]]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,3);
+    h+=`${PCNAME(c,rot)}（寄与率 ${pct(r.propShow[c])}）には ${top.map(t=>`${t[0]}（${t[1].toFixed(2)}）`).join('、')} が高い負荷量を示した。`;
+  }
+  h+='</div>';
+  h+='<p class="muted" style="margin-top:10px">※ 記述例の文章はたたき台です。主成分の名前は、負荷量の大きい変数の内容を見て最終的にご自身で判断してください。</p>';
+  return h;
+}
+
+/* ---------- Rコード ---------- */
+function rCode(r){
+  const rot=r.rotated;
+  const q=v=>'"'+String(v).replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"'; // R文字列用
+  const cell=v=>{const t=String(v??'');return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+
+  // 分析に使ったデータ（欠測を除いたあと）をそのまま埋め込む
+  const uniq=(base)=>{let nm=base,i=2;while(r.varNames.includes(nm))nm=base+(i++);return nm;};
+  const idName=uniq('ID'), grName=uniq('group');
+  const head=[idName,...r.varNames]; if(r.groups) head.push(grName);
+  const lines=[head.map(cell).join(',')];
+  for(let i=0;i<r.n;i++){
+    const row=[r.caseNames[i],...r.X[i]]; if(r.groups) row.push(r.groups[i]);
+    lines.push(row.map(cell).join(','));
+  }
+  const csv=lines.join('\n').replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+
+  const vars=r.varNames.map(q).join(', ');
+  const pcNames=[...Array(r.k).keys()].map(c=>q(PCNAME(c,rot))).join(', ');
+  const named=[...Array(r.k).keys()].some(c=>state.pcNames&&state.pcNames[c]);
+  const ax1=state.pcX+1, ax2=state.pcY+1;
+
+  const code=
+`# ══════════════════════════════════════════════════════════
+#  主成分分析（主成分分析ラボで行った分析の再現）
+#  JASP の R コンソールにこのまま貼り付けて実行できます。
+#  データもコード内に埋め込んであるので、ファイルの読み込みは不要です。
+#  図は画面に描画せず、ダウンロードフォルダに PNG として保存します。
+#  ${r.useCor?'相関行列':'分散共分散行列'}／${rot?'バリマックス回転':'回転なし'}／主成分 ${r.k} 個／N = ${r.n}
+# ══════════════════════════════════════════════════════════
+
+dat <- read.csv(text = "
+${csv}
+", check.names = FALSE, stringsAsFactors = FALSE)
+
+X <- dat[, c(${vars})]
+rownames(X) <- make.unique(as.character(dat[["${idName}"]]))
+print(dim(X))
+
+# ── 1. データの適合性 ──────────────────────────────
+R <- cor(X)
+print(round(R, 2))
+if (requireNamespace("psych", quietly = TRUE)) {
+  print(psych::KMO(R))
+  print(psych::cortest.bartlett(R, n = nrow(X)))
+}
+
+# ── 2. 主成分分析 ─────────────────────────────────
+res <- prcomp(X, scale. = ${r.useCor?'TRUE':'FALSE'})
+print(summary(res))                       # 寄与率・累積寄与率
+eig <- res$sdev^2
+print(round(eig, 4))                      # 固有値
+
+load <- res$rotation %*% diag(res$sdev)   # 主成分負荷量
+colnames(load) <- paste0("PC", seq_len(ncol(load)))
+print(round(load[, 1:${r.k}, drop = FALSE], 3))
+
+scores <- res$x[, 1:${r.k}, drop = FALSE] # 主成分得点
+print(round(head(scores, 10), 3))
+${rot?`
+# ── 3. バリマックス回転（回転後の負荷量と得点）────────
+if (requireNamespace("psych", quietly = TRUE)) {
+  pc <- psych::principal(X, nfactors = ${r.k}, rotate = "varimax", scores = TRUE)
+  print(pc$loadings, cutoff = 0.4, sort = TRUE)
+  load <- unclass(pc$loadings)
+  scores <- pc$scores
+  print(round(head(scores, 10), 3))
+}
+`:''}${named?`
+# 主成分分析ラボで付けた名前
+colnames(load)[1:${r.k}] <- c(${pcNames})
+colnames(scores)[1:${r.k}] <- c(${pcNames})
+print(round(load[, 1:${r.k}, drop = FALSE], 3))
+`:''}
+# ── ${rot?4:3}. 図の保存先（ダウンロードフォルダ）────────────
+#  図は画面に描画せず、PNG ファイルとして保存します。
+#  JASP の R は "~" が実在しない場所を指すことがあるため、
+#  書き込めるダウンロードフォルダを自動で探します。
+.writable <- function(d) {
+  if (!dir.exists(d)) return(FALSE)
+  f <- file.path(d, ".pca_write_test")
+  ok <- suppressWarnings(tryCatch({ cat("", file = f); TRUE },
+                                  error = function(e) FALSE))
+  if (ok) unlink(f)
+  ok
+}
+.cand <- c(Sys.getenv("USERPROFILE"), Sys.getenv("HOME"),
+           path.expand("~"), dirname(path.expand("~")))
+.cand <- unique(.cand[nzchar(.cand)])
+.cand <- c(file.path(.cand, "Downloads"), .cand, getwd(), tempdir())
+outdir <- NULL
+for (d in .cand) if (.writable(d)) { outdir <- d; break }
+if (is.null(outdir)) stop("書き込めるフォルダが見つかりませんでした。outdir を手動で指定してください。")
+cat("図の保存先:", outdir, "\\n")
+
+f_scree  <- file.path(outdir, "pca_scree.png")
+f_biplot <- file.path(outdir, "pca_biplot.png")
+
+# ── ${rot?5:4}. スクリープロット（PNG 保存）──────────────────
+png(f_scree, width = 1800, height = 1350, res = 220)
+plot(eig, type = "b", pch = 16, xlab = "主成分", ylab = "固有値",
+     main = "スクリープロット")
+abline(h = 1, lty = 2, col = "red")
+dev.off()
+cat("保存しました:", f_scree, "\\n")
+
+# ── ${rot?6:5}. バイプロット（背景を黒にした ggplot2 版・PNG 保存）──
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  library(ggplot2)
+  sc <- as.data.frame(scores[, c(${ax1}, ${ax2})]); names(sc) <- c("x", "y")
+  ld <- as.data.frame(load[, c(${ax1}, ${ax2})]);   names(ld) <- c("x", "y")
+  ld$var <- rownames(ld)
+  k <- max(abs(sc)) / max(abs(ld[, 1:2])) * 0.8
+${r.groups?`  sc$group <- dat[["${grName}"]]
+`:''}
+  p <- ggplot() +
+    geom_hline(yintercept = 0, colour = "grey35") +
+    geom_vline(xintercept = 0, colour = "grey35") +
+    geom_point(data = sc, aes(x, y${r.groups?', colour = group':''}),
+               ${r.groups?'':'colour = "#7FB2F0", '}alpha = .8, size = 2.4) +
+    geom_segment(data = ld, aes(0, 0, xend = x * k, yend = y * k),
+                 arrow = arrow(length = unit(.18, "cm")),
+                 colour = "#F2A65A", linewidth = .6) +
+    geom_text(data = ld, aes(x * k * 1.12, y * k * 1.12, label = var),
+              colour = "#F7D9A8", size = 3.4) +
+    labs(x = ${q(PCNAME(state.pcX,rot))}, y = ${q(PCNAME(state.pcY,rot))},
+         title = "主成分バイプロット") +
+    theme_minimal(base_size = 12) +
+    theme(plot.background  = element_rect(fill = "black", colour = NA),
+          panel.background = element_rect(fill = "black", colour = NA),
+          panel.grid  = element_line(colour = "grey20"),
+          legend.key  = element_rect(fill = "black", colour = NA),
+          text = element_text(colour = "grey90"),
+          axis.text = element_text(colour = "grey80"))
+  ggsave(f_biplot, p, width = 8, height = 6.5, dpi = 220, bg = "black")
+} else {
+  png(f_biplot, width = 1800, height = 1500, res = 220)
+  biplot(res, choices = c(${ax1}, ${ax2}))
+  dev.off()
+}
+cat("保存しました:", f_biplot, "\\n")
+
+#  ※ 図の日本語が文字化けする場合は、下のようにフォントを指定してください。
+#     Windows: par(family = "MS Gothic") / theme(text = element_text(family = "MS Gothic"))
+#     macOS  : par(family = "HiraKakuProN-W3") / family = "HiraKakuProN-W3"`;
+
+  return code.split('\n').map(line=>{
+    const e=line.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    if(/^\s*#/.test(e)) return '<span class="cm">'+e+'</span>';
+    return e.replace(/"([^"]*)"/g,'<span class="st">"$1"</span>')
+            .replace(/\b([A-Za-z_.][A-Za-z0-9_.]*)\(/g,'<span class="fn">$1</span>(');
+  }).join('\n');
+}
+function copyR(btn){
+  const t=$('#rcode').innerText;
+  const done=()=>{const o=btn.textContent;btn.textContent='コピーしました';setTimeout(()=>btn.textContent=o,1600);};
+  const fallback=()=>{
+    const ta=document.createElement('textarea');
+    ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    if(ok) done(); else { btn.textContent='コピーできません（手動で選択してください）'; }
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done,fallback);
+  else fallback();
+}
+
+/* ---------- 描画：スクリープロット ---------- */
+const FUI='"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif';
+const FNUM='ui-monospace,Consolas,"Roboto Mono",monospace';
+function setupCanvas(cv,h){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.parentElement.clientWidth;
+  cv.style.height=h+'px';
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+  g.fillStyle='#fff'; g.fillRect(0,0,w,h);
+  return {g,w,h};
+}
+function drawScree(){
+  const cv=$('#scree'); if(!cv) return;
+  const r=state.res, {g,w,h}=setupCanvas(cv,240);
+  const m={l:46,r:52,t:16,b:38};
+  const n=r.eig.length, iw=w-m.l-m.r, ih=h-m.t-m.b;
+  const maxE=Math.max(1.05,...r.eig)*1.1;
+  const bw=Math.min(46,iw/n*0.62);
+  const xAt=i=>m.l+iw*(i+0.5)/n;
+  // 目盛
+  g.strokeStyle='#EAEAE3'; g.fillStyle='#6C7680'; g.font=`11px ${FNUM}`;
+  g.textAlign='right'; g.textBaseline='middle';
+  for(let t=0;t<=5;t++){
+    const v=maxE*t/5, y=m.t+ih-ih*t/5;
+    g.beginPath();g.moveTo(m.l,y);g.lineTo(w-m.r,y);g.stroke();
+    g.fillText(v.toFixed(1),m.l-7,y);
+  }
+  // 固有値1の基準線
+  if(r.useCor&&maxE>1){
+    const y=m.t+ih-ih*(1/maxE);
+    g.strokeStyle='#7B3C7E';g.setLineDash([3,4]);g.beginPath();g.moveTo(m.l,y);g.lineTo(w-m.r,y);g.stroke();g.setLineDash([]);
+  }
+  // 棒
+  r.eig.forEach((e,i)=>{
+    const x=xAt(i), bh=ih*(e/maxE);
+    g.fillStyle=i<Math.max(r.k,0)?'#1B6B5A':(i<r.pl.k?'#9BBDB2':'#CFD2CB');
+    g.fillRect(x-bw/2,m.t+ih-bh,bw,bh);
+    if(i===state.pcX||i===state.pcY){
+      g.strokeStyle='#12161A'; g.lineWidth=1.5;
+      g.strokeRect(x-bw/2-1.5,m.t+ih-bh-1.5,bw+3,bh+3); g.lineWidth=1;
+      g.fillStyle='#12161A'; g.font=`bold 10px ${FNUM}`; g.textAlign='center';
+      g.fillText(i===state.pcX?'横軸':'縦軸',x,m.t+ih-bh-12);
+    }
+    g.fillStyle='#6C7680'; g.font=`11px ${FNUM}`; g.textAlign='center'; g.textBaseline='top';
+    if(n<=14||i%2===0) g.fillText(String(i+1),x,m.t+ih+8);
+  });
+  // 累積寄与率
+  g.strokeStyle='#8F6B14'; g.lineWidth=1.6; g.beginPath();
+  r.cum.forEach((c,i)=>{const x=xAt(i),y=m.t+ih-ih*c; i?g.lineTo(x,y):g.moveTo(x,y);});
+  g.stroke(); g.lineWidth=1;
+  r.cum.forEach((c,i)=>{const x=xAt(i),y=m.t+ih-ih*c;g.fillStyle='#8F6B14';g.beginPath();g.arc(x,y,2.6,0,7);g.fill();});
+  g.fillStyle='#8F6B14'; g.textAlign='left'; g.textBaseline='middle'; g.font=`11px ${FNUM}`;
+  for(let t=0;t<=4;t++){const y=m.t+ih-ih*t/4;g.fillText((t*25)+'%',w-m.r+7,y);}
+  g.fillStyle='#6C7680'; g.textAlign='center'; g.textBaseline='top'; g.font=`11px ${FUI}`;
+  g.fillText('主成分の番号',m.l+iw/2,h-16);
+
+  cv.onclick=ev=>{
+    const rc=cv.getBoundingClientRect(), x=ev.clientX-rc.left;
+    let best=0,bd=1e9;
+    for(let i=0;i<n;i++){const d=Math.abs(xAt(i)-x); if(d<bd){bd=d;best=i;}}
+    if(best>=r.pl.k) return;
+    if(ev.shiftKey) state.pcY=best; else state.pcX=best;
+    if(state.pcX===state.pcY&&r.pl.k>1) state.pcY=(state.pcX+1)%r.pl.k;
+    const ax=$('#axx'),ay=$('#axy'); if(ax)ax.value=state.pcX; if(ay)ay.value=state.pcY;
+    drawScree(); drawBiplot();
+  };
+}
+
+/* ---------- 描画：バイプロット ---------- */
+const PAL=['#1B6B5A','#7B3C7E','#8F6B14','#2E5A7D','#9E4B33','#4A4A8C','#5B6B2A','#A6486B'];
+let bipView={zoom:1,ox:0,oy:0,drag:null};
+function drawBiplot(){
+  const cv=$('#bip'); if(!cv) return;
+  const r=state.res, P=r.pl, rot=P.rot;
+  const cx=Math.min(state.pcX,P.k-1), cy=Math.min(state.pcY,P.k-1);
+  const {g,w,h}=setupCanvas(cv,Math.max(360,Math.min(520,w0(cv)*0.62)));
+  const m=44, iw=w-m*2, ih=h-m*2;
+  const showS=state.view!=='load', showL=state.view!=='score';
+
+  const S=P.scores.map(s=>[s[cx],s[cy]]);
+  const L=P.load.map(l=>[l[cx],l[cy]]);
+  const maxS=Math.max(1e-9,...S.flat().map(Math.abs));
+  const maxL=Math.max(1e-9,...L.flat().map(Math.abs));
+  const scaleL=showS? maxS/maxL*0.85 : 1;
+  const lim=(showS?maxS:maxL*scaleL)*1.15/bipView.zoom;
+  const px=v=>m+iw/2+(v/lim)*(iw/2)+bipView.ox;
+  const py=v=>m+ih/2-(v/lim)*(ih/2)+bipView.oy;
+
+  // 軸
+  g.strokeStyle='#EDEDE6';
+  for(let t=-4;t<=4;t++){
+    const v=lim*t/4;
+    g.beginPath();g.moveTo(px(v),m);g.lineTo(px(v),h-m);g.stroke();
+    g.beginPath();g.moveTo(m,py(v));g.lineTo(w-m,py(v));g.stroke();
+  }
+  g.strokeStyle='#B7BAB2'; g.lineWidth=1.1;
+  g.beginPath();g.moveTo(m,py(0));g.lineTo(w-m,py(0));g.stroke();
+  g.beginPath();g.moveTo(px(0),m);g.lineTo(px(0),h-m);g.stroke();
+  g.lineWidth=1;
+
+  // 得点
+  const groups=r.groups;
+  let gnames=[];
+  if(showS){
+    if(groups){ gnames=[...new Set(groups)]; }
+    S.forEach((s,i)=>{
+      const x=px(s[0]),y=py(s[1]);
+      if(x<m-30||x>w-m+30||y<m-30||y>h-m+30) return;
+      const col=groups?PAL[gnames.indexOf(groups[i])%PAL.length]:'#3B4750';
+      g.fillStyle=col+(groups?'CC':'AA'); g.beginPath(); g.arc(x,y,3.6,0,7); g.fill();
+      if(state.labels&&r.n<=90){
+        g.fillStyle='#6C7680'; g.font=`10px ${FUI}`; g.textAlign='left'; g.textBaseline='middle';
+        g.fillText(String(r.caseNames[i]).slice(0,10),x+6,y);
+      }
+    });
+  }
+  // 変数ベクトル
+  if(showL){
+    L.forEach((l,i)=>{
+      const x=px(l[0]*scaleL),y=py(l[1]*scaleL),x0=px(0),y0=py(0);
+      g.strokeStyle='#8F6B14'; g.lineWidth=1.5;
+      g.beginPath();g.moveTo(x0,y0);g.lineTo(x,y);g.stroke();
+      const ang=Math.atan2(y-y0,x-x0);
+      g.fillStyle='#8F6B14'; g.beginPath();
+      g.moveTo(x,y);
+      g.lineTo(x-9*Math.cos(ang-0.36),y-9*Math.sin(ang-0.36));
+      g.lineTo(x-9*Math.cos(ang+0.36),y-9*Math.sin(ang+0.36));
+      g.closePath(); g.fill(); g.lineWidth=1;
+      const label=r.varNames[i];
+      g.font=`bold 11.5px ${FUI}`;
+      const tw=g.measureText(label).width;
+      const lx=x+Math.cos(ang)*10, ly=y+Math.sin(ang)*10;
+      g.fillStyle='rgba(252,252,250,.86)';
+      g.fillRect(lx-(Math.cos(ang)<0?tw:0)-2,ly-8,tw+4,15);
+      g.fillStyle='#6B5210'; g.textAlign=Math.cos(ang)<0?'right':'left'; g.textBaseline='middle';
+      g.fillText(label,lx,ly);
+    });
+  }
+  // 軸ラベル
+  g.fillStyle='#12161A'; g.font=`bold 12px ${FUI}`;
+  g.textAlign='right'; g.textBaseline='bottom';
+  g.fillText(`${PCNAME(cx,rot)}（${pct(P.prop[cx])}）`,w-m,py(0)-6);
+  g.save(); g.translate(px(0)+6,m); g.textAlign='left'; g.textBaseline='top';
+  g.fillText(`${PCNAME(cy,rot)}（${pct(P.prop[cy])}）`,0,0); g.restore();
+
+  // 凡例
+  const lg=$('#biplegend');
+  if(lg){
+    let s='';
+    if(showS&&groups) s+=gnames.map((n2,i)=>`<span><i style="background:${PAL[i%PAL.length]}"></i>${esc(n2)}</span>`).join('');
+    else if(showS) s+='<span><i style="background:#3B4750"></i>ケース（主成分得点）</span>';
+    if(showL) s+='<span><i style="background:#8F6B14"></i>変数（主成分負荷量）</span>';
+    lg.innerHTML=s;
+  }
+
+  cv.onwheel=ev=>{ev.preventDefault();bipView.zoom*=ev.deltaY<0?1.12:1/1.12;bipView.zoom=Math.max(0.3,Math.min(12,bipView.zoom));drawBiplot();};
+  cv.onpointerdown=ev=>{bipView.drag={x:ev.clientX,y:ev.clientY,ox:bipView.ox,oy:bipView.oy};cv.setPointerCapture(ev.pointerId);};
+  cv.onpointermove=ev=>{if(!bipView.drag)return;bipView.ox=bipView.drag.ox+(ev.clientX-bipView.drag.x);bipView.oy=bipView.drag.oy+(ev.clientY-bipView.drag.y);drawBiplot();};
+  cv.onpointerup=cv.onpointercancel=()=>{bipView.drag=null;};
+  cv.ondblclick=()=>{bipView.zoom=1;bipView.ox=0;bipView.oy=0;drawBiplot();};
+}
+function w0(cv){return cv.parentElement.clientWidth;}
+
+/* ---------- Google Apps Script 連携 ---------- */
+const GAS=(typeof google!=='undefined'&&google.script&&google.script.run);
+function toast(html,bad){
+  const t=$('#toast'); if(!t) return;
+  t.innerHTML='<span class="x" onclick="this.parentNode.classList.remove(\'on\')">×</span>'+html;
+  t.className='on'+(bad?' bad':'');
+  clearTimeout(window._toast);
+  window._toast=setTimeout(()=>t.classList.remove('on'),bad?12000:9000);
+}
+function toBase64(text){
+  const bytes=new TextEncoder().encode(text);
+  let bin='',CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+  return btoa(bin);
+}
+function driveSave(name,b64,mime){
+  toast('Googleドライブに保存しています…');
+  google.script.run
+    .withSuccessHandler(res=>toast(`保存しました：<a href="${res.url}" target="_blank" rel="noopener">${esc(res.name)}</a><br>マイドライブ内のフォルダ「${esc(res.folder)}」`))
+    .withFailureHandler(e=>toast('保存できませんでした：'+esc(e.message||e),true))
+    .saveToDrive(name,b64,mime);
+}
+
+/* ---------- 保存 ---------- */
+function dlPNG(id,name){
+  const cv=document.getElementById(id); if(!cv) return;
+  const url=cv.toDataURL('image/png');
+  if(GAS) return driveSave(`${name}.png`,url.split(',')[1],'image/png');
+  const a=document.createElement('a');
+  a.download=`${name}.png`; a.href=url; a.click();
+}
+function saveCSV(rows,name){
+  const body=rows.map(r=>r.map(c=>{
+    const s=String(c??'');
+    return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  }).join(',')).join('\r\n');
+  const text='\uFEFF'+body;
+  if(GAS) return driveSave(name,toBase64(text),'text/csv');
+  const blob=new Blob([text],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.download=name; a.href=URL.createObjectURL(blob); a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+}
+function loadRows(){
+  const r=state.res,rot=r.rotated;
+  const head=['変数'];
+  for(let c=0;c<r.k;c++) head.push(PCNAME(c,rot));
+  head.push('共通性');
+  const out=[head];
+  r.varNames.forEach((v,i)=>out.push([v,...r.load[i].map(x=>x.toFixed(4)),r.comm[i].toFixed(4)]));
+  return out;
+}
+function scoreRows(){
+  const r=state.res,rot=r.rotated;
+  const head=['ケース']; if(r.groups) head.push('グループ');
+  for(let c=0;c<r.k;c++) head.push(PCNAME(c,rot));
+  const out=[head];
+  r.scores.forEach((s,i)=>{
+    const row=[r.caseNames[i]]; if(r.groups) row.push(r.groups[i]);
+    out.push(row.concat(s.map(x=>x.toFixed(4))));
+  });
+  return out;
+}
+function dlCSV(kind){
+  if(kind==='load') saveCSV(loadRows(),'主成分負荷量.csv');
+  else saveCSV(scoreRows(),'主成分得点.csv');
+}
+function dlAll(){
+  const r=state.res,rot=r.rotated,out=[];
+  out.push(['主成分分析の結果']);
+  out.push(['ケース数',r.n],['変数の数',r.p],['残した主成分',r.k],
+           ['使用した行列',r.useCor?'相関行列':'分散共分散行列'],['回転',rot?'バリマックス':'なし']);
+  if(r.kmo) out.push(['KMO',r.kmo.overall.toFixed(4)]);
+  if(r.bartlett) out.push(['Bartlett χ²',r.bartlett.chi.toFixed(3)],['df',r.bartlett.df],['p',r.bartlett.p.toExponential(3)]);
+  out.push([],['固有値と寄与率'],['主成分','固有値','寄与率','累積寄与率']);
+  r.eig.forEach((e,i)=>out.push([`PC${i+1}`,e.toFixed(4),(r.prop[i]*100).toFixed(2)+'%',(r.cum[i]*100).toFixed(2)+'%']));
+  out.push([],['主成分負荷量'],...loadRows());
+  out.push([],['主成分得点'],...scoreRows());
+  saveCSV(out,'主成分分析_結果.csv');
+}
+
+/* ---------- 例データ ---------- */
+const SAMPLE1=`ID,国語,数学,理科,社会,英語,体育
+青木,73,64,57,76,75,96
+石田,47,61,58,52,45,75
+上田,68,80,66,57,65,48
+江川,96,68,76,75,78,77
+岡本,57,80,69,54,77,79
+加藤,55,93,91,61,60,81
+木下,55,77,83,52,52,79
+栗田,57,40,38,52,52,97
+小林,62,63,64,68,49,70
+斎藤,55,65,66,53,59,72
+柴田,92,83,73,78,74,70
+杉山,72,61,53,56,50,65
+関口,81,63,66,74,84,70
+高橋,59,54,50,53,59,49
+田中,78,57,64,89,72,78
+筒井,78,62,46,49,72,85
+中村,84,42,54,86,87,86
+西村,59,57,69,52,58,37
+野口,97,82,81,86,99,76
+橋本,52,43,43,41,45,79
+平山,85,60,55,78,82,66
+福田,67,84,83,69,64,60
+堀内,67,47,35,52,58,79
+松本,61,88,64,57,42,65
+三浦,59,43,38,58,45,79
+村上,44,58,63,47,47,69
+森下,73,62,63,78,74,85
+安田,61,58,42,57,58,72
+山口,82,43,54,89,78,66
+吉川,76,58,47,85,79,76`;
+const SAMPLE2=`商品,価格の安さ,デザイン,使いやすさ,耐久性,軽さ,ブランド力
+A社モデルX,2,9,8,7,8,9
+B社モデルY,8,4,6,8,3,4
+C社モデルZ,5,7,7,6,6,6
+D社モデルP,9,3,5,9,2,3
+E社モデルQ,3,8,9,6,9,8
+F社モデルR,7,5,6,7,4,5
+G社モデルS,4,8,8,5,8,7
+H社モデルT,9,2,4,9,3,2
+I社モデルU,6,6,7,6,5,6
+J社モデルV,2,9,9,5,9,9
+K社モデルW,8,3,5,8,3,3
+L社モデルN,5,6,6,7,5,5
+M社モデルM,3,9,8,6,8,8
+N社モデルL,7,4,5,8,4,4
+O社モデルK,6,7,7,6,6,7`;
+
+
+/* ---------- 見出しの図：散らばりに軸を引く、という主成分分析の考え方 ---------- */
+const heroPts=(()=>{
+  let seed=20260813;
+  const rnd=()=>{seed=(seed*1103515245+12345)%2147483648;return seed/2147483648;};
+  const nrm=()=>{let u=0,v=0;while(u===0)u=rnd();while(v===0)v=rnd();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+  const th=16*Math.PI/180,c=Math.cos(th),si=Math.sin(th),out=[];
+  for(let i=0;i<130;i++){
+    const a=nrm(),b=nrm()*0.32;
+    out.push([a*c-b*si,a*si+b*c]);
+  }
+  return {pts:out,th};
+})();
+function drawHero(prog){
+  const cv=$('#hero'); if(!cv) return;
+  const w=cv.clientWidth,h=cv.clientHeight;
+  if(!w||!h) return;
+  const dpr=window.devicePixelRatio||1;
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d'); if(!g||!g.setTransform) return;
+  g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+  const S=Math.min(w*0.105,h*0.26), cx=w*0.40, cy=h*0.48;
+  const th=heroPts.th, ux=Math.cos(th), uy=-Math.sin(th);   // 画面上の第1主成分の向き
+  const vx=-uy, vy=ux;                                      // 直交する第2主成分
+  const P=(x,y)=>[cx+x*S,cy-y*S];
+  const ease=t=>1-Math.pow(1-Math.max(0,Math.min(1,t)),3);
+
+  // 点
+  heroPts.pts.forEach((p,i)=>{
+    const a=ease((prog-i/heroPts.pts.length*0.35)/0.4);
+    if(a<=0) return;
+    const [x,y]=P(p[0],p[1]);
+    g.fillStyle=`rgba(59,71,80,${(0.42*a).toFixed(3)})`;
+    g.beginPath(); g.arc(x,y,2.4,0,7); g.fill();
+  });
+
+  // 射影の点線（第1主成分に落とす）
+  const a3=ease((prog-0.68)/0.32);
+  if(a3>0){
+    g.strokeStyle=`rgba(27,107,90,${(0.35*a3).toFixed(3)})`; g.lineWidth=1; g.setLineDash([2,3]);
+    for(let i=6;i<heroPts.pts.length;i+=17){
+      const p=heroPts.pts[i], t=p[0]*Math.cos(th)+p[1]*Math.sin(th);
+      const q=[t*Math.cos(th),t*Math.sin(th)];
+      const A=P(p[0],p[1]),B=P(q[0],q[1]);
+      g.beginPath(); g.moveTo(A[0],A[1]); g.lineTo(B[0],B[1]); g.stroke();
+      g.setLineDash([]); g.fillStyle=`rgba(27,107,90,${(0.75*a3).toFixed(3)})`;
+      g.beginPath(); g.arc(B[0],B[1],2.2,0,7); g.fill(); g.setLineDash([2,3]);
+    }
+    g.setLineDash([]);
+  }
+
+  // 軸
+  const axis=(dx,dy,len,back,col,lw,t,label)=>{
+    const a=ease(t); if(a<=0) return;
+    g.globalAlpha=Math.min(1,a*1.2);
+    g.strokeStyle=col; g.lineWidth=lw; g.lineCap='round';
+    g.beginPath();
+    g.moveTo(cx-dx*back*S*a,cy-dy*back*S*a);
+    g.lineTo(cx+dx*len*S*a,cy+dy*len*S*a);
+    g.stroke();
+    if(a>0.98){
+      const ex=cx+dx*len*S,ey=cy+dy*len*S,ang=Math.atan2(dy,dx);
+      g.fillStyle=col; g.beginPath();
+      g.moveTo(ex,ey);
+      g.lineTo(ex-9*Math.cos(ang-0.35),ey-9*Math.sin(ang-0.35));
+      g.lineTo(ex-9*Math.cos(ang+0.35),ey-9*Math.sin(ang+0.35));
+      g.closePath(); g.fill();
+      g.font=`600 11.5px ${FUI}`; g.fillStyle=col; g.textBaseline='middle';
+      let lx=ex+dx*14, ly=ey+dy*14, al=dx<0?'right':'left';
+      const tw=g.measureText(label).width;
+      if(al==='left'&&lx+tw>w-4){ al='right'; lx=Math.min(lx,w-4); }
+      ly=Math.max(9,Math.min(h-9,ly));
+      g.textAlign=al; g.fillText(label,lx,ly);
+    }
+    g.globalAlpha=1;
+  };
+  axis(ux,uy,3.5,3.2,'#1B6B5A',1.8,(prog-0.30)/0.34,'第1主成分');
+  axis(vx,vy,1.3,1.15,'#7B3C7E',1.4,(prog-0.55)/0.32,'第2主成分');
+}
+function runHero(){
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce||!window.requestAnimationFrame){ drawHero(1); return; }
+  const t0=(window.performance||Date).now(),dur=1600;
+  const step=()=>{
+    const p=Math.min(1,((window.performance||Date).now()-t0)/dur);
+    drawHero(p); if(p<1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ---------- 起動 ---------- */
+$('#s1').onclick=()=>{$('#data').value=SAMPLE1;refreshVars();};
+$('#s2').onclick=()=>{$('#data').value=SAMPLE2;refreshVars();};
+$('#data').addEventListener('input',()=>{clearTimeout(window._t);window._t=setTimeout(refreshVars,350);});
+$('#hdr').onchange=refreshVars;
+$('#allon').onclick=()=>{state.headers.forEach((_,j)=>{if(state.numeric[j])state.use.add(j);});refreshVars();};
+$('#alloff').onclick=()=>{state.use.clear();refreshVars();};
+$('#run').onclick=execute;
+$('#idcol').onchange=()=>{state.idTouched=true;};
+$('#grpcol').onchange=()=>{state.grpTouched=true;};
+
+const drop=$('#drop'),fileEl=$('#file');
+drop.onclick=()=>fileEl.click();
+fileEl.onchange=e=>{const f=e.target.files[0];if(f)readFile(f);};
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('on');}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)readFile(f);});
+function readFile(f){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    let t=fr.result;
+    if(/ /.test(t)){ // 文字化けしていたら Shift_JIS で読み直す
+      const fr2=new FileReader();
+      fr2.onload=()=>{$('#data').value=fr2.result;refreshVars();};
+      fr2.readAsText(f,'Shift_JIS'); return;
+    }
+    $('#data').value=t; refreshVars();
+  };
+  fr.readAsText(f,'UTF-8');
+}
+/* ---------- スプレッドシートから読み込む（GASのときだけ） ---------- */
+function loadSheet(url,name){
+  toast('スプレッドシートを読み込んでいます…');
+  google.script.run
+    .withSuccessHandler(res=>{
+      const sel=$('#sslist');
+      sel.innerHTML='';
+      res.sheets.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.append(o);});
+      sel.value=res.sheet; sel.hidden=false;
+      $('#data').value=res.csv;
+      state.idTouched=false; state.grpTouched=false;
+      refreshVars();
+      toast(`「${esc(res.title)}」のシート「${esc(res.sheet)}」を読み込みました（${res.rows} 行）`);
+    })
+    .withFailureHandler(e=>toast('読み込めませんでした：'+esc(e.message||e),true))
+    .loadSheet(url||'',name||'');
+}
+if(GAS){
+  $('#gasload').hidden=false;
+  $('#ssload').onclick=()=>loadSheet($('#ssurl').value.trim(),$('#sslist').hidden?'':$('#sslist').value);
+  $('#sslist').onchange=()=>loadSheet($('#ssurl').value.trim(),$('#sslist').value);
+}
+
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+  drawHero(1); if(state.res){drawScree();drawBiplot();}
+},200);});
+refreshVars();
+runHero();
+</script>
+</body>
+</html>

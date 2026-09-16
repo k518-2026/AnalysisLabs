@@ -1,0 +1,3443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>構造方程式モデリング・ラボ — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#E6E8EC; --panel:#FCFCFB; --panel2:#F2F3F0;
+  --ink:#1E2430; --ink2:#5A6270; --ink3:#8A9099;
+  --line:#C8CDD6; --line2:#E0E3E8;
+  --lat:#5B3E7C;   /* 潜在変数：葡萄 */
+  --obs:#23566E;   /* 観測変数：藍 */
+  --eff:#9A6B18;   /* 効果：黄土 */
+  --warn:#8E3A3A;  /* 注意：蘇芳 */
+  --ok:#3E6B4F;    /* 良好：苔 */
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP","Times New Roman",serif;
+  --gothic:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,Meiryo,"Noto Sans JP",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Consolas,"Roboto Mono","Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--gothic);
+  font-size:15px; line-height:1.75; -webkit-text-size-adjust:100%;
+}
+h1,h2,h3,h4{font-family:var(--mincho); font-weight:600; letter-spacing:.02em; margin:0}
+a{color:var(--obs)}
+button,input,select,textarea{font-family:inherit; font-size:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--eff); outline-offset:2px}
+
+/* ── ヘッダ ───────────────────────────── */
+header.top{
+  position:sticky; top:0; z-index:60; background:rgba(230,232,236,.96);
+  backdrop-filter:blur(6px); border-bottom:1px solid var(--line);
+}
+.top-in{max-width:1180px; margin:0 auto; padding:10px 20px; display:flex; gap:18px; align-items:center}
+.brand{display:flex; flex-direction:column; gap:2px; flex:0 0 auto}
+.brand .t{font-family:var(--mincho); font-size:19px; letter-spacing:.08em; line-height:1.2}
+.brand .s{font-size:11px; color:var(--ink2); letter-spacing:.1em}
+#mapbar{flex:1 1 auto; min-width:0; height:56px; overflow:hidden; border-left:1px solid var(--line); padding-left:16px}
+#mapbar svg{width:100%; height:56px; display:block}
+.mapnote{font-size:11px; color:var(--ink3); font-family:var(--mono)}
+
+/* ── レイアウト ───────────────────────── */
+.wrap{max-width:1180px; margin:0 auto; padding:0 20px 96px; display:grid; grid-template-columns:196px minmax(0,1fr); gap:28px}
+nav.rail{position:sticky; top:86px; align-self:start; padding-top:26px}
+nav.rail ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--line)}
+nav.rail li{margin:0}
+nav.rail a{
+  display:block; padding:7px 12px; margin-left:-1px; border-left:2px solid transparent;
+  color:var(--ink2); text-decoration:none; font-size:13.5px; transition:color .15s,border-color .15s;
+}
+nav.rail a .n{font-family:var(--mono); font-size:11px; color:var(--ink3); margin-right:8px}
+nav.rail a:hover{color:var(--ink)}
+nav.rail a.on{color:var(--ink); border-left-color:var(--lat); font-weight:600}
+nav.rail a.on .n{color:var(--lat)}
+main{min-width:0; padding-top:26px}
+
+section.step{margin:0 0 46px; scroll-margin-top:96px}
+section.step>h2{
+  font-size:22px; padding-bottom:8px; border-bottom:1px solid var(--line);
+  display:flex; align-items:baseline; gap:12px;
+}
+section.step>h2 .num{font-family:var(--mono); font-size:12px; color:var(--lat); letter-spacing:.14em}
+.lead{color:var(--ink2); font-size:13.5px; margin:10px 0 18px; max-width:64ch}
+
+.card{background:var(--panel); border:1px solid var(--line2); border-radius:3px; padding:18px 20px; margin:14px 0}
+.card>h3{font-size:16px; margin-bottom:6px}
+.card>h3+p{margin-top:0}
+.card .hint{font-size:12.5px; color:var(--ink2)}
+.row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+.row.tight{gap:8px}
+.grow{flex:1 1 220px; min-width:0}
+
+/* ── 部品 ─────────────────────────────── */
+.btn{
+  border:1px solid var(--ink); background:var(--ink); color:#F7F8F6; border-radius:2px;
+  padding:7px 16px; cursor:pointer; font-size:13.5px; letter-spacing:.04em; transition:opacity .15s;
+}
+.btn:hover{opacity:.84}
+.btn.ghost{background:transparent; color:var(--ink); border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink); opacity:1}
+.btn.key{background:var(--lat); border-color:var(--lat)}
+.btn.sm{padding:4px 10px; font-size:12.5px}
+.btn:disabled{opacity:.38; cursor:not-allowed}
+.chip{
+  display:inline-block; border:1px solid var(--line); background:var(--panel2); border-radius:14px;
+  padding:2px 11px; font-size:12.5px; cursor:pointer; margin:2px 3px 2px 0;
+}
+.chip:hover{border-color:var(--lat); color:var(--lat)}
+.chip.on{background:var(--lat); border-color:var(--lat); color:#fff}
+label.f{display:flex; align-items:center; gap:7px; font-size:13.5px; color:var(--ink2)}
+select,input[type=text],input[type=number]{
+  border:1px solid var(--line); background:#fff; border-radius:2px; padding:5px 8px;
+}
+textarea{
+  width:100%; border:1px solid var(--line); background:#fff; border-radius:2px; padding:10px 12px;
+  font-family:var(--mono); font-size:13px; line-height:1.6; resize:vertical;
+}
+.mono{font-family:var(--mono)}
+.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
+
+table.tb{border-collapse:collapse; width:100%; font-size:13px}
+table.tb th,table.tb td{border-bottom:1px solid var(--line2); padding:5px 9px; text-align:right; white-space:nowrap}
+table.tb th{color:var(--ink2); font-weight:600; font-size:12px; border-bottom:1px solid var(--line)}
+table.tb td:first-child,table.tb th:first-child{text-align:left}
+table.tb td.l,table.tb th.l{text-align:left}
+table.tb tbody tr:hover{background:var(--panel2)}
+table.tb td.v{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.scroll{overflow:auto; max-height:460px; border:1px solid var(--line2); border-radius:2px; background:#fff}
+.scroll table.tb th{position:sticky; top:0; background:#fff; z-index:2}
+
+.pill{display:inline-block; padding:1px 8px; border-radius:2px; font-size:11.5px; font-family:var(--mono)}
+.pill.good{background:#E4EDE7; color:var(--ok)}
+.pill.mid{background:#F3EBDA; color:var(--eff)}
+.pill.bad{background:#F1E2E1; color:var(--warn)}
+.pill.lat{background:#EBE4F1; color:var(--lat)}
+.pill.obs{background:#DFE9ED; color:var(--obs)}
+
+.note{border-left:2px solid var(--eff); background:#FAF6EE; padding:10px 14px; font-size:13px; margin:12px 0}
+.note.bad{border-left-color:var(--warn); background:#FBF1F0}
+.note.ok{border-left-color:var(--ok); background:#EFF4F0}
+.muted{color:var(--ink2)}
+.small{font-size:12.5px}
+.hide{display:none !important}
+
+.fitgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:1px; background:var(--line2); border:1px solid var(--line2)}
+.fitgrid .c{background:#fff; padding:10px 12px}
+.fitgrid .c .k{font-size:11px; color:var(--ink2); letter-spacing:.06em}
+.fitgrid .c .v{font-family:var(--mono); font-size:19px; line-height:1.3}
+.fitgrid .c .j{font-size:11px}
+
+.tabs{display:flex; gap:0; border-bottom:1px solid var(--line); margin:6px 0 0; flex-wrap:wrap}
+.tabs button{
+  border:none; background:none; padding:7px 14px; cursor:pointer; font-size:13.5px; color:var(--ink2);
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+}
+.tabs button.on{color:var(--ink); border-bottom-color:var(--lat); font-weight:600}
+
+#diagWrap{background:#fff; border:1px solid var(--line2); border-radius:2px; overflow:auto}
+#diag{display:block; touch-action:none}
+#diag .node{cursor:move}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--ink2); margin-top:8px}
+.legend i{display:inline-block; width:22px; height:11px; vertical-align:-1px; margin-right:5px; border:1.5px solid var(--obs)}
+.legend i.el{border-radius:50%; border-color:var(--lat)}
+
+.drop{border:1px dashed var(--line); border-radius:3px; padding:22px; text-align:center; color:var(--ink2); background:var(--panel2)}
+.drop.over{border-color:var(--lat); background:#EFEAF3; color:var(--lat)}
+pre.code{
+  background:#1E2430; color:#DFE3E8; padding:14px 16px; border-radius:2px; overflow:auto;
+  font-family:var(--mono); font-size:12px; line-height:1.55; max-height:440px; margin:10px 0;
+}
+pre.out{background:#fff; border:1px solid var(--line2); color:var(--ink); padding:12px 14px;
+  font-family:var(--mono); font-size:12px; overflow:auto; max-height:380px; white-space:pre-wrap}
+.kbd{font-family:var(--mono); background:var(--panel2); border:1px solid var(--line); border-radius:2px; padding:0 5px; font-size:12px}
+
+.bar{height:9px; background:var(--line2); border-radius:1px; overflow:hidden; min-width:64px}
+.bar>i{display:block; height:100%; background:var(--lat)}
+
+#busy{position:fixed; inset:0; background:rgba(230,232,236,.86); z-index:200; display:none; place-items:center}
+#busy.on{display:grid}
+#busy .b{text-align:center; font-family:var(--mincho); font-size:15px; letter-spacing:.1em}
+#busy .sp{width:44px;height:44px;margin:0 auto 12px;border:2px solid var(--line);border-top-color:var(--lat);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#busy .sp{animation:none}}
+
+#toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:var(--ink); color:#F7F8F6;
+  padding:9px 20px; border-radius:2px; font-size:13px; z-index:300; opacity:0; pointer-events:none; transition:opacity .2s}
+#toast.on{opacity:1}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr); gap:0; padding:0 14px 80px}
+  nav.rail{min-width:0; overflow:hidden}
+  nav.rail ol{min-width:0}
+  nav.rail{position:static; padding-top:14px}
+  nav.rail ol{display:flex; overflow-x:auto; border-left:none; border-bottom:1px solid var(--line)}
+  nav.rail a{border-left:none; border-bottom:2px solid transparent; white-space:nowrap; margin-left:0}
+  nav.rail a.on{border-bottom-color:var(--lat)}
+  #mapbar{display:none}
+  .top-in{padding:8px 14px}
+}
+@media print{
+  header.top,nav.rail,#busy,#toast,.noprint{display:none !important}
+  .wrap{display:block; padding:0}
+  body{background:#fff; font-size:11px}
+  .card{break-inside:avoid; border-color:#bbb}
+  section.step{break-before:page}
+}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-structure);--paper:var(--al-bg);--panel:var(--al-surface);--panel2:var(--al-surface-2);--ink:var(--al-ink);--ink2:var(--al-ink-2);--ink3:var(--al-ink-3);--line:var(--al-line);--line2:var(--al-line-2);--mincho:var(--al-serif);--gothic:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#structure">構造と測定</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>構造方程式モデリング・ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a><a class="al-link" href="manual.html">マニュアル</a></div>
+
+<div id="busy"><div class="b"><div class="sp"></div><span id="busyMsg">推定しています</span></div></div>
+<div id="toast"></div>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <div class="t">構造方程式モデリング・ラボ</div>
+      <div class="s">SEM / 共分散構造分析</div>
+    </div>
+    <div id="mapbar"><svg id="mapsvg" viewBox="0 0 900 56" preserveAspectRatio="xMinYMid meet"></svg></div>
+  </div>
+</header>
+
+<div class="wrap">
+<nav class="rail" aria-label="手順">
+  <ol>
+    <li><a href="#s1" class="on"><span class="n">1</span>データを読む</a></li>
+    <li><a href="#s2"><span class="n">2</span>モデルを組む</a></li>
+    <li><a href="#s3"><span class="n">3</span>推定する</a></li>
+    <li><a href="#s4"><span class="n">4</span>パス図を描く</a></li>
+    <li><a href="#s5"><span class="n">5</span>診断と改善</a></li>
+    <li><a href="#s6"><span class="n">6</span>書き出す</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ══ 1 データ ══ -->
+<section class="step" id="s1">
+  <h2><span class="num">手順 1</span>データを読む</h2>
+  <p class="lead">個票データ（1行＝1人）か、相関・共分散行列のどちらからでも始められます。データはこの端末の中だけで処理され、どこにも送信されません。</p>
+
+  <div class="card">
+    <div class="tabs" id="dtabs">
+      <button class="on" data-dt="raw">個票データ</button>
+      <button data-dt="mat">相関・共分散行列</button>
+      <button data-dt="demo">練習用データ</button>
+    </div>
+
+    <div id="dt-raw" style="padding-top:14px">
+      <div class="drop" id="drop">
+        CSV・TSVファイルをここに置くか、<button class="btn ghost sm" id="pick">ファイルを選ぶ</button><br>
+        <span class="small">1行目は変数名。区切りは自動で判定します（カンマ／タブ／セミコロン）。</span>
+      </div>
+      <input type="file" id="file" accept=".csv,.tsv,.txt" class="hide">
+      <p class="hint" style="margin:12px 0 6px">表計算ソフトから直接貼り付けることもできます。</p>
+      <textarea id="paste" rows="5" placeholder="ここに貼り付け"></textarea>
+      <div class="row tight" style="margin-top:8px">
+        <button class="btn sm" id="readPaste">貼り付けたものを読む</button>
+        <label class="f"><input type="checkbox" id="hasHeader" checked> 1行目は変数名</label>
+      </div>
+    </div>
+
+    <div id="dt-mat" class="hide" style="padding-top:14px">
+      <p class="hint">行列は下三角・上三角・全体のどれでもかまいません。1行目に変数名を置いてください。</p>
+      <textarea id="matText" rows="8" placeholder="x1 x2 x3&#10;1.00&#10;0.52 1.00&#10;0.41 0.48 1.00"></textarea>
+      <div class="row tight" style="margin-top:8px">
+        <label class="f">種類
+          <select id="matKind"><option value="cor">相関行列</option><option value="cov">共分散行列</option></select>
+        </label>
+        <label class="f">標本の大きさ n <input type="number" id="matN" value="300" min="10" style="width:90px"></label>
+        <label class="f hide" id="sdWrap">標準偏差（任意・空白区切り）<input type="text" id="matSD" style="width:200px" placeholder="省略可"></label>
+        <button class="btn sm" id="readMat">この行列を読む</button>
+      </div>
+    </div>
+
+    <div id="dt-demo" class="hide" style="padding-top:14px">
+      <p class="hint">仕組みを確かめるための人工データです。母集団のモデルが分かっているので、推定値が近い値になるかを確認できます。</p>
+      <div id="demoList"></div>
+    </div>
+  </div>
+
+  <div id="dataInfo" class="hide">
+    <div class="card">
+      <h3>読み込んだデータ</h3>
+      <p id="dataSum" class="hint"></p>
+      <div class="tabs" id="dvtabs">
+        <button class="on" data-dv="desc">記述統計</button>
+        <button data-dv="cor">相関行列</button>
+        <button data-dv="dist">分布</button>
+        <button data-dv="miss">欠測</button>
+      </div>
+      <div id="dv-desc" style="padding-top:12px"></div>
+      <div id="dv-cor" class="hide" style="padding-top:12px"></div>
+      <div id="dv-dist" class="hide" style="padding-top:12px"></div>
+      <div id="dv-miss" class="hide" style="padding-top:12px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 2 モデル ══ -->
+<section class="step" id="s2">
+  <h2><span class="num">手順 2</span>モデルを組む</h2>
+  <p class="lead">lavaan と同じ書き方でモデルを記述します。<span class="kbd">=~</span> は潜在変数から観測変数へ（測定）、<span class="kbd">~</span> は原因から結果へ（回帰）、<span class="kbd">~~</span> は分散・共分散です。</p>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between; align-items:flex-start">
+      <h3 style="margin-bottom:8px">モデル式</h3>
+      <div class="row tight noprint">
+        <span class="small muted">ひな型：</span>
+        <span class="chip" data-tpl="cfa">確認的因子分析</span>
+        <span class="chip" data-tpl="path">パス解析</span>
+        <span class="chip" data-tpl="med">媒介モデル</span>
+        <span class="chip" data-tpl="full">測定＋構造</span>
+        <span class="chip" data-tpl="second">二次因子</span>
+        <span class="chip" data-tpl="growth">潜在成長曲線</span>
+      </div>
+    </div>
+    <textarea id="model" rows="11" spellcheck="false" placeholder="# 測定モデル&#10;支援 =~ x1 + x2 + x3&#10;意欲 =~ y1 + y2 + y3&#10;&#10;# 構造モデル&#10;意欲 ~ 支援"></textarea>
+    <div id="varPal" class="row tight" style="margin-top:10px"></div>
+    <p class="hint" style="margin-top:6px">変数名をクリックするとカーソル位置に挿入されます。全角の <span class="kbd">＝</span><span class="kbd">～</span><span class="kbd">＊</span><span class="kbd">＋</span> もそのまま使えます。</p>
+  </div>
+
+  <div class="card">
+    <h3>推定の設定</h3>
+    <div class="row" style="margin-top:8px">
+      <label class="f">潜在変数の尺度
+        <select id="scaleMode">
+          <option value="marker">最初の観測変数の係数を1に固定</option>
+          <option value="std">潜在変数の分散を1に固定</option>
+        </select>
+      </label>
+      <label class="f">欠測の扱い
+        <select id="missMode">
+          <option value="listwise">その行を除く（リストワイズ）</option>
+          <option value="pairwise">対ごとに使う（ペアワイズ）</option>
+        </select>
+      </label>
+      <label class="f">分析する行列
+        <select id="corMode">
+          <option value="cov">共分散行列</option>
+          <option value="cor">相関行列（標準化データ）</option>
+        </select>
+      </label>
+      <label class="f">推定方法
+        <select id="estMode">
+          <option value="ml">最尤法（連続量とみなす）</option>
+          <option value="wlsmv">WLSMV（順序尺度・ポリコリック相関）</option>
+        </select>
+      </label>
+      <label class="f">χ² の求め方
+        <select id="likMode">
+          <option value="normal">N × F（lavaan の既定）</option>
+          <option value="wishart">(N−1) × F（Wishart）</option>
+        </select>
+      </label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="f"><input type="checkbox" id="optExoCov" checked> 外生変数どうしの共分散を自由に推定する</label>
+      <label class="f"><input type="checkbox" id="optMean"> 平均構造（切片・潜在平均）も推定する</label>
+      <label class="f"><input type="checkbox" id="optMI" checked> 修正指標も計算する</label>
+      <label class="f"><input type="checkbox" id="optBoot"> 間接効果をブートストラップで検定する
+        <input type="number" id="bootN" value="500" min="100" max="5000" step="100" style="width:78px">回</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <h3 style="margin-bottom:4px">モデルの点検</h3>
+        <p id="parseMsg" class="hint">モデル式を書くと、ここに変数の数と推定するパラメータの数が出ます。</p>
+      </div>
+      <button class="btn key" id="run">推定する</button>
+    </div>
+    <div id="parseTbl"></div>
+  </div>
+</section>
+
+<!-- ══ 3 結果 ══ -->
+<section class="step" id="s3">
+  <h2><span class="num">手順 3</span>推定する</h2>
+  <p class="lead">最尤法でモデルの当てはまりとパスの大きさを求めます。</p>
+  <div id="res-empty" class="card"><p class="muted" style="margin:0">まだ推定していません。手順2で「推定する」を押してください。</p></div>
+
+  <div id="res" class="hide">
+    <div class="card">
+      <h3>当てはまりの良さ</h3>
+      <div class="fitgrid" id="fitGrid"></div>
+      <div id="fitVerdict"></div>
+    </div>
+
+    <div class="card">
+      <div id="catBox" class="hide" style="margin-bottom:14px"></div>
+      <div class="tabs" id="rtabs">
+        <button class="on" data-rt="param">推定値</button>
+        <button data-rt="r2">説明率</button>
+        <button data-rt="eff">効果の分解</button>
+        <button data-rt="imp">再現された行列</button>
+      </div>
+      <div id="rt-param" style="padding-top:12px"></div>
+      <div id="rt-r2" class="hide" style="padding-top:12px"></div>
+      <div id="rt-eff" class="hide" style="padding-top:12px"></div>
+      <div id="rt-imp" class="hide" style="padding-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h3>結果の読みどころ</h3>
+      <div id="autoRead"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 4 パス図 ══ -->
+<section class="step" id="s4">
+  <h2><span class="num">手順 4</span>パス図を描く</h2>
+  <p class="lead">丸は潜在変数、四角は観測変数です。節点はドラッグで動かせます。</p>
+  <div id="dg-empty" class="card"><p class="muted" style="margin:0">推定するとここにパス図が出ます。</p></div>
+  <div id="dg" class="hide">
+    <div class="card">
+      <div class="row tight noprint" style="margin-bottom:10px">
+        <label class="f">係数
+          <select id="dgVal"><option value="std">標準化</option><option value="raw">非標準化</option><option value="none">表示しない</option></select>
+        </label>
+        <label class="f">配置
+          <select id="dgLay"><option value="lr">左から右へ</option><option value="tb">上から下へ</option></select>
+        </label>
+        <label class="f"><input type="checkbox" id="dgErr" checked> 誤差を描く</label>
+        <label class="f"><input type="checkbox" id="dgSig" checked> 有意でないパスを点線にする</label>
+        <button class="btn ghost sm" id="dgReset">配置を戻す</button>
+        <button class="btn ghost sm" id="dgSvg">SVGで保存</button>
+        <button class="btn ghost sm" id="dgPng">PNGで保存</button>
+      </div>
+      <div id="diagWrap"><svg id="diag" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="legend">
+        <span><i class="el"></i>潜在変数</span>
+        <span><i></i>観測変数</span>
+        <span style="color:var(--eff)">──▶ 回帰・因子負荷</span>
+        <span style="color:var(--ok)">◜◝ 共分散</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 5 診断 ══ -->
+<section class="step" id="s5">
+  <h2><span class="num">手順 5</span>診断と改善</h2>
+  <p class="lead">どこが合っていないのか、どう直せば良くなるのかを調べます。モデルの変更は理論的な裏づけがあるときだけにしてください。</p>
+  <div id="dx-empty" class="card"><p class="muted" style="margin:0">推定するとここに診断が出ます。</p></div>
+  <div id="dx" class="hide">
+    <div class="card">
+      <div class="tabs" id="xtabs">
+        <button class="on" data-xt="mi">修正指標</button>
+        <button data-xt="resid">残差の大きい組</button>
+        <button data-xt="warn">注意すべき点</button>
+        <button data-xt="cmp">モデルを比べる</button>
+        <button data-xt="mg">群を比べる</button>
+      </div>
+      <div id="xt-mi" style="padding-top:12px"></div>
+      <div id="xt-resid" class="hide" style="padding-top:12px"></div>
+      <div id="xt-warn" class="hide" style="padding-top:12px"></div>
+      <div id="xt-cmp" class="hide" style="padding-top:12px"></div>
+      <div id="xt-mg" class="hide" style="padding-top:12px">
+        <p class="hint" style="margin-top:0">同じモデルが群（性別・学年・学校など）をまたいで同じように成り立つかを調べます。上の手順2で書いたモデル式をそのまま使います。</p>
+        <div class="row tight">
+          <label class="f">群を分ける変数
+            <select id="mgVar"><option value="">（データを読み込むと選べます）</option></select></label>
+          <label class="f"><input type="checkbox" id="mgMean" checked> 切片・潜在平均も調べる（強い不変性まで）</label>
+          <button class="btn" id="mgRun">群ごとに当てはめる</button>
+        </div>
+        <div id="mgOut" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 6 書き出す ══ -->
+<section class="step" id="s6">
+  <h2><span class="num">手順 6</span>書き出す</h2>
+  <p class="lead">論文に書くための文例、同じ計算を再現するRコード、表のCSVを取り出せます。</p>
+  <div id="ex-empty" class="card"><p class="muted" style="margin:0">推定するとここに出力が出ます。</p></div>
+  <div id="ex" class="hide">
+    <div class="card">
+      <div class="tabs" id="etabs">
+        <button class="on" data-et="text">論文の記述例</button>
+        <button data-et="r">Rコード</button>
+        <button data-et="csv">CSV・表</button>
+      </div>
+      <div id="et-text" style="padding-top:12px"></div>
+      <div id="et-r" class="hide" style="padding-top:12px"></div>
+      <div id="et-csv" class="hide" style="padding-top:12px"></div>
+    </div>
+  </div>
+
+  <div class="card noprint">
+    <h3>この分析について</h3>
+    <p class="hint" style="margin-bottom:0">推定は最尤法（正規分布を仮定）です。平均構造は扱っていないため、切片は推定していません。カテゴリカル変数・多母集団・潜在成長曲線には対応していません。標本が小さい（目安として推定するパラメータ数の10倍未満）ときは、結果を慎重に扱ってください。</p>
+  </div>
+</section>
+
+</main>
+</div>
+<script>
+"use strict";
+/* ══════════ 数値ユーティリティ ══════════ */
+const M = {
+  zeros(n,m){const A=new Array(n);for(let i=0;i<n;i++)A[i]=new Float64Array(m);return A;},
+  eye(n){const A=M.zeros(n,n);for(let i=0;i<n;i++)A[i][i]=1;return A;},
+  copy(A){return A.map(r=>Float64Array.from(r));},
+  mul(A,B){
+    const n=A.length,k=B.length,m=B[0].length,C=M.zeros(n,m);
+    for(let i=0;i<n;i++){const Ai=A[i],Ci=C[i];
+      for(let t=0;t<k;t++){const a=Ai[t]; if(a===0)continue; const Bt=B[t];
+        for(let j=0;j<m;j++)Ci[j]+=a*Bt[j];}}
+    return C;},
+  t(A){const n=A.length,m=A[0].length,B=M.zeros(m,n);
+    for(let i=0;i<n;i++)for(let j=0;j<m;j++)B[j][i]=A[i][j];return B;},
+  add(A,B){return A.map((r,i)=>r.map((v,j)=>v+B[i][j]));},
+  sub(A,B){return A.map((r,i)=>r.map((v,j)=>v-B[i][j]));},
+  scale(A,s){return A.map(r=>r.map(v=>v*s));},
+  /* ガウス・ジョルダン法（部分ピボット選択） */
+  inv(A){
+    const n=A.length, a=M.copy(A), b=M.eye(n);
+    for(let c=0;c<n;c++){
+      let p=c,mx=Math.abs(a[c][c]);
+      for(let r=c+1;r<n;r++){const v=Math.abs(a[r][c]); if(v>mx){mx=v;p=r;}}
+      if(mx<1e-13) return null;
+      if(p!==c){const t1=a[p];a[p]=a[c];a[c]=t1;const t2=b[p];b[p]=b[c];b[c]=t2;}
+      const d=a[c][c];
+      for(let j=0;j<n;j++){a[c][j]/=d;b[c][j]/=d;}
+      for(let r=0;r<n;r++){ if(r===c)continue; const f=a[r][c]; if(f===0)continue;
+        for(let j=0;j<n;j++){a[r][j]-=f*a[c][j];b[r][j]-=f*b[c][j];}}
+    }
+    return b;},
+  /* コレスキー分解（正定値判定つき） */
+  chol(A){
+    const n=A.length,L=M.zeros(n,n);
+    for(let i=0;i<n;i++){
+      for(let j=0;j<=i;j++){
+        let s=A[i][j];
+        for(let k=0;k<j;k++)s-=L[i][k]*L[j][k];
+        if(i===j){ if(s<=1e-12) return null; L[i][i]=Math.sqrt(s);}
+        else L[i][j]=s/L[j][j];
+      }}
+    return L;},
+  logDet(A){const L=M.chol(A); if(!L)return null; let s=0; for(let i=0;i<A.length;i++)s+=Math.log(L[i][i]); return 2*s;},
+  trace(A){let s=0;for(let i=0;i<A.length;i++)s+=A[i][i];return s;},
+  sym(A){const n=A.length,B=M.zeros(n,n);for(let i=0;i<n;i++)for(let j=0;j<n;j++)B[i][j]=(A[i][j]+A[j][i])/2;return B;},
+  /* ヤコビ法による対称行列の固有値分解 */
+  eig(Ain){
+    const n=Ain.length, A=M.copy(Ain), V=M.eye(n);
+    for(let sweep=0;sweep<100;sweep++){
+      let off=0; for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)off+=A[i][j]*A[i][j];
+      if(off<1e-22)break;
+      for(let p=0;p<n-1;p++)for(let q=p+1;q<n;q++){
+        if(Math.abs(A[p][q])<1e-18)continue;
+        const th=(A[q][q]-A[p][p])/(2*A[p][q]);
+        const t=Math.sign(th||1)/(Math.abs(th)+Math.sqrt(th*th+1));
+        const c=1/Math.sqrt(t*t+1), s=t*c;
+        for(let k=0;k<n;k++){const akp=A[k][p],akq=A[k][q];A[k][p]=c*akp-s*akq;A[k][q]=s*akp+c*akq;}
+        for(let k=0;k<n;k++){const apk=A[p][k],aqk=A[q][k];A[p][k]=c*apk-s*aqk;A[q][k]=s*apk+c*aqk;}
+        for(let k=0;k<n;k++){const vkp=V[k][p],vkq=V[k][q];V[k][p]=c*vkp-s*vkq;V[k][q]=s*vkp+c*vkq;}
+      }}
+    const val=[];for(let i=0;i<n;i++)val.push(A[i][i]);
+    const idx=val.map((v,i)=>i).sort((a,b)=>val[b]-val[a]);
+    return {values:idx.map(i=>val[i]), vectors:idx.map(i=>V.map(r=>r[i]))};
+  }
+};
+
+/* ── 確率分布 ── */
+/* 標準正規の分布関数。|z| が小さいうちは級数、大きくなったら連分数（ミルズ比）を使う。
+   どちらも倍精度いっぱいまで正しく、Φ₂ や p 値の精度がここで決まる。 */
+function pnorm(z){
+  if(!isFinite(z)) return z>0?1:0;
+  const x=Math.abs(z);
+  const phi=Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+  let up;                      /* up = P(Z > x)（x >= 0） */
+  if(x<3){
+    let t=x, sum=x, k=1;
+    while(Math.abs(t)>1e-18*Math.abs(sum) && k<300){ t*=x*x/(2*k+1); sum+=t; k++; }
+    up=0.5-phi*sum;
+  } else {
+    let cf=0;
+    for(let k=90;k>=1;k--) cf=k/(x+cf);
+    up=phi/(x+cf);
+  }
+  if(up<0)up=0; if(up>1)up=1;
+  return z>0 ? 1-up : up;
+}
+const erf=x=>2*pnorm(x*Math.SQRT2)-1;
+/* 標準正規の分位点。Acklam の近似をハレー法で1回磨いて倍精度に合わせる。 */
+function qnorm(p){
+  if(p<=0)return -Infinity; if(p>=1)return Infinity;
+  const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.3577518672690,-30.66479806614716,2.506628277459239];
+  const b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572];
+  const c=[-.007784894002430293,-.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783];
+  const d=[.007784695709041462,.3224671290700398,2.445134137142996,3.754408661907416];
+  const pl=.02425;let q,r,x;
+  if(p<pl){q=Math.sqrt(-2*Math.log(p));x=(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+  else if(p>1-pl){q=Math.sqrt(-2*Math.log(1-p));x=-(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+  else {q=p-.5;r=q*q;x=(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);}
+  for(let it=0;it<2;it++){
+    const e=pnorm(x)-p, u=e*Math.sqrt(2*Math.PI)*Math.exp(x*x/2);
+    x=x-u/(1+x*u/2);
+  }
+  return x;
+}
+function lgamma(x){
+  const g=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,.1208650973866179e-2,-.5395239384953e-5];
+  let y=x,tmp=x+5.5;tmp-=(x+.5)*Math.log(tmp);let ser=1.000000000190015;
+  for(let j=0;j<6;j++)ser+=g[j]/++y;
+  return -tmp+Math.log(2.5066282746310005*ser/x);
+}
+function gammp(a,x){ /* 下側不完全ガンマ（正規化） */
+  if(x<0||a<=0)return NaN;
+  if(x<a+1){let ap=a,sum=1/a,del=sum;
+    for(let n=1;n<500;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-14)break;}
+    return sum*Math.exp(-x+a*Math.log(x)-lgamma(a));}
+  let b=x+1-a,c=1e300,d=1/b,h=d;
+  for(let i=1;i<500;i++){const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;
+    c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const del=d*c;h*=del;
+    if(Math.abs(del-1)<1e-14)break;}
+  return 1-Math.exp(-x+a*Math.log(x)-lgamma(a))*h;
+}
+const pchisq=(x,df)=>x<=0?0:gammp(df/2,x/2);          /* 下側確率 */
+const pchisqU=(x,df)=>1-pchisq(x,df);                  /* 上側確率＝p値 */
+/* 非心χ²の上側/下側確率（Poisson混合） */
+function pchisqNc(x,df,ncp){
+  if(x<=0)return 0; if(ncp<=0)return pchisq(x,df);
+  let s=0,lam=ncp/2;
+  for(let k=0;k<300;k++){
+    const w=Math.exp(-lam+k*Math.log(lam)-lgamma(k+1));
+    s+=w*pchisq(x,df+2*k);
+    if(k>lam&&w<1e-12)break;}
+  return s;
+}
+/* χ²統計量とdfから非心度の信頼区間（二分探索） */
+function ncpBound(chi,df,target){
+  if(pchisqNc(chi,df,0)<target)return 0;
+  let lo=0,hi=Math.max(chi*2+100,10);
+  for(let i=0;i<300;i++){if(pchisqNc(chi,df,hi)>target)hi*=2;else break;}
+  for(let i=0;i<200;i++){const mid=(lo+hi)/2;if(pchisqNc(chi,df,mid)>target)lo=mid;else hi=mid;}
+  return (lo+hi)/2;
+}
+/* 種つき乱数 */
+function rngFrom(seed){let s=seed>>>0;return function(){s^=s<<13;s>>>=0;s^=s>>17;s^=s<<5;s>>>=0;return s/4294967296;};}
+function normFrom(rng){let sp=null;return function(){if(sp!==null){const v=sp;sp=null;return v;}
+  let u,v,r;do{u=rng()*2-1;v=rng()*2-1;r=u*u+v*v;}while(r<=0||r>=1);
+  const f=Math.sqrt(-2*Math.log(r)/r);sp=v*f;return u*f;};}
+
+const fmt=(x,d=3)=>(x===null||x===undefined||!isFinite(x))?"—":(Math.abs(x)<1e-10?(0).toFixed(d):x.toFixed(d));
+const fmtP=p=>(p===null||!isFinite(p))?"—":(p<.001?"<.001":p.toFixed(3).replace(/^0/,""));
+const stars=p=>!isFinite(p)?"":(p<.001?"***":p<.01?"**":p<.05?"*":"");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+</script>
+<script>
+"use strict";
+/* ══════════ モデル記述の解析（lavaan 風） ══════════ */
+function normalizeSyntax(src){
+  return src
+    .replace(/[\uFF1D]/g,"=").replace(/[\uFF5E\u301C\u223C\u02DC]/g,"~")
+    .replace(/[\uFF0A]/g,"*").replace(/[\uFF0B]/g,"+").replace(/[\uFF0F]/g,"/")
+    .replace(/[\u3000]/g," ").replace(/[\uFF08]/g,"(").replace(/[\uFF09]/g,")")
+    .replace(/\r\n?/g,"\n");
+}
+function parseModel(src, dataVars, opt){
+  const warn=[], err=[];
+  const lines = normalizeSyntax(src).split("\n")
+    .map(l=>l.replace(/#.*$/,"").trim()).filter(l=>l.length)
+    .flatMap(l=>l.split(";").map(s=>s.trim()).filter(Boolean));
+
+  const meas=[], regs=[], covs=[];
+  for(const line of lines){
+    let m;
+    if((m=line.match(/^(.+?)=~(.+)$/))){ meas.push({lhs:m[1].trim(), rhs:m[2]}); }
+    else if((m=line.match(/^(.+?)~~(.+)$/))){ covs.push({lhs:m[1].trim(), rhs:m[2]}); }
+    else if((m=line.match(/^(.+?)~(.+)$/))){ regs.push({lhs:m[1].trim(), rhs:m[2]}); }
+    else err.push("解釈できない行があります： "+line);
+  }
+  const terms = rhs => rhs.split("+").map(s=>s.trim()).filter(Boolean).map(s=>{
+    const m = s.match(/^(?:([^*]+)\*)?(.+)$/);
+    let mod = m[1]?m[1].trim():null, name = m[2].trim();
+    let fix=null, free=false;
+    if(mod!==null){
+      if(/^na$/i.test(mod)) free=true;
+      else if(/^[-+]?\d*\.?\d+(e[-+]?\d+)?$/i.test(mod)) fix=parseFloat(mod);
+      else warn.push("係数の指定「"+mod+"」は数値か NA にしてください（無視します）。");
+    }
+    return {name, fix, free};
+  });
+
+  /* 切片・平均（~ 1）を先に取り出す */
+  const mns=[];
+  regs.forEach(r=>{
+    r.lhsV = r.lhs.split(/\s*\+\s*/).map(s=>s.trim()).filter(Boolean);
+    r.ts = terms(r.rhs).filter(t=>{
+      if(t.name!=="1") return true;
+      r.lhsV.forEach(L=>mns.push({v:L,fix:t.fix,free:t.free}));
+      return false;
+    });
+  });
+
+  /* 変数の分類 */
+  const latSet=new Set(meas.map(m=>m.lhs));
+  const seen=[];
+  const push=v=>{ if(!seen.includes(v)) seen.push(v); };
+  meas.forEach(m=>{push(m.lhs); terms(m.rhs).forEach(t=>push(t.name));});
+  regs.forEach(r=>{r.lhsV.forEach(push); r.ts.forEach(t=>push(t.name));});
+  mns.forEach(x=>push(x.v));
+  covs.forEach(c=>{push(c.lhs); terms(c.rhs).forEach(t=>push(t.name));});
+
+  /* データにない変数は潜在変数とみなす */
+  const dv=new Set(dataVars||[]);
+  seen.forEach(v=>{ if(!dv.has(v) && !latSet.has(v)){
+    latSet.add(v); warn.push("「"+v+"」はデータにないので潜在変数として扱います。"); }});
+
+  const lat=[...latSet];
+  const obs=seen.filter(v=>!latSet.has(v));
+  if(obs.length<2) err.push("観測変数が2つ以上必要です。");
+  const nodes=[...obs,...lat], nO=obs.length, nA=nodes.length;
+  const ix={}; nodes.forEach((v,i)=>ix[v]=i);
+
+  /* A：行=結果、列=原因／S：分散共分散 */
+  const Aval=M.zeros(nA,nA), Afr=M.zeros(nA,nA), Aset=M.zeros(nA,nA);
+  const Sval=M.zeros(nA,nA), Sfr=M.zeros(nA,nA), Sset=M.zeros(nA,nA);
+  const setA=(to,from,t)=>{
+    const i=ix[to],j=ix[from]; if(i===undefined||j===undefined)return;
+    Aset[i][j]=1;
+    if(t.fix!==null && !t.free){Aval[i][j]=t.fix;Afr[i][j]=0;}
+    else {Afr[i][j]=1;Aval[i][j]=0;}
+  };
+  const indicators={};
+  meas.forEach(m=>{ const ts=terms(m.rhs); indicators[m.lhs]=ts.map(t=>t.name);
+    ts.forEach(t=>setA(t.name,m.lhs,t)); });
+  regs.forEach(r=>{ r.lhsV.forEach(L=>r.ts.forEach(t=>setA(L,t.name,t))); });
+  covs.forEach(c=>{ const i=ix[c.lhs]; if(i===undefined)return;
+    terms(c.rhs).forEach(t=>{ const j=ix[t.name]; if(j===undefined)return;
+      Sset[i][j]=Sset[j][i]=1;
+      if(t.fix!==null && !t.free){Sval[i][j]=Sval[j][i]=t.fix;Sfr[i][j]=Sfr[j][i]=0;}
+      else {Sfr[i][j]=Sfr[j][i]=1;Sval[i][j]=Sval[j][i]=0;}
+    });});
+
+  /* 潜在変数の尺度づけ */
+  lat.forEach(f=>{
+    const fi=ix[f], ind=indicators[f]||[];
+    const userScaled = Sset[fi][fi] || ind.some(v=>Aset[ix[v]][fi] && !Afr[ix[v]][fi]);
+    if(userScaled) return;
+    if(opt.scaleMode==="std" || ind.length===0){ Sval[fi][fi]=1; Sfr[fi][fi]=0; Sset[fi][fi]=1; }
+    else { const i0=ix[ind[0]]; Aval[i0][fi]=1; Afr[i0][fi]=0; }
+  });
+
+  /* 内生／外生の判定 */
+  const endo=new Array(nA).fill(false);
+  for(let i=0;i<nA;i++)for(let j=0;j<nA;j++) if(Aset[i][j]) endo[i]=true;
+
+  /* 分散：未指定なら自由 */
+  for(let i=0;i<nA;i++) if(!Sset[i][i]){ Sfr[i][i]=1; Sset[i][i]=1; }
+  /* 外生変数どうしの共分散 */
+  if(opt.exoCov){
+    for(let i=0;i<nA;i++)for(let j=i+1;j<nA;j++){
+      if(endo[i]||endo[j])continue;
+      if(!Sset[i][j]){ Sfr[i][j]=Sfr[j][i]=1; Sset[i][j]=Sset[j][i]=1; }
+    }
+  }
+
+  /* 平均構造 */
+  const mval=new Float64Array(nA), mfr=new Array(nA).fill(0), mset=new Array(nA).fill(0);
+  let hasMean = !!opt.meanStruct;
+  mns.forEach(x=>{ const i=ix[x.v]; if(i===undefined)return; hasMean=true; mset[i]=1;
+    if(x.fix!==null && !x.free){mval[i]=x.fix; mfr[i]=0;} else {mfr[i]=1; mval[i]=0;} });
+  if(hasMean) for(let i=0;i<nA;i++) if(!mset[i]){ if(i<nO) mfr[i]=1; else {mfr[i]=0; mval[i]=0;} }
+
+  /* パラメータ一覧 */
+  const pars=[];
+  const sp0={nodes,obs,lat,nO,nA,Afr,Sfr,mfr,hasMean,endo,pars};
+  buildPars(sp0);
+
+  const dfTot = nO*(nO+1)/2 + (hasMean?nO:0);
+  if(pars.length>dfTot) err.push("推定するパラメータ（"+pars.length+"個）が情報の数（"+dfTot+"個）を超えています。モデルを識別できません。");
+
+  return {ok:err.length===0, err, warn, nodes, obs, lat, nO, nA, ix,
+    Aval, Afr, Sval, Sfr, mval, mfr, mset, hasMean, endo, pars, indicators, meas, regs, covs, opt};
+}
+
+/* 自由パラメータの一覧を作り直す（多母集団で潜在平均を開くときにも使う） */
+function buildPars(sp){
+  const {nodes,obs,lat,nO,nA,Afr,Sfr,mfr,endo}=sp;
+  const pars=sp.pars; pars.length=0;
+  for(let i=0;i<nA;i++)for(let j=0;j<nA;j++) if(Afr[i][j])
+    pars.push({t:"A",i,j,kind:(lat.includes(nodes[j])&&obs.includes(nodes[i]))?"loading":"reg",
+      lab:nodes[j]+" → "+nodes[i]});
+  for(let i=0;i<nA;i++)for(let j=i;j<nA;j++) if(Sfr[i][j])
+    pars.push({t:"S",i,j,kind:i===j?(endo[i]?"resid":"var"):"cov",
+      lab:i===j?(endo[i]?nodes[i]+" の誤差分散":nodes[i]+" の分散"):nodes[i]+" ↔ "+nodes[j]});
+  if(sp.hasMean) for(let i=0;i<nA;i++) if(mfr[i])
+    pars.push({t:"m",i,j:i,kind:(i<nO||endo[i])?"icept":"mean",
+      lab:nodes[i]+((i<nO||endo[i])?" の切片":" の平均")});
+  return pars;
+}
+
+/* ══════════ RAM：Σ の計算と勾配 ══════════ */
+function buildMats(sp, th){
+  const nA=sp.nA, A=M.copy(sp.Aval), S=M.copy(sp.Sval);
+  const m=Float64Array.from(sp.mval||new Float64Array(nA));
+  sp.pars.forEach((p,k)=>{
+    if(p.t==="A")A[p.i][p.j]=th[k];
+    else if(p.t==="m")m[p.i]=th[k];
+    else {S[p.i][p.j]=th[k];S[p.j][p.i]=th[k];} });
+  return {A,S,m};
+}
+function implied(sp, th){
+  const nA=sp.nA, {A,S,m}=buildMats(sp,th);
+  const IA=M.eye(nA); for(let i=0;i<nA;i++)for(let j=0;j<nA;j++)IA[i][j]-=A[i][j];
+  const B=M.inv(IA); if(!B)return null;
+  const V=M.mul(M.mul(B,S),M.t(B));
+  const nO=sp.nO, Sig=M.zeros(nO,nO);
+  for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)Sig[i][j]=(V[i][j]+V[j][i])/2;
+  /* μ = B m（先頭 nO 個が観測変数の期待値） */
+  const muF=new Float64Array(nA);
+  for(let i=0;i<nA;i++){let t=0;for(let k=0;k<nA;k++)t+=B[i][k]*m[k];muF[i]=t;}
+  return {A,S,m,B,V,Sig,muF,mu:Array.from(muF.slice(0,nO))};
+}
+function fitFn(sp, Sobs, th){
+  const im=implied(sp,th); if(!im)return {f:1e10,im:null};
+  const ld=M.logDet(im.Sig); if(ld===null)return {f:1e10,im:null};
+  const Si=M.inv(im.Sig); if(!Si)return {f:1e10,im:null};
+  let tr=0; const nO=sp.nO;
+  for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)tr+=Sobs[i][j]*Si[j][i];
+  /* 平均構造：(x̄−μ)' Σ⁻¹ (x̄−μ) */
+  let fm=0, d=null, u=null;
+  if(sp.hasMean && sp._xbar){
+    d=new Float64Array(nO); u=new Float64Array(nO);
+    for(let i=0;i<nO;i++)d[i]=sp._xbar[i]-im.mu[i];
+    for(let i=0;i<nO;i++){let t=0;for(let j=0;j<nO;j++)t+=Si[i][j]*d[j];u[i]=t;}
+    for(let i=0;i<nO;i++)fm+=d[i]*u[i];
+  }
+  const f=ld+tr-sp._ldS-nO+fm;
+  return {f:isFinite(f)?f:1e10, im, Si, ld, tr, fm, d, u};
+}
+function gradFn(sp, Sobs, th, cache){
+  const r=cache||fitFn(sp,Sobs,th);
+  if(!r.im) return {f:r.f, g:new Float64Array(th.length)};
+  const nO=sp.nO,nA=sp.nA,Si=r.Si;
+  /* Ω = Σ⁻¹ − Σ⁻¹ S Σ⁻¹ */
+  const u=r.u;
+  const SiS=M.mul(Si,Sobs), Of=M.zeros(nA,nA), SiSSi=M.mul(SiS,Si);
+  /* Ω = Σ⁻¹ − Σ⁻¹SΣ⁻¹ − uu'（u = Σ⁻¹(x̄−μ)） */
+  for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)Of[i][j]=Si[i][j]-SiSSi[i][j]-(u?u[i]*u[j]:0);
+  const B=r.im.B, Bt=M.t(B);
+  const W=M.mul(M.mul(Bt,Of),B);          /* dF/dS 用 */
+  const Mm=M.mul(M.mul(r.im.V,Of),B);     /* dF/dA 用 */
+  let Bu=null, Bm=null;
+  if(u){ Bu=new Float64Array(nA); Bm=r.im.muF;
+    for(let i=0;i<nA;i++){let t=0;for(let k=0;k<nO;k++)t+=B[k][i]*u[k];Bu[i]=t;} }
+  const g=new Float64Array(th.length);
+  sp.pars.forEach((p,k)=>{
+    if(p.t==="A") g[k]=2*Mm[p.j][p.i]+(Bu?-2*Bu[p.i]*Bm[p.j]:0);
+    else if(p.t==="m") g[k]=-2*Bu[p.i];
+    else g[k]=(p.i===p.j)?W[p.i][p.i]:2*W[p.i][p.j];
+  });
+  return {f:r.f, g};
+}
+/* 任意の (A,S) 位置集合についての勾配（修正指標用） */
+function gradAt(sp, Sobs, th, extra){
+  const r=fitFn(sp,Sobs,th); if(!r.im)return null;
+  const nO=sp.nO,nA=sp.nA,Si=r.Si,u=r.u;
+  const SiSSi=M.mul(M.mul(Si,Sobs),Si), Of=M.zeros(nA,nA);
+  for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)Of[i][j]=Si[i][j]-SiSSi[i][j]-(u?u[i]*u[j]:0);
+  const B=r.im.B, W=M.mul(M.mul(M.t(B),Of),B), Mm=M.mul(M.mul(r.im.V,Of),B);
+  let Bu=null,Bm=null;
+  if(u){ Bu=new Float64Array(nA); Bm=r.im.muF;
+    for(let i=0;i<nA;i++){let t=0;for(let k=0;k<nO;k++)t+=B[k][i]*u[k];Bu[i]=t;} }
+  return extra.map(p=> p.t==="A" ? 2*Mm[p.j][p.i]+(Bu?-2*Bu[p.i]*Bm[p.j]:0)
+                     : p.t==="m" ? -2*Bu[p.i]
+                     : (p.i===p.j?W[p.i][p.i]:2*W[p.i][p.j]));
+}
+
+/* ══════════ BFGS ══════════ */
+function bfgs(f0, th0, maxit=400){
+  let n=th0.length, x=Float64Array.from(th0);
+  let H=M.eye(n), r=f0(x), fx=r.f, g=r.g;
+  let it=0, conv=false;
+  for(it=0; it<maxit; it++){
+    let gn=0; for(let i=0;i<n;i++)gn+=g[i]*g[i]; gn=Math.sqrt(gn);
+    if(gn<1e-9){conv=true;break;}
+    const d=new Float64Array(n);
+    for(let i=0;i<n;i++){let s=0;for(let j=0;j<n;j++)s-=H[i][j]*g[j];d[i]=s;}
+    let slope=0; for(let i=0;i<n;i++)slope+=d[i]*g[i];
+    if(slope>=0){H=M.eye(n);for(let i=0;i<n;i++)d[i]=-g[i];slope=-gn*gn;}
+    let a=1, xn=null, rn=null, okStep=false;
+    for(let ls=0; ls<40; ls++){
+      xn=new Float64Array(n); for(let i=0;i<n;i++)xn[i]=x[i]+a*d[i];
+      rn=f0(xn);
+      if(isFinite(rn.f) && rn.f<=fx+1e-4*a*slope){okStep=true;break;}
+      a*=.5;
+    }
+    if(!okStep){ if(gn<1e-6){conv=true;} break; }
+    const s=new Float64Array(n), y=new Float64Array(n);
+    for(let i=0;i<n;i++){s[i]=xn[i]-x[i];y[i]=rn.g[i]-g[i];}
+    let sy=0; for(let i=0;i<n;i++)sy+=s[i]*y[i];
+    if(sy>1e-12){
+      const Hy=new Float64Array(n); let yHy=0;
+      for(let i=0;i<n;i++){let t=0;for(let j=0;j<n;j++)t+=H[i][j]*y[j];Hy[i]=t;}
+      for(let i=0;i<n;i++)yHy+=y[i]*Hy[i];
+      const c=(sy+yHy)/(sy*sy);
+      for(let i=0;i<n;i++)for(let j=0;j<n;j++)
+        H[i][j]+= c*s[i]*s[j] - (Hy[i]*s[j]+s[i]*Hy[j])/sy;
+    }
+    const df=fx-rn.f;
+    x=xn; fx=rn.f; g=rn.g;
+    if(df>=0 && df<1e-13){conv=true;break;}
+  }
+  return {x, f:fx, g, iter:it, conv};
+}
+
+/* ══════════ 推定 ══════════ */
+function startValues(sp, Sobs){
+  const th=new Float64Array(sp.pars.length);
+  const sd=i=> i<sp.nO ? Math.sqrt(Math.max(Sobs[i][i],1e-8)) : 1;
+  /* 潜在変数のおおよその分散 */
+  const latVar={};
+  sp.lat.forEach(f=>{
+    const fi=sp.ix[f], ind=(sp.indicators[f]||[]).filter(v=>sp.obs.includes(v));
+    if(sp.Sfr[fi][fi]===0) latVar[fi]=Math.max(sp.Sval[fi][fi],1e-3);
+    else if(ind.length){ const m=ind.reduce((a,v)=>a+Sobs[sp.ix[v]][sp.ix[v]],0)/ind.length; latVar[fi]=0.5*m; }
+    else latVar[fi]=1;
+  });
+  const nodeVar=i=> i<sp.nO ? Math.max(Sobs[i][i],1e-6) : (latVar[i]||1);
+  sp.pars.forEach((p,k)=>{
+    if(p.t==="A"){
+      if(p.kind==="loading") th[k]=0.7*Math.sqrt(nodeVar(p.i)/Math.max(nodeVar(p.j),1e-8));
+      else th[k]=0.1;
+    } else {
+      if(p.t==="m"){ th[k] = (p.i<sp.nO && sp._xbar) ? sp._xbar[p.i] : 0; }
+      else if(p.i===p.j) th[k]= sp.endo[p.i] ? 0.5*nodeVar(p.i) : nodeVar(p.i);
+      else th[k]= (p.i<sp.nO&&p.j<sp.nO) ? 0.5*Sobs[p.i][p.j] : 0.2*Math.sqrt(nodeVar(p.i)*nodeVar(p.j));
+    }
+  });
+  return th;
+}
+function estimate(sp, Sobs, n){
+  sp._ldS = M.logDet(Sobs);
+  if(sp._ldS===null) return {ok:false, msg:"標本の共分散行列が正定値ではありません。変数が重複しているか、標本が小さすぎる可能性があります。"};
+  const f0 = x => gradFn(sp, Sobs, x);
+  let best=null;
+  const tries=[startValues(sp,Sobs)];
+  for(let t=0;t<tries.length;t++){
+    const r=bfgs(f0, tries[t], 500);
+    if(!best || r.f<best.f) best=r;
+    if(best.f<1e9 && best.conv) break;
+  }
+  /* うまくいかないときは別の初期値で再試行 */
+  if(!best || best.f>=1e9 || !best.conv){
+    const alt=startValues(sp,Sobs);
+    for(let k=0;k<alt.length;k++){ const p=sp.pars[k];
+      if(p.t==="A") alt[k]= p.kind==="loading"?1:0; else if(p.i===p.j) alt[k]*=1.6; else alt[k]*=0.5; }
+    const r2=bfgs(f0, alt, 700);
+    if(!best || r2.f<best.f) best=r2;
+  }
+  if(!best || best.f>=1e9) return {ok:false, msg:"推定が収束しませんでした。モデルが識別されていないか、初期値から離れすぎている可能性があります。"};
+  return {ok:true, th:best.x, F:best.f, iter:best.iter, conv:best.conv, grad:best.g};
+}
+
+/* ヘッセ行列（解析的勾配の中心差分） */
+function hessian(sp, Sobs, th){
+  const q=th.length, H=M.zeros(q,q);
+  for(let k=0;k<q;k++){
+    const h=1e-5*Math.max(1,Math.abs(th[k]));
+    const a=Float64Array.from(th), b=Float64Array.from(th);
+    a[k]+=h; b[k]-=h;
+    const ga=gradFn(sp,Sobs,a).g, gb=gradFn(sp,Sobs,b).g;
+    for(let j=0;j<q;j++)H[j][k]=(ga[j]-gb[j])/(2*h);
+  }
+  return M.sym(H);
+}
+
+/* ══════════ 適合度 ══════════ */
+/* 比較の基準になる独立モデル。lavaan と同じく、観測された外生変数どうしの
+   共分散だけは自由にしておく（パス解析で CFI・TLI がずれないように） */
+function baselineF(sp, Sobs){
+  const nO=sp.nO, xs=[];
+  for(let i=0;i<nO;i++) if(!sp.endo[i]) xs.push(i);
+  let lgd=0;
+  for(let i=0;i<nO;i++) if(sp.endo[i]) lgd+=Math.log(Math.max(Sobs[i][i],1e-300));
+  if(xs.length){
+    const Sx=xs.map(i=>xs.map(j=>Sobs[i][j]));
+    const ld=M.logDet(Sx); lgd += (ld===null? xs.reduce((a,i)=>a+Math.log(Sobs[i][i]),0) : ld);
+  }
+  const nx=xs.length;
+  return {F: lgd - sp._ldS, df: nO*(nO+1)/2 - nO - nx*(nx-1)/2, nx};
+}
+
+/* SRMR（lavaan の srmr_bentler と同じ。平均構造があれば平均のずれも数える） */
+function srmrOf(sp, Sobs, im){
+  const nO=sp.nO, Sig=im.Sig; let ss=0,c=0;
+  for(let i=0;i<nO;i++)for(let j=0;j<=i;j++){
+    const r=(Sobs[i][j]-Sig[i][j])/Math.sqrt(Sobs[i][i]*Sobs[j][j]); ss+=r*r; c++; }
+  if(sp.hasMean && sp._xbar) for(let i=0;i<nO;i++){
+    const r=(sp._xbar[i]-im.mu[i])/Math.sqrt(Sobs[i][i]); ss+=r*r; c++; }
+  return Math.sqrt(ss/c);
+}
+
+function fitIndices(sp, Sobs, th, n, F, NN, resc){
+  NN = NN || (n-1);
+  const nO=sp.nO, p=nO, q=sp.pars.length;
+  const df = p*(p+1)/2 + (sp.hasMean?p:0) - q;
+  const T = NN*F;
+  const pv = df>0 ? pchisqU(T,df) : NaN;
+  /* 独立モデル（lavaan と同じく、観測された外生変数どうしの共分散は自由にする） */
+  const bl = baselineF(sp, Sobs);
+  const Fb = bl.F, dfb = bl.df, Tb=NN*Fb;
+  const d1=Math.max(T-df,0), d0=Math.max(Tb-dfb,0);
+  const CFI = d0>0 ? 1-d1/Math.max(d0,d1,1e-12) : 1;
+  const TLI = (Tb/dfb-1)!==0 ? (Tb/dfb - (df>0?T/df:1))/(Tb/dfb-1) : NaN;
+  const NFI = Tb>0 ? (Tb-T)/Tb : NaN;
+  const RMSEA = df>0 ? Math.sqrt(Math.max(T-df,0)/(df*NN)) : 0;
+  let rlo=0,rhi=0,pclose=NaN;
+  if(df>0){
+    const nl=ncpBound(T,df,0.95), nu=ncpBound(T,df,0.05);
+    rlo=Math.sqrt(nl/(df*NN)); rhi=Math.sqrt(nu/(df*NN));
+    pclose = 1-pchisqNc(T,df,0.05*0.05*df*NN);
+  }
+  const im=implied(sp,th), Sig=im.Sig;
+  let maxRes=0, maxPair=null;
+  for(let i=0;i<nO;i++)for(let j=0;j<=i;j++){
+    const r=(Sobs[i][j]-Sig[i][j])/Math.sqrt(Sobs[i][i]*Sobs[j][j]);
+    if(Math.abs(r)>Math.abs(maxRes)){maxRes=r;maxPair=[i,j];}
+  }
+  const SRMR=srmrOf(sp,Sobs,im);
+  const Si=M.inv(Sig), SiS=M.mul(Si,Sobs), I=M.eye(nO);
+  const D=M.sub(SiS,I);
+  const GFI = 1 - M.trace(M.mul(D,D))/M.trace(M.mul(SiS,SiS));
+  const AGFI = 1-(1-GFI)*(p*(p+1)/2)/Math.max(p*(p+1)/2-q+(sp.hasMean?p:0),1e-9);
+  /* 対数尤度 */
+  const Sn = resc ? Sobs : M.scale(Sobs,(n-1)/n);
+  let tr=0; for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)tr+=Sn[i][j]*Si[j][i];
+  let dd=0;
+  if(sp.hasMean && sp._xbar){ const d=[]; for(let i=0;i<nO;i++)d.push(sp._xbar[i]-im.mu[i]);
+    for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)dd+=d[i]*Si[i][j]*d[j]; }
+  const logl = -0.5*n*(p*Math.log(2*Math.PI)+M.logDet(Sig)+tr+dd);
+  const AIC=-2*logl+2*q, BIC=-2*logl+q*Math.log(n);
+  return {df,T,pv,CFI,TLI,NFI,RMSEA,rlo,rhi,pclose,SRMR,GFI,AGFI,AIC,BIC,logl,q,n,NN,F,
+    Tb,dfb,maxRes,maxPair,Sig};
+}
+
+/* ══════════ 標準化解・効果分解 ══════════ */
+function standardize(sp, th){
+  const im=implied(sp,th), nA=sp.nA, V=im.V;
+  const sd=[]; for(let i=0;i<nA;i++)sd.push(Math.sqrt(Math.max(V[i][i],1e-12)));
+  const stA=M.zeros(nA,nA), stS=M.zeros(nA,nA);
+  for(let i=0;i<nA;i++)for(let j=0;j<nA;j++){
+    stA[i][j]=im.A[i][j]*sd[j]/sd[i];
+    stS[i][j]=im.S[i][j]/(sd[i]*sd[j]);
+  }
+  const R2=[]; for(let i=0;i<nA;i++) R2.push(sp.endo[i]? 1-im.S[i][i]/Math.max(V[i][i],1e-12) : null);
+  const stM=[]; for(let i=0;i<nA;i++) stM.push(im.m[i]/sd[i]);
+  return {sd, stA, stS, stM, R2, V, A:im.A, S:im.S, m:im.m, mu:im.mu, muF:im.muF, B:im.B, Sig:im.Sig};
+}
+function effects(sp, th, std){
+  const nA=sp.nA, im=implied(sp,th), B=im.B, A=im.A;
+  const Tot=M.zeros(nA,nA), Ind=M.zeros(nA,nA);
+  const sd=std?std.sd:null;
+  for(let i=0;i<nA;i++)for(let j=0;j<nA;j++){
+    let t=B[i][j]-(i===j?1:0), d=A[i][j];
+    if(sd){t*=sd[j]/sd[i]; d*=sd[j]/sd[i];}
+    Tot[i][j]=t; Ind[i][j]=t-d;
+  }
+  return {Tot, Ind, Dir: sd? std.stA : A};
+}
+</script>
+<script>
+"use strict";
+/* ══════════ データ ══════════ */
+const D = {vars:[], rows:[], n:0, mode:"raw", cov:null, cor:null, mean:[], sd:[], N:0, source:""};
+
+function sniffDelim(text){
+  const l=text.split("\n").slice(0,5).join("\n");
+  const cands=[",","\t",";"];
+  let best=",",bc=-1;
+  cands.forEach(d=>{const c=(l.split(d).length-1); if(c>bc){bc=c;best=d;}});
+  return best;
+}
+function parseDelimited(text, header){
+  text=text.replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n").trim();
+  const d=sniffDelim(text);
+  const lines=text.split("\n").filter(l=>l.trim().length);
+  const cells=lines.map(l=>splitLine(l,d));
+  let vars, body;
+  if(header){ vars=cells[0].map((v,i)=>v.trim()||("V"+(i+1))); body=cells.slice(1); }
+  else { vars=cells[0].map((_,i)=>"V"+(i+1)); body=cells; }
+  const rows=body.map(r=>r.map(c=>{
+    const s=String(c).trim();
+    if(s===""||/^(NA|na|N\/A|\.|-|null|NULL|nan|NaN)$/.test(s))return null;
+    const v=Number(s.replace(/,/g,""));
+    return isFinite(v)?v:s;   /* 数値でない値は文字列のまま残す（群を分ける変数に使える） */
+  }));
+  return {vars, rows};
+}
+function splitLine(line,d){
+  const out=[];let cur="",q=false;
+  for(let i=0;i<line.length;i++){const ch=line[i];
+    if(ch==='"'){ if(q&&line[i+1]==='"'){cur+='"';i++;} else q=!q; }
+    else if(ch===d&&!q){out.push(cur);cur="";}
+    else cur+=ch;}
+  out.push(cur);return out;
+}
+function colStats(rows, j){
+  const v=[]; rows.forEach(r=>{const x=r[j]; if(x!==null&&x!==undefined&&isFinite(x))v.push(x);});
+  const n=v.length; if(!n)return {n:0,mean:NaN,sd:NaN,min:NaN,max:NaN,sk:NaN,ku:NaN,miss:rows.length};
+  const m=v.reduce((a,b)=>a+b,0)/n;
+  let s2=0,s3=0,s4=0; v.forEach(x=>{const d=x-m;s2+=d*d;s3+=d*d*d;s4+=d*d*d*d;});
+  const sd=Math.sqrt(s2/(n-1)), sdp=Math.sqrt(s2/n);
+  return {n, mean:m, sd, min:Math.min(...v), max:Math.max(...v),
+    sk: n>2? (s3/n)/Math.pow(sdp,3):NaN, ku: n>3? (s4/n)/Math.pow(sdp,4)-3:NaN,
+    miss: rows.length-n, values:v};
+}
+function covMatrix(rows, cols, mode){
+  const p=cols.length;
+  if(mode==="listwise"){
+    const keep=rows.filter(r=>cols.every(j=>r[j]!==null&&isFinite(r[j])));
+    const n=keep.length; if(n<3)return null;
+    const mean=cols.map(j=>keep.reduce((a,r)=>a+r[j],0)/n);
+    const C=M.zeros(p,p);
+    for(let a=0;a<p;a++)for(let b=a;b<p;b++){
+      let s=0; for(let k=0;k<n;k++)s+=(keep[k][cols[a]]-mean[a])*(keep[k][cols[b]]-mean[b]);
+      C[a][b]=C[b][a]=s/(n-1);
+    }
+    return {C, n, mean, used:n, dropped:rows.length-n};
+  } else {
+    const C=M.zeros(p,p); let minN=Infinity, sumN=0, cnt=0;
+    const mean=cols.map(j=>{const v=rows.map(r=>r[j]).filter(x=>x!==null&&isFinite(x));
+      return v.reduce((a,b)=>a+b,0)/v.length;});
+    for(let a=0;a<p;a++)for(let b=a;b<p;b++){
+      let s=0,m=0;
+      for(let k=0;k<rows.length;k++){const xa=rows[k][cols[a]],xb=rows[k][cols[b]];
+        if(xa===null||xb===null||!isFinite(xa)||!isFinite(xb))continue;
+        s+=(xa-mean[a])*(xb-mean[b]);m++;}
+      if(m<3)return null;
+      C[a][b]=C[b][a]=s/(m-1); minN=Math.min(minN,m); sumN+=m; cnt++;
+    }
+    return {C, n:Math.round(sumN/cnt), mean, used:minN, dropped:rows.length-minN, pairwise:true};
+  }
+}
+function toCor(C){
+  const p=C.length,R=M.zeros(p,p);
+  for(let i=0;i<p;i++)for(let j=0;j<p;j++)R[i][j]=C[i][j]/Math.sqrt(C[i][i]*C[j][j]);
+  return R;
+}
+
+/* ══════════ 練習用データ ══════════ */
+const DEMOS=[
+ {id:"school", name:"家庭の支援・学習意欲・学業成績", n:320, seed:20260905,
+  desc:"潜在変数3つ・観測変数9つの媒介モデル。支援→意欲→成績の間接効果があり、支援→成績の直接効果は小さめに設定してあります。",
+  model:"# 測定モデル\n支援 =~ 会話 + 見守り + 期待\n意欲 =~ 面白さ + 目標 + 粘り\n成績 =~ 国語 + 数学 + 理科\n\n# 構造モデル\n意欲 ~ 支援\n成績 ~ 意欲 + 支援",
+  build(rng){const nz=normFrom(rng);
+    const names=["会話","見守り","期待","面白さ","目標","粘り","国語","数学","理科"];
+    const rows=[];
+    for(let k=0;k<320;k++){
+      const F1=nz();
+      const F2=0.55*F1+Math.sqrt(1-.55*.55)*nz();
+      const F3=0.50*F2+0.15*F1+nz()*Math.sqrt(1-0.34);
+      const L=[[.80,F1],[.75,F1],[.68,F1],[.82,F2],[.74,F2],[.70,F2],[.85,F3],[.78,F3],[.72,F3]];
+      rows.push(L.map(([l,f])=>{
+        const v=l*f+Math.sqrt(1-l*l)*nz();
+        return Math.round(Math.min(5,Math.max(1, 3.2+v*0.9))*10)/10;}));
+    }
+    return {vars:names, rows};}},
+
+ {id:"job", name:"職務満足と離職意思（観測変数のみ）", n:280, seed:777,
+  desc:"すべて観測変数のパス解析。裁量と支援が満足に影響し、満足を通じて離職意思を下げるという媒介構造です。",
+  model:"# パス解析（観測変数のみ）\n満足 ~ 裁量 + 上司支援 + 負担\n離職意思 ~ 満足 + 負担",
+  build(rng){const nz=normFrom(rng);
+    const names=["裁量","上司支援","負担","満足","離職意思"];
+    const rows=[];
+    for(let k=0;k<280;k++){
+      const x1=nz(), x2=0.35*x1+Math.sqrt(1-.1225)*nz(), x3=-0.20*x1+Math.sqrt(1-.04)*nz();
+      const y1=0.42*x1+0.38*x2-0.28*x3+Math.sqrt(0.5)*nz();
+      const y2=-0.55*y1+0.30*x3+Math.sqrt(0.55)*nz();
+      rows.push([x1,x2,x3,y1,y2].map(v=>Math.round((3+v*0.85)*100)/100));
+    }
+    return {vars:names, rows};}},
+
+ {id:"growth", name:"学力の伸び（4時点・潜在成長曲線）", n:300, seed:1123, needMean:true,
+  desc:"同じ子どもを4回はかった得点です。出発点（切片）と伸び（傾き）を潜在変数として取り出します。平均構造が必要なので、自動で入にします。",
+  model:"# 潜在成長曲線モデル\n切片 =~ 1*t1 + 1*t2 + 1*t3 + 1*t4\n傾き =~ 0*t1 + 1*t2 + 2*t3 + 3*t4\n\n# 切片と傾きの平均を推定し、観測変数の切片は0に固定する\n切片 ~ 1\n傾き ~ 1\nt1 ~ 0*1\nt2 ~ 0*1\nt3 ~ 0*1\nt4 ~ 0*1",
+  build(rng){const nz=normFrom(rng);
+    const names=["t1","t2","t3","t4"]; const rows=[];
+    for(let k=0;k<300;k++){
+      const zi=nz(), zs=nz();
+      const I=50 + Math.sqrt(36)*zi;
+      const Sl=4.0 + Math.sqrt(2.25)*(0.35*zi+Math.sqrt(1-0.1225)*zs);
+      const r=[];
+      for(let t=0;t<4;t++) r.push(Math.round((I+Sl*t+Math.sqrt(9)*nz())*100)/100);
+      rows.push(r);}
+    return {vars:names, rows};}},
+
+ {id:"invar", name:"2つの学校で同じ尺度をとった（多母集団）", n:480, seed:24680, needMean:true,
+  desc:"6項目・2因子の尺度を2校で実施したデータです。列「学校」で群に分けられます。手順5の「群を比べる」で測定不変性を調べてください。負荷と切片は同じで、B校のほうが潜在平均が高くなるように作ってあります。",
+  model:"F1 =~ q1 + q2 + q3\nF2 =~ q4 + q5 + q6",
+  build(rng){const nz=normFrom(rng);
+    const load=[.80,.75,.70,.82,.76,.71], ic=[3.0,2.8,3.2,2.9,3.1,3.0];
+    const names=["q1","q2","q3","q4","q5","q6","学校"];
+    const rows=[];
+    [["A校",250,0,0],["B校",230,0.45,0.30]].forEach(([g,nn,m1,m2])=>{
+      for(let k=0;k<nn;k++){
+        const F1=m1+nz(), F2=m2+0.5*(F1-m1)+Math.sqrt(0.75)*nz();
+        const r=[];
+        for(let i=0;i<6;i++){const f=i<3?F1:F2, l=load[i];
+          r.push(Math.round((ic[i]+l*f+Math.sqrt(1-l*l)*nz())*100)/100);}
+        r.push(g); rows.push(r);}
+    });
+    return {vars:names, rows};}},
+
+ {id:"ord", name:"4件法の尺度（順序尺度・6項目）", n:600, seed:90210, estMode:"wlsmv",
+  desc:"「あてはまらない〜あてはまる」の4件法で答えた6項目です。順序尺度なのでポリコリック相関とWLSMVで分析します。推定方法は自動でWLSMVにします。",
+  model:"F1 =~ i1 + i2 + i3\nF2 =~ i4 + i5 + i6",
+  build(rng){const nz=normFrom(rng);
+    const load=[.80,.72,.66,.78,.70,.64];
+    const cut=[[-1.1,-0.1,0.9],[-0.9,0.1,1.1],[-1.3,-0.3,0.7],[-1.0,0,1.0],[-0.8,0.2,1.2],[-1.2,-0.2,0.8]];
+    const names=["i1","i2","i3","i4","i5","i6"], rows=[];
+    for(let k=0;k<600;k++){
+      const F1=nz(), F2=0.55*F1+Math.sqrt(1-.3025)*nz();
+      const r=[];
+      for(let i=0;i<6;i++){const f=i<3?F1:F2, l=load[i];
+        const y=l*f+Math.sqrt(1-l*l)*nz();
+        let c=1; for(const t of cut[i]) if(y>t) c++;
+        r.push(c);}
+      rows.push(r);}
+    return {vars:names, rows};}},
+
+ {id:"scale", name:"二次因子をもつ尺度（12項目）", n:400, seed:31415,
+  desc:"3つの下位因子を1つの上位因子がまとめる階層構造。二次因子モデルの練習に使えます。",
+  model:"# 一次因子\n情緒 =~ q1 + q2 + q3 + q4\n行動 =~ q5 + q6 + q7 + q8\n認知 =~ q9 + q10 + q11 + q12\n\n# 二次因子\n適応 =~ 情緒 + 行動 + 認知",
+  build(rng){const nz=normFrom(rng);
+    const names=[];for(let i=1;i<=12;i++)names.push("q"+i);
+    const rows=[];
+    for(let k=0;k<400;k++){
+      const G=nz();
+      const f=[0.72,0.68,0.75].map(l=>l*G+Math.sqrt(1-l*l)*nz());
+      const load=[.78,.74,.71,.66,.80,.72,.69,.75,.77,.70,.73,.68];
+      const r=[];
+      for(let i=0;i<12;i++){const fi=f[Math.floor(i/4)],l=load[i];
+        r.push(Math.round(Math.min(5,Math.max(1,3+ (l*fi+Math.sqrt(1-l*l)*nz())*0.95 ))*10)/10);}
+      rows.push(r);}
+    return {vars:names, rows};}}
+];
+
+/* ══════════ 修正指標 ══════════ */
+function modIndices(sp, Sobs, th, NN, limit){
+  const nA=sp.nA, out=[];
+  const cand=[];
+  const isObs=i=>i<sp.nO;
+  const isLat=i=>i>=sp.nO;
+  for(let i=0;i<nA;i++)for(let j=0;j<nA;j++){
+    if(i===j)continue;
+    if(sp.Afr[i][j]||sp.Aval[i][j]!==0)continue;
+    if(isLat(i)&&isObs(j))continue;                    /* 観測→潜在は候補にしない */
+    if(isObs(i)&&isObs(j)&&!sp.endo[i])continue;
+    cand.push({t:"A",i,j,lab:sp.nodes[j]+" → "+sp.nodes[i],
+      kind: isLat(j)&&isObs(i)?"交差負荷": isLat(i)&&isLat(j)?"潜在間のパス":"パス"});
+  }
+  for(let i=0;i<nA;i++)for(let j=i+1;j<nA;j++){
+    if(sp.Sfr[i][j]||sp.Sval[i][j]!==0)continue;
+    cand.push({t:"S",i,j,lab:sp.nodes[i]+" ↔ "+sp.nodes[j],
+      kind: isObs(i)&&isObs(j)?"誤差の相関":"共分散"});
+  }
+  if(!cand.length) return [];
+  const all=sp.pars.concat(cand), nf=sp.pars.length, q=all.length;
+  if(q>260) cand.length=Math.max(0,260-nf);
+  const ext=sp.pars.concat(cand), qe=ext.length;
+  /* 拡張パラメータでの勾配とヘッセ行列（T=(n-1)F 単位） */
+  const gExt=x=>{
+    const g=gradAt(sp,Sobs,x,ext); return g?g.map(v=>v*NN):null;
+  };
+  const g0=gExt(th); if(!g0)return [];
+  const H=M.zeros(qe,qe);
+  for(let k=0;k<nf;k++){
+    const h=1e-5*Math.max(1,Math.abs(th[k]));
+    const a=Float64Array.from(th),b=Float64Array.from(th); a[k]+=h;b[k]-=h;
+    const ga=gExt(a),gb=gExt(b); if(!ga||!gb)return [];
+    for(let j=0;j<qe;j++)H[j][k]=(ga[j]-gb[j])/(2*h);
+  }
+  /* 候補パラメータ方向の2階微分は数値的に別途（0からの微小変化） */
+  for(let c=0;c<cand.length;c++){
+    const k=nf+c, p=cand[c], h=1e-4;
+    const mk=(dv)=>{
+      const sp2={...sp, Aval:M.copy(sp.Aval), Sval:M.copy(sp.Sval)};
+      if(p.t==="A") sp2.Aval[p.i][p.j]=dv; else {sp2.Sval[p.i][p.j]=dv; sp2.Sval[p.j][p.i]=dv;}
+      sp2._ldS=sp._ldS;
+      const g=gradAt(sp2,Sobs,th,ext); return g?g.map(v=>v*NN):null;
+    };
+    const ga=mk(h), gb=mk(-h); if(!ga||!gb)return [];
+    for(let j=0;j<qe;j++)H[j][k]=(ga[j]-gb[j])/(2*h);
+  }
+  const Hs=M.sym(H);
+  const Hff=M.zeros(nf,nf);
+  for(let i=0;i<nf;i++)for(let j=0;j<nf;j++)Hff[i][j]=Hs[i][j];
+  const Hffi=M.inv(Hff); if(!Hffi)return [];
+  for(let c=0;c<cand.length;c++){
+    const k=nf+c;
+    const hkf=new Float64Array(nf); for(let i=0;i<nf;i++)hkf[i]=Hs[k][i];
+    let quad=0;
+    for(let i=0;i<nf;i++){let s=0;for(let j=0;j<nf;j++)s+=Hffi[i][j]*hkf[j];quad+=hkf[i]*s;}
+    const d=Hs[k][k]-quad;
+    if(!(d>1e-8))continue;
+    const mi=g0[k]*g0[k]/(2*d), epc=-g0[k]/d;
+    if(!isFinite(mi)||mi<0)continue;
+    out.push({...cand[c], mi, epc});
+  }
+  out.sort((a,b)=>b.mi-a.mi);
+  return out.slice(0, limit||30);
+}
+
+/* ══════════ 間接効果のデルタ法SE ══════════ */
+function effectSE(sp, th, Vth, i, j, kind, std){
+  const q=th.length, gv=new Float64Array(q);
+  const val=x=>{
+    const im=implied(sp,x); if(!im)return NaN;
+    let e = kind==="total" ? im.B[i][j]-(i===j?1:0)
+          : kind==="direct" ? im.A[i][j]
+          : im.B[i][j]-(i===j?1:0)-im.A[i][j];
+    if(std){ const sd=k=>Math.sqrt(Math.max(im.V[k][k],1e-12)); e*=sd(j)/sd(i); }
+    return e;
+  };
+  const e0=val(th); if(!isFinite(e0))return {est:NaN,se:NaN};
+  for(let k=0;k<q;k++){
+    const h=1e-5*Math.max(1,Math.abs(th[k]));
+    const a=Float64Array.from(th),b=Float64Array.from(th);a[k]+=h;b[k]-=h;
+    gv[k]=(val(a)-val(b))/(2*h);
+  }
+  let v=0; for(let a=0;a<q;a++)for(let b=0;b<q;b++)v+=gv[a]*Vth[a][b]*gv[b];
+  return {est:e0, se:v>0?Math.sqrt(v):NaN};
+}
+
+/* ══════════ ブートストラップ ══════════ */
+function bootstrapIndirect(sp, rows, cols, pairs, reps, missMode, useCor, onProg){
+  return new Promise(resolve=>{
+    const store=pairs.map(()=>[]);
+    let done=0, fails=0;
+    const rng=rngFrom(987654321);
+    const N=rows.length;
+    const step=()=>{
+      const t0=performance.now();
+      while(done<reps && performance.now()-t0<70){
+        const bs=[]; for(let k=0;k<N;k++)bs.push(rows[Math.floor(rng()*N)]);
+        const cm=covMatrix(bs, cols, missMode);
+        done++;
+        if(!cm){fails++;continue;}
+        let C=cm.C; if(useCor)C=toCor(C);
+        const sp2={...sp}; sp2._ldS=M.logDet(C);
+        if(sp2._ldS===null){fails++;continue;}
+        const r=estimate(sp2, C, cm.n);
+        if(!r.ok){fails++;continue;}
+        const st=standardize(sp2,r.th), ef=effects(sp2,r.th,st);
+        pairs.forEach((pr,idx)=>store[idx].push(ef.Ind[pr.i][pr.j]));
+      }
+      if(onProg)onProg(done,reps);
+      if(done<reps) setTimeout(step,0);
+      else{
+        const res=pairs.map((pr,idx)=>{
+          const v=store[idx].slice().sort((a,b)=>a-b);
+          if(v.length<20)return {lo:NaN,hi:NaN,se:NaN,k:v.length};
+          const lo=v[Math.floor(.025*v.length)], hi=v[Math.min(v.length-1,Math.floor(.975*v.length))];
+          const m=v.reduce((a,b)=>a+b,0)/v.length;
+          const se=Math.sqrt(v.reduce((a,b)=>a+(b-m)*(b-m),0)/(v.length-1));
+          return {lo,hi,se,k:v.length};
+        });
+        resolve({res, fails, reps});
+      }
+    };
+    setTimeout(step,0);
+  });
+}
+</script>
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const ST={sp:null,res:null,fit:null,std:null,eff:null,mi:null,Vth:null,Sobs:null,n:0,cols:null,boot:null,hist:[]};
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2200);}
+function busy(on,msg){const b=$("#busy");if(msg)$("#busyMsg").textContent=msg;b.classList.toggle("on",!!on);}
+function tabGroup(root, prefix, attr){
+  $$(root+" button").forEach(b=>b.onclick=()=>{
+    $$(root+" button").forEach(x=>x.classList.toggle("on",x===b));
+    $$("[id^='"+prefix+"']").forEach(d=>d.classList.add("hide"));
+    $(prefix+b.dataset[attr]).classList.remove("hide");
+  });
+}
+tabGroup("#dtabs","#dt-","dt"); tabGroup("#dvtabs","#dv-","dv");
+tabGroup("#rtabs","#rt-","rt"); tabGroup("#xtabs","#xt-","xt");
+tabGroup("#etabs","#et-","et");
+
+/* ── 手順ナビ ── */
+const secs=$$("section.step");
+window.addEventListener("scroll",()=>{
+  let cur=secs[0].id;
+  secs.forEach(s=>{ if(s.getBoundingClientRect().top<160) cur=s.id; });
+  $$("nav.rail a").forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+cur));
+},{passive:true});
+
+/* ══════════ データ読み込み ══════════ */
+function setData(vars, rows, source){
+  D.mode="raw"; D.vars=vars; D.rows=rows; D.n=rows.length; D.source=source; D.cov=null;
+  showData();
+}
+function setMatrix(vars, C, n, kind, sd){
+  D.mode="mat"; D.vars=vars; D.rows=[]; D.n=n; D.cov=C; D.N=n; D.source="行列入力";
+  showData();
+}
+$("#pick").onclick=()=>$("#file").click();
+$("#file").onchange=e=>{const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>{const {vars,rows}=parseDelimited(r.result,$("#hasHeader").checked);
+    setData(vars,rows,f.name);toast(f.name+" を読みました");};r.readAsText(f,"UTF-8");};
+const drop=$("#drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>{const {vars,rows}=parseDelimited(r.result,$("#hasHeader").checked);
+    setData(vars,rows,f.name);toast(f.name+" を読みました");};r.readAsText(f,"UTF-8");});
+$("#readPaste").onclick=()=>{const t=$("#paste").value.trim();
+  if(!t){toast("貼り付ける内容がありません");return;}
+  const {vars,rows}=parseDelimited(t,$("#hasHeader").checked);
+  setData(vars,rows,"貼り付け");toast("読みました");};
+$("#matKind").onchange=()=>$("#sdWrap").classList.toggle("hide",$("#matKind").value!=="cor");
+$("#readMat").onclick=()=>{
+  const txt=$("#matText").value.trim(); if(!txt){toast("行列が空です");return;}
+  const lines=txt.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const head=lines[0].split(/[\s,\t]+/).filter(Boolean);
+  const isName=head.some(h=>!isFinite(Number(h)));
+  const vars=isName?head:head.map((_,i)=>"V"+(i+1));
+  const body=(isName?lines.slice(1):lines).map(l=>l.split(/[\s,\t]+/).filter(Boolean).map(Number));
+  const p=vars.length;
+  if(body.length!==p){toast("行数（"+body.length+"）と変数の数（"+p+"）が合いません");return;}
+  const C=M.zeros(p,p);
+  for(let i=0;i<p;i++)for(let j=0;j<p;j++){
+    let v=null;
+    if(body[i].length>j&&isFinite(body[i][j]))v=body[i][j];
+    else if(body[j]&&body[j].length>i&&isFinite(body[j][i]))v=body[j][i];
+    if(v===null){toast("("+(i+1)+","+(j+1)+") の値が読めません");return;}
+    C[i][j]=v;
+  }
+  for(let i=0;i<p;i++)for(let j=0;j<p;j++)C[i][j]=C[j][i]=(C[i][j]+C[j][i])/2;
+  let CC=C;
+  if($("#matKind").value==="cor"){
+    const sdT=$("#matSD").value.trim();
+    if(sdT){const sd=sdT.split(/[\s,\t]+/).map(Number);
+      if(sd.length===p&&sd.every(isFinite)){CC=M.zeros(p,p);
+        for(let i=0;i<p;i++)for(let j=0;j<p;j++)CC[i][j]=C[i][j]*sd[i]*sd[j];}}
+  }
+  const n=Math.max(10,parseInt($("#matN").value)||300);
+  if(M.logDet(CC)===null){toast("この行列は正定値ではありません");return;}
+  setMatrix(vars,CC,n);toast("行列を読みました（n="+n+"）");
+};
+/* 練習用データ */
+$("#demoList").innerHTML=DEMOS.map(d=>
+  `<div style="border-top:1px solid var(--line2);padding:10px 0">
+   <div class="row" style="justify-content:space-between"><b>${esc(d.name)}</b>
+   <button class="btn ghost sm" data-demo="${d.id}">読み込む</button></div>
+   <p class="hint" style="margin:2px 0 0">n = ${d.n}。${esc(d.desc)}</p></div>`).join("");
+$$("[data-demo]").forEach(b=>b.onclick=()=>{
+  const d=DEMOS.find(x=>x.id===b.dataset.demo);
+  const {vars,rows}=d.build(rngFrom(d.seed));
+  setData(vars,rows,d.name);
+  $("#optMean").checked=!!d.needMean;
+  $("#estMode").value=d.estMode||"ml";
+  $("#model").value=d.model; onModelChange();
+  toast(d.name+" を読み込みました");
+  $("#s2").scrollIntoView({behavior:"smooth"});
+});
+
+/* ── データの要約表示 ── */
+function showData(){
+  $("#dataInfo").classList.remove("hide");
+  ST.mg=null; if(typeof mgFillVars==="function"){mgFillVars(); const b=$("#mgOut"); if(b)b.innerHTML="";}
+  const p=D.vars.length;
+  $("#dataSum").innerHTML = D.mode==="mat"
+    ? `変数 ${p} 個・n = ${D.n}（行列入力）`
+    : `${esc(D.source)}：${D.n} 行 × ${p} 列`;
+  if(D.mode==="mat"){
+    $("#dv-desc").innerHTML=`<p class="hint">行列入力のため記述統計はありません。</p>`;
+    $("#dv-dist").innerHTML=`<p class="hint">行列入力のため分布は描けません。</p>`;
+    $("#dv-miss").innerHTML=`<p class="hint">行列入力のため欠測はありません。</p>`;
+    renderCor(D.cov);
+  } else {
+    const st=D.vars.map((v,j)=>colStats(D.rows,j));
+    D._st=st;
+    $("#dv-desc").innerHTML=`<div class="scroll"><table class="tb"><thead><tr>
+      <th class="l">変数</th><th>n</th><th>欠測</th><th>平均</th><th>標準偏差</th><th>最小</th><th>最大</th><th>歪度</th><th>尖度</th></tr></thead><tbody>`+
+      D.vars.map((v,j)=>{const s=st[j];const bad=Math.abs(s.sk)>2||Math.abs(s.ku)>7;
+        return `<tr><td class="l">${esc(v)}</td><td class="v">${s.n}</td><td class="v">${s.miss||""}</td>
+        <td class="v">${fmt(s.mean,2)}</td><td class="v">${fmt(s.sd,2)}</td><td class="v">${fmt(s.min,2)}</td>
+        <td class="v">${fmt(s.max,2)}</td><td class="v"${bad?' style="color:var(--warn)"':''}>${fmt(s.sk,2)}</td>
+        <td class="v"${bad?' style="color:var(--warn)"':''}>${fmt(s.ku,2)}</td></tr>`;}).join("")+
+      `</tbody></table></div>`+
+      (st.some(s=>Math.abs(s.sk)>2||Math.abs(s.ku)>7)
+        ? `<div class="note">歪度の絶対値が2、尖度の絶対値が7を超える変数があります。最尤法は正規分布を前提にしているので、結果は慎重に読んでください。</div>`:"");
+    const cols=D.vars.map((_,j)=>j);
+    const cm=covMatrix(D.rows,cols,"pairwise");
+    if(cm) renderCor(cm.C);
+    renderDist(st);
+    renderMiss(st);
+  }
+  buildPalette();
+  onModelChange();
+}
+function renderCor(C){
+  const R=toCor(C), p=R.length;
+  let h=`<p class="hint">下三角は相関係数です。色が濃いほど関連が強いことを表します。</p><div class="scroll"><table class="tb"><thead><tr><th class="l"></th>`+
+    D.vars.map(v=>`<th>${esc(v)}</th>`).join("")+`</tr></thead><tbody>`;
+  for(let i=0;i<p;i++){
+    h+=`<tr><td class="l">${esc(D.vars[i])}</td>`;
+    for(let j=0;j<p;j++){
+      if(j>i){h+=`<td></td>`;continue;}
+      const r=R[i][j], a=Math.min(.72,Math.abs(r)*.72);
+      const col=r>=0?`rgba(91,62,124,${a})`:`rgba(142,58,58,${a})`;
+      h+=`<td class="v" style="background:${col}">${i===j?"1":fmt(r,2).replace(/^0\./,".").replace(/^-0\./,"-.")}</td>`;
+    }
+    h+=`</tr>`;
+  }
+  $("#dv-cor").innerHTML=h+`</tbody></table></div>`;
+}
+function renderDist(st){
+  const W=178,H=64;
+  $("#dv-dist").innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px">`+
+   D.vars.map((v,j)=>{
+    const s=st[j]; if(!s.values||s.values.length<3)return `<div class="small muted">${esc(v)}：描けません</div>`;
+    const nb=Math.max(6,Math.min(18,Math.ceil(Math.sqrt(s.values.length))));
+    const lo=s.min,hi=s.max,w=(hi-lo)||1,bins=new Array(nb).fill(0);
+    s.values.forEach(x=>{let b=Math.floor((x-lo)/w*nb);if(b>=nb)b=nb-1;if(b<0)b=0;bins[b]++;});
+    const mx=Math.max(...bins);
+    const bars=bins.map((b,i)=>{const bw=W/nb,h=b/mx*(H-14);
+      return `<rect x="${(i*bw).toFixed(1)}" y="${(H-14-h).toFixed(1)}" width="${(bw-1).toFixed(1)}" height="${h.toFixed(1)}" fill="#5B3E7C" opacity=".55"/>`;}).join("");
+    return `<div><div class="small" style="margin-bottom:2px">${esc(v)}</div>
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;background:#fff;border:1px solid var(--line2)">
+      ${bars}<line x1="0" y1="${H-14}" x2="${W}" y2="${H-14}" stroke="#C8CDD6"/>
+      <text x="0" y="${H-3}" font-size="9" fill="#8A9099">${fmt(lo,1)}</text>
+      <text x="${W}" y="${H-3}" font-size="9" fill="#8A9099" text-anchor="end">${fmt(hi,1)}</text></svg></div>`;
+   }).join("")+`</div>`;
+}
+function renderMiss(st){
+  const tot=D.rows.length;
+  const anyMiss=st.some(s=>s.miss>0);
+  const complete=D.rows.filter(r=>r.every(x=>x!==null&&isFinite(x))).length;
+  $("#dv-miss").innerHTML = !anyMiss
+    ? `<div class="note ok">欠測はありません。</div>`
+    : `<p class="hint">全 ${tot} 行のうち、どの変数にも欠測がない行は ${complete} 行（${(complete/tot*100).toFixed(1)}%）です。</p>
+      <table class="tb"><thead><tr><th class="l">変数</th><th>欠測数</th><th>割合</th><th class="l">　</th></tr></thead><tbody>`+
+      D.vars.map((v,j)=>{const s=st[j],r=s.miss/tot;
+        return `<tr><td class="l">${esc(v)}</td><td class="v">${s.miss}</td><td class="v">${(r*100).toFixed(1)}%</td>
+        <td class="l"><span class="bar" style="display:inline-block;width:120px"><i style="width:${(r*100).toFixed(1)}%"></i></span></td></tr>`;}).join("")+
+      `</tbody></table>
+      <div class="note">欠測が多いときは、手順2の「欠測の扱い」を確かめてください。ペアワイズは行列が正定値にならないことがあります。</div>`;
+}
+
+/* ══════════ モデル編集 ══════════ */
+function buildPalette(){
+  $("#varPal").innerHTML = D.vars.map(v=>`<span class="chip" data-ins="${esc(v)}">${esc(v)}</span>`).join("");
+  $$("[data-ins]").forEach(c=>c.onclick=()=>insertAtCursor($("#model"),c.dataset.ins));
+}
+function insertAtCursor(ta,txt){
+  const s=ta.selectionStart,e=ta.selectionEnd;
+  ta.value=ta.value.slice(0,s)+txt+ta.value.slice(e);
+  ta.selectionStart=ta.selectionEnd=s+txt.length; ta.focus(); onModelChange();
+}
+const TPL={
+  cfa:v=>`# 確認的因子分析\n因子1 =~ ${v(0)} + ${v(1)} + ${v(2)}\n因子2 =~ ${v(3)} + ${v(4)} + ${v(5)}`,
+  path:v=>`# パス解析（観測変数のみ）\n${v(3)} ~ ${v(0)} + ${v(1)}\n${v(4)} ~ ${v(3)} + ${v(2)}`,
+  med:v=>`# 媒介モデル\n${v(1)} ~ ${v(0)}\n${v(2)} ~ ${v(1)} + ${v(0)}`,
+  full:v=>`# 測定モデル\n原因 =~ ${v(0)} + ${v(1)} + ${v(2)}\n媒介 =~ ${v(3)} + ${v(4)} + ${v(5)}\n結果 =~ ${v(6)} + ${v(7)} + ${v(8)}\n\n# 構造モデル\n媒介 ~ 原因\n結果 ~ 媒介 + 原因`,
+  growth:v=>`# 潜在成長曲線モデル（等間隔の4時点）\n切片 =~ 1*${v(0)} + 1*${v(1)} + 1*${v(2)} + 1*${v(3)}\n傾き =~ 0*${v(0)} + 1*${v(1)} + 2*${v(2)} + 3*${v(3)}\n\n# 切片と傾きの平均を推定し、観測変数の切片は0に固定する\n切片 ~ 1\n傾き ~ 1\n${v(0)} ~ 0*1\n${v(1)} ~ 0*1\n${v(2)} ~ 0*1\n${v(3)} ~ 0*1`,
+  second:v=>`# 一次因子\n因子1 =~ ${v(0)} + ${v(1)} + ${v(2)}\n因子2 =~ ${v(3)} + ${v(4)} + ${v(5)}\n因子3 =~ ${v(6)} + ${v(7)} + ${v(8)}\n\n# 二次因子\n上位 =~ 因子1 + 因子2 + 因子3`
+};
+$$("[data-tpl]").forEach(c=>c.onclick=()=>{
+  const v=i=>D.vars[i]||("x"+(i+1));
+  $("#model").value=TPL[c.dataset.tpl](v);
+  if(c.dataset.tpl==="growth") $("#optMean").checked=true;
+  onModelChange();
+});
+["input","change"].forEach(ev=>$("#model").addEventListener(ev,onModelChange));
+["scaleMode","corMode","optExoCov","optMean","missMode","likMode","estMode"].forEach(id=>$("#"+id).addEventListener("change",onModelChange));
+
+function currentOpt(){return {scaleMode:$("#scaleMode").value, exoCov:$("#optExoCov").checked, meanStruct:$("#optMean").checked};}
+function onModelChange(){
+  const src=$("#model").value;
+  if(!src.trim()){$("#parseMsg").textContent="モデル式を書くと、ここに変数の数と推定するパラメータの数が出ます。";
+    $("#parseTbl").innerHTML=""; drawMap(null); return;}
+  const sp=parseModel(src, D.vars, currentOpt());
+  ST._sp=sp;
+  const dfTot=sp.nO*(sp.nO+1)/2+(sp.hasMean?sp.nO:0), df=dfTot-sp.pars.length;
+  let msg=`観測変数 ${sp.nO} 個・潜在変数 ${sp.lat.length} 個／情報の数 ${dfTot}・推定するパラメータ ${sp.pars.length} 個・自由度 ${df}`;
+  $("#parseMsg").innerHTML = esc(msg) + (!sp.ok?` <span class="pill bad">このままでは推定できません</span>`:df===0?` <span class="pill mid">飽和モデル</span>`:` <span class="pill good">推定できます</span>`);
+  const kinds={loading:"因子負荷",reg:"回帰",resid:"誤差分散",var:"分散",cov:"共分散",icept:"切片",mean:"平均"};
+  const cnt={}; sp.pars.forEach(p=>cnt[p.kind]=(cnt[p.kind]||0)+1);
+  let h=`<div class="row tight" style="margin-top:8px">`+
+    Object.keys(kinds).filter(k=>cnt[k]).map(k=>`<span class="pill lat">${kinds[k]} ${cnt[k]}</span>`).join("")+`</div>`;
+  if(sp.err.length)h+=`<div class="note bad">`+sp.err.map(esc).join("<br>")+`</div>`;
+  if(sp.warn.length)h+=`<div class="note">`+sp.warn.map(esc).join("<br>")+`</div>`;
+  $("#parseTbl").innerHTML=h;
+  $("#run").disabled = !sp.ok;
+  drawMap(sp);
+}
+
+/* ══════════ 推定の実行 ══════════ */
+$("#run").onclick=async()=>{
+  const src=$("#model").value;
+  const sp=parseModel(src, D.vars, currentOpt());
+  if(!sp.ok){toast("モデルを直してください");return;}
+  const missing=sp.obs.filter(v=>!D.vars.includes(v));
+  if(missing.length){toast("データにない変数： "+missing.join(", "));return;}
+  busy(true,"推定しています");
+  await new Promise(r=>setTimeout(r,20));
+  try{
+    const cols=sp.obs.map(v=>D.vars.indexOf(v));
+    if($("#estMode").value==="wlsmv"){
+      const done=await runCategorical(sp, cols, src);
+      busy(false); return done;
+    }
+    let Sobs,n,info;
+    if(D.mode==="mat"){
+      const p=cols.length; Sobs=M.zeros(p,p);
+      for(let i=0;i<p;i++)for(let j=0;j<p;j++)Sobs[i][j]=D.cov[cols[i]][cols[j]];
+      n=D.n; info={used:n,dropped:0}; sp._xbar=null;
+    } else {
+      const cm=covMatrix(D.rows,cols,$("#missMode").value);
+      if(!cm){busy(false);toast("共分散行列が作れません（欠測が多すぎる可能性があります）");return;}
+      Sobs=cm.C; n=cm.n; info=cm; sp._xbar=Float64Array.from(cm.mean);
+    }
+    if(sp.hasMean && !sp._xbar){busy(false);
+      toast("平均構造を推定するには個票データが必要です（行列入力では平均が分かりません）");return;}
+    if(sp.hasMean && $("#corMode").value==="cor"){busy(false);
+      toast("相関行列を分析するときは平均構造を使えません");return;}
+    if($("#corMode").value==="cor") Sobs=toCor(Sobs);
+    const SobsRaw=M.copy(Sobs);
+    const likNormal = $("#likMode").value==="normal";
+    if(likNormal) Sobs=M.scale(Sobs,(n-1)/n);   /* lavaan の sample.cov.rescale と同じ */
+    const est=estimate(sp,Sobs,n);
+    if(!est.ok){busy(false);toast(est.msg);
+      $("#res-empty").innerHTML=`<div class="note bad">${esc(est.msg)}</div>`;return;}
+    const NN = likNormal ? n : n-1;
+    const fit=fitIndices(sp,Sobs,est.th,n,est.F,NN,likNormal);
+    const std=standardize(sp,est.th);
+    const H=hessian(sp,Sobs,est.th);
+    const Hi=M.inv(H);
+    const Vth = Hi ? M.scale(Hi, 2/NN) : null;
+    const eff=effects(sp,est.th,null), effS=effects(sp,est.th,std);
+    let mi=[];
+    if($("#optMI").checked && fit.df>0){ busy(true,"修正指標を計算しています"); await new Promise(r=>setTimeout(r,10));
+      try{ mi=modIndices(sp,Sobs,est.th,NN,30);}catch(e){mi=[];} }
+    Object.assign(ST,{sp,res:est,fit,std,eff,effS,Vth,Sobs,SobsRaw,n,NN,cols,info,mi,boot:null,useCor:$("#corMode").value==="cor"});
+    ST.hist.push({name:"モデル"+(ST.hist.length+1), T:fit.T, df:fit.df, CFI:fit.CFI, RMSEA:fit.RMSEA,
+      AIC:fit.AIC, BIC:fit.BIC, q:fit.q, src, logl:fit.logl});
+    renderAll();
+    if($("#optBoot").checked){
+      const pairs=[]; const nA=sp.nA;
+      for(let i=0;i<nA;i++)for(let j=0;j<nA;j++) if(Math.abs(effS.Ind[i][j])>1e-8) pairs.push({i,j});
+      if(pairs.length&&D.mode==="raw"){
+        const reps=Math.max(100,parseInt($("#bootN").value)||500);
+        busy(true,"ブートストラップ 0 / "+reps);
+        const bt=await bootstrapIndirect(sp,D.rows,cols,pairs,reps,$("#missMode").value,ST.useCor,
+          (d,t)=>{$("#busyMsg").textContent="ブートストラップ "+d+" / "+t;});
+        ST.boot={pairs,...bt}; renderEffects();
+      } else if(D.mode!=="raw") toast("ブートストラップには個票データが必要です");
+    }
+    busy(false);
+    $("#s3").scrollIntoView({behavior:"smooth"});
+  }catch(e){busy(false);console.error(e);toast("計算中に問題が起きました： "+e.message);}
+};
+
+/* ══════════ 結果の描画 ══════════ */
+function renderAll(){
+  $("#res-empty").classList.add("hide"); $("#res").classList.remove("hide");
+  $("#dg-empty").classList.add("hide"); $("#dg").classList.remove("hide");
+  $("#dx-empty").classList.add("hide"); $("#dx").classList.remove("hide");
+  $("#ex-empty").classList.add("hide"); $("#ex").classList.remove("hide");
+  renderFit(); renderParams(); renderR2(); renderEffects(); renderImplied(); renderAutoRead();
+  renderMI(); renderResid(); renderWarn(); renderCmp();
+  layoutDiagram(); drawDiagram(); renderExport();
+}
+function judge(v,good,ok,rev){
+  if(!isFinite(v))return "";
+  const g=rev? v<=good : v>=good, m=rev? v<=ok : v>=ok;
+  return g?`<span class="pill good">良好</span>`:m?`<span class="pill mid">許容</span>`:`<span class="pill bad">要検討</span>`;
+}
+function renderFit(){
+  const f=ST.fit;
+  const cells=[
+    ["χ²", fmt(f.T,2), `df = ${f.df}`],
+    ["p 値", fmtP(f.pv), !isFinite(f.pv)?"—":(f.pv>=.05?`<span class="pill good">棄却されない</span>`:`<span class="pill mid">棄却</span>`)],
+    ["χ²/df", fmt(f.df>0?f.T/f.df:NaN,2), judge(f.T/f.df,2,3,true)],
+    ["CFI", fmt(f.CFI,3), judge(f.CFI,.95,.90)],
+    ["TLI", fmt(f.TLI,3), judge(f.TLI,.95,.90)],
+    ["RMSEA", fmt(f.RMSEA,3), `90%CI [${fmt(f.rlo,3)}, ${fmt(f.rhi,3)}] ${judge(f.RMSEA,.05,.08,true)}`],
+    ["SRMR", fmt(f.SRMR,3), judge(f.SRMR,.05,.08,true)],
+    ["GFI", fmt(f.GFI,3), judge(f.GFI,.95,.90)],
+    ["AIC", fmt(f.AIC,1), `BIC ${fmt(f.BIC,1)}`],
+    ["n", String(f.n), `パラメータ ${f.q}`]
+  ];
+  $("#fitGrid").innerHTML=cells.map(([k,v,j])=>
+    `<div class="c"><div class="k">${k}</div><div class="v">${v}</div><div class="j">${j}</div></div>`).join("");
+  const bad=[];
+  if(f.CFI<.90)bad.push("CFI が .90 を下回っています");
+  if(f.RMSEA>.08)bad.push("RMSEA が .08 を上回っています");
+  if(f.SRMR>.08)bad.push("SRMR が .08 を上回っています");
+  if(f.df===0)bad.push("自由度が0（飽和モデル）なので、当てはまりの検定はできません");
+  const ratio=f.n/f.q;
+  let extra="";
+  if(ratio<5)extra=`標本の大きさがパラメータ数の ${ratio.toFixed(1)} 倍しかありません（10倍以上が目安）。`;
+  $("#fitVerdict").innerHTML = bad.length
+    ? `<div class="note bad">${bad.join("。")}。手順5で、どこが合っていないかを確かめてください。${extra}</div>`
+    : `<div class="note ok">主要な指標はいずれも許容範囲です。${extra}</div>`;
+}
+function seOf(k){ return ST.Vth&&ST.Vth[k]&&ST.Vth[k][k]>0 ? Math.sqrt(ST.Vth[k][k]) : NaN; }
+function renderParams(){
+  const sp=ST.sp, th=ST.res.th, std=ST.std;
+  const groups=[["loading","因子負荷（測定モデル）"],["reg","回帰（構造モデル）"],
+    ["cov","共分散"],["var","分散"],["resid","誤差分散"],
+    ["icept","切片（観測変数）"],["mean","平均（潜在変数）"]];
+  let h="";
+  groups.forEach(([g,label])=>{
+    const idx=sp.pars.map((p,k)=>({p,k})).filter(o=>o.p.kind===g);
+    const fixed=[];
+    if(g==="loading"){
+      for(let i=0;i<sp.nA;i++)for(let j=0;j<sp.nA;j++)
+        if(!sp.Afr[i][j]&&sp.Aval[i][j]!==0&&i<sp.nO&&j>=sp.nO)
+          fixed.push({lab:sp.nodes[j]+" → "+sp.nodes[i], v:sp.Aval[i][j], st:std.stA[i][j]});
+    }
+    if(g==="icept"&&sp.hasMean){
+      for(let i=0;i<sp.nO;i++) if(sp.mset[i]&&!sp.mfr[i])
+        fixed.push({lab:sp.nodes[i]+" の切片", v:sp.mval[i], st:sp.mval[i]/std.sd[i]});
+    }
+    if(!idx.length&&!fixed.length)return;
+    h+=`<h4 style="margin:14px 0 4px;font-size:14px">${label}</h4>
+      <div class="scroll" style="max-height:none"><table class="tb"><thead><tr>
+      <th class="l">パラメータ</th><th>推定値</th><th>標準誤差</th><th>z</th><th>p</th><th>標準化</th></tr></thead><tbody>`;
+    idx.forEach(({p,k})=>{
+      const se=seOf(k), ok=isFinite(se)&&se>0;
+      const z=ok?th[k]/se:NaN, pv=ok?2*(1-pnorm(Math.abs(z))):NaN;
+      const st=p.t==="A"?std.stA[p.i][p.j]:p.t==="m"?std.stM[p.i]:std.stS[p.i][p.j];
+      h+=`<tr><td class="l">${esc(p.lab)}</td><td class="v">${fmt(th[k])}</td><td class="v">${fmt(se)}</td>
+        <td class="v">${ok?fmt(z,2):"—"}</td><td class="v">${ok?fmtP(pv)+`<span style="color:var(--eff)">${stars(pv)}</span>`:"制約から決まる値"}</td>
+        <td class="v">${fmt(st)}</td></tr>`;
+    });
+    fixed.forEach(f=>{
+      h+=`<tr style="color:var(--ink2)"><td class="l">${esc(f.lab)}</td><td class="v">${fmt(f.v)}</td>
+        <td class="v">固定</td><td class="v">—</td><td class="v">—</td><td class="v">${fmt(f.st)}</td></tr>`;
+    });
+    h+=`</tbody></table></div>`;
+  });
+  h+=`<p class="hint" style="margin-top:10px">* p&lt;.05　** p&lt;.01　*** p&lt;.001。${
+    ST.cat ? "標準誤差はサンドイッチ推定量（DWLS のロバスト標準誤差）です。"
+           : "標準誤差はヘッセ行列から求めています"+(ST.useCor?"（相関行列を分析したため、標準誤差は目安です）":"")+"。"}</p>`;
+  if(ST.cat) h+=`<div class="note">順序尺度として推定しています。しきい値・ポリコリック相関・推定値・ロバスト標準誤差・平均分散調整 χ² は、
+    lavaan の <code>estimator = "WLSMV"</code> と有効数字7桁まで一致することを確かめてあります。
+    誤差分散は「観測変数の潜在的な分散が1になる」という制約から決まるので、自由に推定するパラメータではありません。</div>`;
+  $("#rt-param").innerHTML=h;
+}
+function renderR2(){
+  const sp=ST.sp, std=ST.std;
+  const rows=[];
+  for(let i=0;i<sp.nA;i++) if(sp.endo[i]) rows.push({name:sp.nodes[i], r2:std.R2[i], lat:i>=sp.nO});
+  if(!rows.length){$("#rt-r2").innerHTML=`<p class="hint">内生変数がありません。</p>`;return;}
+  rows.sort((a,b)=>b.r2-a.r2);
+  $("#rt-r2").innerHTML=`<p class="hint">それぞれの変数について、モデルの中の他の変数でどれだけ説明できたかを表します。</p>
+    <table class="tb"><thead><tr><th class="l">変数</th><th class="l">種類</th><th>R²</th><th class="l">　</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td class="l">${esc(r.name)}</td>
+      <td class="l"><span class="pill ${r.lat?"lat":"obs"}">${r.lat?"潜在":"観測"}</span></td>
+      <td class="v">${fmt(r.r2)}</td>
+      <td class="l"><span class="bar" style="display:inline-block;width:150px"><i style="width:${Math.max(0,Math.min(100,r.r2*100)).toFixed(1)}%"></i></span></td></tr>`).join("")+
+    `</tbody></table>`;
+}
+function renderEffects(){
+  const sp=ST.sp, ef=ST.effS, th=ST.res.th, Vth=ST.Vth;
+  const nA=sp.nA; let rows=[];
+  const isInd=i=>{ if(i>=sp.nO)return false;
+    for(let j=sp.nO;j<sp.nA;j++) if(sp.Aval[i][j]!==0||sp.Afr[i][j])return true; return false;};
+  for(let i=0;i<nA;i++)for(let j=0;j<nA;j++){
+    if(i===j)continue;
+    const tot=ef.Tot[i][j];
+    if(Math.abs(tot)<1e-8)continue;
+    rows.push({i,j,dir:ef.Dir[i][j],ind:ef.Ind[i][j],tot,meas:isInd(i)});
+  }
+  const showMeas = ST._effMeas===true;
+  const core=rows.filter(r=>!r.meas);
+  if(core.length && !showMeas) rows=core;
+  if(!rows.length){$("#rt-eff").innerHTML=`<p class="hint">効果を分解できるパスがありません。</p>`;return;}
+  rows.sort((a,b)=>Math.abs(b.ind)-Math.abs(a.ind)||Math.abs(b.tot)-Math.abs(a.tot));
+  const hasInd=rows.some(r=>Math.abs(r.ind)>1e-8);
+  let h=`<p class="hint">標準化した値です。総合効果＝直接効果＋間接効果。間接効果の標準誤差はデルタ法によります。</p>
+   ${core.length?`<label class="f noprint" style="margin-bottom:8px"><input type="checkbox" id="effMeas" ${showMeas?"checked":""}> 測定モデル（因子から観測変数）の経路も表示する</label>`:``}
+   <div class="scroll"><table class="tb"><thead><tr><th class="l">経路</th><th>直接</th><th>間接</th><th>総合</th>
+   <th>間接のSE</th><th>z</th><th>p</th>${ST.boot?`<th>95%CI（ブートストラップ）</th>`:``}</tr></thead><tbody>`;
+  rows.slice(0,60).forEach(r=>{
+    let se=NaN,z=NaN,pv=NaN;
+    if(Vth&&Math.abs(r.ind)>1e-8){const e=effectSE(sp,th,Vth,r.i,r.j,"indirect",true);se=e.se;z=r.ind/se;pv=2*(1-pnorm(Math.abs(z)));}
+    let ci="";
+    if(ST.boot){const k=ST.boot.pairs.findIndex(p=>p.i===r.i&&p.j===r.j);
+      if(k>=0){const b=ST.boot.res[k];
+        ci=isFinite(b.lo)?`[${fmt(b.lo)}, ${fmt(b.hi)}]${(b.lo>0||b.hi<0)?' <span class="pill good">0を含まない</span>':''}`:"—";}
+      else ci="—";}
+    h+=`<tr><td class="l">${esc(sp.nodes[r.j])} → ${esc(sp.nodes[r.i])}</td>
+      <td class="v">${Math.abs(r.dir)>1e-10?fmt(r.dir):"—"}</td>
+      <td class="v">${Math.abs(r.ind)>1e-10?fmt(r.ind):"—"}</td>
+      <td class="v">${fmt(r.tot)}</td>
+      <td class="v">${fmt(se)}</td><td class="v">${fmt(z,2)}</td>
+      <td class="v">${fmtP(pv)}<span style="color:var(--eff)">${isFinite(pv)?stars(pv):""}</span></td>
+      ${ST.boot?`<td class="v">${ci}</td>`:``}</tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  if(hasInd&&!ST.boot&&D.mode==="raw")h+=`<div class="note">間接効果の分布は正規からずれやすいので、手順2で「ブートストラップ」を選ぶとより適切な信頼区間が得られます。</div>`;
+  $("#rt-eff").innerHTML=h;
+  const cb=$("#effMeas"); if(cb)cb.onchange=()=>{ST._effMeas=cb.checked;renderEffects();};
+}
+function renderImplied(){
+  const sp=ST.sp, Sig=ST.fit.Sig, S=ST.Sobs, p=sp.nO;
+  let h=`<p class="hint">上三角は標本の値、下三角はモデルが再現した値、対角の下の色は標準化残差（データ − モデル）の大きさです。</p><div class="scroll"><table class="tb"><thead><tr><th class="l"></th>`+
+    sp.obs.map(v=>`<th>${esc(v)}</th>`).join("")+`</tr></thead><tbody>`;
+  for(let i=0;i<p;i++){
+    h+=`<tr><td class="l">${esc(sp.obs[i])}</td>`;
+    for(let j=0;j<p;j++){
+      if(j>i)h+=`<td class="v" style="color:var(--ink2)">${fmt(S[i][j],2)}</td>`;
+      else{
+        const r=(S[i][j]-Sig[i][j])/Math.sqrt(S[i][i]*S[j][j]);
+        const a=Math.min(.7,Math.abs(r)*7);
+        h+=`<td class="v" style="background:rgba(154,107,24,${a})" title="標準化残差 ${fmt(r,3)}">${fmt(Sig[i][j],2)}</td>`;
+      }
+    }
+    h+=`</tr>`;
+  }
+  $("#rt-imp").innerHTML=h+`</tbody></table></div>`;
+}
+function renderAutoRead(){
+  const sp=ST.sp,f=ST.fit,std=ST.std,th=ST.res.th;
+  const L=[];
+  L.push(`<p>χ²(${f.df}) = ${fmt(f.T,2)}, p ${f.pv<.001?"< .001":"= "+fmtP(f.pv)}、CFI = ${fmt(f.CFI,3)}、RMSEA = ${fmt(f.RMSEA,3)}、SRMR = ${fmt(f.SRMR,3)} でした。`);
+  /* 有意なパス */
+  const sig=[],ns=[];
+  sp.pars.forEach((p,k)=>{ if(p.kind!=="reg")return;
+    const se=seOf(k), z=th[k]/se, pv=2*(1-pnorm(Math.abs(z)));
+    (pv<.05?sig:ns).push({lab:p.lab, b:std.stA[p.i][p.j], pv});});
+  if(sig.length) L.push(`<p>統計的に有意なパスは ${sig.length} 本です。もっとも大きいのは ${esc(sig.sort((a,b)=>Math.abs(b.b)-Math.abs(a.b))[0].lab)}（β = ${fmt(sig[0].b)}）でした。</p>`);
+  if(ns.length) L.push(`<p class="muted">有意でないパス： ${ns.map(x=>esc(x.lab)+"（β = "+fmt(x.b)+"）").join("、")}。理論上必要でなければ、外すことも検討できます。</p>`);
+  /* 低い負荷 */
+  const low=[];
+  sp.pars.forEach((p,k)=>{ if(p.kind!=="loading")return;
+    const s=std.stA[p.i][p.j]; if(Math.abs(s)<.4) low.push(sp.nodes[p.i]+"（λ = "+fmt(s)+"）");});
+  if(low.length) L.push(`<p>標準化負荷量が .40 を下回る項目： ${low.join("、")}。因子をよく表していない可能性があります。</p>`);
+  /* R² */
+  const r2s=[]; for(let i=0;i<sp.nA;i++) if(sp.endo[i]&&i>=sp.nO) r2s.push(sp.nodes[i]+" = "+fmt(std.R2[i]));
+  if(r2s.length) L.push(`<p>潜在変数の説明率（R²）は ${r2s.join("、")} です。</p>`);
+  /* 不適解 */
+  const hey=[];
+  sp.pars.forEach((p,k)=>{ if(p.t==="S"&&p.i===p.j&&th[k]<0) hey.push(sp.nodes[p.i]);});
+  for(let i=0;i<sp.nA;i++)for(let j=i+1;j<sp.nA;j++){
+    const c=std.stS[i][j]; if(Math.abs(c)>1.0&&(sp.Sfr[i][j])) hey.push(sp.nodes[i]+"と"+sp.nodes[j]+"の相関");}
+  if(hey.length) L.push(`<div class="note bad">不適解が出ています（${hey.join("、")}）。分散が負、あるいは相関が1を超えています。標本が小さい、因子が重なりすぎている、モデルが識別しづらい、といった原因が考えられます。</div>`);
+  const mi=ST.mi&&ST.mi.length?ST.mi[0]:null;
+  if(mi&&mi.mi>10) L.push(`<p>もっとも大きい修正指標は「${esc(mi.lab)}」（MI = ${fmt(mi.mi,1)}）です。理論的に意味があるかを手順5で確かめてください。</p>`);
+  $("#autoRead").innerHTML=L.join("");
+}
+</script>
+<script>
+"use strict";
+/* ══════════ 診断 ══════════ */
+function renderMI(){
+  const mi=ST.mi;
+  if(ST.cat){$("#xt-mi").innerHTML=`<p class="hint">順序尺度（WLSMV）で推定した場合、このアプリでは修正指標を出していません。残差の大きい組を手がかりにしてください。</p>`;return;}
+  if(!mi||!mi.length){$("#xt-mi").innerHTML=`<p class="hint">修正指標は計算していません（手順2で選ぶか、自由度が0でないか確かめてください）。</p>`;return;}
+  $("#xt-mi").innerHTML=`<p class="hint">そのパスを新たに自由推定した場合に、χ² がどれだけ下がるかの見積もりです。MI が 3.84 を超えると、そのパスは有意になり得ます。数値だけで判断せず、理論的に説明できるものだけを追加してください。</p>
+   <div class="scroll"><table class="tb"><thead><tr><th class="l">追加する関係</th><th class="l">種類</th><th>MI</th><th>予想される値</th><th class="l">　</th></tr></thead><tbody>`+
+   mi.map(m=>`<tr><td class="l mono">${esc(m.lab)}</td><td class="l"><span class="pill ${m.kind==="誤差の相関"?"mid":"lat"}">${m.kind}</span></td>
+     <td class="v">${fmt(m.mi,2)}</td><td class="v">${fmt(m.epc)}</td>
+     <td class="l"><button class="btn ghost sm" data-add="${esc(m.t)}|${esc(m.lab)}">モデルに足す</button></td></tr>`).join("")+
+   `</tbody></table></div>
+   <div class="note">修正指標にしたがってパスを足すと、そのデータだけによく当てはまるモデルになりがちです（過剰適合）。加えた場合は論文にその旨を明記し、可能なら別の標本で確かめてください。</div>`;
+  $$("[data-add]").forEach(b=>b.onclick=()=>{
+    const [t,lab]=b.dataset.add.split("|");
+    let line;
+    if(t==="A"){const [from,to]=lab.split(" → "); line=to+" ~ "+from;}
+    else {const [a,c]=lab.split(" ↔ "); line=a+" ~~ "+c;}
+    $("#model").value=$("#model").value.replace(/\s*$/,"")+"\n"+line;
+    onModelChange(); toast("モデル式に加えました： "+line);
+    $("#s2").scrollIntoView({behavior:"smooth"});
+  });
+}
+function renderResid(){
+  const sp=ST.sp,S=ST.Sobs,Sig=ST.fit.Sig,p=sp.nO,list=[];
+  for(let i=0;i<p;i++)for(let j=0;j<=i;j++){
+    const r=(S[i][j]-Sig[i][j])/Math.sqrt(S[i][i]*S[j][j]);
+    list.push({i,j,r});}
+  list.sort((a,b)=>Math.abs(b.r)-Math.abs(a.r));
+  const big=list.filter(x=>Math.abs(x.r)>=.1);
+  $("#xt-resid").innerHTML=`<p class="hint">標準化残差（データの相関 − モデルが再現した相関）の大きい順です。絶対値が .10 を超えると、その2変数の関係をモデルが再現できていません。</p>`+
+   (big.length?"":`<div class="note ok">.10 を超える残差はありません。</div>`)+
+   `<div class="scroll"><table class="tb"><thead><tr><th class="l">変数の組</th><th>標本</th><th>モデル</th><th>残差</th><th class="l">　</th></tr></thead><tbody>`+
+   list.slice(0,30).map(x=>{const r=x.r,a=Math.min(.7,Math.abs(r)*7);
+     return `<tr><td class="l">${esc(sp.obs[x.i])} ${x.i===x.j?"":"↔ "+esc(sp.obs[x.j])}</td>
+     <td class="v">${fmt(toCor(S)[x.i][x.j],3)}</td><td class="v">${fmt(Sig[x.i][x.j]/Math.sqrt(S[x.i][x.i]*S[x.j][x.j]),3)}</td>
+     <td class="v" style="background:rgba(154,107,24,${a})">${fmt(r,3)}</td>
+     <td class="l">${Math.abs(r)>=.1?(r>0?"モデルは過小に見積もっています":"モデルは過大に見積もっています"):""}</td></tr>`;}).join("")+
+   `</tbody></table></div>`;
+}
+function renderWarn(){
+  const sp=ST.sp,th=ST.res.th,std=ST.std,f=ST.fit,W=[];
+  if(!ST.res.conv)W.push(["収束","反復が上限に達しました。推定値は信頼できません。初期値や設定を変えて試してください。","bad"]);
+  if(!ST.Vth)W.push(["標準誤差","ヘッセ行列が反転できませんでした。モデルが経験的に識別されていない可能性があります。","bad"]);
+  sp.pars.forEach((p,k)=>{ if(p.t==="S"&&p.i===p.j&&th[k]<0)
+    W.push(["負の分散",sp.nodes[p.i]+" の分散が負（"+fmt(th[k])+"）です。ヘイウッドケースと呼ばれます。","bad"]);});
+  for(let i=0;i<sp.nA;i++)for(let j=i+1;j<sp.nA;j++)
+    if(sp.Sfr[i][j]&&Math.abs(std.stS[i][j])>0.95)
+      W.push(["高すぎる相関",sp.nodes[i]+" と "+sp.nodes[j]+" の相関が "+fmt(std.stS[i][j])+" です。区別できていない可能性があります。","bad"]);
+  sp.pars.forEach((p,k)=>{ if(p.kind==="loading"&&Math.abs(std.stA[p.i][p.j])<.4)
+    W.push(["低い負荷量",sp.nodes[p.i]+" の標準化負荷量が "+fmt(std.stA[p.i][p.j])+" です。","mid"]);});
+  if(f.n/f.q<10)W.push(["標本の大きさ","n = "+f.n+" に対しパラメータが "+f.q+" 個あります（比 "+ (f.n/f.q).toFixed(1) +"）。10以上が目安です。","mid"]);
+  if(D.mode==="raw"&&D._st){const bad=D.vars.filter((v,j)=>Math.abs(D._st[j].sk)>2||Math.abs(D._st[j].ku)>7);
+    if(bad.length)W.push(["正規性","歪みの大きい変数があります（"+bad.join("、")+"）。最尤法の p 値と標準誤差が甘くなります。","mid"]);}
+  if(ST.info&&ST.info.dropped>0)W.push(["欠測",ST.info.dropped+" 行が欠測のため除かれました（使用 "+ST.info.used+" 行）。","mid"]);
+  if(ST.useCor)W.push(["相関行列","相関行列を分析したため、標準誤差と検定は厳密ではありません。","mid"]);
+  if(f.df===0)W.push(["自由度","自由度が0です。当てはまりの検定はできません。","mid"]);
+  $("#xt-warn").innerHTML = W.length
+    ? W.map(([k,v,c])=>`<div class="note ${c==="bad"?"bad":""}"><b>${k}</b>：${esc(v)}</div>`).join("")
+    : `<div class="note ok">特に問題は見つかりませんでした。</div>`;
+}
+function renderCmp(){
+  const h=ST.hist;
+  if(h.length<2){$("#xt-cmp").innerHTML=`<p class="hint">モデルを変えてもう一度推定すると、ここで比べられます。入れ子になったモデルどうしなら χ² 差の検定も出ます。</p>`;return;}
+  let s=`<div class="scroll"><table class="tb"><thead><tr><th class="l">モデル</th><th>χ²</th><th>df</th><th>CFI</th><th>RMSEA</th><th>AIC</th><th>BIC</th><th>Δχ²</th><th>Δdf</th><th>p</th></tr></thead><tbody>`;
+  h.forEach((m,i)=>{
+    let dchi="",ddf="",dp="";
+    if(i>0){const pr=h[i-1];
+      const a=Math.abs(m.T-pr.T), d=Math.abs(m.df-pr.df);
+      if(d>0){dchi=fmt(a,2);ddf=String(d);dp=fmtP(pchisqU(a,d));}}
+    s+=`<tr><td class="l">${esc(m.name)}</td><td class="v">${fmt(m.T,2)}</td><td class="v">${m.df}</td>
+      <td class="v">${fmt(m.CFI,3)}</td><td class="v">${fmt(m.RMSEA,3)}</td><td class="v">${fmt(m.AIC,1)}</td>
+      <td class="v">${fmt(m.BIC,1)}</td><td class="v">${dchi}</td><td class="v">${ddf}</td><td class="v">${dp}</td></tr>`;
+  });
+  s+=`</tbody></table></div><p class="hint">Δχ² は直前のモデルとの差です。入れ子関係にないモデルどうしでは検定できないので、AIC・BIC（小さいほうが良い）で比べてください。</p>
+   <button class="btn ghost sm" id="clrHist">履歴を消す</button>`;
+  $("#xt-cmp").innerHTML=s;
+  $("#clrHist").onclick=()=>{ST.hist=[];renderCmp();toast("履歴を消しました");};
+}
+
+/* ══════════ ヘッダの関係図 ══════════ */
+function drawMap(sp){
+  const svg=$("#mapsvg");
+  if(!sp||!sp.nodes||!sp.nodes.length){
+    svg.innerHTML=`<text x="0" y="34" font-size="12" fill="#8A9099" font-family="monospace">モデル未設定</text>`;return;}
+  const isInd=i=>{ if(i>=sp.nO)return false;
+    for(let j=sp.nO;j<sp.nA;j++) if(sp.Aval[i][j]!==0||sp.Afr[i][j])return true; return false;};
+  const core=[]; for(let i=0;i<sp.nA;i++) if(!isInd(i))core.push(i);
+  const lay=layerOf(sp,core);
+  const maxL=Math.max(...core.map(i=>lay[i]),0);
+  const colW=Math.min(170,820/Math.max(maxL+1,1));
+  const byL={}; core.forEach(i=>{(byL[lay[i]]=byL[lay[i]]||[]).push(i);});
+  const pos={};
+  Object.keys(byL).forEach(L=>{const arr=byL[L];
+    arr.forEach((i,k)=>{pos[i]={x:14+ +L*colW+54, y:28+(k-(arr.length-1)/2)*22};});});
+  let s=`<defs><marker id="mh" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+    <path d="M0,0 L6,2.5 L0,5 z" fill="#9A6B18"/></marker></defs>`;
+  core.forEach(i=>core.forEach(j=>{ if(sp.Aval[i][j]!==0||sp.Afr[i][j]){
+    const a=pos[j],b=pos[i]; if(!a||!b)return;
+    const dx=b.x-a.x, sgn=dx>=0?1:-1;
+    s+=`<line x1="${a.x+sgn*30}" y1="${a.y}" x2="${b.x-sgn*32}" y2="${b.y}" stroke="#9A6B18" stroke-width="1.2" marker-end="url(#mh)" opacity=".8"/>`;}}));
+  core.forEach(i=>{const p=pos[i],lt=i>=sp.nO,nm=sp.nodes[i];
+    const w=Math.max(46,nm.length*8+14);
+    s+= lt? `<ellipse cx="${p.x}" cy="${p.y}" rx="${w/2}" ry="11" fill="#F1ECF6" stroke="#5B3E7C" stroke-width="1.2"/>`
+          : `<rect x="${p.x-w/2}" y="${p.y-10}" width="${w}" height="20" fill="#E7EFF2" stroke="#23566E" stroke-width="1.2" rx="1"/>`;
+    s+=`<text x="${p.x}" y="${p.y+4}" font-size="10.5" text-anchor="middle" fill="${lt?"#5B3E7C":"#23566E"}" font-family="sans-serif">${esc(nm)}</text>`;});
+  const nInd=sp.nO-core.filter(i=>i<sp.nO).length;
+  if(nInd>0)s+=`<text x="860" y="52" font-size="10" fill="#8A9099" text-anchor="end" font-family="monospace">観測項目 ${nInd}</text>`;
+  svg.innerHTML=s;
+}
+function layerOf(sp, set){
+  const lay={}; set.forEach(i=>lay[i]=0);
+  for(let it=0; it<set.length+2; it++){
+    let ch=false;
+    set.forEach(i=>{ set.forEach(j=>{
+      if(i===j)return;
+      if(sp.Aval[i][j]!==0||sp.Afr[i][j]){ if(lay[i]<lay[j]+1){lay[i]=lay[j]+1;ch=true;} }});});
+    if(!ch)break;
+  }
+  return lay;
+}
+
+/* ══════════ パス図 ══════════ */
+const DG={pos:{}, drag:null, w:900, h:520};
+function layoutDiagram(){
+  const sp=ST.sp; DG.pos={}; DG.err={};
+  const isInd=i=>{ if(i>=sp.nO)return false;
+    for(let j=sp.nO;j<sp.nA;j++) if(sp.Aval[i][j]!==0||sp.Afr[i][j])return true; return false;};
+  const indOf={}; const core=[];
+  for(let i=0;i<sp.nA;i++){ if(isInd(i)){
+      for(let j=sp.nO;j<sp.nA;j++) if(sp.Aval[i][j]!==0||sp.Afr[i][j]){(indOf[j]=indOf[j]||[]).push(i);break;}
+    } else core.push(i); }
+  const lay=layerOf(sp,core), maxL=Math.max(...core.map(i=>lay[i]),0);
+  DG.lay=lay;
+  const byL={}; core.forEach(i=>{(byL[lay[i]]=byL[lay[i]]||[]).push(i);});
+  const COL=262, ROWI=54, SIDE=162;
+  const inLayer={};
+  for(let L=0;L<=maxL;L++){
+    inLayer[L]=[];
+    const arr=byL[L]||[];
+    const below = !(L===0 || L===maxL) || maxL===0;
+    const heights=arr.map(i=>below? 70 : Math.max(1,(indOf[i]||[]).length)*ROWI+26);
+    let y=0;
+    arr.forEach((i,k)=>{
+      const hgt=heights[k], inds=indOf[i]||[];
+      DG.pos[i]={x:L*COL, y:y+hgt/2}; inLayer[L].push(i);
+      DG.err[i]= below? {dx:1,dy:-1} : {dx:(L===0?-1:1),dy:-1};
+      if(below){
+        inds.forEach((ii,m)=>{
+          DG.pos[ii]={x:L*COL+(m-(inds.length-1)/2)*118, y:y+hgt+104}; inLayer[L].push(ii);
+          DG.err[ii]={dx:0,dy:1};
+        });
+        if(inds.length) y+=hgt+150; else y+=hgt+40;
+      } else {
+        const side=(L===0?-1:1);
+        inds.forEach((ii,m)=>{
+          DG.pos[ii]={x:L*COL+side*SIDE, y:y+13+(m+0.5)*ROWI}; inLayer[L].push(ii);
+          DG.err[ii]={dx:side,dy:0};
+        });
+        y+=hgt+44;
+      }
+    });
+  }
+  /* 層の中心をそろえる */
+  const cen={};
+  for(let L=0;L<=maxL;L++){ const a=inLayer[L]||[]; if(!a.length)continue;
+    const ys=a.map(i=>DG.pos[i].y); cen[L]=(Math.min(...ys)+Math.max(...ys))/2; }
+  const target=Math.max(...Object.values(cen).map(v=>v||0),0);
+  for(let L=0;L<=maxL;L++){ const a=inLayer[L]||[]; if(!a.length)continue;
+    const d=target-cen[L]; a.forEach(i=>DG.pos[i].y+=d); }
+  if($("#dgLay").value==="tb"){
+    const P={},E={};
+    Object.keys(DG.pos).forEach(k=>{P[k]={x:DG.pos[k].y*1.2, y:DG.pos[k].x*0.86};
+      E[k]={dx:DG.err[k].dy, dy:DG.err[k].dx};});
+    DG.pos=P; DG.err=E;
+  }
+  normalizeLayout();
+}
+function normalizeLayout(){
+  const sp=ST.sp;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  Object.keys(DG.pos).forEach(k=>{
+    const i=+k,p=DG.pos[i],B=nodeBox(i),e=DG.err[i]||{dx:0,dy:0};
+    const ex=p.x+e.dx*(B.w/2+42), ey=p.y+e.dy*(B.h/2+42);
+    x0=Math.min(x0,p.x-B.w/2,ex-16); x1=Math.max(x1,p.x+B.w/2,ex+16);
+    y0=Math.min(y0,p.y-B.h/2,ey-24); y1=Math.max(y1,p.y+B.h/2,ey+16);
+  });
+  /* 共分散の弧も範囲に入れる */
+  for(let i=0;i<sp.nA;i++)for(let j=i+1;j<sp.nA;j++){
+    if(!sp.Sfr[i][j]&&sp.Sval[i][j]===0)continue;
+    const a=DG.pos[i],b=DG.pos[j]; if(!a||!b)continue;
+    const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,off=Math.min(120,L*0.55);
+    [1,-1].forEach(sg=>{
+      const cx=(a.x+b.x)/2-sg*dy/L*off, cy=(a.y+b.y)/2+sg*dx/L*off;
+      x0=Math.min(x0,cx-32);x1=Math.max(x1,cx+32);y0=Math.min(y0,cy-26);y1=Math.max(y1,cy+18);});
+  }
+  const PAD=34;
+  Object.keys(DG.pos).forEach(k=>{DG.pos[k]={x:DG.pos[k].x-x0+PAD, y:DG.pos[k].y-y0+PAD};});
+  DG.w=Math.max(620, x1-x0+PAD*2); DG.h=Math.max(260, y1-y0+PAD*2);
+}
+function nodeBox(i){ const sp=ST.sp;
+  const nm=sp.nodes[i], lat=i>=sp.nO;
+  const w=lat?Math.max(92,nm.length*15+30):Math.max(78,nm.length*14+22);
+  return {w, h:lat?54:34, lat, nm};
+}
+function edgePoint(i,j){ /* i から j へ向かう線が i の枠と交わる点 */
+  const a=DG.pos[i],b=DG.pos[j],B=nodeBox(i);
+  const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+  if(B.lat){const rx=B.w/2,ry=B.h/2;
+    const t=1/Math.sqrt((dx/L/rx)**2+(dy/L/ry)**2);
+    return {x:a.x+dx/L*t, y:a.y+dy/L*t};}
+  const hw=B.w/2,hh=B.h/2;
+  const t=Math.min(Math.abs(dx)>1e-9?hw/Math.abs(dx/L):1e9, Math.abs(dy)>1e-9?hh/Math.abs(dy/L):1e9);
+  return {x:a.x+dx/L*t, y:a.y+dy/L*t};
+}
+function drawDiagram(){
+  const sp=ST.sp,std=ST.std,th=ST.res.th;
+  const mode=$("#dgVal").value, showErr=$("#dgErr").checked, dashNS=$("#dgSig").checked;
+  const svg=$("#diag");
+  svg.setAttribute("viewBox",`0 0 ${DG.w} ${DG.h}`);
+  svg.setAttribute("width",DG.w); svg.setAttribute("height",DG.h);
+  svg.style.width="100%"; svg.style.height="auto"; svg.style.maxWidth=DG.w+"px";
+  const pIdx={}; sp.pars.forEach((p,k)=>{pIdx[p.t+"_"+p.i+"_"+p.j]=k;});
+  const pval=(i,j,t)=>{const k=pIdx[t+"_"+i+"_"+j]; if(k===undefined)return null;
+    const se=seOf(k); if(!isFinite(se))return null;
+    return 2*(1-pnorm(Math.abs(th[k]/se)));};
+  const lbl=(i,j,t)=>{
+    if(mode==="none")return "";
+    const v = t==="A" ? (mode==="std"?std.stA[i][j]:std.A[i][j]) : (mode==="std"?std.stS[i][j]:std.S[i][j]);
+    const pv=pval(i,j,t);
+    return fmt(v,2).replace(/^0\./,".").replace(/^-0\./,"-.") + (pv!==null?stars(pv):"");
+  };
+  let g=`<defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#9A6B18"/></marker>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="7" refY="2.6" orient="auto">
+      <path d="M0,0 L7,2.6 L0,5.2 z" fill="#3E6B4F"/></marker>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="7" refY="2.6" orient="auto-start-reverse">
+      <path d="M0,0 L7,2.6 L0,5.2 z" fill="#3E6B4F"/></marker>
+  </defs><rect width="${DG.w}" height="${DG.h}" fill="#fff"/>`;
+
+  /* 誤差 */
+  if(showErr){
+    for(let i=0;i<sp.nA;i++){ if(!sp.endo[i])continue;
+      const k=pIdx["S_"+i+"_"+i]; if(k===undefined)continue;
+      const p=DG.pos[i]; if(!p)continue;
+      const B=nodeBox(i), e=DG.err[i]||{dx:0,dy:-1};
+      const L=Math.hypot(e.dx,e.dy)||1, ux=e.dx/L, uy=e.dy/L;
+      const d=(B.lat?B.h/2:B.h/2)+40;
+      const ex=p.x+ux*d, ey=p.y+uy*d;
+      const bx=p.x+ux*(B.w/2*Math.abs(ux)+B.h/2*Math.abs(uy)), by=p.y+uy*(B.h/2*Math.abs(uy)+B.h/2*Math.abs(ux));
+      g+=`<line x1="${(ex-ux*12).toFixed(1)}" y1="${(ey-uy*12).toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="#B9BEC6" stroke-width="1.2" marker-end="url(#ar)"/>`;
+      g+=`<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="11" fill="#fff" stroke="#B9BEC6" stroke-width="1.2"/>`;
+      const v = mode==="std" ? 1-(std.R2[i]||0) : th[k];
+      if(mode!=="none")g+=`<text x="${ex.toFixed(1)}" y="${(ey-15).toFixed(1)}" font-size="10" text-anchor="middle" fill="#8A9099" font-family="monospace">${fmt(v,2).replace(/^0\./,".")}</text>`;
+    }
+  }
+  /* 共分散（双方向） */
+  for(let i=0;i<sp.nA;i++)for(let j=i+1;j<sp.nA;j++){
+    if(!sp.Sfr[i][j]&&sp.Sval[i][j]===0)continue;
+    if(!DG.pos[i]||!DG.pos[j])continue;
+    const a=edgePoint(i,j),b=edgePoint(j,i);
+    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+    const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+    /* ほかの節点から遠い側へ、必要なら大きく膨らませる */
+    let cx=0,cy=0,best=-1;
+    [[1,0.28],[-1,0.28],[1,0.55],[-1,0.55]].forEach(([sg,fa])=>{
+      const off=Math.min(120,L*fa);
+      const qx=mx-sg*dy/L*off, qy=my+sg*dx/L*off;
+      const lx0=(a.x+2*qx+b.x)/4, ly0=(a.y+2*qy+b.y)/4;
+      let m=1e9;
+      for(let t=0;t<sp.nA;t++){ if(t===i||t===j||!DG.pos[t])continue;
+        const B=nodeBox(t);
+        m=Math.min(m, Math.max(Math.abs(DG.pos[t].x-lx0)-B.w/2, Math.abs(DG.pos[t].y-ly0)-B.h/2));}
+      const sc=Math.min(m,90)-(fa>0.4?18:0);
+      if(sc>best){best=sc;cx=qx;cy=qy;}
+    });
+    g+=`<path d="M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}" fill="none" stroke="#3E6B4F" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#ar2)" marker-start="url(#ar3)"/>`;
+    const tx=0.5, lx=(1-tx)*(1-tx)*a.x+2*(1-tx)*tx*cx+tx*tx*b.x, ly=(1-tx)*(1-tx)*a.y+2*(1-tx)*tx*cy+tx*tx*b.y;
+    if(mode!=="none")g+=`<text x="${lx}" y="${ly-4}" font-size="11" text-anchor="middle" fill="#3E6B4F" font-family="monospace" paint-order="stroke" stroke="#fff" stroke-width="3.5">${lbl(i,j,"S")}</text>`;
+  }
+  /* 有向パス */
+  for(let i=0;i<sp.nA;i++)for(let j=0;j<sp.nA;j++){
+    if(i===j)continue;
+    if(!sp.Afr[i][j]&&sp.Aval[i][j]===0)continue;
+    if(!DG.pos[i]||!DG.pos[j])continue;
+    const a=edgePoint(j,i),b=edgePoint(i,j);
+    const pv=pval(i,j,"A");
+    const ns = dashNS && pv!==null && pv>=.05;
+    const w = 1+Math.min(3.2, Math.abs(std.stA[i][j])*3.4);
+    const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+    const skip=(DG.lay&&DG.lay[i]!==undefined&&DG.lay[j]!==undefined)?Math.abs(DG.lay[i]-DG.lay[j]):1;
+    const bend=(skip>1?0.8:0.28)*Math.min(110,L*0.22);
+    const mx0=(a.x+b.x)/2, my0=(a.y+b.y)/2;
+    let cx=mx0-dy/L*bend, cy=my0+dx/L*bend;
+    if(skip>1){ /* 間の節点から遠いほうへ曲げる */
+      const alt={x:mx0+dy/L*bend, y:my0-dx/L*bend};
+      const near=q=>{let m=1e9;
+        for(let t=0;t<sp.nA;t++){ if(t===i||t===j||!DG.pos[t])continue;
+          m=Math.min(m,Math.hypot(DG.pos[t].x-q.x,DG.pos[t].y-q.y)); } return m;};
+      if(near(alt)>near({x:cx,y:cy})){cx=alt.x;cy=alt.y;}
+    }
+    g+=`<path d="M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}" fill="none" stroke="#9A6B18" stroke-width="${w.toFixed(2)}" ${ns?'stroke-dasharray="5 4"':''} marker-end="url(#ar)"/>`;
+    const t=0.62, lx=(1-t)*(1-t)*a.x+2*(1-t)*t*cx+t*t*b.x, ly=(1-t)*(1-t)*a.y+2*(1-t)*t*cy+t*t*b.y;
+    if(mode!=="none"){
+      const s=lbl(i,j,"A");
+      g+=`<text x="${lx}" y="${ly-5}" font-size="11.5" text-anchor="middle" font-family="monospace" fill="#7A5412" paint-order="stroke" stroke="#fff" stroke-width="3.5">${s}</text>`;
+    }
+  }
+  /* 節点 */
+  for(let i=0;i<sp.nA;i++){
+    const p=DG.pos[i]; if(!p)continue;
+    const B=nodeBox(i);
+    g+=`<g class="node" data-i="${i}">`;
+    g+= B.lat
+      ? `<ellipse cx="${p.x}" cy="${p.y}" rx="${B.w/2}" ry="${B.h/2}" fill="#F4F0F8" stroke="#5B3E7C" stroke-width="1.6"/>`
+      : `<rect x="${p.x-B.w/2}" y="${p.y-B.h/2}" width="${B.w}" height="${B.h}" rx="2" fill="#EAF1F4" stroke="#23566E" stroke-width="1.5"/>`;
+    g+=`<text x="${p.x}" y="${p.y+5}" font-size="13" text-anchor="middle" fill="${B.lat?"#4A2F68":"#1B4457"}" font-family="sans-serif">${esc(B.nm)}</text>`;
+    if(i>=sp.nO&&sp.endo[i]&&std.R2[i]!==null&&mode==="std")
+      g+=`<text x="${p.x}" y="${p.y+B.h/2+13}" font-size="9.5" text-anchor="middle" fill="#8A9099" font-family="monospace">R²=${fmt(std.R2[i],2).replace(/^0\./,".")}</text>`;
+    g+=`</g>`;
+  }
+  svg.innerHTML=g;
+  bindDrag();
+}
+function bindDrag(){
+  const svg=$("#diag");
+  const toSvg=e=>{const r=svg.getBoundingClientRect();
+    const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left, cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    return {x:cx/r.width*DG.w, y:cy/r.height*DG.h};};
+  svg.querySelectorAll(".node").forEach(n=>{
+    const start=e=>{e.preventDefault();DG.drag={i:+n.dataset.i, o:toSvg(e), p:{...DG.pos[+n.dataset.i]}};};
+    n.addEventListener("mousedown",start); n.addEventListener("touchstart",start,{passive:false});
+  });
+  const move=e=>{ if(!DG.drag)return; e.preventDefault();
+    const q=toSvg(e); DG.pos[DG.drag.i]={x:DG.drag.p.x+q.x-DG.drag.o.x, y:DG.drag.p.y+q.y-DG.drag.o.y}; drawDiagram();};
+  const end=()=>{DG.drag=null;};
+  window.addEventListener("mousemove",move); window.addEventListener("touchmove",move,{passive:false});
+  window.addEventListener("mouseup",end); window.addEventListener("touchend",end);
+}
+["dgVal","dgErr","dgSig"].forEach(id=>$("#"+id).addEventListener("change",()=>{if(ST.sp)drawDiagram();}));
+$("#dgLay").addEventListener("change",()=>{if(ST.sp){layoutDiagram();drawDiagram();}});
+$("#dgReset").onclick=()=>{if(ST.sp){layoutDiagram();drawDiagram();toast("配置を戻しました");}};
+function svgText(){
+  const s=$("#diag").cloneNode(true);
+  s.setAttribute("xmlns","http://www.w3.org/2000/svg");
+  return '<?xml version="1.0" encoding="UTF-8"?>\n'+s.outerHTML;
+}
+$("#dgSvg").onclick=()=>saveFile("パス図.svg",svgText(),"image/svg+xml");
+$("#dgPng").onclick=()=>{
+  const img=new Image(), sc=2;
+  img.onload=()=>{const c=document.createElement("canvas");c.width=DG.w*sc;c.height=DG.h*sc;
+    const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(img,0,0,c.width,c.height);
+    c.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement("a");
+      a.href=u;a.download="パス図.png";a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);});};
+  img.onerror=()=>toast("PNGに変換できませんでした。SVGで保存してください。");
+  img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svgText());
+};
+</script>
+<script>
+"use strict";
+/* ══════════ 多母集団分析（測定不変性） ══════════ */
+
+const MG_LEVELS=[
+  {id:"configural", name:"配置不変", eq:[],
+   note:"どの群でも同じ形のモデルが当てはまるかを見ます。数値はすべて群ごとに自由です。"},
+  {id:"metric", name:"測定不変（弱）", eq:["loading"],
+   note:"因子負荷を群でそろえます。通れば、潜在変数と項目の関係の強さが群で同じだといえます。"},
+  {id:"scalar", name:"測定不変（強）", eq:["loading","icept"],
+   note:"因子負荷に加えて切片もそろえます。通れば、潜在変数の平均を群間で比べられます。"},
+  {id:"strict", name:"厳密な不変", eq:["loading","icept","resid"],
+   note:"誤差分散までそろえます。ここまで通れば観測得点そのものを比べられますが、必須ではありません。"}
+];
+
+/* 群ごとの共分散行列・平均・人数を作る */
+function mgGroups(rows, gcol, cols, missMode){
+  const buckets=new Map();
+  rows.forEach(r=>{
+    const gv=r[gcol];
+    if(gv===null||gv===undefined||gv==="")return;
+    const key=String(gv);
+    if(!buckets.has(key))buckets.set(key,[]);
+    buckets.get(key).push(r);
+  });
+  const out=[];
+  for(const [name,rs] of buckets){
+    const cm=covMatrix(rs,cols,missMode);
+    if(!cm) return {err:"群「"+name+"」でデータが足りません（人数が少ないか欠測が多すぎます）。"};
+    out.push({name, rows:rs, C:cm.C, mean:cm.mean, n:cm.n, used:cm.used});
+  }
+  out.sort((a,b)=>a.name.localeCompare(b.name,"ja"));
+  if(out.length<2) return {err:"群が2つ以上必要です。"};
+  if(out.length>6) return {err:"群が多すぎます（6つまで）。"};
+  return {groups:out};
+}
+
+/* 群ごとの仕様と、大域パラメータへの対応づけを作る */
+function mgSpec(src, dataVars, opt, level, G){
+  const eq=(MG_LEVELS.find(l=>l.id===level)||MG_LEVELS[0]).eq;
+  const sps=[];
+  for(let g=0; g<G; g++){
+    const sp=parseModel(src, dataVars, opt);
+    if(!sp.ok) return {err:sp.err.join(" ")};
+    /* 切片をそろえる水準では、2群目以降の潜在平均を自由にする */
+    if(sp.hasMean && eq.includes("icept") && g>0){
+      let changed=false;
+      for(let i=sp.nO;i<sp.nA;i++) if(!sp.mset[i] && !sp.mfr[i]){ sp.mfr[i]=1; changed=true; }
+      if(changed) buildPars(sp);
+    }
+    sps.push(sp);
+  }
+  /* 大域パラメータ */
+  const key=(g,p)=> (eq.includes(p.kind) ? "EQ" : "G"+g) + "|" + p.t + ":" + p.i + ":" + p.j;
+  const index=new Map(), gpars=[], map=[];
+  sps.forEach((sp,g)=>{
+    const mk=[];
+    sp.pars.forEach(p=>{
+      const k=key(g,p);
+      if(!index.has(k)){ index.set(k, gpars.length);
+        gpars.push({...p, shared:eq.includes(p.kind), groups:[g]}); }
+      else gpars[index.get(k)].groups.push(g);
+      mk.push(index.get(k));
+    });
+    map.push(mk);
+  });
+  return {sps, gpars, map, eq};
+}
+
+/* 目的関数：F = Σ (n_g/N) F_g */
+function mgFitFn(sps, Ss, ns, map, npar, th){
+  const N=ns.reduce((a,b)=>a+b,0);
+  let F=0; const g=new Float64Array(npar);
+  for(let k=0;k<sps.length;k++){
+    const sp=sps[k], mk=map[k], w=ns[k]/N;
+    const thg=new Float64Array(mk.length);
+    for(let i=0;i<mk.length;i++)thg[i]=th[mk[i]];
+    const r=gradFn(sp, Ss[k], thg);
+    if(!isFinite(r.f)||r.f>=1e9) return {f:1e10, g};
+    F+=w*r.f;
+    for(let i=0;i<mk.length;i++) g[mk[i]]+=w*r.g[i];
+  }
+  return {f:F, g};
+}
+
+function mgEstimate(spec, Ss, xbars, ns){
+  const {sps,gpars,map}=spec, npar=gpars.length;
+  sps.forEach((sp,k)=>{ sp._ldS=M.logDet(Ss[k]); sp._xbar=xbars[k]; });
+  if(sps.some(sp=>sp._ldS===null))
+    return {ok:false, msg:"どこかの群で共分散行列が正定値になりません。人数が少ないか、変数が重複している可能性があります。"};
+  /* 初期値：各群の初期値を平均する */
+  const th=new Float64Array(npar), cnt=new Float64Array(npar);
+  sps.forEach((sp,k)=>{ const sv=startValues(sp,Ss[k]);
+    map[k].forEach((gi,i)=>{ th[gi]+=sv[i]; cnt[gi]++; }); });
+  for(let i=0;i<npar;i++) th[i]/=Math.max(cnt[i],1);
+  const f0 = x => mgFitFn(sps,Ss,ns,map,npar,x);
+  let best=bfgs(f0, th, 800);
+  if(!best || best.f>=1e9 || !best.conv){
+    const alt=Float64Array.from(th);
+    gpars.forEach((p,i)=>{ if(p.t==="A") alt[i]= p.kind==="loading"?1:0;
+      else if(p.t==="S"&&p.i===p.j) alt[i]*=1.5; else if(p.t==="S") alt[i]*=0.5; });
+    const r2=bfgs(f0, alt, 1000);
+    if(!best || r2.f<best.f) best=r2;
+  }
+  if(!best || best.f>=1e9) return {ok:false, msg:"推定が収束しませんでした。"};
+  return {ok:true, th:best.x, F:best.f, conv:best.conv, iter:best.iter};
+}
+
+/* 多母集団の適合度 */
+function mgFitIndices(spec, Ss, ns, th, likNormal){
+  const {sps,map,gpars}=spec, G=sps.length, nO=sps[0].nO, hasMean=sps[0].hasMean;
+  const N=ns.reduce((a,b)=>a+b,0);
+  const NN = likNormal ? N : N-G;
+  const T = NN*spec._F;
+  const info = G*(nO*(nO+1)/2 + (hasMean?nO:0));
+  const df = info - gpars.length;
+  const pv = df>0 ? pchisqU(T,df) : NaN;
+  /* 独立モデル（群ごとに分散と平均だけ自由） */
+  let Fb=0, dfb=0;
+  for(let k=0;k<G;k++){
+    const bl=baselineF(sps[k], Ss[k]);
+    Fb += (ns[k]/N)*bl.F; dfb += bl.df;
+  }
+  const Tb=NN*Fb;
+  const d1=Math.max(T-df,0), d0=Math.max(Tb-dfb,0);
+  const CFI = d0>0 ? 1-d1/Math.max(d0,d1,1e-12) : 1;
+  const TLI = (Tb/dfb-1)!==0 ? (Tb/dfb-(df>0?T/df:1))/(Tb/dfb-1) : NaN;
+  /* 多母集団の RMSEA は群の数だけ大きく見積もる（lavaan と同じ） */
+  const RMSEA = df>0 ? Math.sqrt(G)*Math.sqrt(Math.max(T-df,0)/(df*NN)) : 0;
+  let rlo=0,rhi=0;
+  if(df>0){ rlo=Math.sqrt(G)*Math.sqrt(ncpBound(T,df,0.95)/(df*NN));
+            rhi=Math.sqrt(G)*Math.sqrt(ncpBound(T,df,0.05)/(df*NN)); }
+  /* SRMR：群ごとに求めて人数で重みづけ */
+  let srmr=0, logl=0;
+  const per=[];
+  for(let k=0;k<G;k++){
+    const sp=sps[k], thg=Float64Array.from(map[k].map(i=>th[i]));
+    const im=implied(sp,thg), Sig=im.Sig;
+    let ss=0,c=0;
+    for(let i=0;i<nO;i++)for(let j=0;j<=i;j++){
+      const r=(Ss[k][i][j]-Sig[i][j])/Math.sqrt(Ss[k][i][i]*Ss[k][j][j]); ss+=r*r; c++; }
+    if(hasMean&&sp._xbar) for(let i=0;i<nO;i++){
+      const r=(sp._xbar[i]-im.mu[i])/Math.sqrt(Ss[k][i][i]); ss+=r*r; c++; }
+    const s=Math.sqrt(ss/c); srmr+=(ns[k]/N)*s;
+    const Si=M.inv(Sig); let tr=0;
+    const Sn = likNormal ? Ss[k] : M.scale(Ss[k],(ns[k]-1)/ns[k]);
+    for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)tr+=Sn[i][j]*Si[j][i];
+    let dd=0;
+    if(hasMean&&sp._xbar){ const d=[]; for(let i=0;i<nO;i++)d.push(sp._xbar[i]-im.mu[i]);
+      for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)dd+=d[i]*Si[i][j]*d[j]; }
+    logl += -0.5*ns[k]*(nO*Math.log(2*Math.PI)+M.logDet(Sig)+tr+dd);
+    per.push({name:null, n:ns[k], srmr:s, Sig, im, th:thg});
+  }
+  const q=gpars.length;
+  return {T,df,pv,CFI,TLI,RMSEA,rlo,rhi,SRMR:srmr,logl,
+    AIC:-2*logl+2*q, BIC:-2*logl+q*Math.log(N), q, N, NN, Tb, dfb, per, G};
+}
+
+/* 4つの水準を順に当てはめる */
+function mgRun(src, dataVars, opt, groups, likNormal, levels){
+  const ns=groups.map(g=>g.n);
+  const Ss=groups.map(g=> likNormal ? M.scale(g.C,(g.n-1)/g.n) : M.copy(g.C));
+  const xbars=groups.map(g=>Float64Array.from(g.mean));
+  const out=[];
+  for(const lv of levels){
+    const spec=mgSpec(src, dataVars, opt, lv.id, groups.length);
+    if(spec.err){ out.push({level:lv, err:spec.err}); continue; }
+    const est=mgEstimate(spec, Ss, xbars, ns);
+    if(!est.ok){ out.push({level:lv, err:est.msg}); continue; }
+    spec._F=est.F;
+    const fit=mgFitIndices(spec, Ss, ns, est.th, likNormal);
+    fit.per.forEach((p,i)=>p.name=groups[i].name);
+    out.push({level:lv, spec, est, fit});
+  }
+  /* 前の水準との差 */
+  for(let i=1;i<out.length;i++){
+    const a=out[i-1], b=out[i];
+    if(a.err||b.err)continue;
+    const dT=b.fit.T-a.fit.T, dd=b.fit.df-a.fit.df;
+    b.d={dT, dd, p: dd>0? pchisqU(Math.max(dT,0),dd) : NaN, dCFI: b.fit.CFI-a.fit.CFI};
+  }
+  return out;
+}
+
+/* 群ごとの推定値（1つの水準について） */
+function mgParams(row){
+  const {spec,est}=row, out=[];
+  spec.sps.forEach((sp,g)=>{
+    const thg=Float64Array.from(spec.map[g].map(i=>est.th[i]));
+    const std=standardize(sp,thg);
+    out.push({sp, th:thg, std});
+  });
+  return out;
+}
+
+/* ══════════ 画面 ══════════ */
+function mgFillVars(){
+  const sel=$("#mgVar"); if(!sel)return;
+  const cur=sel.value;
+  if(!D.rows||!D.rows.length){ sel.innerHTML='<option value="">（個票データを読み込むと選べます）</option>'; return; }
+  const cand=[];
+  D.vars.forEach((v,j)=>{
+    const set=new Set();
+    for(const r of D.rows){ const x=r[j];
+      if(x===null||x===undefined||x==="") continue;
+      set.add(String(x)); if(set.size>8) break; }
+    if(set.size>=2 && set.size<=6) cand.push({v,j,k:set.size});
+  });
+  sel.innerHTML = cand.length
+    ? '<option value="">（選んでください）</option>'+cand.map(c=>`<option value="${c.j}">${esc(c.v)}（${c.k}群）</option>`).join("")
+    : '<option value="">2〜6通りの値をもつ列がありません</option>';
+  if(cur && [...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+
+$("#mgRun") && ($("#mgRun").onclick=async()=>{
+  const jv=$("#mgVar").value;
+  if(jv==="") {toast("群を分ける変数を選んでください");return;}
+  if(D.mode!=="raw"){toast("多母集団分析には個票データが必要です");return;}
+  const src=$("#model").value;
+  const useMean=$("#mgMean").checked;
+  const opt={...currentOpt(), meanStruct:useMean};
+  const sp0=parseModel(src, D.vars, opt);
+  if(!sp0.ok){toast("モデルを直してください");return;}
+  const missing=sp0.obs.filter(v=>!D.vars.includes(v));
+  if(missing.length){toast("データにない変数： "+missing.join(", "));return;}
+  const cols=sp0.obs.map(v=>D.vars.indexOf(v));
+  busy(true,"群ごとに当てはめています");
+  await new Promise(r=>setTimeout(r,20));
+  try{
+    const gr=mgGroups(D.rows, parseInt(jv), cols, $("#missMode").value);
+    if(gr.err){busy(false);toast(gr.err);return;}
+    const likNormal=$("#likMode").value==="normal";
+    const levels = useMean ? MG_LEVELS : MG_LEVELS.filter(l=>!l.eq.includes("icept"));
+    const res=mgRun(src, D.vars, opt, gr.groups, likNormal, levels);
+    ST.mg={res, groups:gr.groups, gvar:D.vars[parseInt(jv)], useMean};
+    renderMG();
+  }catch(e){ toast("計算できませんでした： "+e.message); }
+  busy(false);
+});
+
+function renderMG(){
+  const box=$("#mgOut"); if(!box)return;
+  if(!ST.mg){box.innerHTML="";return;}
+  const {res,groups,gvar}=ST.mg;
+  let h=`<div class="note">変数「${esc(gvar)}」で ${groups.length} 群に分けました（`+
+    groups.map(g=>esc(g.name)+" n="+g.n).join("／")+`）。</div>`;
+  h+=`<div class="scroll" style="max-height:none"><table class="tb"><thead><tr>
+    <th class="l">水準</th><th>χ²</th><th>df</th><th>p</th><th>CFI</th><th>RMSEA</th><th>SRMR</th>
+    <th>Δχ²</th><th>Δdf</th><th>p</th><th>ΔCFI</th></tr></thead><tbody>`;
+  res.forEach(r=>{
+    if(r.err){ h+=`<tr><td class="l">${esc(r.level.name)}</td><td colspan="10" class="l" style="color:var(--bad)">${esc(r.err)}</td></tr>`; return; }
+    const f=r.fit, d=r.d;
+    const bad = d && (d.p<0.05 && Math.abs(d.dCFI)>0.01);
+    h+=`<tr><td class="l">${esc(r.level.name)}</td><td class="v">${fmt(f.T,2)}</td><td class="v">${f.df}</td>
+      <td class="v">${f.df>0?fmtP(f.pv):"—"}</td><td class="v">${fmt(f.CFI,3)}</td><td class="v">${fmt(f.RMSEA,3)}</td>
+      <td class="v">${fmt(f.SRMR,3)}</td>`;
+    h+= d ? `<td class="v">${fmt(d.dT,2)}</td><td class="v">${d.dd}</td>
+      <td class="v">${fmtP(d.p)}${bad?'<span style="color:var(--bad)"> ✕</span>':'<span style="color:var(--good)"> ○</span>'}</td>
+      <td class="v">${fmt(d.dCFI,3)}</td>` : `<td class="v">—</td><td class="v">—</td><td class="v">—</td><td class="v">—</td>`;
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  h+=`<p class="hint">Δ は1つ上の水準との差です。Δχ² が有意でなく ΔCFI が −.01 より小さくならなければ、その水準の不変性は保たれていると判断するのが一般的です（Cheung &amp; Rensvold, 2002）。</p>`;
+  /* どこまで通ったか */
+  let passed=res[0].err?null:res[0].level;
+  for(let i=1;i<res.length;i++){ const r=res[i];
+    if(r.err||!r.d)break;
+    if(r.d.p<0.05 && Math.abs(r.d.dCFI)>0.01) break;
+    passed=r.level; }
+  if(passed){
+    const idx=res.findIndex(r=>r.level===passed);
+    h+=`<div class="note good"><b>${esc(passed.name)}</b>まで保たれています。${esc(passed.note)}</div>`;
+    if(idx>=2){
+      /* 潜在平均の差 */
+      const pr=mgParams(res[idx]);
+      const rowsH=[];
+      pr.forEach((p,g)=>{
+        const sp=p.sp;
+        sp.pars.forEach((q,k)=>{ if(q.t==="m"&&q.i>=sp.nO)
+          rowsH.push(`<tr><td class="l">${esc(sp.nodes[q.i])}</td><td class="l">${esc(groups[g].name)}</td>
+            <td class="v">${fmt(p.th[k])}</td><td class="v">${fmt(p.th[k]/Math.sqrt(Math.max(p.std.V[q.i][q.i],1e-12)))}</td></tr>`); });
+      });
+      if(rowsH.length) h+=`<h4 style="margin:14px 0 4px;font-size:14px">潜在変数の平均（1群目を0とした差）</h4>
+        <div class="scroll" style="max-height:none"><table class="tb"><thead><tr><th class="l">潜在変数</th><th class="l">群</th>
+        <th>平均の差</th><th>標準化（d に近い値）</th></tr></thead><tbody>${rowsH.join("")}</tbody></table></div>
+        <p class="hint">1群目の潜在平均を0に固定しているので、ほかの群の値がそのまま差になります。</p>`;
+    }
+  } else h+=`<div class="note bad">配置不変の段階でうまく当てはまりません。群ごとにモデルの形から見直してください。</div>`;
+  /* 群ごとの推定値 */
+  const okIdx=res.map((r,i)=>r.err?null:i).filter(i=>i!==null);
+  if(okIdx.length){
+    h+=`<h4 style="margin:16px 0 4px;font-size:14px">群ごとの推定値</h4>
+      <label class="f">水準 <select id="mgLevSel">`+
+      okIdx.map(i=>`<option value="${i}">${esc(res[i].level.name)}</option>`).join("")+`</select></label>
+      <div id="mgPar" style="margin-top:8px"></div>`;
+  }
+  box.innerHTML=h;
+  const sel=$("#mgLevSel");
+  if(sel){ sel.value=String(res.findIndex(r=>r.level===(passed||res[0].level)));
+    sel.onchange=()=>renderMGPar(parseInt(sel.value)); renderMGPar(parseInt(sel.value)); }
+}
+
+function renderMGPar(idx){
+  const {res,groups}=ST.mg, r=res[idx];
+  if(!r||r.err){$("#mgPar").innerHTML="";return;}
+  const pr=mgParams(r);
+  /* パラメータがいちばん多い群を見出しに使う（2群目以降だけにある潜在平均も出す） */
+  const sp0=pr.reduce((a,b)=>b.sp.pars.length>a.sp.pars.length?b:a).sp;
+  const kinds=[["loading","因子負荷"],["reg","回帰"],["cov","共分散"],["var","分散"],["resid","誤差分散"],["icept","切片"],["mean","潜在平均"]];
+  let h="";
+  kinds.forEach(([kd,label])=>{
+    const idxs=sp0.pars.map((p,k)=>({p,k})).filter(o=>o.p.kind===kd);
+    if(!idxs.length)return;
+    h+=`<h5 style="margin:10px 0 2px;font-size:13px;color:var(--ink2)">${label}</h5>
+      <div class="scroll" style="max-height:none"><table class="tb"><thead><tr><th class="l">パラメータ</th>`+
+      groups.map(g=>`<th>${esc(g.name)}</th>`).join("")+`<th>そろえた</th></tr></thead><tbody>`;
+    idxs.forEach(({p,k})=>{
+      const shared=r.spec.gpars[r.spec.map[0][k]].shared;
+      h+=`<tr><td class="l">${esc(p.lab)}</td>`+
+        pr.map(x=>{ const kk=x.sp.pars.findIndex(q=>q.t===p.t&&q.i===p.i&&q.j===p.j);
+          return `<td class="v">${kk>=0?fmt(x.th[kk]):"—"}</td>`; }).join("")+
+        `<td class="v">${shared?"○":""}</td></tr>`;
+    });
+    h+=`</tbody></table></div>`;
+  });
+  $("#mgPar").innerHTML=h;
+}
+</script>
+<script>
+"use strict";
+/* ══════════ 順序尺度：しきい値とポリコリック相関 ══════════ */
+
+/* 2変量正規の分布関数 Φ₂(h,k;ρ)
+   Φ₂ = Φ(h)Φ(k) + (1/2π)∫₀^ρ (1−r²)^(−1/2) exp(−(h²−2rhk+k²)/(2(1−r²))) dr
+   積分は20点のガウス・ルジャンドル則で近似する（誤差はおよそ 1e−12） */
+const GL20_X=[-0.9931285991850949,-0.9639719272779138,-0.9122344282513259,-0.8391169718222188,
+ -0.7463319064601508,-0.6360536807265150,-0.5108670019508271,-0.3737060887154196,
+ -0.2277858511416451,-0.0765265211334973,0.0765265211334973,0.2277858511416451,
+ 0.3737060887154196,0.5108670019508271,0.6360536807265150,0.7463319064601508,
+ 0.8391169718222188,0.9122344282513259,0.9639719272779138,0.9931285991850949];
+const GL20_W=[0.0176140071391521,0.0406014298003869,0.0626720483341091,0.0832767415767048,
+ 0.1019301198172404,0.1181945319615184,0.1316886384491766,0.1420961093183820,
+ 0.1491729864726037,0.1527533871307258,0.1527533871307258,0.1491729864726037,
+ 0.1420961093183820,0.1316886384491766,0.1181945319615184,0.1019301198172404,
+ 0.0832767415767048,0.0626720483341091,0.0406014298003869,0.0176140071391521];
+
+/* 2変量標準正規の分布関数 P(X<=h, Y<=k)。Genz (2004) の BVND を移したもので、
+   相関が 1 に近くても倍精度いっぱいまで正しい。ポリコリック相関の精度はここで決まる。 */
+const BVN_W=[[0.1713244923791705,0.3607615730481386,0.4679139345726904],
+  [0.04717533638651177,0.1069393259953183,0.1600783285433464,0.2031674267230659,
+   0.2334925365383547,0.2491470458134029],
+  [0.01761400713915212,0.04060142980038694,0.06267204833410906,0.08327674157670475,
+   0.1019301198172404,0.1181945319615184,0.1316886384491766,0.1420961093183821,
+   0.1491729864726037,0.1527533871307259]];
+const BVN_X=[[-0.9324695142031522,-0.6612093864662647,-0.2386191860831970],
+  [-0.9815606342467191,-0.9041172563704750,-0.7699026741943050,-0.5873179542866171,
+   -0.3678314989981802,-0.1252334085114692],
+  [-0.9931285991850949,-0.9639719272779138,-0.9122344282513259,-0.8391169718222188,
+   -0.7463319064601508,-0.6360536807265150,-0.5108670019508271,-0.3737060887154196,
+   -0.2277858511416451,-0.07652652113349733]];
+function bvnUpper(dh, dk, r){
+  const TWOPI=2*Math.PI, ar=Math.abs(r);
+  let ng,lg;
+  if(ar<0.3){ng=0;lg=3;} else if(ar<0.75){ng=1;lg=6;} else {ng=2;lg=10;}
+  const W=BVN_W[ng], X=BVN_X[ng];
+  let h=dh, k=dk, hk=h*k, bvn=0;
+  if(ar<0.925){
+    if(ar>0){
+      const hs=(h*h+k*k)/2, asr=Math.asin(r);
+      for(let i=0;i<lg;i++)for(const is of [-1,1]){
+        const sn=Math.sin(asr*(is*X[i]+1)/2);
+        bvn += W[i]*Math.exp((sn*hk-hs)/(1-sn*sn));
+      }
+      bvn = bvn*asr/(2*TWOPI);
+    }
+    bvn += pnorm(-h)*pnorm(-k);
+  } else {
+    if(r<0){ k=-k; hk=-hk; }
+    if(ar<1){
+      let as=(1-ar)*(1+ar), a=Math.sqrt(as);
+      const bs=(h-k)*(h-k), c=(4-hk)/8, d=(12-hk)/16;
+      let asr=-(bs/as+hk)/2;
+      if(asr>-100) bvn = a*Math.exp(asr)*(1-c*(bs-as)*(1-d*bs/5)/3+c*d*as*as/5);
+      if(-hk<100){
+        const b=Math.sqrt(bs);
+        bvn -= Math.exp(-hk/2)*Math.sqrt(TWOPI)*pnorm(-b/a)*b*(1-c*bs*(1-d*bs/5)/3);
+      }
+      a=a/2;
+      for(let i=0;i<lg;i++)for(const is of [-1,1]){
+        const t=a*(is*X[i]+1), xs=t*t, rs=Math.sqrt(1-xs);
+        asr=-(bs/xs+hk)/2;
+        if(asr>-100) bvn += a*W[i]*Math.exp(asr)*
+          (Math.exp(-hk*xs/(2*(1+rs)*(1+rs)))/rs - (1+c*xs*(1+d*xs)));
+      }
+      bvn = -bvn/TWOPI;
+    }
+    if(r>0) bvn += pnorm(-Math.max(h,k));
+    else    bvn = -bvn + Math.max(0, pnorm(-h)-pnorm(-k));
+  }
+  return Math.min(1,Math.max(0,bvn));
+}
+function pbivnorm(h,k,rho){
+  if(!isFinite(h)) return h>0 ? pnorm(k) : 0;
+  if(!isFinite(k)) return k>0 ? pnorm(h) : 0;
+  if(h<=-9||k<=-9)return 0;
+  if(h>=9)return pnorm(k);
+  if(k>=9)return pnorm(h);
+  const r=Math.max(-0.9999999999,Math.min(0.9999999999,rho));
+  return bvnUpper(-h,-k,r);
+}
+
+/* 1変数のしきい値：累積比率を正規分位点に直す */
+function thresholdsOf(counts){
+  const n=counts.reduce((a,b)=>a+b,0), K=counts.length, th=[];
+  let c=0;
+  for(let k=0;k<K-1;k++){ c+=counts[k];
+    th.push(qnorm(Math.min(1-1e-10,Math.max(1e-10,c/n)))); }
+  return th;
+}
+
+/* 2変数のクロス表からポリコリック相関を最尤で求める（しきい値は固定＝2段階法） */
+function polychoricPair(tab, ta, tb){
+  const A=ta.length+1, B=tb.length+1;
+  const lo=[-Infinity,...ta,Infinity], lb=[-Infinity,...tb,Infinity];
+  let N=0; for(let a=0;a<A;a++)for(let b=0;b<B;b++)N+=tab[a][b];
+  const nll = r => {
+    let L=0;
+    for(let a=0;a<A;a++)for(let b=0;b<B;b++){
+      const n=tab[a][b]; if(!n)continue;
+      const p = pbivnorm(lo[a+1],lb[b+1],r) - pbivnorm(lo[a],lb[b+1],r)
+              - pbivnorm(lo[a+1],lb[b],r) + pbivnorm(lo[a],lb[b],r);
+      L += n*Math.log(Math.max(p,1e-300));
+    }
+    return -L;
+  };
+  /* 黄金分割法で最小化（区間は −0.9999〜0.9999） */
+  let A0=-0.9999, B0=0.9999;
+  const g=(Math.sqrt(5)-1)/2;
+  let c=B0-g*(B0-A0), d=A0+g*(B0-A0), fc=nll(c), fd=nll(d);
+  for(let it=0; it<120 && (B0-A0)>1e-10; it++){
+    if(fc<fd){ B0=d; d=c; fd=fc; c=B0-g*(B0-A0); fc=nll(c); }
+    else { A0=c; c=d; fc=fd; d=A0+g*(B0-A0); fd=nll(d); }
+  }
+  const rho=(A0+B0)/2;
+  return {rho, N, nll:nll(rho)};
+}
+
+/* 列が順序尺度として扱えるか調べる */
+function ordinalInfo(rows, j, maxK){
+  const vals=new Map();
+  let miss=0;
+  for(const r of rows){ const x=r[j];
+    if(x===null||x===undefined||x===""||!isFinite(x)){miss++;continue;}
+    vals.set(x,(vals.get(x)||0)+1); }
+  const lv=[...vals.keys()].sort((a,b)=>a-b);
+  return {levels:lv, counts:lv.map(v=>vals.get(v)), miss,
+          ok: lv.length>=2 && lv.length<=(maxK||10)};
+}
+
+/* ポリコリック相関行列（欠測は変数対ごとに除く） */
+function polychoricMatrix(rows, cols, onProg){
+  const p=cols.length;
+  const info=cols.map(j=>ordinalInfo(rows,j,12));
+  const bad=info.map((o,a)=>o.ok?null:a).filter(a=>a!==null);
+  if(bad.length) return {err:"順序尺度として扱えない列があります（水準が2〜12個である必要があります）。"};
+  const R=M.eye(p), TH=info.map(o=>thresholdsOf(o.counts));
+  const idx=info.map(o=>{const m=new Map();o.levels.forEach((v,i)=>m.set(v,i));return m;});
+  let done=0, total=p*(p-1)/2;
+  for(let a=0;a<p;a++)for(let b=a+1;b<p;b++){
+    const A=info[a].levels.length, B=info[b].levels.length;
+    const tab=[]; for(let i=0;i<A;i++)tab.push(new Array(B).fill(0));
+    let m=0;
+    for(const r of rows){
+      const xa=r[cols[a]], xb=r[cols[b]];
+      if(!idx[a].has(xa)||!idx[b].has(xb))continue;
+      tab[idx[a].get(xa)][idx[b].get(xb)]++; m++;
+    }
+    if(m<10) return {err:"変数の組で使える行が少なすぎます。"};
+    /* この組だけで作り直したしきい値を使う（欠測がある場合に備える） */
+    const ca=new Array(A).fill(0), cb=new Array(B).fill(0);
+    for(let i=0;i<A;i++)for(let j2=0;j2<B;j2++){ca[i]+=tab[i][j2];cb[j2]+=tab[i][j2];}
+    const r0=polychoricPair(tab, thresholdsOf(ca), thresholdsOf(cb));
+    R[a][b]=R[b][a]=r0.rho;
+    if(onProg && (++done%10===0)) onProg(done,total);
+  }
+  return {R, thresholds:TH, info, n:rows.length};
+}
+
+/* ══════════ 標本統計量の漸近共分散 Γ（順序尺度） ══════════
+   しきい値と相関を並べたベクトルについて、観測ごとの影響関数を求めて
+   Γ = (1/N) Σ IF·IF' を作る。DWLS の重みと WLSMV の補正に使う。 */
+function dnorm(x){return Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);}
+/* 2変量正規の密度 */
+function dbivnorm(h,k,r){
+  if(!isFinite(h)||!isFinite(k))return 0;
+  const om=1-r*r;
+  return Math.exp(-(h*h-2*r*h*k+k*k)/(2*om))/(2*Math.PI*Math.sqrt(om));
+}
+/* ∂Φ₂(h,k;ρ)/∂h = φ(h)·Φ((k−ρh)/√(1−ρ²)) */
+function dPhi2_dh(h,k,r){
+  if(!isFinite(h))return 0;
+  if(k===Infinity)return dnorm(h);
+  if(k===-Infinity)return 0;
+  return dnorm(h)*pnorm((k-r*h)/Math.sqrt(Math.max(1-r*r,1e-12)));
+}
+
+function polychoricGamma(rows, cols, R, thresholds, levels){
+  const p=cols.length;
+  /* 統計量の並び：しきい値（変数ごと）→ 相関（上三角を行順に） */
+  const stat=[], thIx=[];
+  for(let a=0;a<p;a++){ const ix=[];
+    thresholds[a].forEach((t,k)=>{ ix.push(stat.length); stat.push({t:"th",a,k}); });
+    thIx.push(ix); }
+  const rhoIx={};
+  for(let a=0;a<p;a++)for(let b=a+1;b<p;b++){ rhoIx[a+"_"+b]=stat.length; stat.push({t:"rho",a,b}); }
+  const q=stat.length;
+
+  /* 使える行（すべての変数がそろっているもの） */
+  const lvIx=levels.map(lv=>{const m=new Map();lv.forEach((v,i)=>m.set(v,i));return m;});
+  const use=rows.filter(r=>cols.every((j,a)=>lvIx[a].has(r[j])));
+  const N=use.length;
+  if(N<20) return null;
+
+  /* しきい値の影響関数はカテゴリだけで決まるので先に作る */
+  const cum=[];   /* cum[a][k] = Φ(τ_ak) */
+  const phi=[];
+  for(let a=0;a<p;a++){ cum.push(thresholds[a].map(t=>pnorm(t)));
+    phi.push(thresholds[a].map(t=>dnorm(t))); }
+
+  /* 各組について A, B を求める */
+  const pairInfo={};
+  for(let a=0;a<p;a++)for(let b=a+1;b<p;b++){
+    const r=R[a][b], ta=thresholds[a], tb=thresholds[b];
+    const la=[-Infinity,...ta,Infinity], lb=[-Infinity,...tb,Infinity];
+    const A=la.length-1, B=lb.length-1;
+    const pi=[], dpr=[], dpa=[], dpb=[];
+    for(let i=0;i<A;i++){ pi.push([]); dpr.push([]); dpa.push([]); dpb.push([]); }
+    for(let i=0;i<A;i++)for(let j=0;j<B;j++){
+      pi[i][j] = pbivnorm(la[i+1],lb[j+1],r)-pbivnorm(la[i],lb[j+1],r)
+               - pbivnorm(la[i+1],lb[j],r)+pbivnorm(la[i],lb[j],r);
+      dpr[i][j]= dbivnorm(la[i+1],lb[j+1],r)-dbivnorm(la[i],lb[j+1],r)
+               - dbivnorm(la[i+1],lb[j],r)+dbivnorm(la[i],lb[j],r);
+      /* しきい値 τ_a,k についての偏微分（k は 0..A-2、la[k+1] が該当） */
+      dpa[i][j]=new Float64Array(ta.length); dpb[i][j]=new Float64Array(tb.length);
+      for(let k=0;k<ta.length;k++){
+        const t=ta[k]; let v=0;
+        if(k+1===i+1) v += dPhi2_dh(t,lb[j+1],r)-dPhi2_dh(t,lb[j],r);
+        if(k+1===i)   v -= dPhi2_dh(t,lb[j+1],r)-dPhi2_dh(t,lb[j],r);
+        dpa[i][j][k]=v;
+      }
+      for(let k=0;k<tb.length;k++){
+        const t=tb[k]; let v=0;
+        if(k+1===j+1) v += dPhi2_dh(t,la[i+1],r)-dPhi2_dh(t,la[i],r);
+        if(k+1===j)   v -= dPhi2_dh(t,la[i+1],r)-dPhi2_dh(t,la[i],r);
+        dpb[i][j][k]=v;
+      }
+    }
+    /* この組の観測されたクロス表 */
+    const tabn=[]; for(let i=0;i<A;i++)tabn.push(new Float64Array(B));
+    for(const row of use) tabn[lvIx[a].get(row[cols[a]])][lvIx[b].get(row[cols[b]])]++;
+    /* A22（ρ のスコアの2乗和）と A21（ρ のスコア × しきい値のスコア）を、
+       期待値ではなく観測されたセル度数から作る（lavaan の muthen1984 と同じ） */
+    let Ainf=0; const Ba=new Float64Array(ta.length), Bb=new Float64Array(tb.length);
+    for(let i=0;i<A;i++)for(let j=0;j<B;j++){
+      const nij=tabn[i][j]; if(!nij)continue;
+      const pp=Math.max(pi[i][j],1e-12), sr=dpr[i][j]/pp;
+      Ainf += nij*sr*sr;
+      for(let k=0;k<ta.length;k++) Ba[k] -= nij*sr*(dpa[i][j][k]/pp);
+      for(let k=0;k<tb.length;k++) Bb[k] -= nij*sr*(dpb[i][j][k]/pp);
+    }
+    Ainf/=N; for(let k=0;k<ta.length;k++)Ba[k]/=N; for(let k=0;k<tb.length;k++)Bb[k]/=N;
+    const dpaS=dpa, dpbS=dpb;
+    pairInfo[a+"_"+b]={pi,dpr,Ainf,Ba,Bb};
+  }
+
+  /* Γ = (1/N) Σ IF·IF' */
+  const G=M.zeros(q,q), IF=new Float64Array(q);
+  for(const row of use){
+    IF.fill(0);
+    const cat=cols.map((j,a)=>lvIx[a].get(row[j]));
+    for(let a=0;a<p;a++) for(let k=0;k<thresholds[a].length;k++)
+      IF[thIx[a][k]] = ((cat[a]<=k?1:0)-cum[a][k])/phi[a][k];
+    for(let a=0;a<p;a++)for(let b=a+1;b<p;b++){
+      const P=pairInfo[a+"_"+b], i=cat[a], j=cat[b];
+      let s = P.dpr[i][j]/Math.max(P.pi[i][j],1e-12);
+      for(let k=0;k<P.Ba.length;k++) s += P.Ba[k]*IF[thIx[a][k]];
+      for(let k=0;k<P.Bb.length;k++) s += P.Bb[k]*IF[thIx[b][k]];
+      IF[rhoIx[a+"_"+b]] = s/P.Ainf;
+    }
+    for(let i=0;i<q;i++){ const v=IF[i]; if(v===0)continue;
+      for(let j=i;j<q;j++) G[i][j]+=v*IF[j]; }
+  }
+  for(let i=0;i<q;i++)for(let j=i;j<q;j++){ G[i][j]/=N; G[j][i]=G[i][j]; }
+  return {G, stat, thIx, rhoIx, N, q};
+}
+
+/* ══════════ 順序尺度のモデル推定（DWLS・WLSMV） ══════════
+   観測変数の裏にある連続変数は分散1とみなす（delta 表記）。したがって
+   観測変数の誤差分散は自由なパラメータにせず、Σ の対角が1になるように決める。 */
+function catPars(sp){
+  const free=[], fixedResid=[];
+  sp.pars.forEach(p=>{
+    if(p.t==="S" && p.i===p.j && p.i<sp.nO) fixedResid.push(p.i);
+    else if(p.t==="m") ;                    /* 平均構造は使わない */
+    else free.push(p);
+  });
+  return {free, fixedResid};
+}
+/* Σ の対角を1にそろえながら RAM で Σ を作る */
+function impliedCat(sp, cp, th){
+  const nA=sp.nA, nO=sp.nO;
+  const A=M.copy(sp.Aval), S=M.copy(sp.Sval);
+  cp.free.forEach((p,k)=>{
+    if(p.t==="A")A[p.i][p.j]=th[k];
+    else {S[p.i][p.j]=th[k];S[p.j][p.i]=th[k];} });
+  cp.fixedResid.forEach(i=>{ if(S[i][i]<=0) S[i][i]=0.5; });
+  const IA=M.eye(nA); for(let i=0;i<nA;i++)for(let j=0;j<nA;j++)IA[i][j]-=A[i][j];
+  const B=M.inv(IA); if(!B)return null;
+  let V=null;
+  for(let it=0; it<40; it++){
+    V=M.mul(M.mul(B,S),M.t(B));
+    let mx=0;
+    cp.fixedResid.forEach(i=>{ const d=1-V[i][i]; mx=Math.max(mx,Math.abs(d));
+      S[i][i]=Math.max(S[i][i]+d, 1e-6); });
+    if(mx<1e-12) break;
+  }
+  V=M.mul(M.mul(B,S),M.t(B));
+  const Sig=M.zeros(nO,nO);
+  for(let i=0;i<nO;i++)for(let j=0;j<nO;j++)Sig[i][j]=(V[i][j]+V[j][i])/2;
+  return {Sig, A, S, B, V};
+}
+function sigVec(Sig,nO){
+  const v=[]; for(let a=0;a<nO;a++)for(let b=a+1;b<nO;b++)v.push(Sig[a][b]);
+  return v;
+}
+/* DWLS 推定 */
+function catEstimate(sp, R, Gr){
+  const cp=catPars(sp), nO=sp.nO, q=cp.free.length;
+  const m=nO*(nO-1)/2;
+  if(q>=m+1) return {ok:false, msg:"推定するパラメータが多すぎます（順序尺度では相関 "+m+" 個ぶんの情報しかありません）。"};
+  const r=sigVec(R,nO);
+  const w=[]; for(let i=0;i<m;i++) w.push(1/Math.max(Gr[i][i],1e-10));
+  const F = th => {
+    const im=impliedCat(sp,cp,th); if(!im)return 1e10;
+    const s=sigVec(im.Sig,nO); let f=0;
+    for(let i=0;i<m;i++){const d=r[i]-s[i]; f+=w[i]*d*d;}
+    return isFinite(f)?f:1e10;
+  };
+  /* 初期値：分散は1、負荷は0.7 */
+  const th0=new Float64Array(q);
+  cp.free.forEach((p,k)=>{
+    if(p.t==="A") th0[k]= p.kind==="loading"?0.7:0.2;
+    else th0[k]= p.i===p.j?(sp.endo[p.i]?0.5:1):0.3; });
+  const num = th => { const g=new Float64Array(q), f0=F(th);
+    for(let k=0;k<q;k++){ const h=1e-6*Math.max(1,Math.abs(th[k]));
+      const a=Float64Array.from(th); a[k]+=h; g[k]=(F(a)-f0)/h; }
+    return {f:f0, g}; };
+  let best=bfgs(num, th0, 600);
+  if(!best||best.f>=1e9) return {ok:false, msg:"推定が収束しませんでした。"};
+  /* ヤコビ行列 Δ = ∂σ/∂θ（中心差分） */
+  const jac=x=>{
+    const D=M.zeros(m,q);
+    for(let k=0;k<q;k++){
+      const h=1e-6*Math.max(1,Math.abs(x[k]));
+      const a=Float64Array.from(x), b=Float64Array.from(x); a[k]+=h; b[k]-=h;
+      const ia=impliedCat(sp,cp,a), ib=impliedCat(sp,cp,b); if(!ia||!ib)return null;
+      const sa=sigVec(ia.Sig,nO), sb=sigVec(ib.Sig,nO);
+      for(let i=0;i<m;i++)D[i][k]=(sa[i]-sb[i])/(2*h);
+    }
+    return D; };
+  /* ガウス・ニュートン法で仕上げる。数値勾配の BFGS だけだと
+     最小値の手前で止まることがあり、χ² が 0.2% ほど大きく出てしまう。 */
+  let th=Float64Array.from(best.x), fcur=F(th);
+  for(let it=0; it<40; it++){
+    const D=jac(th); if(!D)break;
+    const im0=impliedCat(sp,cp,th); if(!im0)break;
+    const s0=sigVec(im0.Sig,nO);
+    const H=M.zeros(q,q), g=new Float64Array(q);
+    for(let a=0;a<q;a++){
+      for(let i=0;i<m;i++) g[a]+=w[i]*(r[i]-s0[i])*D[i][a];
+      for(let b2=0;b2<q;b2++){ let t=0;
+        for(let i=0;i<m;i++)t+=w[i]*D[i][a]*D[i][b2]; H[a][b2]=t; }
+    }
+    const Hi=M.inv(H); if(!Hi)break;
+    const step=new Float64Array(q);
+    for(let a=0;a<q;a++){let t=0;for(let b2=0;b2<q;b2++)t+=Hi[a][b2]*g[b2];step[a]=t;}
+    let lam=1, ok=false, cand=null, fn=0;
+    for(let ls=0; ls<25; ls++){
+      cand=new Float64Array(q); for(let a=0;a<q;a++)cand[a]=th[a]+lam*step[a];
+      fn=F(cand);
+      if(isFinite(fn)&&fn<fcur){ok=true;break;}
+      lam*=0.5;
+    }
+    if(!ok)break;
+    const gain=fcur-fn; th=cand; fcur=fn;
+    if(gain<1e-16*Math.max(fcur,1e-12))break;
+  }
+  const Del=jac(th)||M.zeros(m,q);
+  return {ok:true, th, F:fcur, cp, Del, w, r, m, q, im:impliedCat(sp,cp,th)};
+}
+/* WLSMV：平均と分散を調整した χ²（lavaan の既定と同じ scaled and shifted） */
+function catFit(sp, est, Gr, N){
+  const {Del,w,m,q}=est;
+  const df = m - q;
+  const NN = N-1;          /* lavaan は DWLS の検定統計量に N−1 を使う */
+  const T = NN*est.F;
+  /* U = W⁻¹ − W⁻¹Δ(Δ'W⁻¹Δ)⁻¹Δ'W⁻¹ */
+  const WD=M.zeros(m,q);
+  for(let i=0;i<m;i++)for(let k=0;k<q;k++)WD[i][k]=w[i]*Del[i][k];
+  const DtWD=M.mul(M.t(Del),WD), inv=M.inv(DtWD);
+  const U=M.zeros(m,m);
+  if(inv){ const T1=M.mul(WD,inv), T2=M.mul(T1,M.t(WD));
+    for(let i=0;i<m;i++)for(let j=0;j<m;j++)U[i][j]=(i===j?w[i]:0)-T2[i][j]; }
+  const UG=M.mul(U,Gr);
+  let t1=0,t2=0;
+  for(let i=0;i<m;i++){ t1+=UG[i][i];
+    for(let j=0;j<m;j++) t2+=UG[i][j]*UG[j][i]; }
+  let a=1,b=0,Tss=T;
+  if(df>0 && t2>0){ a=Math.sqrt(df/t2); b=df-a*t1; Tss=a*T+b; }
+  const pv = df>0? pchisqU(Math.max(Tss,0),df) : NaN;
+  /* 標準誤差（サンドイッチ） */
+  let se=null, Vth=null;
+  if(inv){
+    const mid=M.mul(M.mul(M.t(WD),Gr),WD);
+    Vth=M.scale(M.mul(M.mul(inv,mid),inv), 1/NN);   /* 検定統計量と同じく N−1 で割る（lavaan と同じ） */
+    se=[]; for(let k=0;k<q;k++)se.push(Math.sqrt(Math.max(Vth[k][k],0)));
+  }
+  /* 独立モデル（相関がすべて0） */
+  let Tb=0;
+  for(let i=0;i<m;i++) Tb += NN*w[i]*est.r[i]*est.r[i];
+  const dfb=m;
+  /* 基準モデルにも同じ補正をかける */
+  const Ub=M.zeros(m,m); for(let i=0;i<m;i++)Ub[i][i]=w[i];
+  const UGb=M.mul(Ub,Gr);
+  let b1=0,b2=0;
+  for(let i=0;i<m;i++){ b1+=UGb[i][i]; for(let j=0;j<m;j++) b2+=UGb[i][j]*UGb[j][i]; }
+  const ab=Math.sqrt(dfb/b2), bb=dfb-ab*b1, Tbs=ab*Tb+bb;
+  const d1=Math.max(Tss-df,0), d0=Math.max(Tbs-dfb,0);
+  const CFI = d0>0 ? 1-d1/Math.max(d0,d1,1e-12) : 1;
+  const TLI = (Tbs/dfb-1)!==0 ? (Tbs/dfb-(df>0?Tss/df:1))/(Tbs/dfb-1) : NaN;
+  const RMSEA = df>0 ? Math.sqrt(Math.max(Tss-df,0)/(df*NN)) : 0;
+  let rlo=0,rhi=0;
+  if(df>0){ rlo=Math.sqrt(ncpBound(Tss,df,0.95)/(df*NN));
+            rhi=Math.sqrt(ncpBound(Tss,df,0.05)/(df*NN)); }
+  /* SRMR */
+  const s=sigVec(est.im.Sig,sp.nO); let ss=0;
+  for(let i=0;i<m;i++){const d=est.r[i]-s[i]; ss+=d*d;}
+  /* 対角（残差はいつも0）も数に入れる。lavaan の srmr と同じ */
+  const SRMR=Math.sqrt(ss/(sp.nO*(sp.nO+1)/2));
+  return {T, Tss, df, pv, a, b, CFI, TLI, RMSEA, rlo, rhi, SRMR, se, Vth, Tb, Tbs, dfb, N, NN, q};
+}
+
+/* ══════════ 順序尺度の分析を実行して画面に反映する ══════════ */
+async function runCategorical(sp, cols, src){
+  if(D.mode!=="raw"){ toast("順序尺度の分析には個票データが必要です"); return; }
+  if(sp.hasMean){ toast("順序尺度の分析では平均構造を使えません（しきい値がその役割を担います）"); return; }
+  busy(true,"ポリコリック相関を求めています");
+  await new Promise(r=>setTimeout(r,20));
+  const pcm=polychoricMatrix(D.rows, cols);
+  if(pcm.err){ toast(pcm.err); return; }
+  busy(true,"重み行列を求めています");
+  await new Promise(r=>setTimeout(r,20));
+  const lvs=pcm.info.map(o=>o.levels);
+  const G=polychoricGamma(D.rows, cols, pcm.R, pcm.thresholds, lvs);
+  if(!G){ toast("使える行が少なすぎます"); return; }
+  const nO=sp.nO, m=nO*(nO-1)/2, off=G.q-m;
+  const Gr=M.zeros(m,m);
+  for(let i=0;i<m;i++)for(let j=0;j<m;j++)Gr[i][j]=G.G[off+i][off+j];
+  busy(true,"推定しています");
+  await new Promise(r=>setTimeout(r,20));
+  const est=catEstimate(sp, pcm.R, Gr);
+  if(!est.ok){ toast(est.msg); $("#res-empty").innerHTML=`<div class="note bad">${esc(est.msg)}</div>`; return; }
+  const cf=catFit(sp, est, Gr, G.N);
+
+  /* もとのパラメータ並びに戻す（誤差分散は制約から決まった値を入れる） */
+  const q=sp.pars.length;
+  const th=new Float64Array(q), Vth=M.zeros(q,q);
+  const fi=sp.pars.map(p=>est.cp.free.findIndex(f=>f.t===p.t&&f.i===p.i&&f.j===p.j));
+  sp.pars.forEach((p,k)=>{
+    th[k] = fi[k]>=0 ? est.th[fi[k]] : (p.t==="S"? est.im.S[p.i][p.j] : 0); });
+  if(cf.Vth) sp.pars.forEach((p,k)=>{ if(fi[k]<0)return;
+    sp.pars.forEach((p2,k2)=>{ if(fi[k2]<0)return; Vth[k][k2]=cf.Vth[fi[k]][fi[k2]]; }); });
+
+  const std=standardize(sp,th);
+  const fit={df:cf.df, T:cf.Tss, pv:cf.pv, CFI:cf.CFI, TLI:cf.TLI, NFI:NaN,
+    RMSEA:cf.RMSEA, rlo:cf.rlo, rhi:cf.rhi, pclose:NaN, SRMR:cf.SRMR, GFI:NaN, AGFI:NaN,
+    AIC:NaN, BIC:NaN, logl:NaN, q:est.q, n:G.N, NN:G.N, F:est.F,
+    Tb:cf.Tbs, dfb:cf.dfb, Sig:est.im.Sig, maxRes:null, maxPair:null,
+    Traw:cf.T, shiftA:cf.a, shiftB:cf.b};
+  /* 残差のいちばん大きい組 */
+  let mx=0,mp=null;
+  for(let i=0;i<nO;i++)for(let j=0;j<=i;j++){
+    const r=pcm.R[i][j]-est.im.Sig[i][j];
+    if(Math.abs(r)>Math.abs(mx)){mx=r;mp=[i,j];} }
+  fit.maxRes=mx; fit.maxPair=mp;
+
+  Object.assign(ST,{sp, res:{th, F:est.F, conv:true}, fit, std,
+    eff:effects(sp,th,null), effS:effects(sp,th,std), Vth, Sobs:pcm.R, SobsRaw:pcm.R,
+    n:G.N, NN:G.N, cols, info:{used:G.N, dropped:D.rows.length-G.N}, mi:[], boot:null,
+    useCor:true, cat:{pc:pcm, est, cf, Gr, levels:lvs}});
+  ST.hist.push({name:"モデル"+(ST.hist.length+1), T:cf.Tss, df:cf.df, CFI:cf.CFI,
+    RMSEA:cf.RMSEA, AIC:NaN, BIC:NaN, q:est.q, src, logl:NaN});
+  renderAll();
+  renderThresholds();
+  return true;
+}
+
+/* しきい値の表を手順3に足す */
+function renderThresholds(){
+  const box=$("#catBox"); if(!box)return;
+  if(!ST.cat){ box.innerHTML=""; box.classList.add("hide"); return; }
+  box.classList.remove("hide");
+  const {pc,cf}=ST.cat, sp=ST.sp;
+  let h=`<div class="note">順序尺度として分析しました。項目の裏に連続変数があると考え、ポリコリック相関を求めてから
+    対角重み付き最小2乗法（WLSMV）で推定しています。χ² は平均と分散を調整した値です
+    （補正前 ${fmt(cf.T,3)} → 補正後 ${fmt(cf.Tss,3)}、係数 a = ${fmt(cf.a,3)}、b = ${fmt(cf.b,3)}）。
+    観測変数の誤差分散は「裏の連続変数の分散が1」という決まりから自動的に決まるので、推定値ではありません。</div>`;
+  const mx=Math.max(...pc.thresholds.map(t=>t.length));
+  h+=`<h4 style="margin:14px 0 4px;font-size:14px">しきい値</h4>
+    <div class="scroll" style="max-height:none"><table class="tb"><thead><tr><th class="l">変数</th><th>水準</th>`+
+    Array.from({length:mx},(_,k)=>`<th>τ${k+1}</th>`).join("")+`</tr></thead><tbody>`;
+  sp.obs.forEach((v,a)=>{
+    h+=`<tr><td class="l">${esc(v)}</td><td class="v">${pc.info[a].levels.length}</td>`+
+      Array.from({length:mx},(_,k)=>`<td class="v">${a<pc.thresholds.length&&k<pc.thresholds[a].length?fmt(pc.thresholds[a][k]):""}</td>`).join("")+`</tr>`;
+  });
+  h+=`</tbody></table></div>
+    <p class="hint">しきい値は「どのくらいの得点でつぎの選択肢に移るか」を標準正規の目盛りで表したものです。</p>`;
+  box.innerHTML=h;
+}
+</script>
+<script>
+"use strict";
+/* ── 保存（iframe 内ではコピー用の窓を出す） ── */
+function inFrame(){try{return window.self!==window.top;}catch(e){return true;}}
+function saveFile(name, text, mime, bom){
+  if(inFrame()){ copyWindow(name, text); return; }
+  try{
+    const parts = bom? ["\uFEFF", text] : [text];
+    const b=new Blob(parts,{type:(mime||"text/plain")+";charset=utf-8"});
+    const u=URL.createObjectURL(b), a=document.createElement("a");
+    a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),1500);
+    toast(name+" を保存しました");
+  }catch(e){ copyWindow(name,text); }
+}
+function copyWindow(name, text){
+  const d=document.createElement("div");
+  d.style.cssText="position:fixed;inset:0;background:rgba(30,36,48,.6);z-index:400;display:grid;place-items:center;padding:20px";
+  d.innerHTML=`<div style="background:#fff;border-radius:3px;padding:18px;max-width:760px;width:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <b>${esc(name)}</b><button class="btn ghost sm" data-x>閉じる</button></div>
+    <textarea rows="16" style="width:100%" data-t></textarea>
+    <div class="row tight" style="margin-top:8px"><button class="btn sm" data-c>すべて選択してコピー</button>
+    <span class="small muted">埋め込み表示のためファイル保存ができません。ここからコピーしてください。</span></div></div>`;
+  document.body.appendChild(d);
+  const ta=d.querySelector("[data-t]"); ta.value=text;
+  d.querySelector("[data-x]").onclick=()=>d.remove();
+  d.querySelector("[data-c]").onclick=()=>{ta.select();
+    try{document.execCommand("copy");toast("コピーしました");}catch(e){toast("Ctrl+C でコピーしてください");}};
+  ta.focus();
+}
+function copyText(t){
+  if(navigator.clipboard&&!inFrame()){navigator.clipboard.writeText(t).then(()=>toast("コピーしました"),()=>copyWindow("コピー",t));}
+  else copyWindow("コピー",t);
+}
+
+/* ══════════ 論文の記述例 ══════════ */
+/* p 値は APA 式に「0.」の 0 を落として書く */
+function apaP(v){ return !isFinite(v)?"= —":(v<.001?"< .001":"= "+fmt(v,3).replace(/^0\./,".")); }
+function reportText(){
+  const sp=ST.sp,f=ST.fit,std=ST.std,th=ST.res.th;
+  const L=[];
+  const latN=sp.lat.length, obsN=sp.nO;
+  L.push("【方法】");
+  L.push(`　${f.n} 名分のデータをもとに、${latN?`潜在変数 ${latN} 個と観測変数 ${obsN} 個からなる`:`観測変数 ${obsN} 個からなる`}${latN?"構造方程式モデル":"パス解析モデル"}を検討した。${ST.cat?`項目は順序尺度として扱い、ポリコリック相関行列に対して対角重み付き最小2乗法（WLSMV）で推定した。χ² は平均と分散を調整した値を報告する。`:`推定は最尤法により、${ST.useCor?"相関行列":"分散共分散行列"}を分析した。`}潜在変数の尺度は${$("#scaleMode").value==="std"?"分散を1に固定して":"各因子の最初の観測変数の係数を1に固定して"}定めた。欠測は${$("#missMode").value==="listwise"?"リストワイズ":"ペアワイズ"}で処理した${ST.info&&ST.info.dropped?`（${ST.info.dropped} 名を除外し、${ST.info.used} 名を分析対象とした）`:""}。適合度の評価には χ² 検定に加え、CFI、TLI、RMSEA、SRMR を用いた。${ST.mg?`さらに、群ごとにモデルが同じように成り立つかを確かめるため、配置不変・測定不変（弱）・測定不変（強）の順に制約を強めた多母集団分析をおこなった。`:""}`);
+  L.push("");
+  L.push("【結果】");
+  L.push(`　モデルの適合度は χ²(${f.df}) = ${fmt(f.T,2)}, p ${apaP(f.pv)}, CFI = ${fmt(f.CFI,3)}, TLI = ${fmt(f.TLI,3)}, RMSEA = ${fmt(f.RMSEA,3)} [90%CI: ${fmt(f.rlo,3)}, ${fmt(f.rhi,3)}], SRMR = ${fmt(f.SRMR,3)} であった。${f.CFI>=.95&&f.RMSEA<=.06&&f.SRMR<=.08?"いずれの指標も基準を満たしており、モデルはデータによく適合していると判断した。":f.CFI>=.90&&f.RMSEA<=.08?"おおむね許容できる適合であった。":"適合は十分とはいえず、モデルの再検討が必要である。"}`);
+  if(ST.mg){
+    const {res,groups,gvar}=ST.mg;
+    const ok=res.filter(r=>!r.err);
+    if(ok.length){
+      L.push(`　変数「${gvar}」による ${groups.length} 群（${groups.map(g=>g.name+" n = "+g.n).join("、")}）で多母集団分析をおこなった。`+
+        ok.map(r=>`${r.level.name}モデルは χ²(${r.fit.df}) = ${fmt(r.fit.T,2)}, CFI = ${fmt(r.fit.CFI,3)}, RMSEA = ${fmt(r.fit.RMSEA,3)}`+
+          (r.d?`（1つ前の水準との差は Δχ²(${r.d.dd}) = ${fmt(r.d.dT,2)}, p ${apaP(r.d.p)}, ΔCFI = ${fmt(r.d.dCFI,3)}）`:"")).join("、")+"であった。");
+    }
+  }
+  const regs=sp.pars.map((p,k)=>({p,k})).filter(o=>o.p.kind==="reg");
+  if(regs.length){
+    const parts=regs.map(({p,k})=>{
+      const se=seOf(k),z=th[k]/se,pv=2*(1-pnorm(Math.abs(z)));
+      return `${sp.nodes[p.j]}から${sp.nodes[p.i]}へのパスは β = ${fmt(std.stA[p.i][p.j])}（p ${apaP(pv)}）`;});
+    L.push(`　構造モデルについては、${parts.join("、")}であった。`);
+  }
+  const loads=[];
+  for(let i=0;i<sp.nO;i++)for(let j=sp.nO;j<sp.nA;j++)
+    if(sp.Afr[i][j]||sp.Aval[i][j]!==0) loads.push(Math.abs(std.stA[i][j]));
+  if(loads.length) L.push(`　測定モデルの標準化因子負荷量は ${fmt(Math.min(...loads),2)} から ${fmt(Math.max(...loads),2)} の範囲にあった（固定した係数を含む）。`);
+  const r2=[]; for(let i=0;i<sp.nA;i++) if(sp.endo[i]&&i>=sp.nO) r2.push(`${sp.nodes[i]} の R² = ${fmt(std.R2[i],3)}`);
+  if(r2.length) L.push(`　説明率は ${r2.join("、")} であった。`);
+  const ind=[]; const nA=sp.nA;
+  const isInd=i=>{ if(i>=sp.nO)return false;
+    for(let j=sp.nO;j<sp.nA;j++) if(sp.Aval[i][j]!==0||sp.Afr[i][j])return true; return false;};
+  for(let i=0;i<nA;i++)for(let j=0;j<nA;j++){
+    if(Math.abs(ST.effS.Ind[i][j])<.01)continue;
+    if(isInd(i)||isInd(j))continue;
+    let ci="";
+    if(ST.boot){const k=ST.boot.pairs.findIndex(p=>p.i===i&&p.j===j);
+      if(k>=0&&isFinite(ST.boot.res[k].lo))ci=`（95%CI [${fmt(ST.boot.res[k].lo)}, ${fmt(ST.boot.res[k].hi)}]）`;}
+    else if(ST.Vth){const e=effectSE(sp,th,ST.Vth,i,j,"indirect",true);
+      if(isFinite(e.se)){const pp=2*(1-pnorm(Math.abs(e.est/e.se)));
+        ci=`（p ${pp<.001?"< .001":"= "+fmt(pp,3)}）`;}}
+    ind.push(`${sp.nodes[j]}から${sp.nodes[i]}への間接効果は ${fmt(ST.effS.Ind[i][j])}${ci}`);}
+  if(ind.length) L.push(`　効果の分解の結果、${ind.slice(0,6).join("、")}であった。${ST.boot?`間接効果の信頼区間はブートストラップ法（${ST.boot.reps} 回）により求めた。`:""}`);
+  L.push("");
+  L.push("【限界】");
+  const lim=[];
+  if(f.n/f.q<10)lim.push(`標本の大きさ（n = ${f.n}）が推定パラメータ数（${f.q}）に対して十分とはいえない`);
+  if(D.mode==="raw"&&D._st&&D.vars.some((v,j)=>Math.abs(D._st[j].sk)>2))lim.push("一部の変数に歪みがあり、最尤法の前提である多変量正規性が満たされていない可能性がある");
+  lim.push("本研究は横断データにもとづくため、パスの向きは理論的な仮定であり、因果関係を直接示すものではない");
+  if(ST.hist.length>1)lim.push("複数のモデルを比較して選択しているため、結果は探索的な性格をもつ");
+  L.push("　"+lim.join("。")+"。");
+  return L.join("\n");
+}
+/* ══════════ Rコード ══════════ */
+function rVec(a,d){return a.map(x=>Number(x).toFixed(d===undefined?6:d)).join(", ");}
+function rDataBlock(){
+  const sp=ST.sp;
+  if(D.mode==="raw"){
+    const cols=ST.cols;
+    const rows=D.rows.filter(r=>cols.every(j=>r[j]!==null&&isFinite(r[j])));
+    const body=sp.obs.map((v,a)=>`  \`${v}\` = c(${rows.map(r=>Number(r[cols[a]]).toFixed(4)).join(",")})`).join(",\n");
+    return `dat <- data.frame(\n${body},\n  check.names = FALSE, stringsAsFactors = FALSE)\nS <- cov(dat); n <- nrow(dat)`;
+  }
+  const p=sp.nO, flat=[];
+  const SR=ST.SobsRaw||ST.Sobs;
+  for(let i=0;i<p;i++)for(let j=0;j<p;j++)flat.push(SR[i][j]);
+  return `nm <- c(${sp.obs.map(v=>`"${v}"`).join(", ")})\nS <- matrix(c(${rVec(flat)}), ${p}, ${p}, byrow = TRUE, dimnames = list(nm, nm))\nn <- ${ST.n}`;
+}
+function rLavaan(){
+  const sp=ST.sp;
+  if(ST.cat) return rLavaanCat();
+  const model=$("#model").value.split("\n").map(l=>l.replace(/\s+$/,"")).join("\n");
+  const opt=[`estimator = "ML"`, "fixed.x = FALSE"];
+  if($("#likMode").value==="wishart")opt.push(`likelihood = "wishart"`);
+  if($("#scaleMode").value==="std")opt.push("std.lv = TRUE");
+  if(!$("#optExoCov").checked)opt.push("auto.cov.lv.x = FALSE");
+  if($("#missMode").value==="pairwise")opt.push(`missing = "pairwise"`);
+  if(sp.hasMean)opt.push("meanstructure = TRUE");
+  const call = D.mode==="raw"
+    ? `fit <- sem(mod, data = dat, ${opt.join(", ")})`
+    : `fit <- sem(mod, sample.cov = S, sample.nobs = n, ${opt.join(", ")})`;
+  return `## ══ 構造方程式モデリング（lavaan） ══
+## 構造方程式モデリング・ラボ が書き出したコードです。
+library(lavaan)
+
+${rDataBlock()}
+
+mod <- '
+${normalizeSyntax(model)}
+'
+
+${call}
+summary(fit, fit.measures = TRUE, standardized = TRUE, rsquare = TRUE)
+cat("\\n--- 適合度 ---\\n")
+print(fitMeasures(fit, c("chisq","df","pvalue","cfi","tli","rmsea","rmsea.ci.lower",
+                          "rmsea.ci.upper","srmr","gfi","aic","bic")))
+cat("\\n--- 効果の分解（標準化） ---\\n")
+print(lavInspect(fit, "std")$beta)
+cat("\\n--- 修正指標（MI が大きい順に10件） ---\\n")
+mi <- modificationIndices(fit, sort. = TRUE)
+print(head(mi, 10))
+
+## パス図（semPlot がある場合）
+## library(semPlot); semPaths(fit, what = "std", layout = "tree2", edge.label.cex = 0.9)
+${rLavaanMG()}`;
+}
+/* 順序尺度（WLSMV）の lavaan コード */
+function rLavaanCat(){
+  const sp=ST.sp, cols=ST.cols;
+  const model=$("#model").value.split("\n").map(l=>l.replace(/\s+$/,"")).join("\n");
+  const rows=D.rows.filter(r=>cols.every(j=>r[j]!==null&&isFinite(r[j])));
+  const body=sp.obs.map((v,a)=>`  \`${v}\` = c(${rows.map(r=>Number(r[cols[a]])).join(",")})`).join(",\n");
+  return `## ══ 順序尺度の構造方程式モデリング（lavaan・WLSMV） ══
+## 構造方程式モデリング・ラボ が書き出したコードです。
+library(lavaan)
+
+dat <- data.frame(
+${body},
+  check.names = FALSE)
+ord <- c(${sp.obs.map(v=>`"${v}"`).join(", ")})
+for(v in ord) dat[[v]] <- ordered(dat[[v]])
+
+mod <- '
+${normalizeSyntax(model)}
+'
+
+fit <- sem(mod, data = dat, ordered = ord, estimator = "WLSMV")
+summary(fit, fit.measures = TRUE, standardized = TRUE, rsquare = TRUE)
+cat("\\n--- 適合度（平均と分散を調整した値） ---\\n")
+print(fitMeasures(fit, c("chisq.scaled","df.scaled","pvalue.scaled",
+                         "cfi.scaled","tli.scaled","rmsea.scaled","srmr")))
+cat("\\n--- ポリコリック相関としきい値 ---\\n")
+print(round(lavCor(dat, ordered = ord, output = "cor"), 4))
+print(round(lavCor(dat, ordered = ord, output = "th"), 4))
+`;
+}
+
+/* 多母集団（測定不変性）の lavaan コード */
+function rLavaanMG(){
+  if(!ST.mg || D.mode!=="raw") return "";
+  const g=ST.mg, sp=ST.sp, cols=ST.cols;
+  const gj=D.vars.indexOf(g.gvar);
+  const rows=D.rows.filter(r=>cols.every(j=>r[j]!==null&&isFinite(r[j])) && r[gj]!==null && r[gj]!=="");
+  const body=sp.obs.map((v,a)=>`  \`${v}\` = c(${rows.map(r=>Number(r[cols[a]]).toFixed(4)).join(",")})`).join(",\n");
+  const gv=`  \`${g.gvar}\` = c(${rows.map(r=>`"${String(r[gj]).replace(/"/g,"")}"`).join(",")})`;
+  const lv=g.useMean
+    ? `c("configural", "loadings", "loadings+intercepts", "loadings+intercepts+residuals")`
+    : `c("configural", "loadings", "loadings+residuals")`;
+  return `
+
+## ══ 多母集団分析（測定不変性） ══
+datG <- data.frame(
+${body},
+${gv},
+  check.names = FALSE, stringsAsFactors = FALSE)
+
+eqs <- list(character(0), "loadings"${g.useMean?`, c("loadings","intercepts"), c("loadings","intercepts","residuals")`:`, c("loadings","residuals")`})
+nms <- ${lv}
+fits <- lapply(eqs, function(e)
+  sem(mod, data = datG, group = "${g.gvar}", group.equal = e,
+      estimator = "ML"${g.useMean?", meanstructure = TRUE":""}))
+names(fits) <- nms
+print(do.call(rbind, lapply(fits, function(f)
+  fitMeasures(f, c("chisq","df","pvalue","cfi","rmsea","srmr")))))
+cat("\\n--- 水準どうしの比較 ---\\n")
+print(do.call(lavTestLRT, fits))
+`;
+}
+function rBase(){
+  const sp=ST.sp, nA=sp.nA, nO=sp.nO;
+  if(ST.cat) return `## 順序尺度（WLSMV）の計算は外部パッケージなしで書き下すには長くなりすぎるため、
+## base R 版は用意していません。左の lavaan 版をお使いください。
+## どうしても外部パッケージを避けたい場合は、ポリコリック相関行列を
+## 「相関行列を入力する」から読み込ませて最尤法で分析する方法もありますが、
+## 標準誤差と χ² は正しくならないので結果の解釈には注意してください。
+`;
+  const nor=$("#likMode").value==="normal";
+  const lik=nor?"n":"n - 1";
+  const resc=nor?"S <- S * (n - 1) / n   # lavaan の sample.cov.rescale と同じ\n":"";
+  const kf=nor?"S":"S * (n - 1) / n";
+  const flat=A=>{const o=[];for(let i=0;i<nA;i++)for(let j=0;j<nA;j++)o.push(A[i][j]);return o;};
+  const pa=sp.pars.map(p=>`${p.t==="A"?1:p.t==="m"?3:2}, ${p.i+1}, ${p.j+1}`).join(",  ");
+  const HM=!!sp.hasMean;
+  const xs=[]; for(let i=0;i<nO;i++) if(!sp.endo[i]) xs.push(i+1);
+  const meanDecl = HM ? `m0 <- c(${rVec(Array.from(sp.mval))})\nxbar <- c(${rVec(Array.from(sp._xbar||[]))})\n` : "";
+  return `## ══ 構造方程式モデリング（base R のみ・外部パッケージ不要） ══
+## 構造方程式モデリング・ラボ と同じ計算を再現します（RAM 表記・最尤法）。
+
+${rDataBlock()}
+${D.mode==="raw"?`S <- S[c(${sp.obs.map(v=>`"${v}"`).join(", ")}), c(${sp.obs.map(v=>`"${v}"`).join(", ")})]`:``}
+
+nodes <- c(${sp.nodes.map(v=>`"${v}"`).join(", ")})
+nO <- ${nO}; nA <- ${nA}
+A0 <- matrix(c(${rVec(flat(sp.Aval))}), nA, nA, byrow = TRUE)
+S0 <- matrix(c(${rVec(flat(sp.Sval))}), nA, nA, byrow = TRUE)
+pa <- matrix(c(${pa}), ncol = 3, byrow = TRUE)   # 1列目 1=係数 2=分散共分散${HM?" 3=切片・平均":""}
+lab <- c(${sp.pars.map(p=>`"${p.lab}"`).join(", ")})
+${meanDecl}start <- c(${rVec(Array.from(ST.res.th))})
+${resc}ldS <- determinant(S, logarithm = TRUE)$modulus[1]
+
+build <- function(th){
+  A <- A0; Sm <- S0${HM?"; mv <- m0":""}
+  for(k in seq_len(nrow(pa))){
+    if(pa[k,1] == 1) A[pa[k,2], pa[k,3]] <- th[k]${HM?"\n    else if(pa[k,1] == 3) mv[pa[k,2]] <- th[k]":""}
+    else { Sm[pa[k,2], pa[k,3]] <- th[k]; Sm[pa[k,3], pa[k,2]] <- th[k] }
+  }
+  B <- solve(diag(nA) - A); V <- B %*% Sm %*% t(B)
+  list(A = A, S = Sm, B = B, V = V, Sig = V[1:nO, 1:nO, drop = FALSE]${HM?",\n       mv = mv, muF = as.vector(B %*% mv), mu = as.vector(B %*% mv)[1:nO]":""})
+}
+fml <- function(th){
+  r <- try(build(th), silent = TRUE); if(inherits(r, "try-error")) return(1e10)
+  ch <- try(chol(r$Sig), silent = TRUE); if(inherits(ch, "try-error")) return(1e10)
+  ld <- 2 * sum(log(diag(ch))); Si <- chol2inv(ch)
+  as.numeric(ld + sum(S * t(Si)) - ldS - nO${HM?" + t(xbar - r$mu) %*% Si %*% (xbar - r$mu)":""})
+}
+grd <- function(th){
+  r <- build(th); Si <- solve(r$Sig)
+  Om <- Si - Si %*% S %*% Si${HM?"\n  u <- as.vector(Si %*% (xbar - r$mu)); Om <- Om - outer(u, u)":""}
+  Of <- matrix(0, nA, nA); Of[1:nO, 1:nO] <- Om
+  W <- t(r$B) %*% Of %*% r$B; Mm <- r$V %*% Of %*% r$B${HM?"\n  Bu <- as.vector(t(r$B[1:nO, , drop = FALSE]) %*% u); Bm <- r$muF":""}
+  vapply(seq_len(nrow(pa)), function(k){
+    if(pa[k,1] == 1) 2 * Mm[pa[k,3], pa[k,2]]${HM?" - 2 * Bu[pa[k,2]] * Bm[pa[k,3]]":""}${HM?"\n    else if(pa[k,1] == 3) -2 * Bu[pa[k,2]]":""}
+    else if(pa[k,2] == pa[k,3]) W[pa[k,2], pa[k,2]] else 2 * W[pa[k,2], pa[k,3]]
+  }, 0)
+}
+op <- optim(start, fml, grd, method = "BFGS",
+            control = list(maxit = 1000, reltol = 1e-14))
+th <- op$par; Fmin <- op$value
+
+## 標準誤差（勾配の数値微分＝ヘッセ行列より）
+NN <- ${lik}   # lavaan の likelihood="normal" なら N、"wishart" なら N-1
+q <- length(th); H <- matrix(0, q, q)
+for(k in 1:q){ h <- 1e-5 * max(1, abs(th[k]))
+  a <- th; b <- th; a[k] <- a[k] + h; b[k] <- b[k] - h
+  H[, k] <- (grd(a) - grd(b)) / (2 * h) }
+H <- (H + t(H)) / 2
+Vth <- 2 * solve(H) / NN; se <- sqrt(pmax(diag(Vth), 0))
+
+## 適合度
+df <- nO * (nO + 1) / 2${HM?" + nO":""} - q; Tst <- NN * Fmin
+## 独立モデル（lavaan と同じく、観測された外生変数どうしの共分散は自由にする）
+xs <- c(${xs.join(", ")})
+en <- setdiff(seq_len(nO), xs)
+lgd <- sum(log(diag(S)[en])) +
+       if(length(xs)) determinant(S[xs, xs, drop = FALSE], logarithm = TRUE)$modulus[1] else 0
+Fb <- lgd - ldS
+dfb <- nO * (nO + 1) / 2 - nO - length(xs) * (length(xs) - 1) / 2; Tb <- NN * Fb
+CFI <- 1 - max(Tst - df, 0) / max(Tb - dfb, Tst - df, 1e-12)
+TLI <- (Tb / dfb - Tst / df) / (Tb / dfb - 1)
+RMSEA <- sqrt(max(Tst - df, 0) / (df * NN))
+r <- build(th); Sig <- r$Sig
+res <- (S - Sig) / sqrt(outer(diag(S), diag(S)))
+SRMR <- sqrt((sum(res[lower.tri(res, diag = TRUE)]^2)${HM?" +\n              sum(((xbar - r$mu) / sqrt(diag(S)))^2)":""}) /
+             (nO * (nO + 1) / 2${HM?" + nO":""}))
+Si <- solve(Sig)
+logl <- -0.5 * n * (nO * log(2 * pi) + determinant(Sig, logarithm = TRUE)$modulus[1] +
+                    sum((${kf}) * t(Si))${HM?" +\n                    as.numeric(t(xbar - r$mu) %*% Si %*% (xbar - r$mu))":""})
+cat(sprintf("chisq = %.3f  df = %d  p = %.4f\\nCFI = %.4f  TLI = %.4f  RMSEA = %.4f  SRMR = %.4f\\nAIC = %.2f  BIC = %.2f\\n",
+  Tst, df, pchisq(Tst, df, lower.tail = FALSE), CFI, TLI, RMSEA, SRMR,
+  -2 * logl + 2 * q, -2 * logl + q * log(n)))
+
+## 標準化解
+sdv <- sqrt(diag(r$V))
+stdA <- r$A * outer(1 / sdv, sdv); stdS <- r$S / outer(sdv, sdv)
+stpar <- vapply(seq_len(nrow(pa)), function(k)
+  if(pa[k,1] == 1) stdA[pa[k,2], pa[k,3]]${HM?"\n  else if(pa[k,1] == 3) r$mv[pa[k,2]] / sdv[pa[k,2]]":""} else stdS[pa[k,2], pa[k,3]], 0)
+out <- data.frame(lab, round(th, 4), round(se, 4), round(th / se, 3),
+                  round(2 * pnorm(-abs(th / se)), 4), round(stpar, 4),
+                  stringsAsFactors = FALSE)
+names(out) <- c("パラメータ", "推定値", "標準誤差", "z", "p", "標準化")
+print(out, row.names = FALSE)
+
+## 効果の分解（標準化）
+Tot <- (r$B - diag(nA)) * outer(1 / sdv, sdv)
+Dir <- stdA; Ind <- Tot - Dir
+dimnames(Tot) <- dimnames(Ind) <- dimnames(Dir) <- list(nodes, nodes)
+cat("\\n--- 間接効果（標準化・行が結果、列が原因） ---\\n"); print(round(Ind, 3))
+`;
+}
+/* ══════════ CSV ══════════ */
+function csvParams(){
+  const sp=ST.sp,th=ST.res.th,std=ST.std;
+  const L=["種類,パラメータ,推定値,標準誤差,z,p,標準化"];
+  const kn={loading:"因子負荷",reg:"回帰",resid:"誤差分散",var:"分散",cov:"共分散"};
+  sp.pars.forEach((p,k)=>{
+    const se=seOf(k),z=th[k]/se,pv=2*(1-pnorm(Math.abs(z)));
+    const st=p.t==="A"?std.stA[p.i][p.j]:std.stS[p.i][p.j];
+    L.push([kn[p.kind],`"${p.lab}"`,fmt(th[k],5),fmt(se,5),fmt(z,4),fmt(pv,5),fmt(st,5)].join(","));});
+  return L.join("\n");
+}
+function csvFit(){
+  const f=ST.fit;
+  return ["指標,値",["chisq",fmt(f.T,4)],["df",f.df],["p",fmt(f.pv,5)],["CFI",fmt(f.CFI,4)],
+    ["TLI",fmt(f.TLI,4)],["NFI",fmt(f.NFI,4)],["RMSEA",fmt(f.RMSEA,4)],["RMSEA_lo",fmt(f.rlo,4)],
+    ["RMSEA_hi",fmt(f.rhi,4)],["PCLOSE",fmt(f.pclose,4)],["SRMR",fmt(f.SRMR,4)],["GFI",fmt(f.GFI,4)],
+    ["AGFI",fmt(f.AGFI,4)],["AIC",fmt(f.AIC,3)],["BIC",fmt(f.BIC,3)],["logLik",fmt(f.logl,3)],
+    ["n",f.n],["npar",f.q]].map(r=>Array.isArray(r)?r.join(","):r).join("\n");
+}
+function csvEff(){
+  const sp=ST.sp,ef=ST.effS,L=["原因,結果,直接効果,間接効果,総合効果"];
+  for(let i=0;i<sp.nA;i++)for(let j=0;j<sp.nA;j++){
+    if(i===j||Math.abs(ef.Tot[i][j])<1e-9)continue;
+    L.push([`"${sp.nodes[j]}"`,`"${sp.nodes[i]}"`,fmt(ef.Dir[i][j],5),fmt(ef.Ind[i][j],5),fmt(ef.Tot[i][j],5)].join(","));}
+  return L.join("\n");
+}
+function csvMI(){
+  if(!ST.mi||!ST.mi.length)return "修正指標はありません";
+  return ["関係,種類,MI,EPC"].concat(ST.mi.map(m=>[`"${m.lab}"`,m.kind,fmt(m.mi,4),fmt(m.epc,5)].join(","))).join("\n");
+}
+function renderExport(){
+  const t=reportText();
+  $("#et-text").innerHTML=`<div class="row tight noprint" style="margin-bottom:8px">
+    <button class="btn ghost sm" id="cpTxt">コピー</button>
+    <button class="btn ghost sm" id="svTxt">テキストで保存</button>
+    <button class="btn ghost sm" id="prn">印刷・PDF</button></div>
+    <pre class="out">${esc(t)}</pre>
+    <p class="hint">数値と表現は必ず自分の目で確かめてから使ってください。学術雑誌ごとの書式には合わせていません。</p>`;
+  $("#cpTxt").onclick=()=>copyText(reportText());
+  $("#svTxt").onclick=()=>saveFile("SEM_記述例.txt",reportText(),"text/plain");
+  $("#prn").onclick=()=>window.print();
+
+  $("#et-r").innerHTML=`<div class="row tight noprint" style="margin-bottom:8px">
+    <span class="chip on" data-rk="lav">lavaan 版</span><span class="chip" data-rk="base">base R 版</span>
+    <button class="btn ghost sm" id="cpR">コピー</button>
+    <button class="btn ghost sm" id="svR">.R で保存</button></div>
+    <p class="hint" id="rNote">lavaan パッケージを使う版です。データもコードに埋め込んであるので、そのまま貼り付けて実行できます。</p>
+    <pre class="code" id="rCode">${esc(rLavaan())}</pre>`;
+  let rk="lav";
+  $$("[data-rk]").forEach(c=>c.onclick=()=>{
+    $$("[data-rk]").forEach(x=>x.classList.toggle("on",x===c)); rk=c.dataset.rk;
+    $("#rCode").textContent = rk==="lav"?rLavaan():rBase();
+    $("#rNote").textContent = rk==="lav"
+      ? "lavaan パッケージを使う版です。データもコードに埋め込んであるので、そのまま貼り付けて実行できます。"
+      : "外部パッケージを一切使わない版です。このアプリと同じ RAM 表記・最尤法・BFGS で計算するので、同じ数値になります。";
+  });
+  $("#cpR").onclick=()=>copyText(rk==="lav"?rLavaan():rBase());
+  $("#svR").onclick=()=>saveFile("SEM_"+(rk==="lav"?"lavaan":"baseR")+".R", rk==="lav"?rLavaan():rBase(),"text/plain");
+
+  $("#et-csv").innerHTML=`<p class="hint">表計算ソフトで開ける形式で保存します。</p>
+    <div class="row tight">
+    <button class="btn ghost sm" data-csv="par">推定値</button>
+    <button class="btn ghost sm" data-csv="fit">適合度</button>
+    <button class="btn ghost sm" data-csv="eff">効果の分解</button>
+    <button class="btn ghost sm" data-csv="mi">修正指標</button>
+    <button class="btn ghost sm" data-csv="model">モデル式</button></div>`;
+  $$("[data-csv]").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.csv;
+    const map={par:["SEM_推定値.csv",csvParams()],fit:["SEM_適合度.csv",csvFit()],
+      eff:["SEM_効果.csv",csvEff()],mi:["SEM_修正指標.csv",csvMI()],
+      model:["SEM_モデル式.txt",$("#model").value]};
+    saveFile(map[k][0],map[k][1],k==="model"?"text/plain":"text/csv",k!=="model");
+  });
+}
+
+/* ── 起動時 ── */
+(function init(){
+  $("#run").disabled=true;
+  drawMap(null);
+})();
+</script>
+</body>
+</html>

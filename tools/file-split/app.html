@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ファイル分割 — データ分析ラボ</title>
+    <!-- SheetJS (Excel操作) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- JSZip (ZIP圧縮) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- pdf-lib (PDF操作) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f3f4f6;
+            --text: #1f2937;
+            --border: #d1d5db;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 1.5rem;
+            color: #111827;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 25px;
+        }
+        .security-badge {
+            display: inline-block;
+            background: #dcfce7;
+            color: #166534;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            background-color: #f9fafb;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .drop-zone.hover {
+            border-color: var(--primary);
+            background-color: #eff6ff;
+        }
+        .drop-zone p {
+            margin: 0 0 15px 0;
+            font-size: 1.1rem;
+            color: #4b5563;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        #log-container {
+            margin-top: 20px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: #f9fafb;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px dashed #e5e7eb; padding-bottom: 4px;}
+        .log-error { color: #dc2626; font-weight: bold; }
+        .log-success { color: #059669; font-weight: bold; }
+        .instructions {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .instructions h3 { margin-top: 0; color: #92400e; font-size: 1rem;}
+        .instructions ul { margin: 0; padding-left: 20px; color: #92400e; }
+    </style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-prep);--bg:var(--al-bg);--text:var(--al-ink);--border:var(--al-line);--primary:var(--al-cat);--primary-hover:var(--al-cat-deep);}body{font-family:var(--al-sans)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#prep">データの準備</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>ファイル分割</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<div class="container">
+    <h1>ファイル分割ツール（Excel / PDF）</h1>
+    <div class="subtitle">Excelはシート別、PDFはページ別に1つのファイルに分割し、ZIPで保存します。</div>
+    
+    <div class="security-badge">🔒 安全・安心: データは外部サーバーに送信されず、すべてブラウザ内で処理されます。</div>
+
+    <div class="drop-zone" id="drop-zone">
+        <p>ここに Excel または PDF ファイルをドロップ<br>または</p>
+        <input type="file" id="file-input" accept=".xlsx, .xls, .pdf" style="display: none;">
+        <button class="btn" id="select-btn">ファイルを選択</button>
+    </div>
+
+    <div><span id="status-text" style="font-weight: bold; color: #4b5563;">待機中...</span></div>
+    <div id="log-container"></div>
+
+    <div class="instructions">
+        <h3>💡 初心者の方へ：見落としやすい注意点</h3>
+        <ul>
+            <li><strong>パスワード保護（共通）：</strong> ロックがかかっているExcelや暗号化されたPDFは分割できません。事前に解除してください。</li>
+            <li><strong>PDFの仕様：</strong> 分割後のPDFからは、電子署名や入力フォーム（記入欄）などの特殊な機能が失われる場合があります。純粋な「印刷物」として分割されます。</li>
+            <li><strong>Excelの仕様：</strong> シート間で参照している数式（例: <code>=Sheet2!A1</code>）は、分割後に参照エラーになります。マクロ(.xlsm)は引き継がれません。</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const logContainer = document.getElementById('log-container');
+    const selectBtn = document.getElementById('select-btn');
+    const statusText = document.getElementById('status-text');
+
+    function addLog(message, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        if (type === 'error') entry.classList.add('log-error');
+        if (type === 'success') entry.classList.add('log-success');
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function setStatus(text, isLoading) {
+        statusText.textContent = text;
+        selectBtn.disabled = isLoading;
+        dropZone.style.pointerEvents = isLoading ? 'none' : 'auto';
+    }
+
+    selectBtn.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('hover'); });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('hover'); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('hover');
+        if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+            fileInput.value = ''; 
+        }
+    });
+
+    function sanitizeFilename(name) { return name.replace(/[\\/:*?"<>|]/g, '_'); }
+
+    async function handleFile(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['xlsx', 'xls', 'pdf'].includes(ext)) {
+            addLog(`エラー: 対応していないファイルです（${file.name}）。ExcelかPDFを選択してください。`, 'error');
+            return;
+        }
+
+        logContainer.innerHTML = '';
+        addLog(`「${file.name}」の処理を開始します...`);
+        setStatus('データ解析中...', true);
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const zip = new JSZip();
+            const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+            let successCount = 0;
+
+            if (ext === 'pdf') {
+                successCount = await processPDF(arrayBuffer, baseName, zip);
+            } else {
+                successCount = await processExcel(arrayBuffer, baseName, zip);
+            }
+
+            if (successCount > 0) {
+                addLog('ファイルをZIPにまとめています...');
+                const content = await zip.generateAsync({type:"blob"});
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(content);
+                const zipName = `${baseName}_split.zip`;
+                a.download = zipName;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 100);
+                addLog(`🎉 完了！ ${successCount}個のファイルをまとめた「${zipName}」をダウンロードしました。`, 'success');
+            }
+        } catch (error) {
+            addLog(`エラーが発生しました: ${error.message}`, 'error');
+        } finally {
+            setStatus('待機中...', false);
+        }
+    }
+
+    async function processExcel(arrayBuffer, baseName, zip) {
+        addLog('Excelファイルとして解析中...');
+        let workbook;
+        try {
+            workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array', cellFormula: true, cellStyles: true});
+        } catch (e) {
+            throw new Error("Excelの解析に失敗しました。パスワードで保護されている可能性があります。");
+        }
+        
+        const sheetNames = workbook.SheetNames;
+        if (sheetNames.length === 0) throw new Error("シートが見つかりません。");
+
+        for (let i = 0; i < sheetNames.length; i++) {
+            const sheetName = sheetNames[i];
+            const newWb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWb, workbook.Sheets[sheetName], sheetName);
+            const wbout = XLSX.write(newWb, {bookType:'xlsx', type:'array'});
+            const safeSheetName = sanitizeFilename(sheetName);
+            zip.file(`${baseName}_${safeSheetName}.xlsx`, wbout);
+            addLog(`[${i+1}/${sheetNames.length}] シート「${sheetName}」を分割しました。`);
+        }
+        return sheetNames.length;
+    }
+
+    async function processPDF(arrayBuffer, baseName, zip) {
+        addLog('PDFファイルとして解析中...');
+        let pdfDoc;
+        try {
+            pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+        } catch (e) {
+            throw new Error("PDFの解析に失敗しました。パスワードで保護（暗号化）されている可能性があります。");
+        }
+
+        const numPages = pdfDoc.getPageCount();
+        if (numPages === 0) throw new Error("ページが見つかりません。");
+
+        for (let i = 0; i < numPages; i++) {
+            const newPdf = await PDFLib.PDFDocument.create();
+            const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
+            newPdf.addPage(copiedPage);
+            const pdfBytes = await newPdf.save();
+            // 桁数を揃える（01, 02...）ことでフォルダ内でのソートを綺麗にする
+            const pageNum = String(i + 1).padStart(String(numPages).length, '0');
+            zip.file(`${baseName}_page${pageNum}.pdf`, pdfBytes);
+            addLog(`[${i+1}/${numPages}] ページ${i+1}を分割しました。`);
+        }
+        return numPages;
+    }
+</script>
+</body>
+</html>

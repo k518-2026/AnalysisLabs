@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>データ比較・自動分析 — データ分析ラボ</title>
+<meta name="description" content="2群以上の比較で、正規性に応じた検定を自動で選び、記述統計・図・APA形式の記述まで出す。">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<link rel="stylesheet" href="../../assets/site.css?v=b63567b0">
+<style>:root{--al-cat:var(--al-c-compare)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#compare">比べる</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>データ比較・自動分析</span><span class="al-gap"></span><a class="al-link al-primary" href="app.html">ツールを開く</a></div>
+<main>
+  <header class="tool-hero">
+    <div class="wrap">
+      <a class="chip" href="../../#compare"><i></i>比べる</a>
+      <h1>データ比較・自動分析</h1>
+      <p class="en">Auto Compare</p>
+      <p class="lead">2群以上の比較で、正規性に応じた検定を自動で選び、記述統計・図・APA形式の記述まで出す。</p>
+      <div class="actions">
+        <a class="btn primary" href="app.html">ツールを開く <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        
+      </div>
+    </div>
+  </header>
+  <div class="wrap doc">
+    <article>
+      <section>
+        <h2><span class="n">01</span>概要</h2>
+        <p>CSV を読み込み、比べたい値と群（または対応のある ID）を指定すると、データの正規性を確かめたうえで検定を選んで実行します。記述統計量、グラフ、論文用の記述テンプレート、JASP の R コンソールで再現するコードまでを一度に出力します。</p>
+      </section>
+      <section>
+        <h2><span class="n">02</span>できること</h2>
+        <ul><li>2群：t検定（対応あり／Student・Welch）または Mann-Whitney の U 検定・Wilcoxon の符号付順位検定を自動選択</li><li>3群以上：分散分析（一元配置・反復測定）または Kruskal-Wallis 検定・Friedman 検定を自動選択し、事後検定の候補を示す</li><li>記述統計量の表と、群ごとの分布の図</li><li>APA 形式の記述テンプレートと、JASP の R コンソール用の再現コード</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">03</span>使い方</h2>
+        <ol class="steps"><li>CSV ファイルを読み込む</li><li>比較する値（複数可）を選ぶ</li><li>群分けの列（対応なし）か ID の列（対応あり）を指定する</li><li>「統計分析を実行する」を押す</li></ol>
+      </section>
+      <section>
+        <h2><span class="n">04</span>読み込めるデータ</h2>
+        <p>CSV（1行目が変数名）。横持ち（1列＝1条件）と、値の列＋群の列の形のどちらでも使えます。</p>
+      </section>
+      <section>
+        <h2><span class="n">05</span>書き出せるもの</h2>
+        <ul><li>解析レポート</li><li>記述統計量</li><li>グラフ</li><li>APA 形式の記述テンプレート</li><li>R コード</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">06</span>注意</h2>
+        <ul class="notes"><li>検定の選択は自動判定です。研究計画にもとづく検定があるときは、そちらを優先してください。</li><li>3群以上のノンパラメトリック検定と事後検定の詳しい数値は、出力される R コードで確認してください。</li><li>計算はブラウザーの中で行われ、入力したデータがサーバーに送られることはありません。</li><li>出力される記述例や R コードは下書きです。数値と解釈は、研究の文脈と照らし合わせて確かめてください。</li></ul>
+      </section>
+    </article>
+    <aside class="side">
+      <div class="box">
+        <h3>このツール</h3>
+        <dl>
+          <dt>カテゴリ</dt><dd>比べる</dd>
+          <dt>入力</dt><dd>CSV</dd>
+          <dt>マニュアル</dt><dd>この説明ページのみ</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h3>比べるのツール</h3>
+        <ul><li aria-current="page"><a href="../data-compare/">データ比較・自動分析</a></li><li><a href="../categorical/">カテゴリ分析</a></li><li><a href="../crosstab-2x2/">カテゴリデータ検定</a></li><li><a href="../nonparametric/">ノンパラメトリック検定</a></li></ul>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <div>
+      <b>データ分析ラボ</b>
+      <p>ブラウザーだけで動く、統計解析と質的分析のツール集。どのツールもインストール不要で、計算はブラウザーの中で完結します。</p>
+      <p><a href="../../">ツールの一覧へ</a> ・ <a href="https://github.com/k518-2026/AnalysisLabs">ソースコード（GitHub）</a></p>
+    </div>
+    <div>
+      <p>© 2026 K.Yamamoto ・ MIT License</p>
+      <p>「SQS ソースエディタ Web」「SQS マーク読み取り」は、Apache License 2.0 で公開されている SQS（Shared Questionnaire System）をもとに作り直したものです。</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

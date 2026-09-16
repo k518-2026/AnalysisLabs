@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ノンパラメトリック検定 — データ分析ラボ</title>
+<!-- 統計グラフに特化した安定ライブラリ Plotly.js を読み込み -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+:root{
+  --bg:#F1F4F3;
+  --panel:#FFFFFF;
+  --ink:#171F1D;
+  --ink-soft:#5B6764;
+  --line:#D7DFDC;
+  --teal:#215C52;
+  --teal-soft:#E4EEEC;
+  --indigo:#33508F;
+  --indigo-soft:#E8ECF6;
+  --brick:#A8422A;
+  --brick-soft:#F6E7E2;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  --sans: "Hiragino Sans", "Yu Gothic UI", "Segoe UI", system-ui, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+body{-webkit-font-smoothing:antialiased;}
+.app{max-width:1360px;margin:0 auto;padding:28px 20px 80px;}
+header.top{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;flex-wrap:wrap;}
+header.top h1{font-size:22px;letter-spacing:.04em;margin:0;font-weight:800;}
+header.top .badge{font-family:var(--mono);font-size:11px;background:var(--teal);color:#fff;padding:3px 8px;border-radius:3px;letter-spacing:.06em;}
+header.top .sub{font-size:12.5px;color:var(--ink-soft);margin:2px 0 22px;}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start;}
+@media (max-width:980px){.layout{grid-template-columns:1fr;} .rcode-col{order:99;}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px 22px;margin-bottom:18px;}
+.step-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.step-num{font-family:var(--mono);font-size:12px;background:var(--ink);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step-head h2{font-size:15px;margin:0;letter-spacing:.02em;}
+.step-head .hint{font-size:11.5px;color:var(--ink-soft);margin-left:auto;font-family:var(--mono);}
+
+label{font-size:12.5px;color:var(--ink-soft);display:block;margin-bottom:5px;}
+textarea{width:100%;min-height:130px;font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:10px;resize:vertical;background:#FBFCFC;transition:all 0.2s ease;}
+textarea.dragover { border: 2px dashed var(--teal); background: var(--teal-soft); }
+select, .btn{font-family:var(--sans);font-size:13px;}
+select{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);}
+select[multiple]{min-height:110px;}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.row > div{flex:1;min-width:180px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;font-weight:600;letter-spacing:.02em;}
+.btn:hover{opacity:.88;}
+.btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:500;}
+.btn.secondary:hover{background:#F5F6F5;}
+.btn.run{background:var(--teal);border-color:var(--teal);font-size:14px;padding:11px 22px;}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;}
+
+table.preview{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono);margin-top:12px;}
+table.preview th,table.preview td{border:1px solid var(--line);padding:5px 7px;text-align:left;white-space:nowrap;}
+table.preview th{background:var(--teal-soft);font-weight:700;color:var(--teal);}
+table.preview select{padding:2px 4px;font-size:11px;font-family:var(--sans);}
+.preview-wrap{max-height:220px;overflow:auto;border-radius:6px;}
+.small-note{font-size:11.5px;color:var(--ink-soft);margin-top:8px;line-height:1.6;}
+
+#testGroupsContainer { display: flex; flex-direction: column; gap: 16px; }
+.test-category { background: #FBFCFC; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.test-category-title { font-size: 13.5px; font-weight: 700; color: var(--teal); margin-bottom: 12px; display: flex; align-items: center; }
+.test-category-title::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--teal); margin-right: 8px; border-radius: 2px; }
+.test-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+.test-btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:10px 12px;cursor:pointer;text-align:left;transition:.12s;}
+.test-btn:hover{border-color:var(--teal);}
+.test-btn .cat{font-size:10px;color:var(--ink-soft);margin-top:4px;line-height:1.3;}
+.test-btn .nm{font-size:13px;font-weight:700;}
+.test-btn.active{background:var(--teal);border-color:var(--teal);}
+.test-btn.active .nm{color:#fff;}
+.test-btn.active .cat{color:#cfe6e0;}
+
+.slot-block{border:1px solid var(--line);border-radius:7px;padding:12px 14px;margin-bottom:10px;background:#FBFCFC;}
+.slot-title{font-size:12.5px;font-weight:700;color:var(--teal);margin-bottom:8px;}
+.err-msg{color:var(--brick);background:var(--brick-soft);border:1px solid #E4B9AB;border-radius:6px;padding:9px 12px;font-size:12.5px;margin-top:10px;}
+
+.ticket{border:2px dashed var(--teal);border-radius:8px;padding:18px 20px;background:linear-gradient(180deg,#fff,#F7FBFA);position:relative;}
+.ticket .stamp{position:absolute;top:14px;right:16px;font-family:var(--mono);font-weight:800;font-size:12px;padding:5px 10px;border-radius:4px;transform:rotate(3deg);letter-spacing:.05em;}
+.stamp.sig{background:var(--brick-soft);color:var(--brick);border:1.5px solid var(--brick);}
+.stamp.nosig{background:var(--teal-soft);color:var(--teal);border:1.5px solid var(--teal);}
+.ticket h3{margin:0 0 12px;font-size:14px;color:var(--teal);letter-spacing:.02em;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px 18px;margin-bottom:10px;}
+.stat-item .k{font-size:11px;color:var(--ink-soft);font-family:var(--mono);}
+.stat-item .v{font-size:15px;font-weight:800;font-family:var(--mono);}
+.stat-item .v.p-sig{color:var(--brick);}
+.stat-item .v.p-nosig{color:var(--teal);}
+.ticket .interp{font-size:12.5px;color:var(--ink-soft);border-top:1px dashed var(--line);padding-top:10px;margin-top:6px;line-height:1.7;}
+
+.apa-box{background:#FBFCFC;border:1px solid var(--line);border-radius:7px;padding:14px 16px;font-size:13px;line-height:1.9;}
+.apa-box .num{font-family:var(--mono);color:var(--indigo);font-weight:700;}
+.copy-btn{font-size:11px;padding:5px 10px;}
+
+.rcode-col{position:sticky;top:20px;}
+.rcode-panel{background:#000000;color:#DDEAE6;border-radius:10px;padding:0;overflow:hidden;border:1px solid #333;}
+.rcode-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:#1A1A1A;border-bottom:1px solid #333;}
+.rcode-head .tt{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:#8FE3CB;}
+.rcode-head .dot{width:8px;height:8px;border-radius:50%;background:#3FBF8F;display:inline-block;margin-right:7px;}
+.rcode-body{padding:16px;font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre;overflow-x:auto;max-height:640px;}
+
+.r-comment { color: #6C8B84; }
+.r-keyword { color: #FF7B72; font-weight: bold; }
+.r-string { color: #A5D6FF; }
+.r-function { color: #D2A8FF; }
+.r-numeric { color: #79C0FF; }
+
+.r-copy{margin:12px 16px 16px;}
+.r-note{font-size:11px;color:#89A39C;padding:0 16px 14px;line-height:1.6;}
+
+footer.credit{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:10px;}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-compare);--bg:var(--al-bg);--panel:var(--al-surface);--ink:var(--al-ink);--ink-soft:var(--al-ink-2);--line:var(--al-line);--teal:var(--al-cat);--teal-soft:var(--al-cat-soft);--sans:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#compare">比べる</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>ノンパラメトリック検定</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="app">
+  <header class="top">
+    <h1>ノンパラメトリック検定</h1>
+    <span class="badge">NONPARAMETRIC TEST BENCH</span>
+  </header>
+  <p class="sub">データ入力 → 変数指定 → 実行 → 論文記述例 / Rコード出力 まで、ブラウザだけで完結するノンパラメトリック検定ツールです。</p>
+
+  <div class="layout">
+    <div class="main-col">
+
+      <!-- STEP1 -->
+      <section class="card" id="step1">
+        <div class="step-head"><span class="step-num">1</span><h2>データの入力</h2><span class="hint">CSV / タブ区切り・1行目は変数名</span></div>
+        <textarea id="dataInput" placeholder="例)
+id,group,score
+1,A,12
+2,A,15
+3,B,9
+4,B,11
+※ここにCSVファイルを直接ドラッグ＆ドロップして読み込むことも可能です。"></textarea>
+        <div class="toolbar">
+          <button class="btn secondary" id="parseBtn">データを読み込む</button>
+          <select id="sampleSelect" style="width:auto;min-width:220px;"></select>
+          <button class="btn secondary" id="sampleBtn">サンプルデータを入力</button>
+        </div>
+        <div id="previewWrap"></div>
+        <p class="small-note">列の型(数値/カテゴリ)は自動判定されますが、プレビュー表のヘッダー内セレクトで手動変更できます。行はケース(対応あり検定では「同じ行=同一対象」として扱われます)。</p>
+      </section>
+
+      <!-- STEP2 -->
+      <section class="card" id="step2">
+        <div class="step-head"><span class="step-num">2</span><h2>検定の選択と変数の指定</h2></div>
+        <div id="testGroupsContainer"></div>
+        <div id="slotArea" style="margin-top:16px;"></div>
+      </section>
+
+      <!-- STEP3 -->
+      <section class="card" id="step3">
+        <div class="step-head"><span class="step-num">3</span><h2>実行と結果</h2></div>
+        <button class="btn run" id="runBtn">検定を実行する</button>
+        <div id="resultArea" style="margin-top:16px;"></div>
+      </section>
+
+      <!-- STEP4 -->
+      <section class="card" id="step4">
+        <div class="step-head"><span class="step-num">4</span><h2>論文での記述例</h2><span class="hint">APA風・日本語論文体</span></div>
+        <div id="apaArea" class="apa-box">検定を実行すると、結果に基づいた記述例がここに表示されます。</div>
+      </section>
+
+    </div>
+
+    <div class="rcode-col">
+      <section class="card" style="padding:0;border:none;background:none;">
+        <div class="step-head" style="padding:0 2px;"><span class="step-num">5</span><h2>Rコード</h2></div>
+        <div class="rcode-panel">
+          <div class="rcode-head"><span class="tt"><span class="dot"></span>R script</span><button class="btn secondary r-copy" id="copyRBtn" style="margin:0;">コピー</button></div>
+          <div class="rcode-body" id="rcodeBody">検定を選択すると、対応するRコードのテンプレートがここに表示されます。</div>
+          <div class="r-note" id="rNote"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <footer class="credit">計算はすべてブラウザ内(JavaScript)で実行されます。近似計算を用いる検定は結果欄に注記します。</footer>
+</div>
+
+<script>
+/* ================= 数学ユーティリティ ================= */
+function erf(x){
+  const sign = x<0?-1:1; x=Math.abs(x);
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const t=1/(1+p*x);
+  const y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+  return sign*y;
+}
+function normalCDF(x){ return 0.5*(1+erf(x/Math.SQRT2)); }
+function normalQuantile(p){
+  if(p<=0) return -Infinity; if(p>=1) return Infinity;
+  const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+  const b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01];
+  const c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+  const d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  const plow=0.02425, phigh=1-plow; let q,r;
+  if(p<plow){ q=Math.sqrt(-2*Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p>phigh){ q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  q=p-0.5; r=q*q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+function logGamma(x){
+  const g=7;
+  const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(x<0.5) return Math.log(Math.PI/Math.sin(Math.PI*x)) - logGamma(1-x);
+  x-=1; let a=c[0]; const t=x+g+0.5;
+  for(let i=1;i<g+2;i++) a+=c[i]/(x+i);
+  return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);
+}
+function logChoose(n,k){ if(k<0||k>n) return -Infinity; return logGamma(n+1)-logGamma(k+1)-logGamma(n-k+1); }
+function lowerIncGammaReg(s,x){
+  if(x<=0||s<=0) return 0;
+  if(x<s+1){
+    let sum=1/s, term=1/s, n=1;
+    while(Math.abs(term)>1e-14*Math.abs(sum) && n<2000){ term*= x/(s+n); sum+=term; n++; }
+    return sum*Math.exp(-x+s*Math.log(x)-logGamma(s));
+  } else {
+    let b=x+1-s, c=1e300, d=1/b, h=d;
+    for(let i=1;i<2000;i++){
+      const an=-i*(i-s); b+=2;
+      d=an*d+b; if(Math.abs(d)<1e-300) d=1e-300;
+      c=b+an/c; if(Math.abs(c)<1e-300) c=1e-300;
+      d=1/d; const del=d*c; h*=del;
+      if(Math.abs(del-1)<1e-14) break;
+    }
+    const Q=Math.exp(-x+s*Math.log(x)-logGamma(s))*h;
+    return 1-Q;
+  }
+}
+function chiSquareCDF(x,df){ if(x<=0) return 0; return lowerIncGammaReg(df/2,x/2); }
+function tCDF(t,df){ 
+  const x=df/(df+t*t); 
+  const incBetaReg = (xx, a, b) => {
+      if(xx<=0) return 0; if(xx>=1) return 1;
+      const bt=Math.exp(logGamma(a+b)-logGamma(a)-logGamma(b)+a*Math.log(xx)+b*Math.log(1-xx));
+      let c=1, d=1-(a+b)*xx/(a+1); d=1/d; let h=d;
+      for(let m=1;m<=300;m++){
+        const m2=2*m;
+        let aa=m*(b-m)*xx/((a-1+m2)*(a+m2));
+        d=1+aa*d; d=1/d; c=1+aa/c; h*=d*c;
+        aa=-(a+m)*(a+b+m)*xx/((a+m2)*(a+1+m2));
+        d=1+aa*d; d=1/d; c=1+aa/c; h*=d*c;
+        if(Math.abs(d*c-1)<3e-14) break;
+      }
+      return bt*h/a;
+  };
+  const ib = incBetaReg(x, df/2, 0.5); 
+  return t>0 ? 1-0.5*ib : 0.5*ib; 
+}
+function binomPMF(k,n,p){ if(p<=0) return k===0?1:0; if(p>=1) return k===n?1:0; return Math.exp(logChoose(n,k)+k*Math.log(p)+(n-k)*Math.log(1-p)); }
+function binomCDF(k,n,p){ let s=0; for(let i=0;i<=k;i++) s+=binomPMF(i,n,p); return Math.min(Math.max(s,0),1); }
+function kolmogorovQ(t){ if(t<0.2) return 1; let sum=0; for(let k=1;k<=100;k++){ sum+=(k%2===0?-1:1)*Math.exp(-2*k*k*t*t); } return Math.min(Math.max(2*sum,0),1); }
+function clamp01(x,eps){ eps=eps||1e-12; return Math.min(Math.max(x,eps),1-eps); }
+
+function rankArray(values){
+  const idx = values.map((v,i)=>i).sort((a,b)=>values[a]-values[b]);
+  const ranks = new Array(values.length);
+  const tieSizes = [];
+  let i=0;
+  while(i<idx.length){
+    let j=i;
+    while(j+1<idx.length && values[idx[j+1]]===values[idx[i]]) j++;
+    const avg=(i+1+j+1)/2;
+    for(let k=i;k<=j;k++) ranks[idx[k]]=avg;
+    tieSizes.push(j-i+1);
+    i=j+1;
+  }
+  return {ranks, tieSizes};
+}
+function mean(a){ return a.reduce((s,v)=>s+v,0)/a.length; }
+function sd(a){ const m=mean(a); return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/(a.length-1)); }
+function pearson(a,b){
+  const ma=mean(a), mb=mean(b);
+  let num=0,da=0,db=0;
+  for(let i=0;i<a.length;i++){ num+=(a[i]-ma)*(b[i]-mb); da+=(a[i]-ma)**2; db+=(b[i]-mb)**2; }
+  return num/Math.sqrt(da*db);
+}
+function fmt(x,d){ if(x===undefined||x===null||Number.isNaN(x)) return "-"; d=(d===undefined)?3:d; return x.toFixed(d); }
+function fmtP(p){ if(p===undefined||p===null||Number.isNaN(p)) return "-"; return p<0.001 ? "< .001" : p.toFixed(3).replace(/^0\./,"."); }
+
+function calcMedian(arr) {
+  if (!arr || arr.length === 0) return null;
+  const s = [...arr].sort((a,b) => a-b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+/* ================= グラフ・表 描画関数 (Plotly.js) ================= */
+function drawBoxplot(datasets, divId) {
+    const el = document.getElementById(divId);
+    if(!el) return;
+    el.style.display = 'block';
+    const data = datasets.map(d => ({
+        y: d.data,
+        type: 'box',
+        name: d.label,
+        boxpoints: 'all',
+        jitter: 0.3,
+        pointpos: -1.8,
+        marker: {color: '#215C52'}
+    }));
+    const layout = { title: 'データの分布（箱ひげ図）', margin: {t:40, b:30, l:40, r:20}, paper_bgcolor: 'transparent', plot_bgcolor: '#FBFCFC' };
+    Plotly.newPlot(divId, data, layout, {responsive: true, displayModeBar: false});
+}
+
+function drawScatter(x, y, xName, yName, divId) {
+    const el = document.getElementById(divId);
+    if(!el) return;
+    el.style.display = 'block';
+    const data = [{
+        x: x, y: y,
+        mode: 'markers',
+        type: 'scatter',
+        marker: {color: '#215C52', size: 8}
+    }];
+    const layout = {
+        title: '変数の関係性（散布図）',
+        xaxis: {title: xName}, yaxis: {title: yName},
+        margin: {t:40, b:40, l:50, r:20}, paper_bgcolor: 'transparent', plot_bgcolor: '#FBFCFC'
+    };
+    Plotly.newPlot(divId, data, layout, {responsive: true, displayModeBar: false});
+}
+
+function drawHistogram(dataArray, divId, title="データの分布（ヒストグラム）") {
+    const el = document.getElementById(divId);
+    if(!el) return;
+    el.style.display = 'block';
+    const data = [{ x: dataArray, type: 'histogram', marker: {color: '#33508F'} }];
+    const layout = { title: title, margin: {t:40, b:40, l:50, r:20}, paper_bgcolor: 'transparent', plot_bgcolor: '#FBFCFC' };
+    Plotly.newPlot(divId, data, layout, {responsive: true, displayModeBar: false});
+}
+
+function drawBarChart(labels, dataArray, divId, title) {
+    const el = document.getElementById(divId);
+    if(!el) return;
+    el.style.display = 'block';
+    const data = [{ x: labels, y: dataArray, type: 'bar', marker: {color: '#215C52'} }];
+    const layout = { title: title, margin: {t:40, b:40, l:50, r:20}, paper_bgcolor: 'transparent', plot_bgcolor: '#FBFCFC' };
+    Plotly.newPlot(divId, data, layout, {responsive: true, displayModeBar: false});
+}
+
+function renderContingencyTable(table, levelsA, levelsB, containerId) {
+    let html = '<div class="slot-title">分割表（クロス集計表）</div>';
+    html += '<table class="preview" style="margin-top:5px; width:auto;"><thead><tr><th></th>';
+    levelsB.forEach(lb => html += `<th>${lb}</th>`);
+    html += '<th>合計</th></tr></thead><tbody>';
+    let colTotals = new Array(levelsB.length).fill(0);
+    table.forEach((row, i) => {
+        html += `<tr><th>${levelsA[i]}</th>`;
+        let rowTotal = 0;
+        row.forEach((v, j) => {
+            html += `<td>${v}</td>`;
+            rowTotal += v;
+            colTotals[j] += v;
+        });
+        html += `<th>${rowTotal}</th></tr>`;
+    });
+    html += '<tr><th>合計</th>';
+    colTotals.forEach(v => html += `<th>${v}</th>`);
+    html += `<th>${colTotals.reduce((a,b)=>a+b,0)}</th></tr></tbody></table>`;
+    document.getElementById(containerId).innerHTML = html;
+    
+    const chartDiv = document.getElementById('resultChart');
+    if(chartDiv) { chartDiv.style.display = 'none'; chartDiv.innerHTML = ''; }
+}
+
+
+/* ================= 検定の統計計算 ================= */
+function mannWhitney(x1,x2){
+  const n1=x1.length,n2=x2.length,N=n1+n2;
+  const combined=x1.concat(x2);
+  const {ranks,tieSizes}=rankArray(combined);
+  const R1=ranks.slice(0,n1).reduce((s,v)=>s+v,0);
+  const U1=R1-n1*(n1+1)/2, U2=n1*n2-U1, U=Math.min(U1,U2);
+  const muU=n1*n2/2;
+  const tieCorr=tieSizes.reduce((s,t)=>s+(t**3-t),0);
+  const sigmaU=Math.sqrt(n1*n2/12*((N+1)-tieCorr/(N*(N-1))));
+  const z = sigmaU>0 ? (Math.abs(U1-muU)-0.5)/sigmaU : 0;
+  const p = 2*(1-normalCDF(Math.abs(z)));
+  const r = Math.abs(z)/Math.sqrt(N);
+  return {U:Math.min(U1,U2), U1,U2,z,p:Math.min(p,1),effect:r,n1,n2,N};
+}
+
+function wilcoxonSigned(x,y){
+  const rawDiffs=x.map((v,i)=>v-y[i]);
+  const zeroCount=rawDiffs.filter(d=>d===0).length;
+  const diffs=rawDiffs.filter(d=>d!==0);
+  const n=diffs.length;
+  const absd=diffs.map(Math.abs);
+  const {ranks,tieSizes}=rankArray(absd);
+  let Wplus=0,Wminus=0;
+  diffs.forEach((d,i)=>{ if(d>0) Wplus+=ranks[i]; else Wminus+=ranks[i]; });
+  const T=Math.min(Wplus,Wminus);
+  const muT=n*(n+1)/4;
+  const tieCorr=tieSizes.reduce((s,t)=>s+(t**3-t),0);
+  const sigmaT=Math.sqrt(Math.max(n*(n+1)*(2*n+1)/24 - tieCorr/48,0));
+  const z = sigmaT>0 ? (Math.abs(T-muT)-0.5)/sigmaT : 0;
+  const p=2*(1-normalCDF(Math.abs(z)));
+  const effect=Math.abs(z)/Math.sqrt(n);
+  return {Wplus,Wminus,T,z,p:Math.min(p,1),effect,n,zeroCount};
+}
+
+function signTest(x,y){
+  const diffs=x.map((v,i)=>v-y[i]);
+  const pos=diffs.filter(d=>d>0).length, neg=diffs.filter(d=>d<0).length, zero=diffs.length-pos-neg;
+  const n=pos+neg, k=Math.min(pos,neg);
+  const p=Math.min(2*binomCDF(k,n,0.5),1);
+  return {pos,neg,zero,n,p};
+}
+
+function kruskalWallis(groups){
+  const N=groups.reduce((s,g)=>s+g.length,0), k=groups.length;
+  const combined=[].concat(...groups);
+  const {ranks,tieSizes}=rankArray(combined);
+  let offset=0; let Hsum=0; const groupInfo=[];
+  
+  groups.forEach((g, idx)=>{
+    const rs=ranks.slice(offset,offset+g.length);
+    const Rj=rs.reduce((s,v)=>s+v,0);
+    Hsum += (Rj*Rj)/g.length;
+    const med = calcMedian(g); 
+    groupInfo.push({n:g.length, Rj, meanRank:Rj/g.length, med: med, idx: idx});
+    offset+=g.length;
+  });
+  
+  let H=12/(N*(N+1))*Hsum - 3*(N+1);
+  const tieCorr = 1 - tieSizes.reduce((s,t)=>s+(t**3-t),0)/(N**3-N);
+  if(tieCorr>0) H/=tieCorr;
+  const df=k-1;
+  const p=1-chiSquareCDF(H,df);
+
+  const comparisons = [];
+  const numComps = (k * (k - 1)) / 2;
+  const variance = ((N * (N + 1)) / 12) - (tieSizes.reduce((s,t)=>s+(t**3-t),0) / (12 * (N - 1)));
+  
+  for (let i = 0; i < k; i++) {
+    for (let j = i + 1; j < k; j++) {
+      const diff = Math.abs(groupInfo[i].meanRank - groupInfo[j].meanRank);
+      const se = Math.sqrt(variance * (1 / groupInfo[i].n + 1 / groupInfo[j].n));
+      const z = diff / se;
+      const rawP = 2 * (1 - normalCDF(z));
+      const bonfP = Math.min(1, rawP * numComps);
+      comparisons.push({ pair: [i, j], z: z, p: bonfP });
+    }
+  }
+
+  return {H, df, p:Math.min(Math.max(p,0),1), k, N, groupInfo, comparisons};
+}
+
+function friedman(matrix){ 
+  const n=matrix.length, k=matrix[0].length;
+  const colSums=new Array(k).fill(0);
+  let tieC=0;
+  matrix.forEach(row=>{
+    const {ranks,tieSizes}=rankArray(row);
+    ranks.forEach((r,j)=>colSums[j]+=r);
+    tieC += tieSizes.reduce((s,t)=>s+(t**3-t),0);
+  });
+  let Q=12/(n*k*(k+1))*colSums.reduce((s,v)=>s+v*v,0) - 3*n*(k+1);
+  const corr = 1 - tieC/(n*k*(k*k-1));
+  if(corr>0) Q/=corr;
+  const df=k-1;
+  const p=1-chiSquareCDF(Q,df);
+  
+  const comparisons = [];
+  const numComps = (k * (k - 1)) / 2;
+  for (let i = 0; i < k; i++) {
+    for (let j = i + 1; j < k; j++) {
+      const c1 = matrix.map(r => r[i]);
+      const c2 = matrix.map(r => r[j]);
+      const wx = wilcoxonSigned(c1, c2);
+      comparisons.push({ pair: [i, j], p: Math.min(1, wx.p * numComps) });
+    }
+  }
+  
+  return {Q,df,p:Math.min(Math.max(p,0),1),n,k,colSums, comparisons};
+}
+function buildContingency(catA,catB){
+  const levelsA=[...new Set(catA)], levelsB=[...new Set(catB)];
+  const table=levelsA.map(()=>levelsB.map(()=>0));
+  catA.forEach((a,i)=>{ table[levelsA.indexOf(a)][levelsB.indexOf(catB[i])]++; });
+  return {table,levelsA,levelsB};
+}
+function chiSquareIndep(table){
+  const r=table.length,c=table[0].length;
+  const rowSums=table.map(row=>row.reduce((s,v)=>s+v,0));
+  const colSums=table[0].map((_,j)=>table.reduce((s,row)=>s+row[j],0));
+  const total=rowSums.reduce((s,v)=>s+v,0);
+  let chi2=0, chi2y=0;
+  const exp=table.map((row,i)=>row.map((_,j)=>rowSums[i]*colSums[j]/total));
+  for(let i=0;i<r;i++) for(let j=0;j<c;j++){
+    const E=exp[i][j], O=table[i][j];
+    if(E>0) {
+      chi2 += (O-E)**2/E;
+      chi2y += (Math.max(Math.abs(O-E)-0.5,0))**2/E;
+    }
+  }
+  const df=(r-1)*(c-1);
+  const p=1-chiSquareCDF(chi2,df);
+  const pY = (r===2&&c===2) ? 1-chiSquareCDF(chi2y,df) : null;
+  return {chi2,chi2y,pY,df,p:Math.min(Math.max(p,0),1),total,exp};
+}
+function fisherExact2x2(a,b,c,d){
+  const row1=a+b, row2=c+d, col1=a+c, n=a+b+c+d;
+  function hp(aa){ return Math.exp(logChoose(row1,aa)+logChoose(row2,col1-aa)-logChoose(n,col1)); }
+  const pObs=hp(a);
+  const lo=Math.max(0,col1-row2), hi=Math.min(row1,col1);
+  let p=0;
+  for(let x=lo;x<=hi;x++){ const px=hp(x); if(px<=pObs*(1+1e-7)) p+=px; }
+  return {p:Math.min(p,1),a,b,c,d};
+}
+function mcnemar(b,c){
+  const chi2=(Math.abs(b-c)-1)**2/(b+c);
+  const p=1-chiSquareCDF(chi2,1);
+  const pExact=(b+c)<25 ? Math.min(2*binomCDF(Math.min(b,c),b+c,0.5),1) : null;
+  return {chi2,p:Math.min(Math.max(p,0),1),pExact,b,c};
+}
+function cochranQ(matrix){
+  const N=matrix.length, k=matrix[0].length;
+  const Cj=new Array(k).fill(0);
+  const Ri=matrix.map(row=>row.reduce((s,v)=>s+v,0));
+  matrix.forEach(row=>row.forEach((v,j)=>Cj[j]+=v));
+  const sumCj=Cj.reduce((s,v)=>s+v,0);
+  const sumCj2=Cj.reduce((s,v)=>s+v*v,0);
+  const sumRi=Ri.reduce((s,v)=>s+v,0);
+  const sumRi2=Ri.reduce((s,v)=>s+v*v,0);
+  const denom = (k*sumRi-sumRi2);
+  const Q = denom > 0 ? (k-1)*(k*sumCj2-sumCj*sumCj)/denom : 0;
+  const df=k-1;
+  const p=1-chiSquareCDF(Q,df);
+  return {Q,df,p:Math.min(Math.max(p,0),1),N,k,Cj};
+}
+function spearman(x,y){
+  const n=x.length;
+  const rx=rankArray(x).ranks, ry=rankArray(y).ranks;
+  const rho=pearson(rx,ry);
+  const t=rho*Math.sqrt((n-2)/(1-rho*rho));
+  const df=n-2;
+  const p=2*(1-tCDF(Math.abs(t),df));
+  return {rho,t,df,p:Math.min(Math.max(p,0),1),n};
+}
+function kendallTau(x,y){
+  const n=x.length; let C=0,D=0;
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    const dx=x[j]-x[i], dy=y[j]-y[i];
+    if(dx*dy>0) C++; else if(dx*dy<0) D++;
+  }
+  const {tieSizes:txT}=rankArray(x), {tieSizes:tyT}=rankArray(y);
+  const n0=n*(n-1)/2;
+  const n1=txT.reduce((s,t)=>s+t*(t-1)/2,0);
+  const n2=tyT.reduce((s,t)=>s+t*(t-1)/2,0);
+  const tauB=(C-D)/Math.sqrt((n0-n1)*(n0-n2));
+  const z=3*(C-D)/Math.sqrt(n*(n-1)*(2*n+5)/2);
+  const p=2*(1-normalCDF(Math.abs(z)));
+  return {tau:tauB,z,p:Math.min(Math.max(p,0),1),n,C,D};
+}
+function ksOneSampleNormal(x){
+  const n=x.length, m=mean(x), s=sd(x);
+  const sorted=[...x].sort((a,b)=>a-b);
+  let D=0;
+  sorted.forEach((v,i)=>{
+    const F=normalCDF((v-m)/s);
+    D=Math.max(D, (i+1)/n - F, F - i/n);
+  });
+  const t=(Math.sqrt(n)+0.12+0.11/Math.sqrt(n))*D;
+  const p=kolmogorovQ(t);
+  return {D,p:Math.min(Math.max(p,0),1),n,mean:m,sd:s};
+}
+function ksTwoSample(x,y){
+  const n1=x.length,n2=y.length;
+  const all=[...new Set([...x,...y])].sort((a,b)=>a-b);
+  const sx=[...x].sort((a,b)=>a-b), sy=[...y].sort((a,b)=>a-b);
+  function ecdf(sorted,v){ let lo=0,hi=sorted.length; while(lo<hi){const mid=(lo+hi)>>1; if(sorted[mid]<=v) lo=mid+1; else hi=mid;} return lo/sorted.length; }
+  let D=0;
+  all.forEach(v=>{ D=Math.max(D, Math.abs(ecdf(sx,v)-ecdf(sy,v))); });
+  const neff=n1*n2/(n1+n2);
+  const t=Math.sqrt(neff)*D;
+  const p=kolmogorovQ(t);
+  return {D,p:Math.min(Math.max(p,0),1),n1,n2};
+}
+function shapiroWilkApprox(x){
+  const n=x.length, m=mean(x);
+  const sorted=[...x].sort((a,b)=>a-b);
+  const mi=[]; for(let i=1;i<=n;i++) mi.push(normalQuantile((i-0.375)/(n+0.25)));
+  const ss=mi.reduce((s,v)=>s+v*v,0);
+  const ci=mi.map(v=>v/Math.sqrt(ss));
+  const num=sorted.reduce((s,v,i)=>s+ci[i]*v,0);
+  const denom=sorted.reduce((s,v)=>s+(v-m)**2,0);
+  let W=(num*num)/denom;
+  W=Math.min(W,0.999999);
+  let z;
+  if(n<=11){
+    const gamma=-2.273+0.459*n;
+    const arg=Math.max(gamma-Math.log(1-W),1e-10);
+    const y=-Math.log(arg);
+    const mu=0.5440-0.39978*n+0.025054*n*n-0.0006714*n*n*n;
+    const sigma=Math.exp(1.3822-0.77857*n+0.062767*n*n-0.0020322*n*n*n);
+    z=(y-mu)/sigma;
+  } else {
+    const y=Math.log(1-W);
+    const lnN=Math.log(n);
+    const mu=-1.5861-0.31082*lnN-0.083751*lnN*lnN+0.0038915*lnN**3;
+    const sigma=Math.exp(-0.4803-0.082676*lnN+0.0030302*lnN*lnN);
+    z=(y-mu)/sigma;
+  }
+  const p=1-normalCDF(z);
+  return {W, p:Math.min(Math.max(p,0),1), n};
+}
+function andersonDarling(x){
+  const n=x.length, m=mean(x), s=sd(x);
+  const sorted=[...x].sort((a,b)=>a-b).map(v=>(v-m)/s);
+  const F=sorted.map(v=>clamp01(normalCDF(v)));
+  let S=0;
+  for(let i=1;i<=n;i++) S += (2*i-1)*(Math.log(F[i-1]) + Math.log(1-F[n-i]));
+  const A2=-n - S/n;
+  const A2star=A2*(1+0.75/n+2.25/(n*n));
+  let p;
+  if(A2star>=0.6) p=Math.exp(1.2937-5.709*A2star+0.0186*A2star*A2star);
+  else if(A2star>0.34) p=Math.exp(0.9177-4.279*A2star-1.38*A2star*A2star);
+  else if(A2star>0.2) p=1-Math.exp(-8.318+42.796*A2star-59.938*A2star*A2star);
+  else p=1-Math.exp(-13.436+101.14*A2star-223.73*A2star*A2star);
+  return {A2:A2star,p:Math.min(Math.max(p,0),1),n};
+}
+function runsTest(seq){
+  const n=seq.length;
+  const n1=seq.filter(v=>v===1).length, n2=n-n1;
+  let R=1;
+  for(let i=1;i<n;i++) if(seq[i]!==seq[i-1]) R++;
+  const mu=2*n1*n2/n+1;
+  const sigma2=2*n1*n2*(2*n1*n2-n)/(n*n*(n-1));
+  const z=(Math.abs(R-mu)-0.5)/Math.sqrt(sigma2);
+  const p=2*(1-normalCDF(Math.abs(z)));
+  return {R,n1,n2,mu,p:Math.min(Math.max(p,0),1)};
+}
+
+/* ================= データパース ================= */
+let DATA = {headers:[], rows:[], colTypes:{}};
+
+function parseData(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim().length>0);
+  if(lines.length<2) return null;
+  const delim = lines[0].includes("\t") ? "\t" : ",";
+  const headers = lines[0].split(delim).map(h=>h.trim());
+  const rows = lines.slice(1).map(l=>l.split(delim).map(c=>c.trim()));
+  const colTypes={};
+  headers.forEach((h,ci)=>{
+    const vals=rows.map(r=>r[ci]).filter(v=>v!==undefined && v!=="");
+    const allNum = vals.length>0 && vals.every(v=>!Number.isNaN(parseFloat(v)) && /^-?\d*\.?\d+(e-?\d+)?$/i.test(v));
+    colTypes[h]=allNum?"numeric":"categorical";
+  });
+  return {headers, rows, colTypes};
+}
+function colValues(name){
+  const idx=DATA.headers.indexOf(name);
+  return DATA.rows.map(r=>r[idx]);
+}
+function colNumeric(name){ return colValues(name).map(v=>parseFloat(v)); }
+function colLevels(name){ return [...new Set(colValues(name).filter(v=>v!==""))]; }
+
+function alignedRows(names){
+  const idxs=names.map(n=>DATA.headers.indexOf(n));
+  const out=[];
+  DATA.rows.forEach(r=>{
+    if(idxs.every(i=>r[i]!==undefined && r[i]!=="")) out.push(idxs.map(i=>r[i]));
+  });
+  return out;
+}
+
+/* ================= サンプルデータ ================= */
+const SAMPLES = {
+  mwu: {label:"2群比較用(独立)", csv:"id,group,score\n1,A,15\n2,A,18\n3,A,12\n4,A,20\n5,A,16\n6,B,9\n7,B,11\n8,B,14\n9,B,8\n10,B,13"},
+  paired: {label:"前後比較用(対応あり)", csv:"id,pre,post\n1,52,58\n2,48,50\n3,61,66\n4,45,44\n5,58,63\n6,50,55\n7,55,54\n8,49,52"},
+  kw: {label:"3群比較用", csv:"id,group,score\n1,A,22\n2,A,25\n3,A,19\n4,B,30\n5,B,28\n6,B,33\n7,C,15\n8,C,18\n9,C,20"},
+  friedman: {label:"反復測定(3条件)用", csv:"id,T1,T2,T3\n1,4,6,7\n2,3,5,6\n3,5,7,8\n4,2,4,5\n5,6,7,9\n6,4,5,7"},
+  chisq: {label:"独立性検定(分割表)用", csv:"id,gender,pref\n1,male,A\n2,male,B\n3,female,A\n4,female,A\n5,male,A\n6,female,B\n7,male,B\n8,female,A\n9,male,A\n10,female,B"},
+  mcnemar: {label:"McNemar検定(前後2値)用", csv:"id,before,after\n1,no,yes\n2,yes,yes\n3,no,no\n4,no,yes\n5,yes,no\n6,no,yes\n7,yes,yes\n8,no,no"},
+  cochran: {label:"Cochran Q(反復2値)用", csv:"id,taskA,taskB,taskC\n1,1,1,0\n2,1,0,0\n3,0,1,0\n4,1,1,1\n5,0,0,0\n6,1,1,0\n7,1,0,1\n8,0,1,0"},
+  corr: {label:"相関(Spearman/Kendall)用", csv:"id,x,y\n1,3,7\n2,5,9\n3,2,4\n4,8,12\n5,6,10\n6,1,3\n7,7,11\n8,4,8"},
+  single: {label:"単一変数(正規性/ラン)用", csv:"id,value\n1,12.1\n2,13.4\n3,11.8\n4,15.2\n5,12.9\n6,14.0\n7,13.1\n8,12.5\n9,16.0\n10,11.2"}
+};
+
+/* ================= 検定定義 ================= */
+const TESTS = [
+{id:"mwu", cat:"【差の検定】数値・順位データ", name:"マン・ホイットニーのU検定", need:"数値1列・カテゴリ1列(2水準)",
+ slots:[{key:"value",label:"値(数値変数)",kind:"numeric"},{key:"group",label:"群(カテゴリ変数・2水準)",kind:"categorical"}],
+ run(map){
+   const levels=colLevels(map.group);
+   if(levels.length!==2) throw "群変数は2水準である必要があります(現在"+levels.length+"水準)。3水準以上ならKruskal-Wallis検定を使用してください。";
+   const rows=alignedRows([map.value,map.group]);
+   const x1=rows.filter(r=>r[1]===levels[0]).map(r=>parseFloat(r[0]));
+   const x2=rows.filter(r=>r[1]===levels[1]).map(r=>parseFloat(r[0]));
+   const med1 = calcMedian(x1); 
+   const med2 = calcMedian(x2);
+   const res=mannWhitney(x1,x2);
+   res.levels=levels; res.groupsN=[x1.length,x2.length];
+   res.medians = [med1, med2];
+   res.rawData = [{label: levels[0], data: x1}, {label: levels[1], data: x2}];
+   return res;
+ },
+ stat(res){ return [
+   {k:"U統計量",v:fmt(res.U,2)},{k:"z",v:fmt(res.z,3)},{k:"p値",v:fmtP(res.p),p:true},
+   {k:"効果量 r",v:fmt(res.effect,3)},
+   {k:"中央値", v: `${res.levels[0]}: ${fmt(res.medians[0],1)}, ${res.levels[1]}: ${fmt(res.medians[1],1)}`}
+ ]; },
+ interp(res){ return "群"+res.levels[0]+"(n="+res.groupsN[0]+")と群"+res.levels[1]+"(n="+res.groupsN[1]+")の間で、順位に基づく分布の位置に統計的に有意な差が"+(res.p<0.05?"認められました。":"認められませんでした。"); },
+ apa(map,res){ return "マン・ホイットニーのU検定を行った結果、"+map.group+"("+res.levels[0]+" vs "+res.levels[1]+")間で"+map.value+"に"+(res.p<0.05?"有意な差が認められた":"有意な差は認められなかった")+"(<span class='num'>U</span> = "+fmt(res.U,1)+", <span class='num'>z</span> = "+fmt(res.z,2)+", <span class='num'>p</span> = "+fmtP(res.p)+", <span class='num'>r</span> = "+fmt(res.effect,2)+")。"; },
+ rcode(map){ return {main:"wilcox.test("+jsVar(map.value)+" ~ "+jsVar(map.group)+", data = df, exact = FALSE, correct = TRUE)"}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawBoxplot(res.rawData, 'resultChart'); }
+},
+{id:"wilcoxon", cat:"【差の検定】数値・順位データ", name:"ウィルコクソンの符号順位検定", need:"数値2列(同一対象の前後など)",
+ slots:[{key:"v1",label:"変数1(例:前)",kind:"numeric"},{key:"v2",label:"変数2(例:後)",kind:"numeric"}],
+ run(map){
+   const rows=alignedRows([map.v1,map.v2]);
+   const x=rows.map(r=>parseFloat(r[0])), y=rows.map(r=>parseFloat(r[1]));
+   const res = wilcoxonSigned(x,y);
+   res.medians = [calcMedian(x), calcMedian(y)];
+   res.labels = [map.v1, map.v2];
+   res.rawData = [{label: map.v1, data: x}, {label: map.v2, data: y}];
+   return res;
+ },
+ stat(res){ return [
+   {k:"T統計量",v:fmt(res.T,2)},{k:"z",v:fmt(res.z,3)},{k:"p値",v:fmtP(res.p),p:true},{k:"効果量 r",v:fmt(res.effect,3)},
+   {k:"中央値", v: `${res.labels[0]}: ${fmt(res.medians[0],1)}, ${res.labels[1]}: ${fmt(res.medians[1],1)}`}
+ ]; },
+ interp(res){ return "n="+res.n+"組(差が0の"+res.zeroCount+"組を除外)について、対応する2条件間の分布に統計的に有意な差が"+(res.p<0.05?"認められました。":"認められませんでした。"); },
+ apa(map,res){ return "ウィルコクソンの符号順位検定を行った結果、"+map.v1+"と"+map.v2+"の間に"+(res.p<0.05?"有意な差が認められた":"有意な差は認められなかった")+"(<span class='num'>T</span> = "+fmt(res.T,1)+", <span class='num'>z</span> = "+fmt(res.z,2)+", <span class='num'>p</span> = "+fmtP(res.p)+", <span class='num'>r</span> = "+fmt(res.effect,2)+")。"; },
+ rcode(map){ return {main:"wilcox.test("+jsVar(map.v1)+", "+jsVar(map.v2)+", paired = TRUE, exact = FALSE, correct = TRUE)"}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawBoxplot(res.rawData, 'resultChart'); }
+},
+{id:"sign", cat:"【差の検定】数値・順位データ", name:"符号検定", need:"数値2列(同一対象の前後など)",
+ slots:[{key:"v1",label:"変数1(例:前)",kind:"numeric"},{key:"v2",label:"変数2(例:後)",kind:"numeric"}],
+ run(map){
+   const rows=alignedRows([map.v1,map.v2]);
+   const x=rows.map(r=>parseFloat(r[0])), y=rows.map(r=>parseFloat(r[1]));
+   const res = signTest(x,y);
+   res.medians = [calcMedian(x), calcMedian(y)];
+   res.labels = [map.v1, map.v2];
+   res.rawData = [{label: map.v1, data: x}, {label: map.v2, data: y}];
+   return res;
+ },
+ stat(res){ return [
+   {k:"+の数",v:res.pos},{k:"-の数",v:res.neg},{k:"タイ(差0)",v:res.zero},{k:"p値",v:fmtP(res.p),p:true},
+   {k:"中央値", v: `${res.labels[0]}: ${fmt(res.medians[0],1)}, ${res.labels[1]}: ${fmt(res.medians[1],1)}`}
+ ]; },
+ interp(res){ return "n="+res.n+"組(タイ"+res.zero+"組を除く)の符号に基づき、変化の方向に統計的な偏りが"+(res.p<0.05?"認められました。":"認められませんでした。"); },
+ apa(map,res){ return "符号検定を行った結果、"+map.v1+"から"+map.v2+"への変化の方向に"+(res.p<0.05?"有意な偏りが認められた":"有意な偏りは認められなかった")+"(+ = "+res.pos+", - = "+res.neg+", <span class='num'>p</span> = "+fmtP(res.p)+", 両側二項検定)。"; },
+ rcode(map){ return {main:"d <- "+jsVar(map.v1)+" - "+jsVar(map.v2)+"\nbinom.test(sum(d > 0), sum(d != 0), p = 0.5)  # 符号検定"}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawBoxplot(res.rawData, 'resultChart'); }
+},
+{id:"kw", cat:"【差の検定】数値・順位データ", name:"クラスカル・ウォリス検定", need:"数値1列・カテゴリ1列(3水準以上)",
+ slots:[{key:"value",label:"値(数値変数)",kind:"numeric"},{key:"group",label:"群(カテゴリ変数)",kind:"categorical"}],
+ run(map){
+   const levels=colLevels(map.group);
+   if(levels.length<2) throw "群変数の水準が2未満です。";
+   const rows=alignedRows([map.value,map.group]);
+   const groups=levels.map(lv=>rows.filter(r=>r[1]===lv).map(r=>parseFloat(r[0])));
+   const res=kruskalWallis(groups); 
+   res.levels=levels; 
+   res.rawData = levels.map((lv, i) => ({label: lv, data: groups[i]}));
+   return res;
+ },
+ stat(res){ 
+   const meds = res.levels.map((lv,i)=>`${lv}: ${fmt(res.groupInfo[i].med,1)}`).join(", ");
+   return [
+     {k:"H統計量",v:fmt(res.H,3)},{k:"df",v:res.df},{k:"p値",v:fmtP(res.p),p:true},
+     {k:"中央値", v: meds}
+   ]; 
+ },
+ interp(res){ 
+   let txt = res.k+"群(N="+res.N+")の間で、分布に統計的に有意な差が"+(res.p<0.05?"認められました。":"認められませんでした。"); 
+   if(res.p < 0.05 && res.comparisons) {
+       txt += "<br><br><b>【事後検定 (Dunn検定 + Bonferroni補正)】</b><br>";
+       res.comparisons.forEach(c => {
+           const l1 = res.levels[c.pair[0]], l2 = res.levels[c.pair[1]];
+           const mark = c.p < 0.05 ? " *" : " (ns)";
+           txt += `・${l1} vs ${l2}: p = ${fmtP(c.p)}${mark}<br>`;
+       });
+   }
+   return txt;
+ },
+ apa(map,res){ 
+   let base = "クラスカル・ウォリス検定を行った結果、"+map.group+"の水準間で"+map.value+"に"+(res.p<0.05?"有意な差が認められた":"有意な差は認められなかった")+"(<span class='num'>H</span>("+res.df+") = "+fmt(res.H,2)+", <span class='num'>p</span> = "+fmtP(res.p)+")。"; 
+   if (res.p < 0.05 && res.comparisons) {
+     base += " 続いてBonferroni補正を伴うDunnの事後検定を実施した結果、";
+     const sigs = res.comparisons.filter(c => c.p < 0.05);
+     if (sigs.length > 0) {
+       const pairs = sigs.map(c => res.levels[c.pair[0]] + "と" + res.levels[c.pair[1]] + "の間(<span class='num'>p</span> = " + fmtP(c.p) + ")");
+       base += pairs.join("、および") + "に有意な差が認められた。";
+     } else {
+       base += "いずれのペア間にも有意な差は認められなかった。";
+     }
+   }
+   return base;
+ },
+ rcode(map){ return {main:`kruskal.test(${jsVar(map.value)} ~ ${jsVar(map.group)}, data = df)
+
+# 事後検定 (Dunn検定 + Bonferroni補正)
+if (!requireNamespace("FSA", quietly = TRUE)) {
+  install.packages("FSA", repos = "https://cloud.r-project.org")
+}
+library(FSA)
+dunnTest(${jsVar(map.value)} ~ ${jsVar(map.group)}, data = df, method = "bonferroni")`}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawBoxplot(res.rawData, 'resultChart'); }
+},
+{id:"friedman", cat:"【差の検定】数値・順位データ", name:"フリードマン検定", need:"数値3列以上(反復測定・横持ち)",
+ slots:[{key:"cols",label:"条件の列(3列以上を選択)",kind:"numeric",multi:true,min:3}],
+ run(map){
+   const cols=map.cols;
+   const rows=alignedRows(cols).map(r=>r.map(parseFloat));
+   const res=friedman(rows); 
+   res.cols=cols; 
+   res.medians = cols.map((c,i)=>calcMedian(rows.map(r=>r[i])));
+   res.rawData = cols.map((c,i)=>({label: c, data: rows.map(r=>r[i])}));
+   return res;
+ },
+ stat(res){ 
+   const meds = res.cols.map((c,i)=>`${c}: ${fmt(res.medians[i],1)}`).join(", ");
+   return [
+     {k:"Q統計量",v:fmt(res.Q,3)},{k:"df",v:res.df},{k:"p値",v:fmtP(res.p),p:true},
+     {k:"中央値", v: meds}
+   ]; 
+ },
+ interp(res){ 
+   let txt = "対象者n="+res.n+"、条件数k="+res.k+"の反復測定において、条件間に統計的に有意な差が"+(res.p<0.05?"認められました。":"認められませんでした。"); 
+   if(res.p < 0.05 && res.comparisons) {
+       txt += "<br><br><b>【事後検定 (Wilcoxon符号順位検定 + Bonferroni補正)】</b><br>";
+       res.comparisons.forEach(c => {
+           const l1 = res.cols[c.pair[0]], l2 = res.cols[c.pair[1]];
+           const mark = c.p < 0.05 ? " *" : " (ns)";
+           txt += `・${l1} vs ${l2}: p = ${fmtP(c.p)}${mark}<br>`;
+       });
+   }
+   return txt;
+ },
+ apa(map,res){ 
+   let base = "フリードマン検定を行った結果、"+res.cols.join("・")+"の各条件間に"+(res.p<0.05?"有意な差が認められた":"有意な差は認められなかった")+"(<span class='num'>χ²</span>("+res.df+") = "+fmt(res.Q,2)+", <span class='num'>p</span> = "+fmtP(res.p)+")。"; 
+   if (res.p < 0.05 && res.comparisons) {
+     base += " 続いてBonferroni補正を伴うWilcoxon符号順位検定による事後検定を実施した結果、";
+     const sigs = res.comparisons.filter(c => c.p < 0.05);
+     if (sigs.length > 0) {
+       const pairs = sigs.map(c => res.cols[c.pair[0]] + "と" + res.cols[c.pair[1]] + "の間(<span class='num'>p</span> = " + fmtP(c.p) + ")");
+       base += pairs.join("、および") + "に有意な差が認められた。";
+     } else {
+       base += "いずれのペア間にも有意な差は認められなかった。";
+     }
+   }
+   return base;
+ },
+ rcode(map){ return {main:`m <- as.matrix(df[, c(${map.cols.map(c=>'"'+c+'"').join(", ")})])
+friedman.test(m)
+
+# 事後検定 (Wilcoxon + Bonferroni補正)
+pairwise.wilcox.test(c(m), rep(colnames(m), each=nrow(m)), p.adjust.method="bonferroni", paired=TRUE)`}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawBoxplot(res.rawData, 'resultChart'); }
+},
+{id:"chisq", cat:"【比率・独立性の検定】カテゴリデータ", name:"カイ二乗検定(独立性)", need:"カテゴリ2列",
+ slots:[{key:"a",label:"変数A(カテゴリ)",kind:"categorical"},{key:"b",label:"変数B(カテゴリ)",kind:"categorical"}],
+ run(map){
+   const rows=alignedRows([map.a,map.b]);
+   const {table,levelsA,levelsB}=buildContingency(rows.map(r=>r[0]),rows.map(r=>r[1]));
+   const res=chiSquareIndep(table); res.table=table; res.levelsA=levelsA; res.levelsB=levelsB; return res;
+ },
+ stat(res){ const arr=[{k:"χ²",v:fmt(res.chi2,3)},{k:"df",v:res.df},{k:"p値",v:fmtP(res.p),p:true}];
+   if(res.pY!==null) arr.push({k:"p値(Yates補正)",v:fmtP(res.pY)});
+   return arr; },
+ interp(res){ return res.levelsA.length+"×"+res.levelsB.length+"の分割表(N="+res.total+")において、2変数間に統計的な関連が"+(res.p<0.05?"認められました。":"認められませんでした。"); },
+ apa(map,res){ return "カイ二乗検定を行った結果、"+map.a+"と"+map.b+"の間に"+(res.p<0.05?"有意な関連が認められた":"有意な関連は認められなかった")+"(<span class='num'>χ²</span>("+res.df+") = "+fmt(res.chi2,2)+", <span class='num'>p</span> = "+fmtP(res.p)+", <span class='num'>N</span> = "+res.total+")。"; },
+ rcode(map){ return {main:"tbl <- table("+jsVar(map.a)+", "+jsVar(map.b)+")\nchisq.test(tbl)"}; },
+ draw(res){ renderContingencyTable(res.table, res.levelsA, res.levelsB, 'extraArea'); }
+},
+{id:"fisher", cat:"【比率・独立性の検定】カテゴリデータ", name:"フィッシャーの正確検定", need:"カテゴリ2列(各2水準・2×2表)",
+ slots:[{key:"a",label:"変数A(カテゴリ・2水準)",kind:"categorical"},{key:"b",label:"変数B(カテゴリ・2水準)",kind:"categorical"}],
+ run(map){
+   const rows=alignedRows([map.a,map.b]);
+   const {table,levelsA,levelsB}=buildContingency(rows.map(r=>r[0]),rows.map(r=>r[1]));
+   if(levelsA.length!==2||levelsB.length!==2) throw "フィッシャーの正確検定は2×2の分割表(各変数2水準)にのみ対応しています。";
+   const res=fisherExact2x2(table[0][0],table[0][1],table[1][0],table[1][1]);
+   res.levelsA=levelsA; res.levelsB=levelsB; res.table=table; return res;
+ },
+ stat(res){ return [{k:"p値(両側)",v:fmtP(res.p),p:true}]; },
+ interp(res){ return "2×2分割表において、2変数間に統計的な関連が"+(res.p<0.05?"認められました。":"認められませんでした。(標本が小さい場合に適した正確検定です)"); },
+ apa(map,res){ return "フィッシャーの正確検定を行った結果、"+map.a+"と"+map.b+"の間に"+(res.p<0.05?"有意な関連が認められた":"有意な関連は認められなかった")+"(<span class='num'>p</span> = "+fmtP(res.p)+", 両側検定)。"; },
+ rcode(map){ return {main:"tbl <- table("+jsVar(map.a)+", "+jsVar(map.b)+")\nfisher.test(tbl)"}; },
+ draw(res){ renderContingencyTable(res.table, res.levelsA, res.levelsB, 'extraArea'); }
+},
+{id:"mcnemar", cat:"【比率・独立性の検定】カテゴリデータ", name:"マクネマー検定", need:"カテゴリ2列(各2水準・対応あり)",
+ slots:[{key:"a",label:"変数A(例:処置前・2水準)",kind:"categorical"},{key:"b",label:"変数B(例:処置後・2水準)",kind:"categorical"}],
+ run(map){
+   const rows=alignedRows([map.a,map.b]);
+   const {table,levelsA,levelsB}=buildContingency(rows.map(r=>r[0]),rows.map(r=>r[1]));
+   if(levelsA.length!==2||levelsB.length!==2) throw "マクネマー検定は各変数2水準の2×2表に対応しています。";
+   const res=mcnemar(table[0][1],table[1][0]);
+   res.levelsA=levelsA; res.levelsB=levelsB; res.table=table; return res;
+ },
+ stat(res){ const arr=[{k:"χ²(補正)",v:fmt(res.chi2,3)},{k:"p値",v:fmtP(res.p),p:true}];
+   if(res.pExact!==null) arr.push({k:"p値(正確二項)",v:fmtP(res.pExact)});
+   return arr; },
+ interp(res){ return "不一致セル(b="+res.b+", c="+res.c+")に基づき、前後の変化に統計的な偏りが"+(res.p<0.05?"認められました。":"認められませんでした。"); },
+ apa(map,res){ return "マクネマー検定(連続性補正あり)を行った結果、"+map.a+"から"+map.b+"への変化に"+(res.p<0.05?"有意な偏りが認められた":"有意な偏りは認められなかった")+"(<span class='num'>χ²</span>(1) = "+fmt(res.chi2,2)+", <span class='num'>p</span> = "+fmtP(res.p)+")。"; },
+ rcode(map){ return {main:"tbl <- table("+jsVar(map.a)+", "+jsVar(map.b)+")\nmcnemar.test(tbl, correct = TRUE)"}; },
+ draw(res){ renderContingencyTable(res.table, res.levelsA, res.levelsB, 'extraArea'); }
+},
+{id:"cochran", cat:"【比率・独立性の検定】カテゴリデータ", name:"コクランのQ検定", need:"0/1の数値列3列以上(反復2値)",
+ slots:[{key:"cols",label:"条件の列(3列以上・値は0/1)",kind:"numeric",multi:true,min:3}],
+ run(map){
+   const cols=map.cols;
+   const rows=alignedRows(cols).map(r=>r.map(v=>parseFloat(v)));
+   rows.forEach(r=>r.forEach(v=>{ if(v!==0&&v!==1) throw "コクランのQ検定は各列の値が0/1である必要があります。"; }));
+   const res=cochranQ(rows); res.cols=cols; return res;
+ },
+ stat(res){ return [{k:"Q統計量",v:fmt(res.Q,3)},{k:"df",v:res.df},{k:"p値",v:fmtP(res.p),p:true}]; },
+ interp(res){ return "対象者N="+res.N+"、条件数k="+res.k+"の反復2値データにおいて、条件間に統計的に有意な差が"+(res.p<0.05?"認められました。":"認められませんでした。"); },
+ apa(map,res){ return "コクランのQ検定を行った結果、"+res.cols.join("・")+"の各条件間に"+(res.p<0.05?"有意な差が認められた":"有意な差は認められなかった")+"(<span class='num'>Q</span>("+res.df+") = "+fmt(res.Q,2)+", <span class='num'>p</span> = "+fmtP(res.p)+")。"; },
+ rcode(map){ return {main:`if (!requireNamespace("DescTools", quietly = TRUE)) {
+  install.packages("DescTools", repos = "https://cloud.r-project.org")
+}
+library(DescTools)
+m <- as.matrix(df[, c(${map.cols.map(c=>'"'+c+'"').join(", ")})])
+CochranQTest(m)`}; },
+ draw(res){ 
+    document.getElementById('extraArea').innerHTML = '';
+    const ratios = res.Cj.map(v => v/res.N);
+    drawBarChart(res.cols, ratios, 'resultChart', '各条件における 1 (Yes) の割合'); 
+ }
+},
+{id:"spearman", cat:"【相関関係】数値・順位データ", name:"スピアマンの順位相関係数", need:"数値2列",
+ slots:[{key:"v1",label:"変数1",kind:"numeric"},{key:"v2",label:"変数2",kind:"numeric"}],
+ run(map){
+   const rows=alignedRows([map.v1,map.v2]);
+   const x=rows.map(r=>parseFloat(r[0])), y=rows.map(r=>parseFloat(r[1]));
+   const res = spearman(x,y); res.x=x; res.y=y; res.xName=map.v1; res.yName=map.v2; return res;
+ },
+ stat(res){ return [{k:"ρ (rho)",v:fmt(res.rho,3)},{k:"t",v:fmt(res.t,3)},{k:"df",v:res.df},{k:"p値",v:fmtP(res.p),p:true}]; },
+ interp(res){ return "n="+res.n+"において、2変数間に統計的に有意な順位相関が"+(res.p<0.05?"認められました(ρ = "+fmt(res.rho,2)+")。":"認められませんでした。"); },
+ apa(map,res){ return "スピアマンの順位相関係数を算出した結果、"+map.v1+"と"+map.v2+"の間に"+(res.p<0.05?"有意な相関が認められた":"有意な相関は認められなかった")+"(<span class='num'>ρ</span> = "+fmt(res.rho,2)+", <span class='num'>p</span> = "+fmtP(res.p)+", <span class='num'>n</span> = "+res.n+")。"; },
+ rcode(map){ return {main:"cor.test("+jsVar(map.v1)+", "+jsVar(map.v2)+", method = \"spearman\")"}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawScatter(res.x, res.y, res.xName, res.yName, 'resultChart'); }
+},
+{id:"kendall", cat:"【相関関係】数値・順位データ", name:"ケンドールのタウ", need:"数値2列",
+ slots:[{key:"v1",label:"変数1",kind:"numeric"},{key:"v2",label:"変数2",kind:"numeric"}],
+ run(map){
+   const rows=alignedRows([map.v1,map.v2]);
+   const x=rows.map(r=>parseFloat(r[0])), y=rows.map(r=>parseFloat(r[1]));
+   const res = kendallTau(x,y); res.x=x; res.y=y; res.xName=map.v1; res.yName=map.v2; return res;
+ },
+ stat(res){ return [{k:"τ (tau-b)",v:fmt(res.tau,3)},{k:"z(近似)",v:fmt(res.z,3)},{k:"p値",v:fmtP(res.p),p:true}]; },
+ interp(res){ return "n="+res.n+"において、2変数間に統計的に有意な順位関連が"+(res.p<0.05?"認められました(τ = "+fmt(res.tau,2)+")。":"認められませんでした。"); },
+ apa(map,res){ return "ケンドールのタウ(τ_b)を算出した結果、"+map.v1+"と"+map.v2+"の間に"+(res.p<0.05?"有意な相関が認められた":"有意な相関は認められなかった")+"(<span class='num'>τ</span> = "+fmt(res.tau,2)+", <span class='num'>p</span> = "+fmtP(res.p)+", <span class='num'>n</span> = "+res.n+")。"; },
+ rcode(map){ return {main:"cor.test("+jsVar(map.v1)+", "+jsVar(map.v2)+", method = \"kendall\")"}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawScatter(res.x, res.y, res.xName, res.yName, 'resultChart'); }
+},
+{id:"ks1", cat:"【分布の形状・正規性の確認】", name:"KS検定(1標本・正規性)", need:"数値1列",
+ slots:[{key:"v1",label:"変数(数値)",kind:"numeric"}],
+ run(map){ const x=colNumeric(map.v1).filter(v=>!Number.isNaN(v)); const res = ksOneSampleNormal(x); res.data=x; return res; },
+ stat(res){ return [{k:"D統計量",v:fmt(res.D,3)},{k:"p値",v:fmtP(res.p),p:true},{k:"n",v:res.n}]; },
+ interp(res){ return "標本平均・標準偏差を用いた正規分布との適合を検定した結果、正規分布からのずれが"+(res.p<0.05?"統計的に有意でした(正規性を仮定しにくい)。":"統計的に有意ではありませんでした(正規性の仮定に反する強い証拠はない)。"); },
+ apa(map,res){ return "コルモゴロフ・スミルノフ検定(1標本)を行った結果、"+map.v1+"の分布は正規分布と"+(res.p<0.05?"有意に異なっていた":"有意には異なっていなかった")+"(<span class='num'>D</span> = "+fmt(res.D,3)+", <span class='num'>p</span> = "+fmtP(res.p)+", <span class='num'>n</span> = "+res.n+")。"; },
+ rcode(map){ return {main:"x <- "+jsVar(map.v1)+"\nks.test(x, \"pnorm\", mean(x), sd(x))"}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawHistogram(res.data, 'resultChart', 'データの分布形状'); }
+},
+{id:"ks2", cat:"【分布の形状・正規性の確認】", name:"KS検定(2標本の分布比較)", need:"数値1列・カテゴリ1列(2水準)",
+ slots:[{key:"value",label:"値(数値変数)",kind:"numeric"},{key:"group",label:"群(カテゴリ変数・2水準)",kind:"categorical"}],
+ run(map){
+   const levels=colLevels(map.group);
+   if(levels.length!==2) throw "群変数は2水準である必要があります。";
+   const rows=alignedRows([map.value,map.group]);
+   const x=rows.filter(r=>r[1]===levels[0]).map(r=>parseFloat(r[0]));
+   const y=rows.filter(r=>r[1]===levels[1]).map(r=>parseFloat(r[0]));
+   const res=ksTwoSample(x,y); res.levels=levels; 
+   res.rawData = [{label: levels[0], data: x}, {label: levels[1], data: y}];
+   return res;
+ },
+ stat(res){ return [{k:"D統計量",v:fmt(res.D,3)},{k:"p値",v:fmtP(res.p),p:true},{k:"n1,n2",v:res.n1+", "+res.n2}]; },
+ interp(res){ return "2群の分布(形状・位置を含む)に統計的な差が"+(res.p<0.05?"認められました。":"認められませんでした。"); },
+ apa(map,res){ return "2標本コルモゴロフ・スミルノフ検定を行った結果、"+res.levels[0]+"群と"+res.levels[1]+"群の"+map.value+"の分布に"+(res.p<0.05?"有意な差が認められた":"有意な差は認められなかった")+"(<span class='num'>D</span> = "+fmt(res.D,3)+", <span class='num'>p</span> = "+fmtP(res.p)+")。"; },
+ rcode(map){
+   const levels=colLevels(map.group);
+   const gv=jsVar(map.group), vv=jsVar(map.value);
+   return {main:"x <- "+vv+"["+gv+" == \""+levels[0]+"\"]\ny <- "+vv+"["+gv+" == \""+(levels[1]||"")+"\"]\nks.test(x, y)"};
+ },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawBoxplot(res.rawData, 'resultChart'); }
+},
+{id:"shapiro", cat:"【分布の形状・正規性の確認】", name:"シャピロ・ウィルク検定(正規性)", need:"数値1列",
+ slots:[{key:"v1",label:"変数(数値)",kind:"numeric"}],
+ run(map){ const x=colNumeric(map.v1).filter(v=>!Number.isNaN(v)); if(x.length<3) throw "3件以上のデータが必要です。"; const res=shapiroWilkApprox(x); res.data=x; return res; },
+ stat(res){ return [{k:"W統計量",v:fmt(res.W,4)},{k:"p値",v:fmtP(res.p),p:true},{k:"n",v:res.n}]; },
+ interp(res){ return "n="+res.n+"のデータについて、正規性からのずれが"+(res.p<0.05?"統計的に有意でした(正規性を仮定しにくい)。":"統計的に有意ではありませんでした(正規性の仮定に反する強い証拠はない)。"); },
+ apa(map,res){ return "シャピロ・ウィルク検定を行った結果、"+map.v1+"は正規分布から"+(res.p<0.05?"有意に偏っていた":"有意には偏っていなかった")+"(<span class='num'>W</span> = "+fmt(res.W,3)+", <span class='num'>p</span> = "+fmtP(res.p)+")。"; },
+ rcode(map){ return {main:"shapiro.test("+jsVar(map.v1)+")"}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawHistogram(res.data, 'resultChart', 'データの分布形状'); }
+},
+{id:"ad", cat:"【分布の形状・正規性の確認】", name:"アンダーソン・ダーリング検定", need:"数値1列",
+ slots:[{key:"v1",label:"変数(数値)",kind:"numeric"}],
+ run(map){ const x=colNumeric(map.v1).filter(v=>!Number.isNaN(v)); if(x.length<8) throw "8件以上のデータを推奨します。"; const res = andersonDarling(x); res.data=x; return res; },
+ stat(res){ return [{k:"A²統計量",v:fmt(res.A2,4)},{k:"p値",v:fmtP(res.p),p:true},{k:"n",v:res.n}]; },
+ interp(res){ return "分布の裾を重視した正規性検定において、正規性からのずれが"+(res.p<0.05?"統計的に有意でした。":"統計的に有意ではありませんでした。"); },
+ apa(map,res){ return "アンダーソン・ダーリング検定を行った結果、"+map.v1+"は正規分布から"+(res.p<0.05?"有意に偏っていた":"有意には偏っていなかった")+"(<span class='num'>A²</span> = "+fmt(res.A2,3)+", <span class='num'>p</span> = "+fmtP(res.p)+")。"; },
+ rcode(map){ return {main:`if (!requireNamespace("nortest", quietly = TRUE)) {
+  install.packages("nortest", repos = "https://cloud.r-project.org")
+}
+library(nortest)
+ad.test(${jsVar(map.v1)})`}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawHistogram(res.data, 'resultChart', 'データの分布形状'); }
+},
+{id:"runs", cat:"【分布の形状・正規性の確認】", name:"ラン検定(ランダム性)", need:"数値1列 または カテゴリ1列(2水準)",
+ slots:[{key:"v1",label:"変数(数値 or カテゴリ2水準)",kind:"any"}],
+ run(map){
+   const idx=DATA.headers.indexOf(map.v1);
+   const isNum = DATA.colTypes[map.v1]==="numeric";
+   let seq;
+   if(isNum){
+     const x=colNumeric(map.v1).filter(v=>!Number.isNaN(v));
+     const med=[...x].sort((a,b)=>a-b)[Math.floor(x.length/2)];
+     seq=x.map(v=>v>med?1:0);
+   } else {
+     const levels=colLevels(map.v1);
+     if(levels.length!==2) throw "カテゴリ変数を用いる場合は2水準である必要があります。";
+     seq=colValues(map.v1).filter(v=>v!=="").map(v=>v===levels[0]?1:0);
+   }
+   const res=runsTest(seq); res.isNum=isNum; res.seq=seq; return res;
+ },
+ stat(res){ return [{k:"ラン数 R",v:res.R},{k:"n1,n2",v:res.n1+", "+res.n2},{k:"p値",v:fmtP(res.p),p:true}]; },
+ interp(res){ return "系列のランダム性を検定した結果、非ランダムな並び(周期性や連続性)が"+(res.p<0.05?"統計的に示唆されました。":"統計的には示唆されませんでした。"); },
+ apa(map,res){ return "ラン検定を行った結果、"+map.v1+"の系列は"+(res.p<0.05?"有意にランダムではなかった":"ランダム性を否定する有意な証拠は認められなかった")+"(<span class='num'>R</span> = "+res.R+", <span class='num'>p</span> = "+fmtP(res.p)+")。"; },
+ rcode(map){ return {main:`if (!requireNamespace("randtests", quietly = TRUE)) {
+  install.packages("randtests", repos = "https://cloud.r-project.org")
+}
+library(randtests)
+x <- ${jsVar(map.v1)}
+runs.test(as.factor(x > median(x)))`}; },
+ draw(res){ document.getElementById('extraArea').innerHTML = ''; drawBarChart(['グループ1 (<=Med/Lv1)', 'グループ2 (>Med/Lv2)'], [res.n1, res.n2], 'resultChart', '各グループの度数'); }
+}
+];
+
+function jsVar(name){ return "df$"+name.replace(/[^A-Za-z0-9_]/g,"_"); }
+
+/* ================= UI 状態 ================= */
+let currentTest=null;
+let currentMapping={};
+let lastResult=null;
+
+/* サンプルセレクト初期化 */
+const sampleSelect=document.getElementById("sampleSelect");
+Object.keys(SAMPLES).forEach(k=>{
+  const opt=document.createElement("option"); opt.value=k; opt.textContent=SAMPLES[k].label; sampleSelect.appendChild(opt);
+});
+
+document.getElementById("sampleBtn").addEventListener("click",()=>{
+  const key=sampleSelect.value || Object.keys(SAMPLES)[0];
+  document.getElementById("dataInput").value=SAMPLES[key].csv;
+  doParse();
+});
+document.getElementById("parseBtn").addEventListener("click",doParse);
+
+/* ドラッグ＆ドロップのイベント設定 */
+const dataInput = document.getElementById("dataInput");
+dataInput.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dataInput.classList.add("dragover");
+});
+dataInput.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    dataInput.classList.remove("dragover");
+});
+dataInput.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dataInput.classList.remove("dragover");
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith(".csv") || file.name.endsWith(".txt") || file.name.endsWith(".tsv"))) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            dataInput.value = evt.target.result;
+            doParse(); 
+        };
+        reader.readAsText(file);
+    } else {
+        alert("CSVまたはテキストファイルをドロップしてください。");
+    }
+});
+
+function doParse(){
+  const text=document.getElementById("dataInput").value;
+  const parsed=parseData(text);
+  const wrap=document.getElementById("previewWrap");
+  if(!parsed){ wrap.innerHTML="<p class='err-msg'>データを解釈できませんでした。ヘッダー行+1行以上のデータが必要です。</p>"; return; }
+  DATA=parsed;
+  renderPreview();
+  renderTestGroups();
+  if(currentTest) renderSlots(currentTest);
+}
+
+function renderPreview(){
+  const wrap=document.getElementById("previewWrap");
+  let html="<div class='preview-wrap'><table class='preview'><thead><tr>";
+  DATA.headers.forEach(h=>{
+    html+="<th>"+h+"<br><select data-col='"+h+"' class='typeSel'>"+
+      "<option value='numeric'"+(DATA.colTypes[h]==="numeric"?" selected":"")+">数値</option>"+
+      "<option value='categorical'"+(DATA.colTypes[h]==="categorical"?" selected":"")+">カテゴリ</option>"+
+      "</select></th>";
+  });
+  html+="</tr></thead><tbody>";
+  DATA.rows.slice(0,12).forEach(r=>{
+    html+="<tr>"+r.map(c=>"<td>"+(c===""?"<i>-</i>":c)+"</td>").join("")+"</tr>";
+  });
+  html+="</tbody></table></div><p class='small-note'>全"+DATA.rows.length+"行 / 先頭12行を表示</p>";
+  wrap.innerHTML=html;
+  wrap.querySelectorAll(".typeSel").forEach(sel=>{
+    sel.addEventListener("change",e=>{
+      DATA.colTypes[e.target.dataset.col]=e.target.value;
+      if(currentTest) renderSlots(currentTest);
+    });
+  });
+}
+
+function renderTestGroups(){
+  const area=document.getElementById("testGroupsContainer");
+  area.innerHTML="";
+
+  const groups = {};
+  TESTS.forEach(t => {
+    if(!groups[t.cat]) groups[t.cat] = [];
+    groups[t.cat].push(t);
+  });
+
+  for(const cat in groups) {
+    const catDiv = document.createElement("div");
+    catDiv.className = "test-category";
+    catDiv.innerHTML = `<div class='test-category-title'>${cat}</div>`;
+    
+    const gridDiv = document.createElement("div");
+    gridDiv.className = "test-groups";
+    
+    groups[cat].forEach(t => {
+      const btn=document.createElement("div");
+      btn.className="test-btn"+(currentTest&&currentTest.id===t.id?" active":"");
+      btn.innerHTML=`<div class='nm'>${t.name}</div><div class='cat'>${t.need}</div>`;
+      btn.addEventListener("click",()=>{ selectTest(t); });
+      gridDiv.appendChild(btn);
+    });
+    
+    catDiv.appendChild(gridDiv);
+    area.appendChild(catDiv);
+  }
+}
+
+function selectTest(t){
+  currentTest=t; currentMapping={}; lastResult=null;
+  renderTestGroups();
+  renderSlots(t);
+  document.getElementById("resultArea").innerHTML="";
+  document.getElementById("apaArea").innerHTML="検定を実行すると、結果に基づいた記述例がここに表示されます。";
+  updateRCode();
+}
+
+function availableCols(kind){
+  if(!DATA.headers.length) return [];
+  if(kind==="any") return DATA.headers;
+  return DATA.headers.filter(h=>DATA.colTypes[h]===kind);
+}
+
+function renderSlots(t){
+  const area=document.getElementById("slotArea");
+  if(!DATA.headers.length){ area.innerHTML="<p class='small-note'>先に手順1でデータを読み込んでください。</p>"; return; }
+  let html="<div class='slot-block'><div class='slot-title'>"+t.name+" - 必要な変数: "+t.need+"</div>";
+  t.slots.forEach(slot=>{
+    const opts=availableCols(slot.kind);
+    if(slot.multi){
+      html+="<label>"+slot.label+"</label><select multiple data-slot='"+slot.key+"' class='slotSel'>"+
+        opts.map(o=>"<option value='"+o+"'>"+o+"</option>").join("")+"</select>";
+    } else {
+      html+="<label>"+slot.label+"</label><select data-slot='"+slot.key+"' class='slotSel'><option value=''>-- 選択 --</option>"+
+        opts.map(o=>"<option value='"+o+"'>"+o+"</option>").join("")+"</select>";
+    }
+  });
+  html+="</div>";
+  area.innerHTML=html;
+  area.querySelectorAll(".slotSel").forEach(sel=>{
+    sel.addEventListener("change",()=>{
+      const key=sel.dataset.slot;
+      if(sel.multiple){
+        currentMapping[key]=[...sel.selectedOptions].map(o=>o.value);
+      } else {
+        currentMapping[key]=sel.value;
+      }
+      updateRCode();
+    });
+  });
+}
+
+document.getElementById("runBtn").addEventListener("click",()=>{
+  const resArea=document.getElementById("resultArea");
+  const apaArea=document.getElementById("apaArea");
+  if(!currentTest){ resArea.innerHTML="<p class='err-msg'>検定を選択してください。</p>"; return; }
+  if(!DATA.headers.length){ resArea.innerHTML="<p class='err-msg'>データを読み込んでください。</p>"; return; }
+  for(const slot of currentTest.slots){
+    const v=currentMapping[slot.key];
+    if(slot.multi){
+      if(!v || v.length < (slot.min||2)){ resArea.innerHTML="<p class='err-msg'>「"+slot.label+"」を"+(slot.min||2)+"つ以上選択してください。</p>"; return; }
+    } else {
+      if(!v){ resArea.innerHTML="<p class='err-msg'>「"+slot.label+"」を選択してください。</p>"; return; }
+    }
+  }
+  try{
+    const res=currentTest.run(currentMapping);
+    lastResult=res;
+    renderResult(currentTest,res);
+    apaArea.innerHTML=currentTest.apa(currentMapping,res);
+    updateRCode();
+  }catch(e){
+    resArea.innerHTML="<p class='err-msg'>"+(typeof e==="string"?e:"計算中にエラーが発生しました: "+e.message)+"</p>";
+  }
+});
+
+function renderResult(t,res){
+  const area=document.getElementById("resultArea");
+  const pField=t.stat(res).find(s=>s.p);
+  const isSig = pField && res.p<0.05;
+  let html="<div class='ticket'>";
+  html+="<div class='stamp "+(isSig?"sig":"nosig")+"'>"+(isSig?"有意差あり":"有意差なし")+" (α=.05)</div>";
+  html+="<h3>"+t.name+" - 結果</h3><div class='stat-grid'>";
+  t.stat(res).forEach(s=>{
+    const cls = s.p ? (res.p<0.05?"p-sig":"p-nosig") : "";
+    html+="<div class='stat-item'><div class='k'>"+s.k+"</div><div class='v "+cls+"'>"+s.v+"</div></div>";
+  });
+  html+="</div><div class='interp'>"+t.interp(res)+"</div>";
+  
+  html+="<div id='extraArea'></div>";
+  html+="<div id='chartContainer'><div id='resultChart'></div></div>";
+  
+  html+="</div>";
+  area.innerHTML=html;
+  
+  if(t.draw) {
+      setTimeout(() => { t.draw(res); }, 50); 
+  }
+}
+
+function highlightRCode(code) {
+    let s = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    s = s.replace(/(#.*)/g, "<span class='r-comment'>$1</span>");
+    s = s.replace(/(".*?")/g, "<span class='r-string'>$1</span>");
+    s = s.replace(/\b(TRUE|FALSE|NA|NULL|function|if|else|for|in|return)\b/g, "<span class='r-keyword'>$1</span>");
+    s = s.replace(/\b([a-zA-Z0-9_\.]+)(?=\()/g, "<span class='r-function'>$1</span>");
+    s = s.replace(/\b(\d+(\.\d+)?)\b/g, "<span class='r-numeric'>$1</span>");
+    return s;
+}
+
+function updateRCode(){
+  const body=document.getElementById("rcodeBody");
+  const note=document.getElementById("rNote");
+  if(!currentTest){ body.innerHTML="検定を選択すると、対応するRコードのテンプレートがここに表示されます。"; note.textContent=""; return; }
+  const complete = currentTest.slots.every(slot=>{
+    const v=currentMapping[slot.key];
+    return slot.multi ? (v && v.length>=(slot.min||2)) : !!v;
+  });
+  
+  let header="# ---- "+currentTest.name+" ----\n";
+  header += "# ※必要なパッケージは自動でインストールおよび読み込みを行います。\n\n";
+
+  if(!complete){
+    header+="# 手順2で変数を指定すると、全データを埋め込んだコードが生成されます。\n";
+    body.innerHTML=highlightRCode(header+"# (変数指定待ち)");
+    note.textContent="";
+    return;
+  }
+  
+  const dataLines=buildDataVectorLinesWrapped(currentTest,currentMapping);
+  const code=currentTest.rcode(currentMapping);
+  const fullCode = header + dataLines + "\n" + code.main;
+  
+  body.innerHTML=highlightRCode(fullCode);
+  note.textContent="上記コードをコピーして、JASPのRコンソール（またはRStudio）にそのまま貼り付けて実行してください。データと必要な関数がすべて自動で処理されます。";
+}
+
+function buildDataVectorLines(t,map){
+  const seen=new Set();
+  let lines="";
+  t.slots.forEach(slot=>{
+    const v=map[slot.key];
+    if(slot.multi){
+      v.forEach(colName=>{
+        if(seen.has(colName)) return; seen.add(colName);
+        lines+=rVectorLine(colName);
+      });
+    } else {
+      if(seen.has(v)) return; seen.add(v);
+      lines+=rVectorLine(v);
+    }
+  });
+  return lines;
+}
+
+function rVectorLine(colName){
+  const type=DATA.colTypes[colName];
+  const vals=colValues(colName);
+  const safe=colName.replace(/[^A-Za-z0-9_]/g,"_");
+  
+  if(type==="numeric"){
+    return safe+" <- c("+vals.map(v=>v===""?"NA":v).join(", ")+")\n";
+  } else {
+    return safe+" <- c("+vals.map(v=>v===""?"NA":'"'+v+'"').join(", ")+")\n";
+  }
+}
+
+function buildDataVectorLinesWrapped(t,map){
+  let lines=buildDataVectorLines(t,map);
+  const colNames=new Set();
+  t.slots.forEach(slot=>{ const v=map[slot.key]; if(slot.multi) v.forEach(c=>colNames.add(c)); else colNames.add(v); });
+  const dfLine="df <- data.frame(\n  "+[...colNames].map(c=>{const safe=c.replace(/[^A-Za-z0-9_]/g,"_"); return safe+" = "+safe;}).join(",\n  ")+"\n)\n";
+  return lines+dfLine;
+}
+
+document.getElementById("copyRBtn").addEventListener("click",()=>{
+  const text=document.getElementById("rcodeBody").textContent; 
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.getElementById("copyRBtn");
+    const old=btn.textContent; btn.textContent="コピーしました"; setTimeout(()=>btn.textContent=old,1400);
+  });
+});
+renderTestGroups();
+</script>
+</body>
+</html>

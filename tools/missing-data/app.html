@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>欠測データラボ — データ分析ラボ</title>
+<style>
+:root{
+  --bg:#F3F1F6; --paper:#FFFFFF; --ink:#201D33; --ink-2:#4E496B; --muted:#807A9B;
+  --obs:#453A8E; --obs-soft:#E4E0F2; --void:#C9C0DC; --alert:#B4502F; --alert-soft:#F7E7E0;
+  --line:#DEDAE8; --line-2:#C3BCD6; --ok:#2E6B54;
+  --mincho:Georgia,"Hiragino Mincho ProN","Yu Mincho",YuMincho,serif;
+  --gothic:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--gothic);font-size:14px;line-height:1.75}
+h1,h2,h3{margin:0;font-weight:700}
+button,input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px 90px}
+
+header{padding:30px 0 18px}
+.brand h1{font-family:var(--mincho);font-size:30px;letter-spacing:.03em}
+.brand .tag{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--muted);text-transform:uppercase;margin-top:4px}
+.rule{height:6px;background:
+  repeating-linear-gradient(90deg,var(--obs) 0 15px,transparent 15px 21px);opacity:.9;margin-top:14px}
+
+.shell{display:grid;grid-template-columns:196px 1fr;gap:26px;margin-top:26px;align-items:start}
+@media(max-width:860px){.shell{grid-template-columns:1fr;gap:14px}}
+nav.rail{position:sticky;top:16px}
+@media(max-width:860px){nav.rail{position:static;display:flex;overflow-x:auto;gap:6px;padding-bottom:6px}}
+nav.rail button{display:block;width:100%;text-align:left;background:none;border:none;border-left:3px solid transparent;
+  padding:8px 10px;cursor:pointer;color:var(--ink-2);font-size:13.5px;white-space:nowrap}
+@media(max-width:860px){nav.rail button{width:auto;border-left:none;border-bottom:3px solid transparent;background:#fff;border-radius:3px}}
+nav.rail button .k{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.1em;display:block}
+nav.rail button:hover{background:var(--obs-soft)}
+nav.rail button.on{border-left-color:var(--obs);color:var(--obs);font-weight:700;background:var(--obs-soft)}
+@media(max-width:860px){nav.rail button.on{border-bottom-color:var(--obs)}}
+nav.rail button:disabled{opacity:.38;cursor:not-allowed}
+
+.panel{background:var(--paper);border:1px solid var(--line-2);border-radius:4px;padding:22px;margin-bottom:20px}
+.panel h2{font-family:var(--mincho);font-size:19px;border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:14px;
+  display:flex;align-items:baseline;gap:10px}
+.panel h2 small{font-family:var(--gothic);font-size:11.5px;font-weight:400;color:var(--muted);letter-spacing:.05em}
+h3.sub{font-size:14.5px;margin:22px 0 8px;color:var(--obs);border-left:4px solid var(--obs);padding-left:9px}
+.hide{display:none !important}
+.lead{color:var(--ink-2);font-size:13px;margin:0 0 14px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:11px;color:var(--ink-2);letter-spacing:.05em}
+input[type=text],input[type=number],select,textarea{border:1px solid var(--line-2);border-radius:3px;padding:6px 9px;background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--obs)}
+textarea{width:100%;font-family:var(--mono);font-size:12px;line-height:1.55;resize:vertical}
+.btn{background:var(--obs);color:#fff;border:none;border-radius:3px;padding:9px 18px;cursor:pointer;font-weight:700;letter-spacing:.03em}
+.btn:hover{background:#332A6E}
+.btn.ghost{background:#fff;color:var(--obs);border:1px solid var(--obs)}
+.btn.ghost:hover{background:var(--obs-soft)}
+.btn.sm{padding:5px 11px;font-size:12px;font-weight:400}
+.btn:disabled{background:var(--muted);cursor:not-allowed}
+.chip{display:inline-block;border:1px solid var(--line-2);border-radius:3px;padding:3px 9px;margin:0 5px 5px 0;font-size:12.5px;
+  background:#fff;cursor:pointer;user-select:none}
+.chip.on{background:var(--obs);color:#fff;border-color:var(--obs)}
+.chip em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--alert);margin-left:5px}
+.chip.on em{color:#F0C7B6}
+.picker{border:1px solid var(--line);background:#FAF9FC;border-radius:3px;padding:9px;max-height:170px;overflow:auto}
+.note{font-size:12px;color:var(--muted);margin:6px 0 0}
+.warnbox{background:var(--alert-soft);border-left:4px solid var(--alert);padding:10px 13px;font-size:13px;margin:12px 0}
+.okbox{background:var(--obs-soft);border-left:4px solid var(--obs);padding:10px 13px;font-size:13px;margin:12px 0}
+.big{display:flex;gap:26px;flex-wrap:wrap;margin:12px 0;padding:14px 16px;background:#FAF9FC;border:1px solid var(--line)}
+.big div{min-width:96px}
+.big .lab{font-size:11px;color:var(--muted);letter-spacing:.06em}
+.big .val{font-family:var(--mono);font-size:22px;color:var(--obs);line-height:1.3}
+.big .val.warn{color:var(--alert)}
+
+.tblwrap{overflow:auto;max-height:430px;border:1px solid var(--line-2);border-radius:3px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{border-bottom:1px solid var(--line);padding:5px 10px;text-align:left;white-space:nowrap}
+thead th{position:sticky;top:0;background:#EDEAF4;font-size:11.5px;letter-spacing:.03em;z-index:2;border-bottom:1px solid var(--line-2)}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+tbody tr:hover{background:#F7F5FB}
+tr.hi td{background:#FBF0EA}
+td.na{color:var(--alert);font-family:var(--mono);font-size:11px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%}
+.dot.o{background:var(--obs)}.dot.m{background:transparent;border:1px solid var(--alert)}
+
+pre{background:#1B1830;color:#DED9F0;padding:15px;border-radius:3px;overflow:auto;font-family:var(--mono);font-size:11.5px;
+  line-height:1.6;max-height:460px}
+.doc{font-size:13.5px;line-height:2}
+.doc h4{font-family:var(--mincho);font-size:15.5px;margin:20px 0 6px;color:var(--obs)}
+.doc p{margin:0 0 10px}
+.quote{border-left:4px solid var(--line-2);padding:4px 0 4px 15px;color:var(--ink-2);font-family:var(--mincho);line-height:2.05}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button{background:#fff;border:1px solid var(--line-2);border-radius:3px;padding:6px 14px;cursor:pointer;font-size:13px}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.legend{font-size:11.5px;color:var(--ink-2);display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 2px}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:11px;display:inline-block;border:1px solid var(--line-2)}
+.svgbox{overflow:auto;border:1px solid var(--line);border-radius:3px;background:#fff;padding:10px}
+.prog{height:5px;background:var(--obs-soft);border-radius:3px;overflow:hidden;margin:10px 0}
+.prog i{display:block;height:100%;background:var(--obs);width:0;transition:width .2s}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-prep);--bg:var(--al-bg);--paper:var(--al-surface);--ink:var(--al-ink);--ink-2:var(--al-ink-2);--muted:var(--al-ink-3);--line:var(--al-line-2);--line-2:var(--al-line);--mincho:var(--al-serif);--gothic:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#prep">データの準備</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>欠測データラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+<div class="wrap">
+<header>
+  <div class="brand">
+    <h1>欠測データラボ</h1>
+    <div class="tag">missing patterns / MCAR test / multiple imputation / pooling</div>
+  </div>
+  <div class="rule"></div>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <button data-t="load" class="on"><span class="k">01</span>データを読む</button>
+  <button data-t="map" disabled><span class="k">02</span>欠測の地図</button>
+  <button data-t="mech" disabled><span class="k">03</span>欠測の理由を探る</button>
+  <button data-t="imp" disabled><span class="k">04</span>代入する</button>
+  <button data-t="diag" disabled><span class="k">05</span>代入を診断する</button>
+  <button data-t="pool" disabled><span class="k">06</span>統合して分析する</button>
+  <button data-t="out" disabled><span class="k">07</span>書き出す</button>
+</nav>
+
+<main>
+<!-- 01 -->
+<section class="panel" id="p-load">
+  <h2>データを読む <small>CSV / TSV / 表計算ソフトからの貼り付け</small></h2>
+  <p class="lead">1行目が変数名です。空欄や指定した記号を欠測として読み込みます。区切り文字は自動で判定します。</p>
+  <textarea id="raw" rows="9" placeholder="ID,性別,年齢,学力,意欲,満足度&#10;1,男,15,62,4.2,&#10;2,女,16,,3.8,5"></textarea>
+  <div class="row" style="margin-top:10px">
+    <div class="fld"><label>ファイルから</label><input type="file" id="file" accept=".csv,.tsv,.txt"></div>
+    <div class="fld"><label>欠測とみなす値</label><input type="text" id="natok" value="NA,na,N/A,.,-,999,9999" style="width:200px"></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn" id="btnLoad">読み込む</button></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn ghost" id="btnSample">サンプルデータを入れる</button></div>
+  </div>
+  <div id="loadMsg"></div>
+  <div id="varPickBox" class="hide">
+    <h3 class="sub">分析に使う変数を選ぶ</h3>
+    <p class="lead">代入と分析の対象にする変数です。ID のように内容と無関係な列は外してください。分類変数は水準に番号を振って扱い、書き出すときに元のラベルへ戻します。</p>
+    <div class="picker" id="varPick"></div>
+    <div class="row" style="margin-top:10px">
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnVars">この変数で進む</button></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn ghost sm" id="btnAllVars">すべて選ぶ／外す</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section class="panel hide" id="p-map">
+  <h2>欠測の地図 <small>どこが、どれだけ、どう重なって欠けているか</small></h2>
+  <div id="mapOverview"></div>
+  <h3 class="sub">変数ごとの欠測</h3>
+  <div id="mapVars"></div>
+  <h3 class="sub">欠測の地図</h3>
+  <p class="lead">1行が1ケース、1列が1変数です。塗ってあるところが観測値、抜けているところが欠測です。並べ替えると、欠測がどのケースに集まっているかが見えます。</p>
+  <div class="row">
+    <div class="fld"><label>行の並べ方</label><select id="mapSort">
+      <option value="orig">元の順</option><option value="cnt">欠測の多い順</option><option value="pat">欠測パターン順</option></select></div>
+  </div>
+  <div class="legend"><span><i class="sw" style="background:#453A8E"></i>観測値</span>
+    <span><i class="sw" style="background:#EDE8F6"></i>欠測</span></div>
+  <div class="svgbox" id="mapMatrix"></div>
+  <h3 class="sub">欠測パターン</h3>
+  <p class="lead">同じ欠け方をしたケースをまとめた表です。上の行ほど人数が多いパターンです。</p>
+  <div id="mapPat"></div>
+  <h3 class="sub">欠測の重なり</h3>
+  <p class="lead">2つの変数が同時に欠けやすいかどうかです。値が大きいほど「一緒に欠ける」傾向が強く、共通の原因を疑う手がかりになります。</p>
+  <div class="svgbox" id="mapCo"></div>
+</section>
+
+<!-- 03 -->
+<section class="panel hide" id="p-mech">
+  <h2>欠測の理由を探る <small>MCAR・MAR・MNAR の見分け</small></h2>
+  <p class="lead">欠測が完全にランダム（MCAR）なら、欠測した人と観測できた人で他の変数の平均は変わらないはずです。この考えを2通りに形にして確かめます。</p>
+  <div class="row"><div class="fld"><label>&nbsp;</label><button class="btn" id="btnMech">検定を実行する</button></div></div>
+  <div id="mechOut"></div>
+</section>
+
+<!-- 04 -->
+<section class="panel hide" id="p-imp">
+  <h2>代入する <small>単一代入と多重代入</small></h2>
+  <div class="tabs" id="impTabs">
+    <button data-v="mi" class="on">多重代入（推奨）</button>
+    <button data-v="single">単一代入・除去</button>
+  </div>
+
+  <div id="im-mi">
+    <p class="lead">欠測を1つの値で埋めるかわりに、もっともらしい値を複数set作ります。埋めた値の不確かさが分析結果の標準誤差に反映されるため、単一代入より妥当な推測ができます（連鎖方程式による多重代入＝mice に相当）。</p>
+    <div class="row">
+      <div class="fld"><label>作るデータセット数 <i>m</i></label><input type="number" id="miM" value="5" min="2" max="50" style="width:80px"></div>
+      <div class="fld"><label>反復回数</label><input type="number" id="miIt" value="10" min="1" max="60" style="width:80px"></div>
+      <div class="fld"><label>乱数の種</label><input type="number" id="miSeed" value="2026" style="width:100px"></div>
+      <div class="fld"><label>PMM の候補数</label><input type="number" id="miDon" value="5" min="1" max="20" style="width:80px"></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnMice">多重代入を実行する</button></div>
+    </div>
+    <h3 class="sub">変数ごとの方法</h3>
+    <p class="lead">既定では、量的変数は PMM（似た人の実際の値を借りる）、2値変数はロジスティック回帰を使います。欠測のない変数は予測にだけ使われます。</p>
+    <div id="miMethods"></div>
+    <div class="prog hide" id="miProg"><i></i></div>
+    <div id="miMsg"></div>
+  </div>
+
+  <div id="im-single" class="hide">
+    <p class="lead">単純な方法は結果の解釈を歪めやすく、とくに平均代入は分散と相関を必ず小さくします。ここでは比較のために用意しています。最終的な結論には多重代入を使ってください。</p>
+    <div class="row">
+      <div class="fld"><label>方法</label><select id="sgMethod">
+        <option value="listwise">欠測のある行を落とす（リストワイズ）</option>
+        <option value="mean">平均で埋める</option>
+        <option value="median">中央値で埋める</option>
+        <option value="reg">回帰で埋める（予測値そのまま）</option>
+        <option value="sreg">確率的回帰で埋める（誤差を足す）</option>
+        <option value="hot">ホットデック（似た人の値を借りる）</option>
+        <option value="em">EM アルゴリズム（条件付き期待値）</option>
+      </select></div>
+      <div class="fld"><label>乱数の種</label><input type="number" id="sgSeed" value="2026" style="width:100px"></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnSingle">実行する</button></div>
+    </div>
+    <div id="sgOut"></div>
+  </div>
+</section>
+
+<!-- 05 -->
+<section class="panel hide" id="p-diag">
+  <h2>代入を診断する <small>代入値は観測値と釣り合っているか</small></h2>
+  <p class="lead">代入値の分布が観測値と大きくずれていないか、反復のあいだに値が落ち着いたかを確認します。ずれがあること自体は誤りではありません（MAR ではむしろ自然です）が、極端な外れは設定を見直す合図です。</p>
+  <div id="diagOut"><div class="okbox">先に「代入する」で多重代入を実行してください。</div></div>
+</section>
+
+<!-- 06 -->
+<section class="panel hide" id="p-pool">
+  <h2>統合して分析する <small>Rubin の規則</small></h2>
+  <p class="lead">m 個のデータセットそれぞれで回帰分析を行い、推定値の平均と、データセット間のばらつきを含めた標準誤差にまとめます。</p>
+  <div class="row">
+    <div class="fld"><label>目的変数</label><select id="poolY"></select></div>
+    <div class="fld"><label>&nbsp;</label><button class="btn" id="btnPool">統合分析を実行する</button></div>
+  </div>
+  <div class="fld"><label>説明変数</label><div class="picker" id="poolX"></div></div>
+  <div id="poolOut"></div>
+</section>
+
+<!-- 07 -->
+<section class="panel hide" id="p-out">
+  <h2>書き出す <small>データ・Rコード・解説</small></h2>
+  <div class="tabs" id="outTabs">
+    <button data-v="csv" class="on">代入済みデータ</button>
+    <button data-v="r">Rコード</button>
+    <button data-v="doc">解説と記述例</button>
+  </div>
+  <div id="ou-csv">
+    <div class="row">
+      <div class="fld"><label>書き出す内容</label><select id="expWhat">
+        <option value="long">すべての代入（.imp 列つきの長い形式）</option>
+        <option value="one">1つ目の代入データだけ</option>
+        <option value="avg">代入値の平均で埋めたデータ</option>
+      </select></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn" id="btnDl">ファイルに保存</button></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn ghost" id="btnCopy">コピー</button></div>
+    </div>
+    <p class="note">長い形式は R の <code>mice::as.mids()</code> で読み戻せます。1つの代入データだけを使って分析するのは避けてください（不確かさが消えます）。</p>
+    <textarea id="expText" rows="13"></textarea>
+  </div>
+  <div id="ou-r" class="hide">
+    <p class="lead">JASP の R コンソールにそのまま貼り付けられるよう、データを埋め込んだ形で出力します。図は画面に描かず PNG として保存します。</p>
+    <div class="row"><div class="fld"><label>&nbsp;</label><button class="btn ghost sm" id="btnCopyR">Rコードをコピー</button></div></div>
+    <pre id="rcode"></pre>
+  </div>
+  <div id="ou-doc" class="hide"><div id="docBox" class="doc"></div></div>
+</section>
+</main>
+</div>
+</div>
+
+<script>
+/* ===== 統計計算コア（外部ライブラリなし） ===== */
+var ST = (function () {
+  'use strict';
+
+  /* ---- 乱数（種つき） ---- */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function RNG(seed) {
+    var u = mulberry32(seed >>> 0), spare = null;
+    return {
+      unif: u,
+      norm: function () {
+        if (spare !== null) { var s = spare; spare = null; return s; }
+        var a = 0, b = 0;
+        while (a === 0) a = u();
+        b = u();
+        var r = Math.sqrt(-2 * Math.log(a));
+        spare = r * Math.sin(2 * Math.PI * b);
+        return r * Math.cos(2 * Math.PI * b);
+      },
+      int: function (n) { return Math.floor(u() * n) % n; },
+      gamma: function (shape) {           // Marsaglia–Tsang
+        if (shape < 1) { var g = this.gamma(shape + 1); return g * Math.pow(u(), 1 / shape); }
+        var d = shape - 1 / 3, c = 1 / Math.sqrt(9 * d);
+        for (;;) {
+          var x = this.norm(), v = 1 + c * x;
+          if (v <= 0) continue;
+          v = v * v * v;
+          var uu = u();
+          if (uu < 1 - 0.0331 * x * x * x * x) return d * v;
+          if (Math.log(uu) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+        }
+      },
+      chisq: function (df) { return 2 * this.gamma(df / 2); }
+    };
+  }
+
+  /* ---- 分布関数 ---- */
+  function lgamma(x) {
+    var c = [76.18009172947146, -86.50532032941677, 24.01409824083091,
+      -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    var y = x, tmp = x + 5.5;
+    tmp -= (x + 0.5) * Math.log(tmp);
+    var ser = 1.000000000190015;
+    for (var j = 0; j < 6; j++) ser += c[j] / ++y;
+    return -tmp + Math.log(2.5066282746310005 * ser / x);
+  }
+  function gammaP(a, x) {                 // 正則化不完全ガンマ（下側）
+    if (x <= 0) return 0;
+    if (x < a + 1) {
+      var ap = a, sum = 1 / a, del = sum;
+      for (var n = 0; n < 500; n++) {
+        ap++; del *= x / ap; sum += del;
+        if (Math.abs(del) < Math.abs(sum) * 1e-14) break;
+      }
+      return sum * Math.exp(-x + a * Math.log(x) - lgamma(a));
+    }
+    var b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+    for (var i = 1; i <= 500; i++) {
+      var an = -i * (i - a);
+      b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300;
+      c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+      d = 1 / d; var de = d * c; h *= de;
+      if (Math.abs(de - 1) < 1e-14) break;
+    }
+    return 1 - Math.exp(-x + a * Math.log(x) - lgamma(a)) * h;
+  }
+  function chisqCDF(x, df) { return df <= 0 ? NaN : gammaP(df / 2, x / 2); }
+  function chisqP(x, df) { return 1 - chisqCDF(x, df); }
+
+  function betacf(a, b, x) {
+    var qab = a + b, qap = a + 1, qam = a - 1;
+    var c = 1, d = 1 - qab * x / qap;
+    if (Math.abs(d) < 1e-300) d = 1e-300;
+    d = 1 / d; var h = d;
+    for (var m = 1; m <= 300; m++) {
+      var m2 = 2 * m;
+      var aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+      d = 1 + aa * d; if (Math.abs(d) < 1e-300) d = 1e-300;
+      c = 1 + aa / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+      d = 1 / d; h *= d * c;
+      aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+      d = 1 + aa * d; if (Math.abs(d) < 1e-300) d = 1e-300;
+      c = 1 + aa / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+      d = 1 / d; var del = d * c; h *= del;
+      if (Math.abs(del - 1) < 1e-14) break;
+    }
+    return h;
+  }
+  function ibeta(a, b, x) {
+    if (x <= 0) return 0; if (x >= 1) return 1;
+    var bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+    return x < (a + 1) / (a + b + 2) ? bt * betacf(a, b, x) / a : 1 - bt * betacf(b, a, 1 - x) / b;
+  }
+  function tP(t, df) {                     // 両側 p
+    if (!isFinite(t) || df <= 0) return NaN;
+    return ibeta(df / 2, 0.5, df / (df + t * t));
+  }
+  function fP(f, d1, d2) {                 // 上側 p
+    if (f <= 0) return 1;
+    return ibeta(d2 / 2, d1 / 2, d2 / (d2 + d1 * f));
+  }
+  function normCDF(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
+  function erf(x) {
+    var s = x < 0 ? -1 : 1; x = Math.abs(x);
+    var t = 1 / (1 + 0.3275911 * x);
+    var y = 1 - ((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t * t
+      - 0; // placeholder replaced below
+    y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return s * y;
+  }
+  function normQ(p) {                       // 逆正規（Acklam）
+    if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
+    var a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    var b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    var c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    var d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    var pl = 0.02425, q, r;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    if (p > 1 - pl) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    q = p - 0.5; r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
+  function tQ(p, df) {                       // 両側 1-p 点（|t|）を二分法で
+    if (df <= 0) return NaN;
+    var lo = 0, hi = 1000;
+    for (var i = 0; i < 200; i++) {
+      var mid = (lo + hi) / 2;
+      if (tP(mid, df) > p) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  /* ---- 行列 ---- */
+  function zeros(n, m) { var A = [], i, j; for (i = 0; i < n; i++) { A.push([]); for (j = 0; j < m; j++) A[i].push(0); } return A; }
+  function eye(n) { var A = zeros(n, n); for (var i = 0; i < n; i++) A[i][i] = 1; return A; }
+  function tr(A) { var n = A.length, m = A[0].length, B = zeros(m, n); for (var i = 0; i < n; i++) for (var j = 0; j < m; j++) B[j][i] = A[i][j]; return B; }
+  function mm(A, B) {
+    var n = A.length, k = B.length, m = B[0].length, C = zeros(n, m);
+    for (var i = 0; i < n; i++) for (var t = 0; t < k; t++) { var a = A[i][t]; if (a === 0) continue; for (var j = 0; j < m; j++) C[i][j] += a * B[t][j]; }
+    return C;
+  }
+  function mv(A, v) { var n = A.length, m = v.length, r = []; for (var i = 0; i < n; i++) { var s = 0; for (var j = 0; j < m; j++) s += A[i][j] * v[j]; r.push(s); } return r; }
+  function inv(A) {
+    var n = A.length, M = [], i, j, k;
+    for (i = 0; i < n; i++) M.push(A[i].slice().concat(eye(n)[i]));
+    for (i = 0; i < n; i++) {
+      var piv = i;
+      for (k = i + 1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[piv][i])) piv = k;
+      if (Math.abs(M[piv][i]) < 1e-12) return null;
+      var t = M[i]; M[i] = M[piv]; M[piv] = t;
+      var d = M[i][i];
+      for (j = 0; j < 2 * n; j++) M[i][j] /= d;
+      for (k = 0; k < n; k++) {
+        if (k === i) continue;
+        var f = M[k][i]; if (f === 0) continue;
+        for (j = 0; j < 2 * n; j++) M[k][j] -= f * M[i][j];
+      }
+    }
+    var R = zeros(n, n);
+    for (i = 0; i < n; i++) for (j = 0; j < n; j++) R[i][j] = M[i][j + n];
+    return R;
+  }
+  function chol(A) {                       // 下三角 L, A = L L'
+    var n = A.length, L = zeros(n, n), i, j, k;
+    for (i = 0; i < n; i++) for (j = 0; j <= i; j++) {
+      var s = 0;
+      for (k = 0; k < j; k++) s += L[i][k] * L[j][k];
+      if (i === j) { var v = A[i][i] - s; if (v <= 0) v = 1e-10; L[i][j] = Math.sqrt(v); }
+      else L[i][j] = (A[i][j] - s) / L[j][j];
+    }
+    return L;
+  }
+  function sub(A, ri, ci) { var B = [], i, j; for (i = 0; i < ri.length; i++) { var r = []; for (j = 0; j < ci.length; j++) r.push(A[ri[i]][ci[j]]); B.push(r); } return B; }
+  function ridge(A, eps) { var n = A.length, B = A.map(function (r) { return r.slice(); }); for (var i = 0; i < n; i++) B[i][i] += eps; return B; }
+
+  /* ---- 記述統計 ---- */
+  function mean(a) { var s = 0, n = 0; for (var i = 0; i < a.length; i++) if (a[i] !== null && isFinite(a[i])) { s += a[i]; n++; } return n ? s / n : NaN; }
+  function sd(a) { var m = mean(a), s = 0, n = 0; for (var i = 0; i < a.length; i++) if (a[i] !== null && isFinite(a[i])) { s += (a[i] - m) * (a[i] - m); n++; } return n > 1 ? Math.sqrt(s / (n - 1)) : NaN; }
+  function quantile(sorted, p) {
+    var n = sorted.length; if (!n) return NaN;
+    var h = (n - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
+    return sorted[lo] + (h - lo) * (sorted[hi] - sorted[lo]);
+  }
+  function median(a) { var s = a.filter(function (x) { return x !== null && isFinite(x); }).sort(function (x, y) { return x - y; }); return quantile(s, 0.5); }
+  function mad(a) {
+    var med = median(a);
+    var dev = a.filter(function (x) { return x !== null && isFinite(x); }).map(function (x) { return Math.abs(x - med); });
+    return 1.4826 * median(dev);
+  }
+  function alphaCoef(mat) {                 // mat: n × k（欠測なし）
+    var n = mat.length, k = mat[0].length, j, i;
+    if (n < 2 || k < 2) return NaN;
+    var vs = 0;
+    for (j = 0; j < k; j++) { var col = []; for (i = 0; i < n; i++) col.push(mat[i][j]); vs += Math.pow(sd(col), 2); }
+    var tot = []; for (i = 0; i < n; i++) { var s = 0; for (j = 0; j < k; j++) s += mat[i][j]; tot.push(s); }
+    var vt = Math.pow(sd(tot), 2);
+    return (k / (k - 1)) * (1 - vs / vt);
+  }
+
+  /* ---- 回帰（OLS） ---- */
+  function ols(X, y) {                      // X は切片列を含む
+    var n = X.length, p = X[0].length;
+    var Xt = tr(X), XtX = mm(Xt, X), XtXi = inv(ridge(XtX, 1e-10));
+    if (!XtXi) return null;
+    var b = mv(mm(XtXi, Xt), y);
+    var fit = mv(X, b), res = [], ss = 0, i;
+    for (i = 0; i < n; i++) { res.push(y[i] - fit[i]); ss += res[i] * res[i]; }
+    var df = n - p, s2 = ss / df;
+    var se = []; for (i = 0; i < p; i++) se.push(Math.sqrt(s2 * XtXi[i][i]));
+    var my = mean(y), tss = 0; for (i = 0; i < n; i++) tss += (y[i] - my) * (y[i] - my);
+    return { beta: b, se: se, df: df, sigma2: s2, XtXi: XtXi, r2: 1 - ss / tss, n: n, p: p, resid: res, fitted: fit, ssr: ss };
+  }
+
+  /* ---- ロジスティック回帰（IRLS） ---- */
+  function logit(X, y) {
+    var n = X.length, p = X[0].length, b = new Array(p).fill(0), it, i, j;
+    var XtXi = null;
+    for (it = 0; it < 40; it++) {
+      var eta = mv(X, b), w = [], z = [];
+      for (i = 0; i < n; i++) {
+        var mu = 1 / (1 + Math.exp(-eta[i]));
+        mu = Math.min(Math.max(mu, 1e-8), 1 - 1e-8);
+        var wi = mu * (1 - mu);
+        w.push(wi); z.push(eta[i] + (y[i] - mu) / wi);
+      }
+      var Xw = X.map(function (r, k) { return r.map(function (v) { return v * w[k]; }); });
+      var XtWX = mm(tr(Xw), X), XtWz = mv(tr(Xw), z);
+      XtXi = inv(ridge(XtWX, 1e-8));
+      if (!XtXi) return null;
+      var nb = mv(XtXi, XtWz), diff = 0;
+      for (j = 0; j < p; j++) diff += Math.abs(nb[j] - b[j]);
+      b = nb;
+      if (diff < 1e-8) break;
+    }
+    return { beta: b, cov: XtXi };
+  }
+
+  /* ---- 欠測パターン ---- */
+  function missPatterns(data) {             // data: n×p（null=欠測）
+    var n = data.length, p = data[0].length, map = {}, i, j;
+    for (i = 0; i < n; i++) {
+      var key = '';
+      for (j = 0; j < p; j++) key += (data[i][j] === null ? '0' : '1');
+      if (!map[key]) map[key] = { key: key, n: 0, rows: [] };
+      map[key].n++; map[key].rows.push(i);
+    }
+    var arr = Object.keys(map).map(function (k) { return map[k]; });
+    arr.sort(function (a, b) { return b.n - a.n; });
+    return arr;
+  }
+
+  /* ---- EM（多変量正規：平均・共分散） ---- */
+  function emMVN(data, maxit, tol) {
+    maxit = maxit || 500; tol = tol || 1e-7;
+    var n = data.length, p = data[0].length, i, j, k;
+    var mu = [], S = zeros(p, p);
+    for (j = 0; j < p; j++) { var col = []; for (i = 0; i < n; i++) col.push(data[i][j]); mu.push(mean(col)); }
+    for (j = 0; j < p; j++) for (k = 0; k < p; k++) {
+      var s = 0, c = 0;
+      for (i = 0; i < n; i++) if (data[i][j] !== null && data[i][k] !== null) { s += (data[i][j] - mu[j]) * (data[i][k] - mu[k]); c++; }
+      S[j][k] = c > 1 ? s / (c - 1) : (j === k ? 1 : 0);
+    }
+    S = ridge(S, 1e-8);
+    var it, conv = false;
+    for (it = 0; it < maxit; it++) {
+      var T1 = new Array(p).fill(0), T2 = zeros(p, p);
+      for (i = 0; i < n; i++) {
+        var O = [], M = [];
+        for (j = 0; j < p; j++) (data[i][j] === null ? M : O).push(j);
+        var y = new Array(p).fill(0), C = zeros(p, p);
+        for (j = 0; j < O.length; j++) y[O[j]] = data[i][O[j]];
+        if (M.length) {
+          if (O.length === 0) { for (j = 0; j < M.length; j++) { y[M[j]] = mu[M[j]]; } for (j = 0; j < M.length; j++) for (k = 0; k < M.length; k++) C[M[j]][M[k]] = S[M[j]][M[k]]; }
+          else {
+            var Soo = sub(S, O, O), Sooi = inv(ridge(Soo, 1e-10));
+            var Smo = sub(S, M, O), Smm = sub(S, M, M);
+            var d = O.map(function (o) { return data[i][o] - mu[o]; });
+            var adj = mv(mm(Smo, Sooi), d);
+            for (j = 0; j < M.length; j++) y[M[j]] = mu[M[j]] + adj[j];
+            var Cm = mm(mm(Smo, Sooi), tr(Smo));
+            for (j = 0; j < M.length; j++) for (k = 0; k < M.length; k++) C[M[j]][M[k]] = Smm[j][k] - Cm[j][k];
+          }
+        }
+        for (j = 0; j < p; j++) { T1[j] += y[j]; for (k = 0; k < p; k++) T2[j][k] += y[j] * y[k] + C[j][k]; }
+      }
+      var nmu = T1.map(function (v) { return v / n; });
+      var nS = zeros(p, p);
+      for (j = 0; j < p; j++) for (k = 0; k < p; k++) nS[j][k] = T2[j][k] / n - nmu[j] * nmu[k];
+      var diff = 0;
+      for (j = 0; j < p; j++) { diff = Math.max(diff, Math.abs(nmu[j] - mu[j])); for (k = 0; k < p; k++) diff = Math.max(diff, Math.abs(nS[j][k] - S[j][k])); }
+      mu = nmu; S = ridge(nS, 1e-10);
+      if (diff < tol) { conv = true; break; }
+    }
+    return { mu: mu, sigma: S, iter: it + 1, converged: conv };
+  }
+
+  /* ---- Little の MCAR 検定 ---- */
+  function littleMCAR(data) {
+    var em = emMVN(data), p = data[0].length;
+    var pats = missPatterns(data), d2 = 0, df = 0, used = 0;
+    for (var t = 0; t < pats.length; t++) {
+      var pat = pats[t], O = [];
+      for (var j = 0; j < p; j++) if (pat.key[j] === '1') O.push(j);
+      if (!O.length) continue;
+      var nj = pat.rows.length;
+      var mb = O.map(function (o) { var s = 0; for (var i = 0; i < pat.rows.length; i++) s += data[pat.rows[i]][o]; return s / nj; });
+      var dvec = O.map(function (o, idx) { return mb[idx] - em.mu[o]; });
+      var Soo = inv(ridge(sub(em.sigma, O, O), 1e-10));
+      if (!Soo) continue;
+      var q = 0, a = mv(Soo, dvec);
+      for (var i2 = 0; i2 < O.length; i2++) q += dvec[i2] * a[i2];
+      d2 += nj * q; df += O.length; used++;
+    }
+    df -= p;
+    return { chi2: d2, df: df, p: df > 0 ? chisqP(d2, df) : NaN, patterns: used, em: em };
+  }
+
+  /* ---- ベイズ線形回帰からの抽出（norm/pmm 用） ---- */
+  function drawBeta(X, y, rng) {
+    var n = X.length, p = X[0].length;
+    var Xt = tr(X), XtX = ridge(mm(Xt, X), 1e-6), XtXi = inv(XtX);
+    if (!XtXi) return null;
+    var bhat = mv(mm(XtXi, Xt), y);
+    var fit = mv(X, bhat), ss = 0;
+    for (var i = 0; i < n; i++) ss += (y[i] - fit[i]) * (y[i] - fit[i]);
+    var df = Math.max(n - p, 1);
+    var g = rng.chisq(df); if (g <= 0) g = 1e-6;
+    var sigma = Math.sqrt(ss / g);
+    var L = chol(XtXi), z = [], j;
+    for (j = 0; j < p; j++) z.push(rng.norm());
+    var bstar = bhat.slice();
+    for (j = 0; j < p; j++) { var s = 0; for (var k2 = 0; k2 <= j; k2++) s += L[j][k2] * z[k2]; bstar[j] += sigma * s; }
+    return { bhat: bhat, bstar: bstar, sigma: sigma };
+  }
+
+  /* ---- MICE（連鎖方程式による多重代入） ---- */
+  function mice(data, opts) {
+    opts = opts || {};
+    var m = opts.m || 5, maxit = opts.maxit || 10, seed = opts.seed || 12345;
+    var methods = opts.methods;             // 列ごとの 'pmm'|'norm'|'logreg'|'sample'|''
+    var predictors = opts.predictors;       // 二値行列（p×p）省略時は全変数
+    var donors = opts.donors || 5;
+    var n = data.length, p = data[0].length, i, j, k;
+    var rng = RNG(seed);
+    var isMiss = [], obsIdx = [], misIdx = [];
+    for (j = 0; j < p; j++) { obsIdx.push([]); misIdx.push([]); }
+    for (i = 0; i < n; i++) { isMiss.push([]); for (j = 0; j < p; j++) { var mflag = data[i][j] === null; isMiss[i].push(mflag); (mflag ? misIdx[j] : obsIdx[j]).push(i); } }
+    if (!predictors) { predictors = zeros(p, p); for (j = 0; j < p; j++) for (k = 0; k < p; k++) predictors[j][k] = (j === k ? 0 : 1); }
+
+    var imps = [], trace = [];
+    for (var rep = 0; rep < m; rep++) {
+      // 初期値：観測値からの無作為抽出
+      var cur = [];
+      for (i = 0; i < n; i++) cur.push(data[i].slice());
+      for (j = 0; j < p; j++) {
+        if (!misIdx[j].length) continue;
+        if (!obsIdx[j].length) { for (i = 0; i < n; i++) cur[i][j] = 0; continue; }
+        for (k = 0; k < misIdx[j].length; k++) cur[misIdx[j][k]][j] = data[obsIdx[j][rng.int(obsIdx[j].length)]][j];
+      }
+      var tr1 = [];
+      for (var it = 0; it < maxit; it++) {
+        for (j = 0; j < p; j++) {
+          if (!misIdx[j].length) continue;
+          var meth = methods ? methods[j] : 'pmm';
+          if (!meth || meth === 'none') continue;
+          var preds = [];
+          for (k = 0; k < p; k++) if (predictors[j][k] && k !== j) preds.push(k);
+          if (meth === 'sample' || !preds.length) {
+            for (k = 0; k < misIdx[j].length; k++) cur[misIdx[j][k]][j] = data[obsIdx[j][rng.int(obsIdx[j].length)]][j];
+            continue;
+          }
+          var Xo = [], yo = [], Xm = [];
+          for (k = 0; k < obsIdx[j].length; k++) { var r = obsIdx[j][k], row = [1]; for (var q = 0; q < preds.length; q++) row.push(cur[r][preds[q]]); Xo.push(row); yo.push(data[r][j]); }
+          for (k = 0; k < misIdx[j].length; k++) { var r2 = misIdx[j][k], row2 = [1]; for (var q2 = 0; q2 < preds.length; q2++) row2.push(cur[r2][preds[q2]]); Xm.push(row2); }
+          if (meth === 'logreg') {
+            var lv = {}, levels = [];
+            for (k = 0; k < yo.length; k++) if (!(yo[k] in lv)) { lv[yo[k]] = 1; levels.push(yo[k]); }
+            levels.sort(function (a, b) { return a - b; });
+            if (levels.length !== 2) meth = 'pmm';
+            else {
+              var y01 = yo.map(function (v) { return v === levels[1] ? 1 : 0; });
+              var fit = logit(Xo, y01);
+              if (!fit) { meth = 'pmm'; }
+              else {
+                var L2 = chol(ridge(fit.cov, 1e-10)), bs = fit.beta.slice(), zz = [];
+                for (k = 0; k < bs.length; k++) zz.push(rng.norm());
+                for (k = 0; k < bs.length; k++) { var s2 = 0; for (var k3 = 0; k3 <= k; k3++) s2 += L2[k][k3] * zz[k3]; bs[k] += s2; }
+                for (k = 0; k < Xm.length; k++) {
+                  var eta = 0; for (var q3 = 0; q3 < bs.length; q3++) eta += bs[q3] * Xm[k][q3];
+                  var pr = 1 / (1 + Math.exp(-eta));
+                  cur[misIdx[j][k]][j] = rng.unif() < pr ? levels[1] : levels[0];
+                }
+                continue;
+              }
+            }
+          }
+          var dr = drawBeta(Xo, yo, rng);
+          if (!dr) { for (k = 0; k < misIdx[j].length; k++) cur[misIdx[j][k]][j] = data[obsIdx[j][rng.int(obsIdx[j].length)]][j]; continue; }
+          if (meth === 'norm') {
+            for (k = 0; k < Xm.length; k++) {
+              var yh = 0; for (var q4 = 0; q4 < dr.bstar.length; q4++) yh += dr.bstar[q4] * Xm[k][q4];
+              cur[misIdx[j][k]][j] = yh + dr.sigma * rng.norm();
+            }
+          } else { // pmm
+            var yhObs = [];
+            for (k = 0; k < Xo.length; k++) { var v1 = 0; for (var q5 = 0; q5 < dr.bhat.length; q5++) v1 += dr.bhat[q5] * Xo[k][q5]; yhObs.push(v1); }
+            for (k = 0; k < Xm.length; k++) {
+              var v2 = 0; for (var q6 = 0; q6 < dr.bstar.length; q6++) v2 += dr.bstar[q6] * Xm[k][q6];
+              var cand = [];
+              for (var t2 = 0; t2 < yhObs.length; t2++) cand.push({ i: t2, d: Math.abs(yhObs[t2] - v2) });
+              cand.sort(function (a, b) { return a.d - b.d; });
+              var dn = Math.min(donors, cand.length);
+              cur[misIdx[j][k]][j] = yo[cand[rng.int(dn)].i];
+            }
+          }
+        }
+        // トレース（各変数の代入値の平均・SD）
+        var tstat = [];
+        for (j = 0; j < p; j++) {
+          if (!misIdx[j].length) { tstat.push({ mean: NaN, sd: NaN }); continue; }
+          var vals = misIdx[j].map(function (r) { return cur[r][j]; });
+          tstat.push({ mean: mean(vals), sd: sd(vals) });
+        }
+        tr1.push(tstat);
+      }
+      imps.push(cur); trace.push(tr1);
+    }
+    return { imps: imps, trace: trace, m: m, maxit: maxit, misIdx: misIdx, obsIdx: obsIdx };
+  }
+
+  /* ---- Rubin の統合規則 ---- */
+  function pool(Q, U, dfCom) {
+    var m = Q.length, i;
+    var qb = mean(Q), ub = mean(U), b = 0;
+    for (i = 0; i < m; i++) b += (Q[i] - qb) * (Q[i] - qb);
+    b = m > 1 ? b / (m - 1) : 0;
+    var T = ub + (1 + 1 / m) * b;
+    var lambda = T > 0 ? ((1 + 1 / m) * b) / T : 0;
+    var r = ub > 0 ? ((1 + 1 / m) * b) / ub : 0;
+    var dfOld = m > 1 ? (m - 1) * Math.pow(1 + 1 / (r || 1e-12), 2) : 1e6;
+    var df;
+    if (dfCom && isFinite(dfCom)) {
+      var dfObs = ((dfCom + 1) / (dfCom + 3)) * dfCom * (1 - lambda);
+      df = 1 / (1 / dfOld + 1 / (dfObs || 1e-12));
+    } else df = dfOld;
+    if (!isFinite(df) || df <= 0) df = 1e6;
+    var se = Math.sqrt(T), t = qb / se;
+    var crit = tQ(0.05, df);
+    var fmi = (r + 2 / (df + 3)) / (r + 1);
+    return { est: qb, se: se, t: t, df: df, p: tP(t, df), lo: qb - crit * se, hi: qb + crit * se, fmi: fmi, lambda: lambda, riv: r, re: 1 / (1 + fmi / m), b: b, ub: ub, T: T };
+  }
+
+  return {
+    RNG: RNG, lgamma: lgamma, chisqP: chisqP, chisqCDF: chisqCDF, tP: tP, tQ: tQ, fP: fP,
+    normCDF: normCDF, normQ: normQ, zeros: zeros, eye: eye, tr: tr, mm: mm, mv: mv, inv: inv,
+    chol: chol, sub: sub, ridge: ridge, mean: mean, sd: sd, median: median, mad: mad,
+    quantile: quantile, alphaCoef: alphaCoef, ols: ols, logit: logit, missPatterns: missPatterns,
+    emMVN: emMVN, littleMCAR: littleMCAR, mice: mice, pool: pool
+  };
+})();
+
+</script>
+<script>
+'use strict';
+var S = { cols: [], types: [], rows: [], vars: [], V: null, mi: null, single: null, little: null, pooled: null };
+var $ = function (id) { return document.getElementById(id); };
+var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+function fmt(v, d) { if (v === null || v === undefined || (typeof v === 'number' && !isFinite(v))) return '–'; if (typeof v !== 'number') return String(v); if (Math.abs(v) >= 1e6 || (Math.abs(v) < 1e-4 && v !== 0)) return v.toExponential(2); return (+v.toFixed(d === undefined ? 3 : d)).toString(); }
+function pfmt(p) { return !isFinite(p) ? '–' : (p < 0.001 ? '<.001' : p.toFixed(3).replace(/^0/, '')); }
+function msg(id, t, err) { $(id).innerHTML = '<div class="' + (err ? 'warnbox' : 'okbox') + '">' + t + '</div>'; }
+
+/* ---------- 読み込み ---------- */
+function detectSep(t) { var l = t.split(/\r?\n/)[0] || '', c = ['\t', ',', ';', '|'], b = ',', n = 0; c.forEach(function (x) { var k = l.split(x).length; if (k > n) { n = k; b = x; } }); return b; }
+function parseCSV(txt, sep) {
+  var rows = [], row = [], cur = '', q = false;
+  txt = txt.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (var i = 0; i < txt.length; i++) {
+    var c = txt[i];
+    if (q) { if (c === '"') { if (txt[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === sep) { row.push(cur); cur = ''; }
+    else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(function (r) { return r.length > 1 || (r.length === 1 && r[0].trim() !== ''); });
+}
+function isNum(s) { return s !== '' && isFinite(Number(s)); }
+function loadData(txt) {
+  txt = txt.replace(/^\uFEFF/, '').trim();
+  if (!txt) { msg('loadMsg', 'データが空です。表を貼り付けるか、ファイルを選んでください。', 1); return; }
+  var g = parseCSV(txt, detectSep(txt));
+  if (g.length < 2) { msg('loadMsg', '2行以上（変数名の行＋データ行）が必要です。', 1); return; }
+  var na = $('natok').value.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s !== ''; });
+  var cols = g[0].map(function (c, i) { return c.trim() || ('V' + (i + 1)); });
+  var rows = g.slice(1).map(function (r) { return cols.map(function (_, j) { var v = r[j] === undefined ? '' : String(r[j]).trim(); return (v === '' || na.indexOf(v) >= 0) ? null : v; }); });
+  var types = cols.map(function (c, j) { var n = 0, k = 0; rows.forEach(function (r) { if (r[j] !== null) { n++; if (isNum(r[j])) k++; } }); return (n && n === k) ? 'num' : 'cat'; });
+  rows.forEach(function (r) { types.forEach(function (t, j) { if (t === 'num' && r[j] !== null) r[j] = Number(r[j]); }); });
+  S.cols = cols; S.types = types; S.rows = rows; S.mi = null; S.single = null; S.little = null; S.pooled = null;
+  var nna = 0; rows.forEach(function (r) { r.forEach(function (v) { if (v === null) nna++; }); });
+  msg('loadMsg', rows.length + ' 行 × ' + cols.length + ' 列を読み込みました。欠測は <b>' + nna + '</b> セル（' + (nna / (rows.length * cols.length) * 100).toFixed(1) + '％）です。', 0);
+  var h = '';
+  cols.forEach(function (c, j) {
+    var m = 0; rows.forEach(function (r) { if (r[j] === null) m++; });
+    var uniq = {}, nu = 0; rows.forEach(function (r) { if (r[j] !== null && !uniq[r[j]]) { uniq[r[j]] = 1; nu++; } });
+    var idish = (types[j] === 'num' && nu === rows.length && !m) || /^(id|no|番号|通し)/i.test(c);
+    h += '<span class="chip' + (idish ? '' : ' on') + '" data-j="' + j + '">' + esc(c) + (m ? '<em>' + (m / rows.length * 100).toFixed(0) + '%欠測</em>' : '') + '</span>';
+  });
+  $('varPick').innerHTML = h;
+  [].forEach.call($('varPick').querySelectorAll('.chip'), function (c) { c.onclick = function () { c.classList.toggle('on'); }; });
+  $('varPickBox').classList.remove('hide');
+}
+$('btnAllVars').onclick = function () {
+  var chips = $('varPick').querySelectorAll('.chip'), all = [].every.call(chips, function (c) { return c.classList.contains('on'); });
+  [].forEach.call(chips, function (c) { c.classList.toggle('on', !all); });
+};
+$('btnVars').onclick = function () {
+  var js = [].map.call($('varPick').querySelectorAll('.chip.on'), function (c) { return +c.dataset.j; });
+  if (js.length < 2) { msg('loadMsg', '2変数以上を選んでください。', 1); return; }
+  S.vars = js;
+  var V = { names: [], types: [], levels: [], data: [], n: S.rows.length, p: js.length };
+  js.forEach(function (j, k) {
+    V.names.push(S.cols[j]); V.types.push(S.types[j]);
+    var lv = null;
+    if (S.types[j] === 'cat') { var u = {}; lv = []; S.rows.forEach(function (r) { if (r[j] !== null && !u[r[j]]) { u[r[j]] = 1; lv.push(r[j]); } }); lv.sort(); }
+    V.levels.push(lv);
+  });
+  for (var i = 0; i < S.rows.length; i++) {
+    var row = [];
+    js.forEach(function (j, k) {
+      var v = S.rows[i][j];
+      if (v === null) { row.push(null); return; }
+      row.push(V.types[k] === 'num' ? Number(v) : V.levels[k].indexOf(v));
+    });
+    V.data.push(row);
+  }
+  var keep = [];
+  for (var i2 = 0; i2 < V.data.length; i2++) if (V.data[i2].some(function (v) { return v !== null; })) keep.push(i2);
+  V.rowIdx = keep; V.data = keep.map(function (i3) { return V.data[i3]; }); V.n = V.data.length;
+  V.miss = V.names.map(function (_, k) { var m = 0; V.data.forEach(function (r) { if (r[k] === null) m++; }); return m; });
+  S.V = V; S.mi = null; S.single = null; S.pooled = null;
+  [].forEach.call($('rail').children, function (b) { b.disabled = false; });
+  buildMethods(); fillPool(); go('map');
+};
+$('btnLoad').onclick = function () { loadData($('raw').value); };
+$('file').onchange = function (e) { var f = e.target.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { $('raw').value = r.result; loadData(r.result); }; r.readAsText(f, 'UTF-8'); };
+$('btnSample').onclick = function () {
+  var rng = ST.RNG(20260822), L = ['ID,性別,年齢,学力テスト,学習意欲,授業満足度,家庭学習時間'];
+  for (var i = 1; i <= 150; i++) {
+    var sex = rng.unif() < .5 ? '男' : '女';
+    var age = 15 + Math.round(rng.unif() * 2);
+    var ability = 50 + rng.norm() * 10;
+    var motiv = 3 + 0.06 * (ability - 50) + rng.norm() * 0.8;
+    var sat = 3 + 0.5 * (motiv - 3) + rng.norm() * 0.9;
+    var hours = Math.max(0, 1 + 0.05 * (ability - 50) + 0.4 * (motiv - 3) + rng.norm() * 0.6);
+    var a = ability.toFixed(1), m = motiv.toFixed(2), s2 = sat.toFixed(2), h = hours.toFixed(2);
+    if (ability < 45 && rng.unif() < 0.55) h = '';            // MAR：学力が低い人ほど学習時間が未記入
+    if (rng.unif() < 0.12) s2 = '';                            // MCAR
+    if (motiv < 2.5 && rng.unif() < 0.4) m = '';               // MNAR に近い形
+    L.push([i, sex, age, a, m, s2, h].join(','));
+  }
+  $('raw').value = L.join('\n');
+  msg('loadMsg', 'サンプルを入れました。「読み込む」を押してください。学習時間は学力に依存する欠測（MAR）、満足度は完全にランダムな欠測（MCAR）、意欲はその値自体に依存する欠測（MNAR に近い）を仕込んであります。', 0);
+};
+
+/* ---------- 画面遷移 ---------- */
+var TABS = ['load', 'map', 'mech', 'imp', 'diag', 'pool', 'out'];
+function go(t) {
+  TABS.forEach(function (x) { $('p-' + x).classList.toggle('hide', x !== t); });
+  [].forEach.call($('rail').children, function (b) { b.classList.toggle('on', b.dataset.t === t); });
+  if (t === 'map') drawMap();
+  if (t === 'diag') drawDiag();
+  if (t === 'out') drawOut();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+[].forEach.call($('rail').children, function (b) { b.onclick = function () { if (!b.disabled) go(b.dataset.t); }; });
+
+/* ---------- 02 欠測の地図 ---------- */
+function drawMap() {
+  var V = S.V, n = V.n, p = V.p, i, k;
+  var cellNA = 0, rowNA = 0;
+  V.data.forEach(function (r) { var m = 0; r.forEach(function (v) { if (v === null) m++; }); cellNA += m; if (m) rowNA++; });
+  var varNA = 0; V.miss.forEach(function (m) { if (m) varNA++; });
+  $('mapOverview').innerHTML = '<div class="big">' +
+    '<div><div class="lab">ケース</div><div class="val">' + n + '</div></div>' +
+    '<div><div class="lab">変数</div><div class="val">' + p + '</div></div>' +
+    '<div><div class="lab">欠測セル</div><div class="val' + (cellNA / (n * p) > .1 ? ' warn' : '') + '">' + (cellNA / (n * p) * 100).toFixed(1) + '%</div></div>' +
+    '<div><div class="lab">欠測のあるケース</div><div class="val' + (rowNA / n > .3 ? ' warn' : '') + '">' + (rowNA / n * 100).toFixed(1) + '%</div></div>' +
+    '<div><div class="lab">完全なケース</div><div class="val">' + (n - rowNA) + '</div></div>' +
+    '<div><div class="lab">欠測のある変数</div><div class="val">' + varNA + ' / ' + p + '</div></div></div>' +
+    (rowNA / n > 0.3 ? '<div class="warnbox">欠測のあるケースが3割を超えています。完全なケースだけで分析すると標本が大きく減り、結果が偏るおそれがあります。</div>' : '');
+
+  var maxm = Math.max.apply(null, V.miss.concat([1]));
+  var h = '<div class="tblwrap"><table><thead><tr><th>変数</th><th class="n">欠測数</th><th class="n">欠測率</th><th>　</th><th class="n">観測値の平均</th><th class="n">SD</th></tr></thead><tbody>';
+  V.names.forEach(function (nm, k2) {
+    var vals = []; V.data.forEach(function (r) { if (r[k2] !== null) vals.push(r[k2]); });
+    var w = V.miss[k2] / n * 100;
+    h += '<tr' + (w > 20 ? ' class="hi"' : '') + '><td>' + esc(nm) + (V.types[k2] === 'cat' ? ' <span class="note">（分類）</span>' : '') + '</td>' +
+      '<td class="n">' + V.miss[k2] + '</td><td class="n">' + w.toFixed(1) + '%</td>' +
+      '<td style="width:200px"><svg width="180" height="11"><rect x="0" y="1" width="176" height="9" fill="#EDEAF4"/>' +
+      '<rect x="0" y="1" width="' + (176 * V.miss[k2] / maxm).toFixed(1) + '" height="9" fill="' + (w > 20 ? '#B4502F' : '#453A8E') + '"/></svg></td>' +
+      '<td class="n">' + (V.types[k2] === 'num' ? fmt(ST.mean(vals), 2) : '–') + '</td>' +
+      '<td class="n">' + (V.types[k2] === 'num' ? fmt(ST.sd(vals), 2) : '–') + '</td></tr>';
+  });
+  $('mapVars').innerHTML = h + '</tbody></table></div>';
+  drawMatrix();
+  drawPat();
+  drawCo();
+}
+$('mapSort').onchange = drawMatrix;
+function drawMatrix() {
+  var V = S.V, n = V.n, p = V.p, sortBy = $('mapSort').value;
+  var order = [];
+  for (var i = 0; i < n; i++) order.push(i);
+  if (sortBy === 'cnt') order.sort(function (a, b) { var ca = V.data[a].filter(function (v) { return v === null; }).length, cb = V.data[b].filter(function (v) { return v === null; }).length; return cb - ca; });
+  else if (sortBy === 'pat') order.sort(function (a, b) { var ka = V.data[a].map(function (v) { return v === null ? 0 : 1; }).join(''), kb = V.data[b].map(function (v) { return v === null ? 0 : 1; }).join(''); return ka < kb ? -1 : ka > kb ? 1 : 0; });
+  var cw = Math.max(34, Math.min(80, 760 / p)), rh = Math.max(1.2, Math.min(5, 420 / n)), H = n * rh, W = p * cw;
+  var s = '<svg width="' + (W + 20) + '" height="' + (H + 66) + '" font-family="var(--gothic)">';
+  s += '<defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
+    '<rect width="5" height="5" fill="#fff"/><rect width="2" height="5" fill="#C9C0DC"/></pattern></defs>';
+  V.names.forEach(function (nm, k) {
+    var t = nm.length > 7 ? nm.slice(0, 6) + '…' : nm;
+    s += '<text x="' + (k * cw + cw / 2 + 10) + '" y="' + (H + 16) + '" font-size="10.5" text-anchor="end" fill="#4E496B" transform="rotate(-38 ' + (k * cw + cw / 2 + 10) + ' ' + (H + 16) + ')">' + esc(t) + '</text>';
+  });
+  for (var q = 0; q < order.length; q++) {
+    var r = V.data[order[q]];
+    for (var k2 = 0; k2 < p; k2++) {
+      var miss = r[k2] === null;
+      var fill = miss ? (rh >= 4 ? 'url(#hatch)' : '#EDE8F6') : '#453A8E';
+      s += '<rect x="' + (k2 * cw + 10) + '" y="' + (q * rh).toFixed(2) + '" width="' + (cw - 1) + '" height="' + Math.max(rh, 1).toFixed(2) + '" fill="' + fill + '" ' + (miss ? '' : 'opacity=".88"') + '/>';
+    }
+  }
+  s += '<text x="10" y="' + (H + 58) + '" font-size="10.5" fill="#807A9B">' + n + ' ケース × ' + p + ' 変数</text></svg>';
+  $('mapMatrix').innerHTML = s;
+}
+function drawPat() {
+  var V = S.V, pats = ST.missPatterns(V.data);
+  var h = '<div class="tblwrap"><table><thead><tr><th class="n">人数</th><th class="n">割合</th>';
+  V.names.forEach(function (nm) { h += '<th>' + esc(nm.length > 6 ? nm.slice(0, 5) + '…' : nm) + '</th>'; });
+  h += '<th class="n">欠測数</th></tr></thead><tbody>';
+  pats.forEach(function (pt) {
+    var nm2 = pt.key.split('').filter(function (c) { return c === '0'; }).length;
+    h += '<tr' + (nm2 === 0 ? '' : '') + '><td class="n">' + pt.n + '</td><td class="n">' + (pt.n / V.n * 100).toFixed(1) + '%</td>';
+    for (var k = 0; k < V.p; k++) h += '<td style="text-align:center">' + (pt.key[k] === '1' ? '<i class="dot o"></i>' : '<i class="dot m"></i>') + '</td>';
+    h += '<td class="n">' + nm2 + '</td></tr>';
+  });
+  h += '</tbody></table></div><div class="legend"><span><i class="dot o"></i>観測</span><span><i class="dot m"></i>欠測</span></div>';
+  h += '<p class="note">パターン数が多いほど欠測は入り組んでいます。ここが1行だけなら完全データです。</p>';
+  $('mapPat').innerHTML = h;
+}
+function drawCo() {
+  var V = S.V, p = V.p, n = V.n, i, a, b;
+  var M = [];
+  for (i = 0; i < n; i++) M.push(V.data[i].map(function (v) { return v === null ? 1 : 0; }));
+  var cw = Math.max(40, Math.min(74, 660 / p)), lab = 96;
+  var s = '<svg width="' + (lab + p * cw + 16) + '" height="' + (lab + p * cw + 16) + '" font-family="var(--gothic)">';
+  for (a = 0; a < p; a++) {
+    var t = V.names[a].length > 7 ? V.names[a].slice(0, 6) + '…' : V.names[a];
+    s += '<text x="' + (lab - 6) + '" y="' + (lab + a * cw + cw / 2 + 4) + '" font-size="10.5" text-anchor="end" fill="#4E496B">' + esc(t) + '</text>';
+    s += '<text x="' + (lab + a * cw + cw / 2) + '" y="' + (lab - 8) + '" font-size="10.5" text-anchor="start" fill="#4E496B" transform="rotate(-55 ' + (lab + a * cw + cw / 2) + ' ' + (lab - 8) + ')">' + esc(t) + '</text>';
+  }
+  for (a = 0; a < p; a++) for (b = 0; b < p; b++) {
+    var v;
+    if (a === b) v = V.miss[a] / n;
+    else {
+      var ma = ST.mean(M.map(function (r) { return r[a]; })), mb = ST.mean(M.map(function (r) { return r[b]; })), sa = ST.sd(M.map(function (r) { return r[a]; })), sb = ST.sd(M.map(function (r) { return r[b]; })), c = 0;
+      for (i = 0; i < n; i++) c += (M[i][a] - ma) * (M[i][b] - mb);
+      v = (sa > 0 && sb > 0) ? (c / (n - 1)) / (sa * sb) : 0;
+    }
+    var col = a === b ? 'rgba(69,58,142,' + (0.15 + 0.8 * Math.min(1, v * 2)).toFixed(2) + ')'
+      : (v >= 0 ? 'rgba(180,80,47,' + (0.06 + 0.9 * Math.min(1, Math.abs(v) * 2)).toFixed(2) + ')' : 'rgba(46,107,84,' + (0.06 + 0.9 * Math.min(1, Math.abs(v) * 2)).toFixed(2) + ')');
+    s += '<rect x="' + (lab + b * cw) + '" y="' + (lab + a * cw) + '" width="' + (cw - 2) + '" height="' + (cw - 2) + '" fill="' + col + '" stroke="#DEDAE8"/>';
+    s += '<text x="' + (lab + b * cw + cw / 2 - 1) + '" y="' + (lab + a * cw + cw / 2 + 4) + '" font-size="10.5" text-anchor="middle" font-family="var(--mono)" fill="#201D33">' +
+      (a === b ? (v * 100).toFixed(0) + '%' : fmt(v, 2).replace('0.', '.')) + '</text>';
+  }
+  s += '</svg>';
+  $('mapCo').innerHTML = s + '<p class="note">対角は各変数の欠測率、それ以外は欠測の有無どうしの相関（φ係数）です。正の値（赤）は同時に欠けやすいこと、負の値（緑）は片方が欠けるともう片方は残ることを表します。</p>';
+}
+
+/* ---------- 03 メカニズム ---------- */
+$('btnMech').onclick = function () {
+  var V = S.V, num = [];
+  for (var k = 0; k < V.p; k++) if (V.types[k] === 'num') num.push(k);
+  if (num.length < 2) { msg('mechOut', 'Little の検定には数値変数が2つ以上必要です。', 1); return; }
+  var sub = V.data.map(function (r) { return num.map(function (k) { return r[k]; }); });
+  var lt;
+  try { lt = ST.littleMCAR(sub); } catch (e) { msg('mechOut', '検定を計算できませんでした。変数を減らして試してください。', 1); return; }
+  S.little = lt;
+  var h = '<h3 class="sub">Little の MCAR 検定</h3>';
+  h += '<div class="big"><div><div class="lab">χ²</div><div class="val">' + fmt(lt.chi2, 2) + '</div></div>' +
+    '<div><div class="lab">自由度</div><div class="val">' + lt.df + '</div></div>' +
+    '<div><div class="lab">p 値</div><div class="val' + (lt.p < .05 ? ' warn' : '') + '">' + pfmt(lt.p) + '</div></div>' +
+    '<div><div class="lab">欠測パターン</div><div class="val">' + lt.patterns + '</div></div></div>';
+  h += lt.p < 0.05
+    ? '<div class="warnbox"><b>MCAR とはいえません（p &lt; .05）。</b>欠測パターンごとに平均が異なっています。欠測のある行を落とす（リストワイズ除去）と結果が偏る可能性が高いので、多重代入を使ってください。ただしこの検定は MAR と MNAR を区別できません。</div>'
+    : '<div class="okbox"><b>MCAR を否定する証拠は得られませんでした（p ≥ .05）。</b>ただし「MCAR である」ことが示されたわけではありません。標本が小さいと検出力が足りないだけの場合もあります。多重代入は MCAR でも妥当なので、そのまま使えます。</div>';
+  h += '<p class="note">検定に使った数値変数：' + num.map(function (k) { return esc(V.names[k]); }).join('、') + '</p>';
+
+  h += '<h3 class="sub">欠測した人と観測できた人の比較</h3>' +
+    '<p class="lead">ある変数が欠測している群と観測されている群で、他の変数の平均を比べます。差が大きい組み合わせは、その変数が欠測の理由と関係している（MAR）ことを示唆します。差の大きさは Cohen の d で見ます。</p>';
+  h += '<div class="tblwrap"><table><thead><tr><th>欠測した変数</th><th>比べた変数</th><th class="n">欠測群の平均</th><th class="n">観測群の平均</th><th class="n">t</th><th class="n">p</th><th class="n">d</th></tr></thead><tbody>';
+  var any = false;
+  for (var a = 0; a < V.p; a++) {
+    if (!V.miss[a] || V.miss[a] === V.n) continue;
+    for (var b = 0; b < V.p; b++) {
+      if (a === b || V.types[b] !== 'num') continue;
+      var g1 = [], g2 = [];
+      V.data.forEach(function (r) { if (r[b] === null) return; (r[a] === null ? g1 : g2).push(r[b]); });
+      if (g1.length < 3 || g2.length < 3) continue;
+      var m1 = ST.mean(g1), m2 = ST.mean(g2), s1 = ST.sd(g1), s2 = ST.sd(g2), n1 = g1.length, n2 = g2.length;
+      var sp = Math.sqrt(((n1 - 1) * s1 * s1 + (n2 - 1) * s2 * s2) / (n1 + n2 - 2));
+      var t = (m1 - m2) / (sp * Math.sqrt(1 / n1 + 1 / n2)), df = n1 + n2 - 2, pv = ST.tP(t, df), d = (m1 - m2) / sp;
+      var big = Math.abs(d) >= 0.3 || pv < 0.05;
+      if (big) any = true;
+      h += '<tr' + (big ? ' class="hi"' : '') + '><td>' + esc(V.names[a]) + ' が欠測</td><td>' + esc(V.names[b]) + '</td>' +
+        '<td class="n">' + fmt(m1, 2) + '</td><td class="n">' + fmt(m2, 2) + '</td><td class="n">' + fmt(t, 2) + '</td>' +
+        '<td class="n">' + pfmt(pv) + '</td><td class="n">' + fmt(d, 2) + '</td></tr>';
+    }
+  }
+  h += '</tbody></table></div>';
+  h += any ? '<div class="warnbox">色のついた行では、欠測の有無によって他の変数の平均が違っています。その変数を代入モデルの予測子に必ず含めてください（MAR の仮定はそれで成り立ちやすくなります）。</div>'
+    : '<div class="okbox">目立った差は見つかりませんでした。観測された変数から欠測を説明できる手がかりは弱いようです。</div>';
+  h += '<h3 class="sub">3つの欠測メカニズム</h3>' +
+    '<div class="tblwrap"><table><thead><tr><th>種類</th><th>意味</th><th>リストワイズ除去</th><th>多重代入</th></tr></thead><tbody>' +
+    '<tr><td>MCAR<br>完全にランダム</td><td style="white-space:normal">欠けるかどうかが、観測値にも欠測値自身にも関係しない</td><td>偏らない（ただし標本が減る）</td><td>妥当</td></tr>' +
+    '<tr><td>MAR<br>観測値で説明できる</td><td style="white-space:normal">欠けるかどうかが、観測できている他の変数で説明できる</td><td>偏る</td><td>妥当</td></tr>' +
+    '<tr><td>MNAR<br>欠測値自身による</td><td style="white-space:normal">欠けるかどうかが、その欠けている値自身に関係する</td><td>偏る</td><td>偏りが残る（感度分析が必要）</td></tr>' +
+    '</tbody></table></div>' +
+    '<p class="note">データだけから MAR と MNAR を区別することはできません。調査の事情や無回答の理由といった、データの外側の情報が判断材料になります。</p>';
+  $('mechOut').innerHTML = h;
+};
+
+/* ---------- 04 代入 ---------- */
+[].forEach.call($('impTabs').children, function (b) {
+  b.onclick = function () {
+    [].forEach.call($('impTabs').children, function (x) { x.classList.remove('on'); }); b.classList.add('on');
+    $('im-mi').classList.toggle('hide', b.dataset.v !== 'mi');
+    $('im-single').classList.toggle('hide', b.dataset.v !== 'single');
+  };
+});
+function defaultMethod(k) {
+  var V = S.V;
+  if (!V.miss[k]) return 'none';
+  if (V.types[k] === 'cat') return (V.levels[k] && V.levels[k].length === 2) ? 'logreg' : 'sample';
+  var u = {}, nu = 0;
+  V.data.forEach(function (r) { if (r[k] !== null && !u[r[k]]) { u[r[k]] = 1; nu++; } });
+  return nu === 2 ? 'logreg' : 'pmm';
+}
+function buildMethods() {
+  var V = S.V, h = '<div class="tblwrap"><table><thead><tr><th>変数</th><th class="n">欠測</th><th>方法</th><th>予測子として使う</th></tr></thead><tbody>';
+  V.names.forEach(function (nm, k) {
+    var d = defaultMethod(k);
+    h += '<tr><td>' + esc(nm) + '</td><td class="n">' + V.miss[k] + '</td><td>' +
+      (V.miss[k] ? '<select class="mth" data-k="' + k + '">' +
+        ['pmm|PMM（似た人の値を借りる）', 'norm|ベイズ線形回帰（連続値を作る）', 'logreg|ロジスティック回帰（2値）', 'sample|観測値から無作為に', 'none|代入しない'].map(function (o) {
+          var v = o.split('|')[0];
+          return '<option value="' + v + '"' + (v === d ? ' selected' : '') + '>' + o.split('|')[1] + '</option>';
+        }).join('') + '</select>' : '<span class="note">欠測なし</span>') + '</td>' +
+      '<td><label><input type="checkbox" class="prd" data-k="' + k + '" checked> 使う</label></td></tr>';
+  });
+  $('miMethods').innerHTML = h + '</tbody></table></div>';
+}
+$('btnMice').onclick = function () {
+  var V = S.V, m = Math.max(2, +$('miM').value || 5), it = Math.max(1, +$('miIt').value || 10), seed = +$('miSeed').value || 2026, don = Math.max(1, +$('miDon').value || 5);
+  var methods = V.names.map(function (_, k) { return 'none'; });
+  [].forEach.call(document.querySelectorAll('.mth'), function (el) { methods[+el.dataset.k] = el.value; });
+  var use = V.names.map(function () { return true; });
+  [].forEach.call(document.querySelectorAll('.prd'), function (el) { use[+el.dataset.k] = el.checked; });
+  var pred = ST.zeros(V.p, V.p);
+  for (var a = 0; a < V.p; a++) for (var b = 0; b < V.p; b++) pred[a][b] = (a !== b && use[b]) ? 1 : 0;
+  var left = 0;
+  V.miss.forEach(function (mm, k) { if (mm && methods[k] === 'none') left += mm; });
+  $('miMsg').innerHTML = '<div class="okbox">計算しています…</div>';
+  $('miProg').classList.remove('hide');
+  setTimeout(function () {
+    var t0 = Date.now(), r;
+    try { r = ST.mice(V.data, { m: m, maxit: it, seed: seed, methods: methods, predictors: pred, donors: don }); }
+    catch (e) { $('miProg').classList.add('hide'); msg('miMsg', '計算に失敗しました：' + esc(e.message), 1); return; }
+    S.mi = r; S.mi.methods = methods; S.pooled = null;
+    $('miProg').querySelector('i').style.width = '100%';
+    $('miProg').classList.add('hide');
+    msg('miMsg', '<b>' + m + ' 組</b>の代入済みデータを作りました（各 ' + it + ' 反復・' + ((Date.now() - t0) / 1000).toFixed(1) + ' 秒）。' +
+      (left ? '「代入しない」を選んだ変数に ' + left + ' セルの欠測が残っています。' : '') +
+      '　次は「代入を診断する」で結果を確かめ、「統合して分析する」に進みます。', 0);
+  }, 30);
+};
+$('btnSingle').onclick = function () {
+  var V = S.V, meth = $('sgMethod').value, rng = ST.RNG(+$('sgSeed').value || 2026);
+  var out = V.data.map(function (r) { return r.slice(); }), note = '', k, i;
+  if (meth === 'listwise') {
+    var keep = out.filter(function (r) { return r.every(function (v) { return v !== null; }); });
+    S.single = { data: keep, method: meth };
+    var lost = V.n - keep.length;
+    $('sgOut').innerHTML = '<div class="' + (lost / V.n > .2 ? 'warnbox' : 'okbox') + '">' + V.n + ' ケース中 <b>' + keep.length + '</b> ケースが残りました（' + lost + ' ケース・' + (lost / V.n * 100).toFixed(1) + '％ を除外）。' +
+      (lost / V.n > .2 ? ' 2割以上を失っています。検定力が落ちるだけでなく、MCAR でなければ推定も偏ります。' : '') + '</div>' + singleTable(keep);
+    return;
+  }
+  if (meth === 'em') {
+    var num = []; for (k = 0; k < V.p; k++) if (V.types[k] === 'num') num.push(k);
+    var sub = out.map(function (r) { return num.map(function (k2) { return r[k2]; }); });
+    var em = ST.emMVN(sub);
+    for (i = 0; i < out.length; i++) {
+      var O = [], M = [];
+      for (k = 0; k < num.length; k++) (sub[i][k] === null ? M : O).push(k);
+      if (!M.length || !O.length) continue;
+      var Soo = ST.inv(ST.ridge(ST.sub(em.sigma, O, O), 1e-10)), Smo = ST.sub(em.sigma, M, O);
+      var d = O.map(function (o) { return sub[i][o] - em.mu[o]; });
+      var adj = ST.mv(ST.mm(Smo, Soo), d);
+      M.forEach(function (mk, q) { out[i][num[mk]] = em.mu[mk] + adj[q]; });
+    }
+    note = 'EM で推定した平均・共分散から条件付き期待値を入れました（' + em.iter + ' 反復' + (em.converged ? '・収束' : '・打ち切り') + '）。値のばらつきは小さめになります。';
+  } else {
+    for (k = 0; k < V.p; k++) {
+      if (!V.miss[k]) continue;
+      var obs = [], oidx = [], midx = [];
+      for (i = 0; i < out.length; i++) { if (out[i][k] === null) midx.push(i); else { obs.push(out[i][k]); oidx.push(i); } }
+      if (!obs.length) continue;
+      if (meth === 'mean' || meth === 'median') {
+        var fill = V.types[k] === 'cat' ? mode(obs) : (meth === 'mean' ? ST.mean(obs) : ST.median(obs));
+        midx.forEach(function (i2) { out[i2][k] = fill; });
+      } else if (meth === 'hot') {
+        midx.forEach(function (i2) { out[i2][k] = obs[rng.int(obs.length)]; });
+      } else {
+        var preds = [];
+        for (var b = 0; b < V.p; b++) if (b !== k && V.miss[b] === 0) preds.push(b);
+        if (!preds.length) { midx.forEach(function (i2) { out[i2][k] = obs[rng.int(obs.length)]; }); continue; }
+        var Xo = oidx.map(function (i3) { return [1].concat(preds.map(function (b2) { return out[i3][b2]; })); });
+        var fit = ST.ols(Xo, obs);
+        if (!fit) { midx.forEach(function (i2) { out[i2][k] = ST.mean(obs); }); continue; }
+        midx.forEach(function (i4) {
+          var x = [1].concat(preds.map(function (b3) { return out[i4][b3]; })), yh = 0;
+          for (var q2 = 0; q2 < x.length; q2++) yh += fit.beta[q2] * x[q2];
+          out[i4][k] = meth === 'sreg' ? yh + Math.sqrt(fit.sigma2) * rng.norm() : yh;
+        });
+      }
+    }
+    note = { mean: '各変数の平均で埋めました。分散と相関が実際より小さくなります（見かけの標準誤差も小さくなります）。',
+      median: '各変数の中央値で埋めました。外れ値には強いですが、分散は縮みます。',
+      reg: '欠測のない変数からの回帰予測値で埋めました。予測誤差を無視するため、関連が実際より強く見えます。',
+      sreg: '回帰予測値に残差のばらつきを加えて埋めました。分散は保たれますが、1組だけでは代入の不確かさが分析に反映されません。',
+      hot: '観測値から無作為に借りてきて埋めました。分布の形は保たれますが、変数間の関係は弱まります。' }[meth];
+  }
+  S.single = { data: out, method: meth };
+  $('sgOut').innerHTML = '<div class="warnbox">' + note + '</div>' + singleTable(out);
+};
+function mode(a) { var c = {}, best = a[0], bn = 0; a.forEach(function (v) { c[v] = (c[v] || 0) + 1; if (c[v] > bn) { bn = c[v]; best = v; } }); return best; }
+function singleTable(D) {
+  var V = S.V;
+  var h = '<h3 class="sub">代入の前後で統計量はどう変わったか</h3><div class="tblwrap"><table><thead><tr><th>変数</th>' +
+    '<th class="n">観測値の平均</th><th class="n">代入後の平均</th><th class="n">観測値のSD</th><th class="n">代入後のSD</th><th class="n">SDの変化</th></tr></thead><tbody>';
+  V.names.forEach(function (nm, k) {
+    if (V.types[k] !== 'num') return;
+    var o = []; V.data.forEach(function (r) { if (r[k] !== null) o.push(r[k]); });
+    var a = []; D.forEach(function (r) { if (r[k] !== null) a.push(r[k]); });
+    var s1 = ST.sd(o), s2 = ST.sd(a), ch = (s2 - s1) / s1 * 100;
+    h += '<tr' + (Math.abs(ch) > 10 ? ' class="hi"' : '') + '><td>' + esc(nm) + '</td><td class="n">' + fmt(ST.mean(o), 3) + '</td><td class="n">' + fmt(ST.mean(a), 3) + '</td>' +
+      '<td class="n">' + fmt(s1, 3) + '</td><td class="n">' + fmt(s2, 3) + '</td><td class="n">' + (ch >= 0 ? '+' : '') + fmt(ch, 1) + '%</td></tr>';
+  });
+  return h + '</tbody></table></div><p class="note">SD が大きく縮んでいる変数では、単一代入によって「実際よりデータが揃っている」ように見えています。</p>';
+}
+
+/* ---------- 05 診断 ---------- */
+function drawDiag() {
+  if (!S.mi) { $('diagOut').innerHTML = '<div class="okbox">先に「代入する」で多重代入を実行してください。</div>'; return; }
+  var V = S.V, mi = S.mi, h = '';
+  h += '<h3 class="sub">観測値と代入値の分布</h3>';
+  h += '<div class="legend"><span><i class="sw" style="background:#453A8E;opacity:.85"></i>観測値</span><span><i class="sw" style="background:#B4502F;opacity:.55"></i>代入値（m組をまとめて）</span></div>';
+  var drew = 0;
+  V.names.forEach(function (nm, k) {
+    if (!V.miss[k] || mi.methods[k] === 'none') return;
+    var obs = [], imp = [];
+    V.data.forEach(function (r) { if (r[k] !== null) obs.push(r[k]); });
+    mi.imps.forEach(function (D) { mi.misIdx[k].forEach(function (i) { imp.push(D[i][k]); }); });
+    if (V.types[k] === 'cat') { h += catCompare(nm, k, obs, imp); drew++; return; }
+    h += '<div style="margin:14px 0"><b>' + esc(nm) + '</b>　<span class="note">観測 ' + obs.length + ' 件（M=' + fmt(ST.mean(obs), 2) + ', SD=' + fmt(ST.sd(obs), 2) + '） / 代入 ' + imp.length + ' 件（M=' + fmt(ST.mean(imp), 2) + ', SD=' + fmt(ST.sd(imp), 2) + '）</span>' + histPair(obs, imp) + '</div>';
+    drew++;
+  });
+  if (!drew) h += '<div class="okbox">代入された値はありません。</div>';
+  h += '<h3 class="sub">反復のあいだの動き（収束の確認）</h3>' +
+    '<p class="lead">m 本の線がそれぞれ独立した代入の系列です。特定の向きに上がり続けたり下がり続けたりせず、線どうしが混ざり合っていれば落ち着いています。</p>';
+  V.names.forEach(function (nm, k) {
+    if (!V.miss[k] || mi.methods[k] === 'none') return;
+    h += '<div style="margin:12px 0"><b>' + esc(nm) + '</b> の代入値の平均' + traceChart(k) + '</div>';
+  });
+  $('diagOut').innerHTML = h;
+}
+function histPair(a, b) {
+  var all = a.concat(b), mn = Math.min.apply(null, all), mx = Math.max.apply(null, all);
+  if (mx === mn) { mx = mn + 1; }
+  var K = 22, W = 620, H = 108, ba = new Array(K).fill(0), bb = new Array(K).fill(0);
+  a.forEach(function (v) { ba[Math.min(K - 1, Math.floor((v - mn) / (mx - mn) * K))]++; });
+  b.forEach(function (v) { bb[Math.min(K - 1, Math.floor((v - mn) / (mx - mn) * K))]++; });
+  var pa = ba.map(function (v) { return v / (a.length || 1); }), pb = bb.map(function (v) { return v / (b.length || 1); });
+  var mxp = Math.max(Math.max.apply(null, pa), Math.max.apply(null, pb)) || 1;
+  var w = W / K, s = '<svg width="' + (W + 46) + '" height="' + (H + 30) + '" font-family="var(--mono)">';
+  s += '<line x1="34" y1="' + H + '" x2="' + (W + 36) + '" y2="' + H + '" stroke="#C3BCD6"/>';
+  for (var i = 0; i < K; i++) {
+    var ha = pa[i] / mxp * (H - 8), hb = pb[i] / mxp * (H - 8);
+    s += '<rect x="' + (36 + i * w) + '" y="' + (H - ha) + '" width="' + (w - 1.5) + '" height="' + ha + '" fill="#453A8E" opacity=".85"/>';
+    s += '<rect x="' + (36 + i * w) + '" y="' + (H - hb) + '" width="' + (w - 1.5) + '" height="' + hb + '" fill="#B4502F" opacity=".55"/>';
+  }
+  s += '<text x="36" y="' + (H + 16) + '" font-size="10" fill="#807A9B">' + fmt(mn, 2) + '</text>' +
+    '<text x="' + (W + 36) + '" y="' + (H + 16) + '" font-size="10" text-anchor="end" fill="#807A9B">' + fmt(mx, 2) + '</text>' +
+    '<text x="30" y="12" font-size="10" text-anchor="end" fill="#807A9B">割合</text></svg>';
+  return '<div class="svgbox">' + s + '</div>';
+}
+function catCompare(nm, k, obs, imp) {
+  var V = S.V, lv = V.levels[k] || [];
+  var co = {}, ci = {};
+  obs.forEach(function (v) { co[v] = (co[v] || 0) + 1; });
+  imp.forEach(function (v) { ci[Math.round(v)] = (ci[Math.round(v)] || 0) + 1; });
+  var h = '<div style="margin:12px 0"><b>' + esc(nm) + '</b><div class="tblwrap"><table><thead><tr><th>水準</th><th class="n">観測の割合</th><th class="n">代入の割合</th></tr></thead><tbody>';
+  lv.forEach(function (l, q) {
+    h += '<tr><td>' + esc(l) + '</td><td class="n">' + ((co[q] || 0) / (obs.length || 1) * 100).toFixed(1) + '%</td><td class="n">' + ((ci[q] || 0) / (imp.length || 1) * 100).toFixed(1) + '%</td></tr>';
+  });
+  return h + '</tbody></table></div></div>';
+}
+function traceChart(k) {
+  var mi = S.mi, W = 620, H = 96, m = mi.m, it = mi.maxit;
+  var vals = [];
+  for (var c = 0; c < m; c++) for (var t = 0; t < it; t++) { var v = mi.trace[c][t][k].mean; if (isFinite(v)) vals.push(v); }
+  if (!vals.length) return '';
+  var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+  if (mx === mn) { mn -= 1; mx += 1; }
+  var pad = (mx - mn) * .12; mn -= pad; mx += pad;
+  var x = function (t) { return 44 + (it === 1 ? 0 : t / (it - 1) * (W - 20)); };
+  var y = function (v) { return H - 8 - (v - mn) / (mx - mn) * (H - 22); };
+  var s = '<svg width="' + (W + 50) + '" height="' + (H + 22) + '" font-family="var(--mono)">';
+  s += '<line x1="44" y1="' + (H - 8) + '" x2="' + (W + 24) + '" y2="' + (H - 8) + '" stroke="#DEDAE8"/>';
+  var cols = ['#453A8E', '#B4502F', '#2E6B54', '#8A6A1F', '#7C5AA8', '#3A6FA8', '#A8447C', '#5A7A2E'];
+  for (var c2 = 0; c2 < m; c2++) {
+    var d = '';
+    for (var t2 = 0; t2 < it; t2++) { var v2 = mi.trace[c2][t2][k].mean; if (!isFinite(v2)) continue; d += (d ? 'L' : 'M') + x(t2).toFixed(1) + ',' + y(v2).toFixed(1) + ' '; }
+    s += '<path d="' + d + '" fill="none" stroke="' + cols[c2 % cols.length] + '" stroke-width="1.4" opacity=".8"/>';
+  }
+  s += '<text x="40" y="14" font-size="10" text-anchor="end" fill="#807A9B">' + fmt(mx, 2) + '</text>' +
+    '<text x="40" y="' + (H - 6) + '" font-size="10" text-anchor="end" fill="#807A9B">' + fmt(mn, 2) + '</text>' +
+    '<text x="44" y="' + (H + 14) + '" font-size="10" fill="#807A9B">反復 1</text>' +
+    '<text x="' + (W + 24) + '" y="' + (H + 14) + '" font-size="10" text-anchor="end" fill="#807A9B">' + it + '</text></svg>';
+  return '<div class="svgbox">' + s + '</div>';
+}
+
+/* ---------- 06 統合分析 ---------- */
+function fillPool() {
+  var V = S.V;
+  $('poolY').innerHTML = V.names.map(function (nm, k) { return V.types[k] === 'num' ? '<option value="' + k + '">' + esc(nm) + '</option>' : ''; }).join('');
+  $('poolX').innerHTML = V.names.map(function (nm, k) { return '<span class="chip" data-k="' + k + '">' + esc(nm) + '</span>'; }).join('');
+  [].forEach.call($('poolX').querySelectorAll('.chip'), function (c) { c.onclick = function () { c.classList.toggle('on'); }; });
+}
+$('btnPool').onclick = function () {
+  if (!S.mi) { msg('poolOut', '先に多重代入を実行してください。', 1); return; }
+  var V = S.V, y = +$('poolY').value;
+  var xs = [].map.call($('poolX').querySelectorAll('.chip.on'), function (c) { return +c.dataset.k; }).filter(function (k) { return k !== y; });
+  if (!xs.length) { msg('poolOut', '説明変数を1つ以上選んでください。', 1); return; }
+  var terms = ['（切片）'], cols = [];
+  xs.forEach(function (k) {
+    if (V.types[k] === 'cat' && V.levels[k] && V.levels[k].length > 2) {
+      for (var q = 1; q < V.levels[k].length; q++) { terms.push(V.names[k] + '：' + V.levels[k][q] + '（基準 ' + V.levels[k][0] + '）'); cols.push({ k: k, lv: q }); }
+    } else { terms.push(V.names[k] + (V.types[k] === 'cat' ? '（' + V.levels[k][1] + '＝1）' : '')); cols.push({ k: k, lv: null }); }
+  });
+  var design = function (D) {
+    var X = [], yy = [];
+    for (var i = 0; i < D.length; i++) {
+      var ok = D[i][y] !== null, row = [1];
+      cols.forEach(function (c) { var v = D[i][c.k]; if (v === null) ok = false; else row.push(c.lv === null ? v : (Math.round(v) === c.lv ? 1 : 0)); });
+      if (!ok) continue;
+      X.push(row); yy.push(D[i][y]);
+    }
+    return { X: X, y: yy };
+  };
+  var Q = [], U = [], r2 = [], nUsed = 0;
+  for (var q2 = 0; q2 < S.mi.imps.length; q2++) {
+    var d = design(S.mi.imps[q2]), f = ST.ols(d.X, d.y);
+    if (!f) { msg('poolOut', '回帰の計算に失敗しました。説明変数の重複を確認してください。', 1); return; }
+    nUsed = d.X.length;
+    Q.push(f.beta); U.push(f.se.map(function (s) { return s * s; })); r2.push(f.r2);
+  }
+  var dfCom = nUsed - terms.length;
+  var res = terms.map(function (_, j) { return ST.pool(Q.map(function (b) { return b[j]; }), U.map(function (u) { return u[j]; }), dfCom); });
+  var dcc = design(V.data), fcc = dcc.X.length > terms.length ? ST.ols(dcc.X, dcc.y) : null;
+  S.pooled = { terms: terms, res: res, r2: ST.mean(r2), n: nUsed, ncc: dcc.X.length, cc: fcc, y: y, xs: xs };
+  var h = '<h3 class="sub">統合された回帰分析</h3>';
+  h += '<p class="lead">目的変数：<b>' + esc(V.names[y]) + '</b>　／　' + S.mi.m + ' 組の代入データで推定し、Rubin の規則で統合しました（n = ' + nUsed + '、平均 R² = ' + fmt(ST.mean(r2), 3) + '）。</p>';
+  h += '<div class="tblwrap"><table><thead><tr><th>項</th><th class="n">推定値</th><th class="n">標準誤差</th><th class="n">t</th><th class="n">df</th><th class="n">p</th><th class="n">95%信頼区間</th><th class="n">FMI</th></tr></thead><tbody>';
+  res.forEach(function (r, j) {
+    h += '<tr' + (r.p < .05 && j > 0 ? ' class="hi"' : '') + '><td>' + esc(terms[j]) + '</td><td class="n">' + fmt(r.est, 3) + '</td><td class="n">' + fmt(r.se, 3) + '</td>' +
+      '<td class="n">' + fmt(r.t, 2) + '</td><td class="n">' + fmt(r.df, 1) + '</td><td class="n">' + pfmt(r.p) + '</td>' +
+      '<td class="n">[' + fmt(r.lo, 3) + ', ' + fmt(r.hi, 3) + ']</td><td class="n">' + fmt(r.fmi, 3) + '</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  h += '<p class="note">FMI（欠測による情報の損失割合）が大きい項ほど、その推定は欠測の影響を強く受けています。おおよそ 0.5 を超えるときは m を増やしてください（目安：m ≧ FMI×100）。</p>';
+  var maxf = Math.max.apply(null, res.map(function (r) { return r.fmi; }));
+  if (maxf * 100 > S.mi.m) h += '<div class="warnbox">最大の FMI は ' + fmt(maxf, 2) + ' です。m = ' + Math.ceil(maxf * 100) + ' 程度まで増やすと推定が安定します。</div>';
+  if (fcc) {
+    h += '<h3 class="sub">完全ケース分析との比較</h3><p class="lead">欠測のある行を落とした場合（n = ' + dcc.X.length + '）の結果です。推定値が大きく違うなら、欠測の扱いが結論を左右しています。</p>';
+    h += '<div class="tblwrap"><table><thead><tr><th>項</th><th class="n">多重代入</th><th class="n">完全ケース</th><th class="n">差</th><th class="n">MIの標準誤差</th><th class="n">CCの標準誤差</th></tr></thead><tbody>';
+    terms.forEach(function (t, j) {
+      h += '<tr><td>' + esc(t) + '</td><td class="n">' + fmt(res[j].est, 3) + '</td><td class="n">' + fmt(fcc.beta[j], 3) + '</td>' +
+        '<td class="n">' + fmt(res[j].est - fcc.beta[j], 3) + '</td><td class="n">' + fmt(res[j].se, 3) + '</td><td class="n">' + fmt(fcc.se[j], 3) + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '<h3 class="sub">分散の内訳</h3><div class="tblwrap"><table><thead><tr><th>項</th><th class="n">組内分散 Ū</th><th class="n">組間分散 B</th><th class="n">全体 T</th><th class="n">相対増加 r</th><th class="n">相対効率</th></tr></thead><tbody>';
+  res.forEach(function (r, j) {
+    h += '<tr><td>' + esc(terms[j]) + '</td><td class="n">' + fmt(r.ub, 4) + '</td><td class="n">' + fmt(r.b, 4) + '</td><td class="n">' + fmt(r.T, 4) + '</td>' +
+      '<td class="n">' + fmt(r.riv, 3) + '</td><td class="n">' + fmt(r.re, 3) + '</td></tr>';
+  });
+  h += '</tbody></table></div><p class="note">組間分散 B が代入の不確かさです。ここが 0 に近ければ、その項は欠測の影響をほとんど受けていません。</p>';
+  $('poolOut').innerHTML = h;
+};
+
+/* ---------- 07 書き出す ---------- */
+[].forEach.call($('outTabs').children, function (b) {
+  b.onclick = function () {
+    [].forEach.call($('outTabs').children, function (x) { x.classList.remove('on'); }); b.classList.add('on');
+    ['csv', 'r', 'doc'].forEach(function (v) { $('ou-' + v).classList.toggle('hide', v !== b.dataset.v); });
+  };
+});
+$('expWhat').onchange = drawOut;
+function backLabel(k, v) {
+  var V = S.V;
+  if (v === null || v === undefined) return '';
+  if (V.types[k] === 'cat') { var lv = V.levels[k], i = Math.round(v); return lv && lv[i] !== undefined ? lv[i] : ''; }
+  return typeof v === 'number' ? (+v.toFixed(6)).toString() : v;
+}
+function expCSV() {
+  var V = S.V, what = $('expWhat').value, L = [];
+  if (!S.mi) {
+    if (S.single) {
+      L.push(V.names.join(','));
+      S.single.data.forEach(function (r) { L.push(r.map(function (v, k) { return backLabel(k, v); }).join(',')); });
+      return L.join('\n');
+    }
+    L.push(V.names.join(','));
+    V.data.forEach(function (r) { L.push(r.map(function (v, k) { return v === null ? 'NA' : backLabel(k, v); }).join(',')); });
+    return L.join('\n');
+  }
+  if (what === 'one') {
+    L.push(V.names.join(','));
+    S.mi.imps[0].forEach(function (r) { L.push(r.map(function (v, k) { return backLabel(k, v); }).join(',')); });
+  } else if (what === 'avg') {
+    L.push(V.names.join(','));
+    for (var i = 0; i < V.n; i++) {
+      var row = [];
+      for (var k = 0; k < V.p; k++) {
+        if (V.data[i][k] !== null) { row.push(backLabel(k, V.data[i][k])); continue; }
+        var a = S.mi.imps.map(function (D) { return D[i][k]; });
+        row.push(V.types[k] === 'cat' ? backLabel(k, mode(a.map(function (x) { return Math.round(x); }))) : backLabel(k, ST.mean(a)));
+      }
+      L.push(row.join(','));
+    }
+  } else {
+    L.push(['.imp', '.id'].concat(V.names).join(','));
+    for (var i2 = 0; i2 < V.n; i2++) L.push(['0', i2 + 1].concat(V.data[i2].map(function (v, k2) { return v === null ? 'NA' : backLabel(k2, v); })).join(','));
+    S.mi.imps.forEach(function (D, q) {
+      for (var i3 = 0; i3 < V.n; i3++) L.push([q + 1, i3 + 1].concat(D[i3].map(function (v, k3) { return backLabel(k3, v); })).join(','));
+    });
+  }
+  return L.join('\n');
+}
+function drawOut() { $('expText').value = expCSV(); $('rcode').textContent = buildR(); $('docBox').innerHTML = buildDoc(); }
+$('btnDl').onclick = function () { download(expCSV(), 'imputed_data.csv'); };
+$('btnCopy').onclick = function () { copyText($('expText').value); };
+$('btnCopyR').onclick = function () { copyText(buildR()); };
+function download(t, name) {
+  try {
+    var b = new Blob(['\uFEFF' + t], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  } catch (e) { alert('保存できませんでした。枠の内容をコピーして保存してください。'); }
+}
+function copyText(t) {
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(function () { alert('コピーしました。'); }, function () { fb(t); }); else fb(t);
+  function fb(x) { var ta = document.createElement('textarea'); ta.value = x; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); alert('コピーしました。'); } catch (e) { alert('コピーできませんでした。'); } ta.remove(); }
+}
+function origCSV() {
+  var V = S.V, L = [V.names.map(function (n) { return n; }).join(',')];
+  var lim = Math.min(V.n, 2500);
+  for (var i = 0; i < lim; i++) L.push(V.data[i].map(function (v, k) { return v === null ? 'NA' : backLabel(k, v); }).join(','));
+  return L.join('\n');
+}
+function buildR() {
+  var V = S.V, L = [];
+  var meth = V.names.map(function (nm, k) {
+    if (!S.mi) return defaultMethod(k) === 'none' ? '""' : '"' + defaultMethod(k) + '"';
+    return S.mi.methods[k] === 'none' ? '""' : '"' + S.mi.methods[k] + '"';
+  });
+  L.push('# ============================================================');
+  L.push('# 欠測データラボ が生成した R コード（データ埋め込み）');
+  L.push('# 必要なパッケージ: mice, naniar（なければ install.packages で導入）');
+  L.push('# ============================================================');
+  L.push('library(mice)');
+  L.push('');
+  L.push('raw_text <- "');
+  L.push(origCSV().replace(/"/g, '""'));
+  L.push('"');
+  L.push('dat <- read.csv(text = raw_text, na.strings = "NA", check.names = FALSE, stringsAsFactors = TRUE)');
+  L.push('');
+  L.push('# 図の保存先を自動判定（JASP の R コンソール対策）');
+  L.push('out_dir <- Sys.getenv("USERPROFILE"); if (out_dir == "") out_dir <- Sys.getenv("HOME")');
+  L.push('cand <- file.path(out_dir, "Downloads"); if (!dir.exists(cand)) cand <- getwd()');
+  L.push('if (!file.access(cand, 2) == 0) cand <- tempdir()');
+  L.push('cat("図の保存先:", cand, "\\n")');
+  L.push('');
+  L.push('## 1. 欠測パターン ------------------------------------------');
+  L.push('print(colSums(is.na(dat)))');
+  L.push('png(file.path(cand, "missing_pattern.png"), width = 1400, height = 1000, res = 150)');
+  L.push('md.pattern(dat, rotate.names = TRUE)');
+  L.push('dev.off()');
+  L.push('');
+  L.push('## 2. Little の MCAR 検定 -----------------------------------');
+  L.push('if (requireNamespace("naniar", quietly = TRUE)) print(naniar::mcar_test(dat[sapply(dat, is.numeric)]))');
+  L.push('');
+  L.push('## 3. 多重代入 ----------------------------------------------');
+  L.push('meth <- c(' + meth.join(', ') + ')');
+  L.push('names(meth) <- names(dat)');
+  L.push('imp <- mice(dat, m = ' + (S.mi ? S.mi.m : 5) + ', maxit = ' + (S.mi ? S.mi.maxit : 10) + ', method = meth, seed = ' + (+$('miSeed').value || 2026) + ', printFlag = FALSE)');
+  L.push('print(imp$loggedEvents)');
+  L.push('');
+  L.push('## 4. 診断 --------------------------------------------------');
+  L.push('png(file.path(cand, "convergence.png"), width = 1400, height = 1000, res = 150)');
+  L.push('print(plot(imp))');
+  L.push('dev.off()');
+  L.push('png(file.path(cand, "density_obs_vs_imp.png"), width = 1400, height = 1000, res = 150)');
+  L.push('print(densityplot(imp))');
+  L.push('dev.off()');
+  L.push('');
+  L.push('## 5. 統合分析 ----------------------------------------------');
+  if (S.pooled) {
+    var yn = V.names[S.pooled.y], xs = S.pooled.xs.map(function (k) { return '`' + V.names[k] + '`'; }).join(' + ');
+    L.push('fit <- with(imp, lm(`' + yn + '` ~ ' + xs + '))');
+    L.push('res <- pool(fit)');
+    L.push('print(summary(res, conf.int = TRUE))');
+    L.push('print(res)   # fmi・lambda などの詳細');
+    L.push('');
+    L.push('# 完全ケース分析との比較');
+    L.push('print(summary(lm(`' + yn + '` ~ ' + xs + ', data = dat)))');
+  } else {
+    L.push('# 例：fit <- with(imp, lm(Y ~ X1 + X2)); summary(pool(fit), conf.int = TRUE)');
+  }
+  L.push('');
+  L.push('## 6. 代入済みデータの保存 ----------------------------------');
+  L.push('write.csv(complete(imp, "long", include = TRUE), file.path(cand, "imputed_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")');
+  L.push('cat("保存しました\\n")');
+  return L.join('\n');
+}
+function buildDoc() {
+  var V = S.V, h = '';
+  var cellNA = 0, rowNA = 0;
+  V.data.forEach(function (r) { var m = 0; r.forEach(function (v) { if (v === null) m++; }); cellNA += m; if (m) rowNA++; });
+  h += '<h4>いまのデータ</h4><p>' + V.n + ' ケース × ' + V.p + ' 変数。欠測は ' + cellNA + ' セル（' + (cellNA / (V.n * V.p) * 100).toFixed(1) + '％）、欠測を含むケースは ' + rowNA + ' 件（' + (rowNA / V.n * 100).toFixed(1) + '％）です。</p>';
+  h += '<h4>なぜ多重代入なのか</h4>' +
+    '<p>欠測のある行を落とすと、標本が減るだけでなく、残った人が母集団と違う顔ぶれになりがちです。平均で埋める方法は行数を保てますが、埋めた値にばらつきがないため分散と相関が縮み、標準誤差が実際より小さく出ます。つまり「有意」が出やすくなります。</p>' +
+    '<p>多重代入は、欠測を1つの値ではなく複数のもっともらしい値で埋め、それぞれで分析した結果を統合します。統合した標準誤差には、①各データセット内の誤差と、②データセット間のばらつき（＝欠測の不確かさ）の両方が含まれます。これが Rubin の規則です。</p>' +
+    '<p><b>PMM（predictive mean matching）</b>は、予測値が近い人の<em>実際の観測値</em>を借りてきます。分布の形や取りうる値の範囲（整数、1〜5 の評定など）が自然に保たれるため、既定の方法として広く使われています。</p>';
+  if (S.little) {
+    h += '<h4>この データでの検定結果</h4><p>Little の MCAR 検定：χ²(' + S.little.df + ') = ' + fmt(S.little.chi2, 2) + '、p ' + (S.little.p < .001 ? '< .001' : '= ' + pfmt(S.little.p)) + '。' +
+      (S.little.p < .05 ? '欠測が完全にランダムであるという仮定は支持されませんでした。' : '欠測が完全にランダムであるという仮定は棄却されませんでした。') + '</p>';
+  }
+  h += '<h4>論文での記述例</h4><div class="quote">';
+  var t = [];
+  t.push('欠測値の検討を行ったところ、' + V.p + '変数のうち' + V.miss.filter(function (m) { return m > 0; }).length + '変数に欠測がみられ、欠測率は' +
+    fmt(Math.min.apply(null, V.miss.filter(function (m) { return m > 0; }).concat([0])) / V.n * 100, 1) + '％から' + fmt(Math.max.apply(null, V.miss) / V.n * 100, 1) + '％であった。');
+  if (S.little) t.push('Little の MCAR 検定の結果、χ²(' + S.little.df + ') = ' + fmt(S.little.chi2, 2) + ', p ' + (S.little.p < .001 ? '< .001' : '= ' + pfmt(S.little.p)) + ' であり、欠測が完全にランダムであるとの仮定は' + (S.little.p < .05 ? '支持されなかった' : '棄却されなかった') + '。');
+  if (S.mi) {
+    t.push('そこで、観測変数を条件とした欠測（MAR）を仮定し、連鎖方程式による多重代入（predictive mean matching を中心とする方法）により ' + S.mi.m + ' 組の代入データセットを作成した（反復回数 ' + S.mi.maxit + ' 回）。代入モデルには分析に用いる全変数を投入した。');
+    t.push('収束は反復ごとの代入値の推移により確認し、代入値と観測値の分布を比較して大きな乖離がないことを確かめた。');
+  }
+  if (S.pooled) {
+    var r1 = S.pooled.res[1];
+    t.push('各データセットで回帰分析を実施し、Rubin の規則により推定値を統合した。統合の結果、' + esc(S.pooled.terms[1]) + 'の偏回帰係数は ' + fmt(r1.est, 3) + '（SE = ' + fmt(r1.se, 3) + ', 95%CI [' + fmt(r1.lo, 3) + ', ' + fmt(r1.hi, 3) + '], p ' + (r1.p < .001 ? '< .001' : '= ' + pfmt(r1.p)) + '）であり、欠測による情報損失割合（FMI）は ' + fmt(r1.fmi, 2) + ' であった。');
+  }
+  h += t.join('') + '</div>';
+  h += '<p class="note">数値は現在の結果から自動生成しています。文体や対象の記述は投稿先に合わせて必ず調整してください。</p>';
+  h += '<h4>報告するときに欠かせない項目</h4>' +
+    '<ul><li>変数ごとの欠測率と、欠測を含むケースの割合</li><li>欠測メカニズムについての判断と、その根拠</li><li>代入の方法・代入数 m・代入モデルに入れた変数</li><li>統合の方法（Rubin の規則）と、FMI などの指標</li><li>可能なら、完全ケース分析との比較（感度分析）</li></ul>';
+  return h;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>項目反応理論ラボ — データ分析ラボ</title>
+<meta name="description" content="回答データから、項目の性質と受験者の特性値を同じ物差しで推定する。1PL・2PL・3PL・段階反応モデル。">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<link rel="stylesheet" href="../../assets/site.css?v=b63567b0">
+<style>:root{--al-cat:var(--al-c-structure)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#structure">構造と測定</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>項目反応理論ラボ</span><span class="al-gap"></span><a class="al-link al-primary" href="app.html">ツールを開く</a></div>
+<main>
+  <header class="tool-hero">
+    <div class="wrap">
+      <a class="chip" href="../../#structure"><i></i>構造と測定</a>
+      <h1>項目反応理論ラボ</h1>
+      <p class="en">Item Response Theory</p>
+      <p class="lead">回答データから、項目の性質と受験者の特性値を同じ物差しで推定する。1PL・2PL・3PL・段階反応モデル。</p>
+      <div class="actions">
+        <a class="btn primary" href="app.html">ツールを開く <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        
+      </div>
+    </div>
+  </header>
+  <div class="wrap doc">
+    <article>
+      <section>
+        <h2><span class="n">01</span>概要</h2>
+        <p>2値（正誤）や多値（5件法など）の回答データから、項目の困難度・識別力と、受験者の特性値を推定します。項目特性曲線や情報量の図、群による特異項目機能（DIF）も確かめられます。</p>
+      </section>
+      <section>
+        <h2><span class="n">02</span>できること</h2>
+        <ul><li>1PL・2PL・3PL・段階反応モデル</li><li>周辺最尤法（EM アルゴリズム＋ガウス求積）</li><li>特性値の推定：EAP／最尤推定</li><li>逆転項目の指定、DIF の検討</li><li>項目のパラメータ、項目特性曲線</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">03</span>使い方</h2>
+        <ol class="steps"><li>回答データを読み込むか貼り付ける（または例を入れる）</li><li>項目・受験者 ID・群・逆転項目を指定する</li><li>モデルと推定法を選ぶ</li><li>「推定を実行する」を押す</li></ol><p class="note-box" style="margin-top:14px">2値データと5件法データの例があります。まずはそれで動きを確かめるのがおすすめです。</p>
+      </section>
+      <section>
+        <h2><span class="n">04</span>読み込めるデータ</h2>
+        <p>CSV・タブ区切り（1行が1人、1列が1項目、1行目は項目名）。2値は 0/1、多値は 1〜5 などの順序尺度。空欄・NA は欠測。</p>
+      </section>
+      <section>
+        <h2><span class="n">05</span>書き出せるもの</h2>
+        <ul><li>項目のパラメータ</li><li>特性値</li><li>項目特性曲線などの図</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">06</span>注意</h2>
+        <ul class="notes"><li>最尤推定では、満点・0点の受験者の特性値は推定できません（EAP を使うと全員に値が出ます）。</li><li>計算はブラウザーの中で行われ、入力したデータがサーバーに送られることはありません。</li><li>出力される記述例や R コードは下書きです。数値と解釈は、研究の文脈と照らし合わせて確かめてください。</li></ul>
+      </section>
+    </article>
+    <aside class="side">
+      <div class="box">
+        <h3>このツール</h3>
+        <dl>
+          <dt>カテゴリ</dt><dd>構造と測定</dd>
+          <dt>入力</dt><dd>CSV・タブ区切り</dd>
+          <dt>マニュアル</dt><dd>この説明ページのみ</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h3>構造と測定のツール</h3>
+        <ul><li><a href="../cluster/">クラスター分析ラボ</a></li><li><a href="../pca/">主成分分析ラボ</a></li><li><a href="../factor/">因子分析ラボ</a></li><li><a href="../sem/">構造方程式モデリング・ラボ</a></li><li><a href="../g-theory/">一般化可能性理論ラボ</a></li><li aria-current="page"><a href="../irt/">項目反応理論ラボ</a></li></ul>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <div>
+      <b>データ分析ラボ</b>
+      <p>ブラウザーだけで動く、統計解析と質的分析のツール集。どのツールもインストール不要で、計算はブラウザーの中で完結します。</p>
+      <p><a href="../../">ツールの一覧へ</a> ・ <a href="https://github.com/k518-2026/AnalysisLabs">ソースコード（GitHub）</a></p>
+    </div>
+    <div>
+      <p>© 2026 K.Yamamoto ・ MIT License</p>
+      <p>「SQS ソースエディタ Web」「SQS マーク読み取り」は、Apache License 2.0 で公開されている SQS（Shared Questionnaire System）をもとに作り直したものです。</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

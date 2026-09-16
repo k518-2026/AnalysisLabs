@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>混合モデルラボ — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#E7ECEF; --card:#FFFFFF; --ink:#13212C; --ink2:#425A6B; --ink3:#7B8F9D;
+  --rule:#C6D2DA; --grid:#D9E2E8;
+  --l1:#A5384E;           /* レベル1（個人・残差） */
+  --l2:#2C6E60;           /* レベル2（群） */
+  --l3:#4B5FA8;           /* レベル3（上位群） */
+  --gold:#B58718;
+  --ok:#2C6E60; --warn:#A5384E;
+  --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Roboto Mono", "DejaVu Sans Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans JP", sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:22px 22px;
+  font-size:14.5px; line-height:1.75; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:1140px; margin:0 auto; padding:0 16px 96px}
+
+/* ===== ヘッダー ===== */
+header.top{
+  background:var(--ink); color:#EEF3F6; border-bottom:3px solid var(--gold);
+}
+header.top .wrap{padding-top:18px; padding-bottom:16px}
+.brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+.brand h1{
+  margin:0; font-size:25px; font-weight:800; letter-spacing:.14em;
+}
+.brand .en{font-family:var(--mono); font-size:11px; letter-spacing:.22em; color:#8FA9B7; text-transform:uppercase}
+.brand p{margin:6px 0 0; font-size:12.5px; color:#A8C0CC; letter-spacing:.04em; width:100%}
+
+/* ===== モデル式バー ===== */
+.formulabar{
+  position:sticky; top:0; z-index:30; background:#0E1A23; color:#DCE7ED;
+  border-bottom:1px solid #2A3E4C; box-shadow:0 2px 10px rgba(19,33,44,.18);
+}
+.formulabar .wrap{display:flex; align-items:center; gap:14px; padding-top:9px; padding-bottom:9px; overflow-x:auto}
+.formulabar .lab{font-size:10.5px; letter-spacing:.18em; color:#6E8896; font-family:var(--mono); white-space:nowrap}
+.formulabar code{font-family:var(--mono); font-size:14px; white-space:nowrap; letter-spacing:.01em}
+.tk-y{color:#F0F4F6; font-weight:700}
+.tk-f{color:#E88FA0}
+.tk-r{color:#6FC7B4}
+.tk-g{color:#9FB2F0}
+.tk-op{color:#5E7686}
+
+/* ===== ステップ ===== */
+nav.steps{display:flex; gap:0; margin:20px 0 22px; overflow-x:auto; border-bottom:2px solid var(--rule); padding-bottom:0}
+nav.steps button{
+  appearance:none; background:none; border:0; border-bottom:3px solid transparent; margin-bottom:-2px;
+  font-family:var(--sans); font-size:13px; color:var(--ink3); padding:9px 15px 8px; cursor:pointer;
+  white-space:nowrap; display:flex; align-items:baseline; gap:8px; letter-spacing:.03em;
+}
+nav.steps button .no{font-family:var(--mono); font-size:11px; color:var(--ink3); letter-spacing:.1em}
+nav.steps button:hover{color:var(--ink)}
+nav.steps button.on{color:var(--ink); font-weight:700; border-bottom-color:var(--gold)}
+nav.steps button.on .no{color:var(--gold)}
+nav.steps button:disabled{opacity:.38; cursor:not-allowed}
+nav.steps button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+/* ===== カード ===== */
+.card{background:var(--card); border:1px solid var(--rule); border-radius:5px; padding:20px 22px; margin-bottom:18px}
+.card > h2{
+  margin:0 0 4px; font-size:17px; letter-spacing:.06em; font-weight:800;
+  padding-bottom:9px; border-bottom:1px solid var(--rule);
+}
+.card > h2 .sub{font-weight:400; font-size:12px; color:var(--ink3); letter-spacing:.02em; margin-left:10px}
+.card h3{font-size:14px; letter-spacing:.06em; margin:22px 0 8px; color:var(--ink)}
+.card h3:first-of-type{margin-top:16px}
+.note{font-size:12.5px; color:var(--ink2); line-height:1.8}
+.muted{color:var(--ink3)}
+.hr{height:1px; background:var(--rule); margin:20px 0}
+
+/* レベルの帯 */
+.levelband{display:flex; align-items:center; gap:10px; font-size:11px; font-family:var(--mono); letter-spacing:.12em; margin:0 0 12px}
+.levelband span{padding:2px 8px; border-radius:2px; color:#fff}
+.lv1{background:var(--l1)} .lv2{background:var(--l2)} .lv3{background:var(--l3)}
+
+/* ===== フォーム ===== */
+label.fld{display:block; font-size:12px; letter-spacing:.08em; color:var(--ink2); margin:0 0 4px}
+select,input[type=text],input[type=number],textarea{
+  font-family:var(--sans); font-size:13.5px; color:var(--ink); background:#fff;
+  border:1px solid var(--rule); border-radius:3px; padding:7px 9px; width:100%;
+}
+textarea{font-family:var(--mono); font-size:12px; line-height:1.6}
+select:focus,input:focus,textarea:focus{outline:2px solid var(--gold); outline-offset:0; border-color:var(--gold)}
+.row{display:flex; gap:14px; flex-wrap:wrap}
+.row > div{flex:1 1 200px; min-width:180px}
+.btn{
+  appearance:none; font-family:var(--sans); font-size:13px; letter-spacing:.06em; cursor:pointer;
+  background:var(--ink); color:#fff; border:1px solid var(--ink); border-radius:3px; padding:9px 18px;
+}
+.btn:hover{background:#24384a}
+.btn.sec{background:#fff; color:var(--ink)}
+.btn.sec:hover{background:#EDF2F5}
+.btn.gold{background:var(--gold); border-color:var(--gold); color:#1B1403; font-weight:700}
+.btn.gold:hover{background:#CD9C25}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+.btn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.btnrow{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; align-items:center}
+.chk{display:inline-flex; align-items:center; gap:7px; font-size:13px; cursor:pointer; padding:3px 0}
+.chk input{width:auto; margin:0}
+
+/* ===== 表 ===== */
+table{border-collapse:collapse; width:100%; font-size:13px; margin:6px 0 4px}
+th,td{border-bottom:1px solid var(--rule); padding:6px 9px; text-align:right; vertical-align:middle}
+th{font-size:11px; letter-spacing:.08em; color:var(--ink2); font-weight:600; border-bottom:1.5px solid var(--ink3); white-space:nowrap}
+td.l,th.l{text-align:left}
+tbody tr:hover{background:#F4F8FA}
+.num{font-family:var(--mono); font-size:12.5px; font-variant-numeric:tabular-nums}
+.tbl-wrap{overflow-x:auto; margin:0 -4px; padding:0 4px}
+tr.sec-row td{background:#F1F5F7; font-weight:700; text-align:left; letter-spacing:.06em; font-size:12px}
+.sig{color:var(--l1); font-weight:700}
+.pill{display:inline-block; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; padding:1px 7px; border-radius:2px; border:1px solid currentColor}
+.pill.p1{color:var(--l1)} .pill.p2{color:var(--l2)} .pill.p3{color:var(--l3)}
+
+/* 数値の大きい表示 */
+.stats{display:flex; flex-wrap:wrap; gap:0; border:1px solid var(--rule); border-radius:4px; overflow:hidden; margin:12px 0}
+.stat{flex:1 1 130px; padding:12px 14px; border-right:1px solid var(--rule); background:#FBFCFD}
+.stat:last-child{border-right:0}
+.stat .k{font-size:10.5px; letter-spacing:.12em; color:var(--ink3); font-family:var(--mono)}
+.stat .v{font-family:var(--mono); font-size:22px; font-weight:600; letter-spacing:-.01em; line-height:1.35}
+.stat .u{font-size:11px; color:var(--ink3); margin-left:3px}
+
+/* メッセージ */
+.msg{border-left:3px solid var(--gold); background:#FDF8EC; padding:10px 14px; font-size:12.5px; margin:12px 0; border-radius:0 3px 3px 0}
+.msg.err{border-color:var(--l1); background:#FBEFF1}
+.msg.ok{border-color:var(--l2); background:#EDF5F3}
+.readout{background:#F7FAFB; border:1px solid var(--rule); border-left:3px solid var(--l2); padding:12px 16px; font-size:13px; line-height:1.9; border-radius:0 3px 3px 0; margin:10px 0}
+.readout b{color:var(--l2)}
+.quote{background:#FBFCFD; border:1px solid var(--rule); padding:14px 16px; font-size:13px; line-height:2.0; border-radius:3px; white-space:pre-wrap}
+pre.code{background:#0E1A23; color:#DCE7ED; padding:14px 16px; border-radius:4px; overflow:auto; max-height:440px; font-family:var(--mono); font-size:11.5px; line-height:1.65; margin:8px 0; white-space:pre}
+
+/* 図 */
+figure{margin:14px 0 6px}
+figure svg{display:block; width:100%; height:auto; background:#fff; border:1px solid var(--rule); border-radius:4px}
+figcaption{font-size:11.5px; color:var(--ink3); margin-top:6px; line-height:1.7}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:11.5px; color:var(--ink2); margin:8px 0 0}
+.legend i{display:inline-block; width:22px; height:0; border-top:2.5px solid; margin-right:6px; vertical-align:middle}
+.legend i.dot{width:9px; height:9px; border-radius:50%; border:0; background:currentColor}
+
+/* 変数テーブル */
+.vartable td select{padding:4px 6px; font-size:12.5px}
+.vartable td{padding:4px 8px}
+.tag{font-family:var(--mono); font-size:10px; letter-spacing:.08em; padding:1px 6px; border-radius:2px; background:#EDF2F5; color:var(--ink2)}
+
+.hidden{display:none !important}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+footer.foot{font-size:11.5px; color:var(--ink3); text-align:center; padding:20px 0 0; border-top:1px solid var(--rule); margin-top:26px}
+@media (max-width:640px){
+  .card{padding:16px 14px}
+  .brand h1{font-size:20px; letter-spacing:.1em}
+  .stat .v{font-size:19px}
+  body{font-size:14px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-causal);--paper:var(--al-bg);--card:var(--al-surface);--ink:var(--al-ink);--ink2:var(--al-ink-2);--ink3:var(--al-ink-3);--rule:var(--al-line);--grid:var(--al-line-2);--sans:var(--al-sans);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#causal">説明・予測する</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>混合モデルラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>混合モデルラボ</h1>
+      <span class="en">Linear Mixed Models</span>
+      <p>入れ子になったデータを、ブラウザーの中だけで解析します。データはどこにも送信されません。</p>
+    </div>
+  </div>
+</header>
+
+<div class="formulabar">
+  <div class="wrap">
+    <span class="lab">MODEL</span>
+    <code id="formula"><span class="tk-op">目的変数と群を選ぶとここに式が出ます</span></code>
+  </div>
+</div>
+
+<div class="wrap">
+
+<nav class="steps" id="stepnav">
+  <button data-step="0" class="on"><span class="no">i</span>データ</button>
+  <button data-step="1"><span class="no">ii</span>モデルを組む</button>
+  <button data-step="2" disabled><span class="no">iii</span>推定結果</button>
+  <button data-step="3" disabled><span class="no">iv</span>群ごとの効果</button>
+  <button data-step="4" disabled><span class="no">v</span>診断</button>
+  <button data-step="5" disabled><span class="no">vi</span>レポート</button>
+</nav>
+
+<!-- ============ i. データ ============ -->
+<section class="panel" data-panel="0">
+  <div class="card">
+    <h2>i. データを読み込む<span class="sub">1行＝1観測、1列＝1変数</span></h2>
+    <p class="note">
+      混合モデルは「観測が群に入れ子になっている」データのための方法です。たとえば <b>生徒が学級に</b>、<b>測定機会が個人に</b>、<b>患者が病院に</b> 属している形。
+      群を表す列（学級ID、個人IDなど）が必要です。
+    </p>
+    <div class="btnrow">
+      <button class="btn sec" id="smp1">例：学級に属する生徒（2レベル）</button>
+      <button class="btn sec" id="smp2">例：同じ人を6回測る（経時データ）</button>
+      <button class="btn sec" id="smp3">例：学校→学級→生徒（3レベル）</button>
+    </div>
+    <div class="hr"></div>
+    <div class="row">
+      <div style="flex:2 1 380px">
+        <label class="fld" for="rawdata">データを貼り付ける（CSV / タブ区切り。1行目は変数名）</label>
+        <textarea id="rawdata" rows="9" placeholder="学級,生徒,学習時間,得点&#10;1A,1,3.5,62&#10;1A,2,1.0,48&#10;..."></textarea>
+      </div>
+      <div style="flex:1 1 200px">
+        <label class="fld" for="fileinput">ファイルから読み込む</label>
+        <input type="file" id="fileinput" accept=".csv,.txt,.tsv" style="border:1px dashed var(--rule); padding:9px; font-size:12px">
+        <p class="note" style="margin-top:10px">
+          文字コードは UTF-8。Excel から貼り付ける場合は、そのままセル範囲をコピーして貼り付けてください（タブ区切りとして読みます）。
+        </p>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn" id="loadbtn">この内容で読み込む</button>
+      <span class="note" id="loadmsg"></span>
+    </div>
+    <div id="dataprev"></div>
+  </div>
+</section>
+
+<!-- ============ ii. モデル ============ -->
+<section class="panel hidden" data-panel="1">
+  <div class="card">
+    <h2>ii. モデルを組む<span class="sub">何を説明し、どの群でばらつきを許すか</span></h2>
+    <div class="levelband">
+      <span class="lv1">Lv.1 観測</span><span class="lv2">Lv.2 群</span><span class="lv3">Lv.3 上位群</span>
+      <span style="background:none;color:var(--ink3);padding-left:2px">← 変数がどの層に属するかを意識すると迷いません</span>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fld" for="yvar">目的変数（連続量）</label>
+        <select id="yvar"></select>
+      </div>
+      <div>
+        <label class="fld" for="gvar">群変数 Lv.2（必須・IDや所属）</label>
+        <select id="gvar"></select>
+      </div>
+      <div>
+        <label class="fld" for="g2var">上位の群 Lv.3（入れ子・任意）</label>
+        <select id="g2var"></select>
+      </div>
+    </div>
+
+    <h3>固定効果（すべての群に共通する平均的な効果）</h3>
+    <p class="note">使う説明変数にチェックを入れます。連続量は中心化を選べます。<b>群平均中心化</b>は「群の中での相対的な位置」と「群そのものの水準」を分けたいときに使います。</p>
+    <div class="tbl-wrap"><table class="vartable" id="fixtable"></table></div>
+
+    <h3>交互作用（任意）</h3>
+    <div class="row">
+      <div><label class="fld" for="ix1">変数 A</label><select id="ix1"></select></div>
+      <div><label class="fld" for="ix2">変数 B</label><select id="ix2"></select></div>
+      <div style="flex:0 0 auto; display:flex; align-items:flex-end">
+        <button class="btn sec" id="addix">交互作用を追加</button>
+      </div>
+    </div>
+    <div id="ixlist" class="note" style="margin-top:8px"></div>
+
+    <h3>ランダム効果（群ごとに揺れてよい部分）</h3>
+    <p class="note">切片は常に群ごとに揺れます（＝群ごとの水準差）。傾きにチェックを入れると、<b>その説明変数の効果が群ごとに違う</b>ことを許します。</p>
+    <div id="ranlist"></div>
+    <div class="btnrow" style="margin-top:10px">
+      <label class="chk"><input type="checkbox" id="corr" checked> 切片と傾きの相関を推定する</label>
+      <label class="chk"><input type="checkbox" id="reml" checked> REML で推定する（外すと最尤法 ML）</label>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn gold" id="runbtn">推定する</button>
+      <span class="note" id="runmsg"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ iii. 結果 ============ -->
+<section class="panel hidden" data-panel="2">
+  <div id="resultbox"></div>
+</section>
+
+<!-- ============ iv. 群ごとの効果 ============ -->
+<section class="panel hidden" data-panel="3">
+  <div id="groupbox"></div>
+</section>
+
+<!-- ============ v. 診断 ============ -->
+<section class="panel hidden" data-panel="4">
+  <div id="diagbox"></div>
+</section>
+
+<!-- ============ vi. レポート ============ -->
+<section class="panel hidden" data-panel="5">
+  <div id="reportbox"></div>
+</section>
+
+<footer class="foot">
+  混合モデルラボ ／ すべての計算はこのページの中で完結します（外部ライブラリ・通信なし）
+</footer>
+</div>
+
+<script>
+"use strict";
+/* ==================================================================
+   1. 数値計算ユーティリティ
+   ================================================================== */
+function zeros(n,m){const a=[];for(let i=0;i<n;i++)a.push(new Float64Array(m));return a;}
+function transpose(A){const n=A.length,m=A[0].length,B=zeros(m,n);for(let i=0;i<n;i++)for(let j=0;j<m;j++)B[j][i]=A[i][j];return B;}
+function matTmat(A,B){const n=A.length,p=A[0].length,q=B[0].length,C=zeros(p,q);
+  for(let i=0;i<n;i++){const ai=A[i],bi=B[i];for(let r=0;r<p;r++){const v=ai[r];if(v===0)continue;const cr=C[r];for(let c=0;c<q;c++)cr[c]+=v*bi[c];}}return C;}
+function matTvec(A,y){const n=A.length,p=A[0].length,o=new Float64Array(p);
+  for(let i=0;i<n;i++){const ai=A[i],yi=y[i];for(let r=0;r<p;r++)o[r]+=ai[r]*yi;}return o;}
+function matmat(A,B){const n=A.length,k=B.length,m=B[0].length,C=zeros(n,m);
+  for(let i=0;i<n;i++){const ai=A[i],ci=C[i];for(let t=0;t<k;t++){const v=ai[t];if(v===0)continue;const bt=B[t];for(let j=0;j<m;j++)ci[j]+=v*bt[j];}}return C;}
+function chol(A){const n=A.length,L=zeros(n,n);
+  for(let i=0;i<n;i++){for(let j=0;j<=i;j++){let s=A[i][j];for(let k=0;k<j;k++)s-=L[i][k]*L[j][k];
+    if(i===j){if(!(s>1e-300))return null;L[i][i]=Math.sqrt(s);}else L[i][j]=s/L[j][j];}}return L;}
+function cholSolveVec(L,b){const n=L.length,x=new Float64Array(n);
+  for(let i=0;i<n;i++){let s=b[i];for(let k=0;k<i;k++)s-=L[i][k]*x[k];x[i]=s/L[i][i];}
+  for(let i=n-1;i>=0;i--){let s=x[i];for(let k=i+1;k<n;k++)s-=L[k][i]*x[k];x[i]=s/L[i][i];}return x;}
+function cholSolveMat(L,B){const n=L.length,m=B[0].length,X=zeros(n,m);
+  for(let c=0;c<m;c++){const b=new Float64Array(n);for(let i=0;i<n;i++)b[i]=B[i][c];
+    const x=cholSolveVec(L,b);for(let i=0;i<n;i++)X[i][c]=x[i];}return X;}
+function cholLogDet(L){let s=0;for(let i=0;i<L.length;i++)s+=Math.log(L[i][i]);return 2*s;}
+function inverseFromChol(L){const n=L.length,I=zeros(n,n);for(let i=0;i<n;i++)I[i][i]=1;return cholSolveMat(L,I);}
+function mean(a){let s=0;for(let i=0;i<a.length;i++)s+=a[i];return s/a.length;}
+function variance(a){const m=mean(a);let s=0;for(let i=0;i<a.length;i++)s+=(a[i]-m)*(a[i]-m);return s/(a.length-1);}
+function sd(a){return Math.sqrt(variance(a));}
+
+/* 正規分布・t分布・カイ二乗 */
+function erfc(x){const z=Math.abs(x),t=1/(1+z/2);
+  const r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+t*(0.27886807+
+    t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));
+  return x>=0?r:2-r;}
+function pnorm(x){return 1-0.5*erfc(x/Math.SQRT2);}
+function qnorm(p){ // Acklam近似
+  if(p<=0)return -Infinity; if(p>=1)return Infinity;
+  const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+  const b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01];
+  const c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+  const d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  const pl=0.02425;let q,r;
+  if(p<pl){q=Math.sqrt(-2*Math.log(p));return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+  if(p>1-pl){q=Math.sqrt(-2*Math.log(1-p));return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+  q=p-0.5;r=q*q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);}
+function logGamma(x){const g=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y=x,tmp=x+5.5;tmp-=(x+0.5)*Math.log(tmp);let ser=1.000000000190015;
+  for(let j=0;j<6;j++)ser+=g[j]/++y;return -tmp+Math.log(2.5066282746310005*ser/x);}
+function betacf(a,b,x){const MAXIT=200,EPS=3e-14,FPMIN=1e-300;
+  let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;
+  if(Math.abs(d)<FPMIN)d=FPMIN;d=1/d;let h=d;
+  for(let m=1;m<=MAXIT;m++){const m2=2*m;let aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;d=1/d;h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<EPS)break;}
+  return h;}
+function ibeta(a,b,x){if(x<=0)return 0;if(x>=1)return 1;
+  const bt=Math.exp(logGamma(a+b)-logGamma(a)-logGamma(b)+a*Math.log(x)+b*Math.log(1-x));
+  return x<(a+1)/(a+b+2)?bt*betacf(a,b,x)/a:1-bt*betacf(b,a,1-x)/b;}
+function pt2(t,df){ // 両側p値
+  if(!isFinite(df)||df>1e7)return 2*(1-pnorm(Math.abs(t)));
+  if(df<=0)return NaN;
+  return ibeta(df/2,0.5,df/(df+t*t));}
+function qt(p,df){ // 片側確率pの分位点（p>0.5想定でも可）
+  if(!isFinite(df)||df>1e7)return qnorm(p);
+  let lo=-100,hi=100;
+  for(let i=0;i<200;i++){const mid=(lo+hi)/2;const cp=1-pt2(Math.abs(mid),df)/2;
+    const cdf=mid>=0?cp:1-cp; if(cdf<p)lo=mid;else hi=mid;}
+  return (lo+hi)/2;}
+function pchisq(x,df){if(x<=0)return 0;return gammap(df/2,x/2);}
+function gammap(a,x){if(x<a+1){let ap=a,sum=1/a,del=sum;
+    for(let n=1;n<200;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*3e-14)break;}
+    return sum*Math.exp(-x+a*Math.log(x)-logGamma(a));}
+  let b=x+1-a,c=1e300,d=1/b,h=d;
+  for(let i=1;i<200;i++){const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;
+    c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<3e-14)break;}
+  return 1-Math.exp(-x+a*Math.log(x)-logGamma(a))*h;}
+
+/* ==================================================================
+   2. 混合モデル推定エンジン
+   ================================================================== */
+function buildGroups(y,X,Z,gid,sub){
+  const map=new Map();
+  for(let i=0;i<y.length;i++){if(!map.has(gid[i]))map.set(gid[i],[]);map.get(gid[i]).push(i);}
+  const groups=[];
+  for(const kv of map){
+    const key=kv[0],idx=kv[1];
+    const g={key:key,idx:idx,n:idx.length,y:new Float64Array(idx.length),X:[],Z:[]};
+    for(let a=0;a<g.n;a++){g.y[a]=y[idx[a]];g.X.push(X[idx[a]]);g.Z.push(Z[idx[a]]);}
+    if(sub){const sm=new Map(),si=[];
+      for(let a=0;a<g.n;a++){const s=sub[idx[a]];if(!sm.has(s))sm.set(s,sm.size);si.push(sm.get(s));}
+      g.nsub=sm.size;g.subIdx=si;g.subKeys=Array.from(sm.keys());}
+    else g.nsub=0;
+    groups.push(g);
+  }
+  return groups;
+}
+function nTheta(q,corr){return corr?q*(q+1)/2:q;}
+function makeLambda(theta,q,corr){const L=zeros(q,q);let k=0;
+  if(corr){for(let j=0;j<q;j++)for(let i=j;i<q;i++)L[i][j]=theta[k++];}
+  else{for(let j=0;j<q;j++)L[j][j]=theta[k++];}return L;}
+
+function profileFit(groups,theta,q,corr,p,hasSub){
+  const Lam=makeLambda(theta,q,corr);
+  const tauS=hasSub?theta[nTheta(q,corr)]:0;
+  let logdetM=0;const XtX=zeros(p,p),Xty=new Float64Array(p);let yty=0;const per=[];
+  for(const g of groups){
+    const qq=q+(hasSub?g.nsub:0);
+    const U=zeros(g.n,qq);
+    for(let a=0;a<g.n;a++){const za=g.Z[a],ua=U[a];
+      for(let c=0;c<q;c++){let s=0;for(let r=c;r<q;r++)s+=za[r]*Lam[r][c];ua[c]=s;}
+      if(hasSub)ua[q+g.subIdx[a]]=tauS;}
+    const M=matTmat(U,U);for(let i=0;i<qq;i++)M[i][i]+=1;
+    const LM=chol(M);if(!LM)return null;
+    logdetM+=cholLogDet(LM);
+    const A=matTmat(U,g.X),b=matTvec(U,g.y);
+    const MA=cholSolveMat(LM,A),Mb=cholSolveVec(LM,b);
+    const XX=matTmat(g.X,g.X),Xy=matTvec(g.X,g.y);
+    for(let r=0;r<p;r++){
+      for(let c=0;c<p;c++){let t=0;for(let k=0;k<qq;k++)t+=A[k][r]*MA[k][c];XtX[r][c]+=XX[r][c]-t;}
+      let t2=0;for(let k=0;k<qq;k++)t2+=A[k][r]*Mb[k];Xty[r]+=Xy[r]-t2;}
+    let sy=0;for(let a=0;a<g.n;a++)sy+=g.y[a]*g.y[a];
+    let ty=0;for(let k=0;k<qq;k++)ty+=b[k]*Mb[k];
+    yty+=sy-ty;
+    per.push({g:g,LM:LM,qq:qq,U:U});
+  }
+  const LX=chol(XtX);if(!LX)return null;
+  const beta=cholSolveVec(LX,Xty);
+  let r=yty;for(let i=0;i<p;i++)r-=Xty[i]*beta[i];
+  if(!(r>0))return null;
+  return {Lam:Lam,tauS:tauS,logdetM:logdetM,XtX:XtX,LX:LX,Xty:Xty,beta:beta,pwrss:r,per:per};
+}
+function devianceOf(groups,theta,q,corr,p,N,hasSub,reml){
+  const f=profileFit(groups,theta,q,corr,p,hasSub);
+  if(!f)return {dev:1e18,f:null};
+  const dfr=reml?N-p:N,s2=f.pwrss/dfr;
+  let dev=f.logdetM+dfr*(1+Math.log(2*Math.PI*s2));
+  if(reml)dev+=cholLogDet(f.LX);
+  f.sigma2=s2;
+  return {dev:dev,f:f};
+}
+function nelderMead(fn,x0,opts){
+  opts=opts||{};const n=x0.length,maxIter=opts.maxIter||900,tol=opts.tol||1e-12,step=opts.step||0.5;
+  let sx=[{x:x0.slice(),f:fn(x0)}];
+  for(let i=0;i<n;i++){const x=x0.slice();x[i]+=(Math.abs(x[i])>1e-8?x[i]*step:step);sx.push({x:x,f:fn(x)});}
+  let it=0;
+  for(;it<maxIter;it++){
+    sx.sort((a,b)=>a.f-b.f);
+    if(Math.abs(sx[n].f-sx[0].f)<tol*(Math.abs(sx[0].f)+tol))break;
+    const cent=new Array(n).fill(0);
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++)cent[j]+=sx[i].x[j]/n;
+    const w=sx[n];
+    const refl=cent.map((c,j)=>c+(c-w.x[j])),fr=fn(refl);
+    if(fr<sx[0].f){const ex=cent.map((c,j)=>c+2*(c-w.x[j])),fe=fn(ex);sx[n]=fe<fr?{x:ex,f:fe}:{x:refl,f:fr};}
+    else if(fr<sx[n-1].f)sx[n]={x:refl,f:fr};
+    else{const co=cent.map((c,j)=>c+0.5*(w.x[j]-c)),fc=fn(co);
+      if(fc<w.f)sx[n]={x:co,f:fc};
+      else{for(let i=1;i<=n;i++){const x=sx[i].x.map((v,j)=>sx[0].x[j]+0.5*(v-sx[0].x[j]));sx[i]={x:x,f:fn(x)};}}}
+  }
+  sx.sort((a,b)=>a.f-b.f);
+  return {x:sx[0].x,f:sx[0].f,iter:it};
+}
+function fitLMM(y,X,Z,gid,sub,corr,reml){
+  const N=y.length,p=X[0].length,q=Z[0].length,hasSub=!!sub;
+  const groups=buildGroups(y,X,Z,gid,sub);
+  const obj=th=>devianceOf(groups,th,q,corr,p,N,hasSub,reml).dev;
+  const base=[];{if(corr){for(let j=0;j<q;j++)for(let i=j;i<q;i++)base.push(i===j?1:0);}else{for(let j=0;j<q;j++)base.push(1);}if(hasSub)base.push(1);}
+  const starts=[base,base.map(v=>v*0.25+0.02),base.map(v=>v*3),base.map(v=>v*0.6+0.1)];
+  let best=null,nev=0;
+  for(const s of starts){
+    let r=nelderMead(obj,s,{maxIter:1200});
+    r=nelderMead(obj,r.x,{maxIter:1200,step:0.06});
+    r=nelderMead(obj,r.x,{maxIter:900,step:0.012,tol:1e-14});
+    nev+=r.iter;
+    if(!best||r.f<best.f-1e-10)best=r;
+  }
+  const d=devianceOf(groups,best.x,q,corr,p,N,hasSub,reml);
+  return {theta:best.x,dev:d.dev,f:d.f,groups:groups,N:N,p:p,q:q,hasSub:hasSub,corr:corr,reml:reml,iter:nev,
+          y:y,X:X,Z:Z,gid:gid,sub:sub};
+}
+/* 非プロファイル REML/ML deviance（Satterthwaite用） */
+function devFullOf(fit,phi){
+  const th=phi.slice(0,phi.length-1),sg=phi[phi.length-1];
+  if(!(sg>0))return 1e18;
+  const f=profileFit(fit.groups,th,fit.q,fit.corr,fit.p,fit.hasSub);
+  if(!f)return 1e18;
+  const N=fit.N,p=fit.p;
+  if(fit.reml)return (N-p)*Math.log(sg)+f.logdetM+cholLogDet(f.LX)+f.pwrss/sg+(N-p)*Math.log(2*Math.PI);
+  return N*Math.log(sg)+f.logdetM+f.pwrss/sg+N*Math.log(2*Math.PI);
+}
+function varBetaOf(fit,phi){
+  const th=phi.slice(0,phi.length-1),sg=phi[phi.length-1];
+  const f=profileFit(fit.groups,th,fit.q,fit.corr,fit.p,fit.hasSub);
+  if(!f)return null;
+  const inv=inverseFromChol(f.LX);
+  return inv.map(r=>Array.from(r).map(v=>v*sg));
+}
+function satterthwaiteDF(fit){
+  const phi=fit.theta.concat([fit.f.sigma2]),np=phi.length,p=fit.p;
+  const h=phi.map(v=>Math.max(1e-4,Math.abs(v)*2e-3));
+  const H=[];for(let i=0;i<np;i++)H.push(new Array(np).fill(0));
+  try{
+    for(let i=0;i<np;i++)for(let j=i;j<np;j++){
+      const a=phi.slice(),b=phi.slice(),c=phi.slice(),d=phi.slice();
+      a[i]+=h[i];a[j]+=h[j];b[i]+=h[i];b[j]-=h[j];c[i]-=h[i];c[j]+=h[j];d[i]-=h[i];d[j]-=h[j];
+      const v=(devFullOf(fit,a)-devFullOf(fit,b)-devFullOf(fit,c)+devFullOf(fit,d))/(4*h[i]*h[j]);
+      H[i][j]=v;H[j][i]=v;}
+    const LH=chol(H);if(!LH)return null;
+    const Hi=inverseFromChol(LH),Vphi=Hi.map(r=>Array.from(r).map(v=>2*v));
+    const V0=varBetaOf(fit,phi);if(!V0)return null;
+    const grads=[];
+    for(let i=0;i<np;i++){
+      const hh=Math.max(1e-5,Math.abs(phi[i])*5e-4);
+      const a=phi.slice();a[i]+=hh;const b=phi.slice();b[i]-=hh;
+      const Va=varBetaOf(fit,a),Vb=varBetaOf(fit,b);
+      if(!Va||!Vb)return null;
+      grads.push(V0.map((_,k)=>(Va[k][k]-Vb[k][k])/(2*hh)));
+    }
+    const dfs=[];
+    for(let k=0;k<p;k++){
+      let den=0;
+      for(let i=0;i<np;i++)for(let j=0;j<np;j++)den+=grads[i][k]*Vphi[i][j]*grads[j][k];
+      const V=V0[k][k],df=2*V*V/den;
+      dfs.push(isFinite(df)&&df>0.5?Math.min(df,fit.N-1):null);
+    }
+    return dfs;
+  }catch(e){return null;}
+}
+/* BLUP（群ごとのランダム効果の予測値）と条件付き分散 */
+function computeBLUP(fit){
+  const f=fit.f,q=fit.q,p=fit.p,Lam=f.Lam,s2=f.sigma2;
+  const out=[],fitted=new Float64Array(fit.N),margin=new Float64Array(fit.N);
+  for(const pg of f.per){
+    const g=pg.g,qq=pg.qq,LM=pg.LM,U=pg.U;
+    const resid=new Float64Array(g.n);
+    for(let a=0;a<g.n;a++){let m=0;for(let k=0;k<p;k++)m+=g.X[a][k]*f.beta[k];
+      margin[g.idx[a]]=m;resid[a]=g.y[a]-m;}
+    const s=matTvec(U,resid);              // U' r  (qq)
+    const Ms=cholSolveVec(LM,s);           // M^{-1} U' r
+    // b = Lam * Ms[0..q-1]  (ランダム効果), 下位群は tau * Ms[q..]
+    const b=new Float64Array(q);
+    for(let i=0;i<q;i++){let v=0;for(let j=0;j<=i;j++)v+=Lam[i][j]*Ms[j];b[i]=v;}
+    const bsub=[];if(fit.hasSub)for(let k=0;k<g.nsub;k++)bsub.push(f.tauS*Ms[q+k]);
+    // 条件付き分散 sigma2 * Lam M^{-1} Lam'
+    const Mi=inverseFromChol(LM);
+    const cv=new Float64Array(q);
+    for(let i=0;i<q;i++){let v=0;
+      for(let a=0;a<=i;a++)for(let b2=0;b2<=i;b2++)v+=Lam[i][a]*Mi[a][b2]*Lam[i][b2];
+      cv[i]=Math.max(0,v*s2);}
+    for(let a=0;a<g.n;a++){
+      let add=0;for(let k=0;k<q;k++)add+=g.Z[a][k]*b[k];
+      if(fit.hasSub)add+=bsub[g.subIdx[a]];
+      fitted[g.idx[a]]=margin[g.idx[a]]+add;}
+    out.push({key:g.key,n:g.n,b:Array.from(b),se:Array.from(cv).map(Math.sqrt),
+      sub:fit.hasSub?g.subKeys.map((k,i)=>({key:k,b:bsub[i]})):null});
+  }
+  return {re:out,fitted:fitted,marginal:margin};
+}
+
+/* ==================================================================
+   3. データの読み込みと状態
+   ================================================================== */
+var DATA=null;          // {names:[], types:{}, rows:[{}], n}
+var MODEL=null;         // 設計情報
+var FIT=null;           // 推定結果一式
+var IX=[];              // 交互作用 [[v1,v2],...]
+
+function parseTable(text){
+  text=text.replace(/\r\n?/g,"\n").replace(/^\uFEFF/,"").trim();
+  if(!text)return null;
+  const lines=text.split("\n").filter(l=>l.trim()!=="");
+  const tabs=(lines[0].match(/\t/g)||[]).length, commas=(lines[0].match(/,/g)||[]).length;
+  const sep=tabs>=commas?"\t":",";
+  const splitLine=function(line){
+    const out=[];let cur="",q=false;
+    for(let i=0;i<line.length;i++){const c=line[i];
+      if(q){if(c==='"'){if(line[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+      else{if(c==='"')q=true;else if(c===sep){out.push(cur);cur="";}else cur+=c;}}
+    out.push(cur);return out.map(s=>s.trim());};
+  const head=splitLine(lines[0]);
+  const names=head.map((h,i)=>h===""?("V"+(i+1)):h);
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const c=splitLine(lines[i]);if(c.length===1&&c[0]==="")continue;
+    const o={};for(let j=0;j<names.length;j++)o[names[j]]=(c[j]===undefined?"":c[j]);
+    rows.push(o);}
+  const types={};
+  for(const nm of names){
+    let numeric=true,nonMiss=0;const vals=new Set();
+    for(const r of rows){const v=r[nm];
+      if(v===""||v==null||/^(na|nan|null|\.|-|—)$/i.test(v))continue;
+      nonMiss++;vals.add(v);
+      if(!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(v))numeric=false;}
+    types[nm]={numeric:numeric&&nonMiss>0,levels:vals.size,nonMiss:nonMiss};}
+  return {names:names,rows:rows,types:types,n:rows.length};
+}
+function numOf(v){
+  if(v===""||v==null||/^(na|nan|null|\.|-|—)$/i.test(String(v)))return NaN;
+  const x=parseFloat(v);return isFinite(x)?x:NaN;}
+function isMiss(v){return v===""||v==null||/^(na|nan|null|\.|-|—)$/i.test(String(v));}
+
+/* --- サンプルデータ --- */
+function rngFactory(seed){let s=seed;return function(){s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;};}
+function normFactory(rnd){return function(){let u=0,v=0;while(u===0)u=rnd();while(v===0)v=rnd();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};}
+function sample1(){
+  const rnd=rngFactory(20240517),rn=normFactory(rnd);
+  const rows=["学級,生徒番号,学習時間,事前学力,学級規模,得点"];
+  const classes=["1組","2組","3組","4組","5組","6組","7組","8組","9組","10組","11組","12組"];
+  classes.forEach((cl,ci)=>{
+    const u0=6.5*rn(),u1=1.6*rn(),size=Math.round(24+12*rnd());
+    const nstu=Math.round(18+14*rnd());
+    for(let i=1;i<=nstu;i++){
+      const t=Math.max(0,Math.round((2.5+2.2*rn())*10)/10);
+      const pre=Math.round(50+10*rn());
+      const y=Math.round(42+ (3.2+u1)*t + 0.42*(pre-50) - 0.22*(size-30) + u0 + 5.0*rn());
+      rows.push([cl,i,t,pre,size,Math.max(0,Math.min(100,y))].join(","));}
+  });
+  return rows.join("\n");
+}
+function sample2(){
+  const rnd=rngFactory(778899),rn=normFactory(rnd);
+  const rows=["参加者,回,週,条件,不安得点"];
+  for(let p=1;p<=30;p++){
+    const cond=p%2===0?"介入":"統制";
+    const u0=7*rn(),u1=1.1*rn();
+    for(let t=0;t<6;t++){
+      const slope=(cond==="介入"?-2.4:-0.6)+u1;
+      const y=Math.round((58+u0+slope*t+4.2*rn())*10)/10;
+      rows.push([("P"+String(p).padStart(2,"0")),t+1,t*2,cond,y].join(","));}
+  }
+  return rows.join("\n");
+}
+function sample3(){
+  const rnd=rngFactory(31415),rn=normFactory(rnd);
+  const rows=["学校,学級,生徒,家庭学習,読解得点"];
+  for(let s=1;s<=8;s++){
+    const us=5.5*rn();
+    const ncl=2+Math.round(rnd()*2);
+    for(let c=1;c<=ncl;c++){
+      const uc=3.5*rn();
+      const nst=Math.round(15+10*rnd());
+      for(let i=1;i<=nst;i++){
+        const h=Math.max(0,Math.round((1.6+1.3*rn())*10)/10);
+        const y=Math.round(48+2.9*h+us+uc+4.6*rn());
+        rows.push(["S"+s,"S"+s+"-"+c,"S"+s+"-"+c+"-"+i,h,y].join(","));}}
+  }
+  return rows.join("\n");
+}
+
+/* ==================================================================
+   4. 画面遷移
+   ================================================================== */
+function showStep(k){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("hidden",+p.dataset.panel!==k));
+  document.querySelectorAll("#stepnav button").forEach(b=>b.classList.toggle("on",+b.dataset.step===k));
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function enableSteps(on){
+  document.querySelectorAll("#stepnav button").forEach(b=>{if(+b.dataset.step>=2)b.disabled=!on;});
+}
+document.querySelectorAll("#stepnav button").forEach(b=>b.addEventListener("click",()=>{if(!b.disabled)showStep(+b.dataset.step);}));
+
+/* ==================================================================
+   5. データ読み込みUI
+   ================================================================== */
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function fmt(x,d){if(x==null||!isFinite(x))return "—";
+  d=(d==null?3:d);
+  if(Math.abs(x)>=1e6||(Math.abs(x)<1e-4&&x!==0))return x.toExponential(2);
+  return x.toFixed(d);}
+function fmtP(p){if(p==null||!isFinite(p))return "—";
+  if(p<.001)return "&lt;.001";return p.toFixed(3).replace(/^0/,"");}
+
+document.getElementById("smp1").onclick=()=>{document.getElementById("rawdata").value=sample1();loadData();};
+document.getElementById("smp2").onclick=()=>{document.getElementById("rawdata").value=sample2();loadData();};
+document.getElementById("smp3").onclick=()=>{document.getElementById("rawdata").value=sample3();loadData();};
+document.getElementById("loadbtn").onclick=loadData;
+document.getElementById("fileinput").onchange=function(e){
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=ev=>{document.getElementById("rawdata").value=ev.target.result;loadData();};
+  rd.readAsText(f,"UTF-8");
+};
+
+function loadData(){
+  const txt=document.getElementById("rawdata").value;
+  const msg=document.getElementById("loadmsg");
+  const d=parseTable(txt);
+  if(!d||d.n<3||d.names.length<2){msg.innerHTML='<span style="color:var(--l1)">読み込めませんでした。1行目に変数名、2行目以降にデータが必要です。</span>';return;}
+  DATA=d;IX=[];
+  msg.innerHTML='<b>'+d.n+'</b> 行 × <b>'+d.names.length+'</b> 列を読み込みました。';
+  renderPreview();
+  buildModelUI();
+  enableSteps(false);
+  document.querySelectorAll("#stepnav button").forEach(b=>{if(+b.dataset.step===1)b.disabled=false;});
+  showStep(1);
+}
+function renderPreview(){
+  const d=DATA,k=Math.min(6,d.n);
+  let h='<h3>読み込んだデータ（先頭'+k+'行）</h3><div class="tbl-wrap"><table><thead><tr><th class="l">#</th>';
+  d.names.forEach(n=>{h+='<th class="l">'+esc(n)+'<br><span class="tag">'+(d.types[n].numeric?"数値":"カテゴリ "+d.types[n].levels)+'</span></th>';});
+  h+='</tr></thead><tbody>';
+  for(let i=0;i<k;i++){h+='<tr><td class="l muted num">'+(i+1)+'</td>';
+    d.names.forEach(n=>{const v=d.rows[i][n];h+='<td class="'+(d.types[n].numeric?"num":"l")+'">'+esc(v===""?"—":v)+'</td>';});h+='</tr>';}
+  h+='</tbody></table></div>';
+  document.getElementById("dataprev").innerHTML=h;
+}
+
+/* ==================================================================
+   6. モデル指定UI
+   ================================================================== */
+function buildModelUI(){
+  const d=DATA;
+  const ysel=document.getElementById("yvar"),gsel=document.getElementById("gvar"),g2sel=document.getElementById("g2var");
+  const numVars=d.names.filter(n=>d.types[n].numeric);
+  const idLike=d.names.filter(n=>d.types[n].levels>1&&d.types[n].levels<=Math.max(2,d.n*0.7));
+  ysel.innerHTML=numVars.map(n=>'<option>'+esc(n)+'</option>').join("");
+  gsel.innerHTML=idLike.map(n=>'<option>'+esc(n)+'</option>').join("");
+  g2sel.innerHTML='<option value="">（なし・2レベル）</option>'+idLike.map(n=>'<option>'+esc(n)+'</option>').join("");
+  // 既定値の推測：目的変数＝最後の数値列、群＝水準数が中くらいのカテゴリ
+  if(numVars.length)ysel.value=numVars[numVars.length-1];
+  const cand=idLike.filter(n=>!d.types[n].numeric&&d.types[n].levels>=3&&d.types[n].levels<d.n*0.6);
+  if(cand.length)gsel.value=cand[0];
+  ysel.onchange=gsel.onchange=g2sel.onchange=()=>{renderFixTable();renderRandom();updateFormula();};
+  renderFixTable();renderRandom();updateFormula();
+  document.getElementById("addix").onclick=addInteraction;
+  document.getElementById("corr").onchange=updateFormula;
+}
+function usedGroupVars(){
+  return {y:document.getElementById("yvar").value,g:document.getElementById("gvar").value,g2:document.getElementById("g2var").value};
+}
+function renderFixTable(){
+  const d=DATA,u=usedGroupVars();
+  const prev={};document.querySelectorAll("#fixtable input[data-v]").forEach(i=>{prev[i.dataset.v]={on:i.checked};});
+  document.querySelectorAll("#fixtable select[data-c]").forEach(s=>{if(prev[s.dataset.c])prev[s.dataset.c].c=s.value;});
+  let h='<thead><tr><th class="l" style="width:34px">使う</th><th class="l">変数</th><th class="l">扱い</th><th class="l">中心化 / 参照水準</th></tr></thead><tbody>';
+  d.names.forEach(n=>{
+    if(n===u.y||n===u.g||n===u.g2)return;
+    const t=d.types[n];
+    const on=prev[n]?prev[n].on:false;
+    h+='<tr><td class="l"><input type="checkbox" data-v="'+esc(n)+'"'+(on?" checked":"")+'></td>';
+    h+='<td class="l">'+esc(n)+'</td>';
+    h+='<td class="l"><select data-t="'+esc(n)+'"><option value="num"'+(t.numeric?" selected":"")+(t.numeric?"":" disabled")+'>数値</option><option value="cat"'+(t.numeric?"":" selected")+'>カテゴリ</option></select></td>';
+    h+='<td class="l"><span data-opt="'+esc(n)+'"></span></td></tr>';
+  });
+  h+='</tbody>';
+  const tb=document.getElementById("fixtable");tb.innerHTML=h;
+  d.names.forEach(n=>{if(n===u.y||n===u.g||n===u.g2)return;renderOpt(n,prev[n]?prev[n].c:null);});
+  tb.querySelectorAll("input[data-v]").forEach(i=>i.addEventListener("change",()=>{renderRandom();updateFormula();}));
+  tb.querySelectorAll("select[data-t]").forEach(s=>s.addEventListener("change",()=>{renderOpt(s.dataset.t,null);renderRandom();updateFormula();}));
+}
+function renderOpt(n,keep){
+  const holder=document.querySelector('#fixtable span[data-opt="'+CSS.escape(n)+'"]');
+  if(!holder)return;
+  const kind=document.querySelector('#fixtable select[data-t="'+CSS.escape(n)+'"]').value;
+  if(kind==="num"){
+    holder.innerHTML='<select data-c="'+esc(n)+'"><option value="none">中心化しない</option><option value="grand">全体平均で中心化</option><option value="group">群平均で中心化</option><option value="groupplus">群平均で中心化＋群平均も投入</option></select>';
+  }else{
+    const lv=Array.from(new Set(DATA.rows.map(r=>r[n]).filter(v=>!isMiss(v)))).sort();
+    holder.innerHTML='<select data-c="'+esc(n)+'">'+lv.map(v=>'<option value="'+esc(v)+'">基準：'+esc(v)+'</option>').join("")+'</select>';
+  }
+  const sel=holder.querySelector("select");
+  if(keep&&Array.from(sel.options).some(o=>o.value===keep))sel.value=keep;
+  sel.addEventListener("change",()=>{renderRandom();updateFormula();});
+}
+function selectedFixed(){
+  const out=[];
+  document.querySelectorAll("#fixtable input[data-v]").forEach(i=>{
+    if(!i.checked)return;
+    const n=i.dataset.v;
+    const kind=document.querySelector('#fixtable select[data-t="'+CSS.escape(n)+'"]').value;
+    const opt=document.querySelector('#fixtable select[data-c="'+CSS.escape(n)+'"]').value;
+    out.push({name:n,kind:kind,opt:opt});});
+  return out;
+}
+function addInteraction(){
+  const a=document.getElementById("ix1").value,b=document.getElementById("ix2").value;
+  if(!a||!b||a===b){return;}
+  if(IX.some(p=>(p[0]===a&&p[1]===b)||(p[0]===b&&p[1]===a)))return;
+  IX.push([a,b]);renderIX();updateFormula();
+}
+function renderIX(){
+  const sel=selectedFixed().map(f=>f.name);
+  IX=IX.filter(p=>sel.includes(p[0])&&sel.includes(p[1]));
+  const el=document.getElementById("ixlist");
+  el.innerHTML=IX.length?IX.map((p,i)=>'<span class="tag" style="margin-right:8px">'+esc(p[0])+' × '+esc(p[1])+' <a href="#" data-ix="'+i+'" style="color:var(--l1);text-decoration:none">✕</a></span>').join(""):'<span class="muted">交互作用なし</span>';
+  el.querySelectorAll("a[data-ix]").forEach(a=>a.onclick=e=>{e.preventDefault();IX.splice(+a.dataset.ix,1);renderIX();updateFormula();});
+}
+function renderRandom(){
+  const u=usedGroupVars(),fx=selectedFixed();
+  const three=!!u.g2;
+  const slopes=fx.filter(f=>f.kind==="num");
+  const prev={};document.querySelectorAll("#ranlist input[data-r]").forEach(i=>{prev[i.dataset.r]=i.checked;});
+  let h='<label class="chk"><input type="checkbox" checked disabled> 切片（群ごとの水準差）<span class="muted" style="font-size:12px">— 常に入ります</span></label><br>';
+  if(three){
+    h+='<p class="note" style="margin:6px 0 0">3レベル（'+esc(u.g2)+' → '+esc(u.g)+'）では、両方のレベルで<b>切片のみ</b>を推定します。傾きを群ごとに変えたい場合は上位の群を「なし」にしてください。</p>';
+  }else if(slopes.length===0){
+    h+='<p class="note" style="margin:6px 0 0">傾きを群ごとに変えるには、まず数値の説明変数を固定効果に入れてください。</p>';
+  }else{
+    h+=slopes.map(f=>{
+      const lab=f.opt==="groupplus"||f.opt==="group"?(f.name+"（群内）"):f.name;
+      return '<label class="chk" style="margin-right:16px"><input type="checkbox" data-r="'+esc(f.name)+'"'+(prev[f.name]?" checked":"")+'> '+esc(lab)+' の傾き</label>';}).join("");
+  }
+  document.getElementById("ranlist").innerHTML=h;
+  document.querySelectorAll("#ranlist input[data-r]").forEach(i=>i.addEventListener("change",updateFormula));
+  // 交互作用セレクタ
+  const o='<option value="">—</option>'+fx.map(f=>'<option>'+esc(f.name)+'</option>').join("");
+  const i1=document.getElementById("ix1"),i2=document.getElementById("ix2");
+  const v1=i1.value,v2=i2.value;i1.innerHTML=o;i2.innerHTML=o;
+  if(Array.from(i1.options).some(x=>x.value===v1))i1.value=v1;
+  if(Array.from(i2.options).some(x=>x.value===v2))i2.value=v2;
+  renderIX();
+}
+function selectedSlopes(){
+  const out=[];document.querySelectorAll("#ranlist input[data-r]").forEach(i=>{if(i.checked)out.push(i.dataset.r);});
+  return out;
+}
+function updateFormula(){
+  const u=usedGroupVars();
+  if(!u.y||!u.g){document.getElementById("formula").innerHTML='<span class="tk-op">目的変数と群を選ぶとここに式が出ます</span>';return;}
+  const fx=selectedFixed(),sl=selectedSlopes();
+  const fixTok=fx.map(f=>{
+    let nm=f.name;
+    if(f.opt==="grand")nm=nm+"_c";
+    else if(f.opt==="group")nm=nm+"_cwc";
+    else if(f.opt==="groupplus")nm=nm+"_cwc + "+f.name+"_群平均";
+    return '<span class="tk-f">'+esc(nm)+'</span>';});
+  IX.forEach(p=>fixTok.push('<span class="tk-f">'+esc(p[0])+':'+esc(p[1])+'</span>'));
+  const corr=document.getElementById("corr").checked;
+  const ranIn=['<span class="tk-r">1</span>'].concat(sl.map(s=>'<span class="tk-r">'+esc(s)+'</span>'));
+  let ran='('+ranIn.join(' <span class="tk-op">+</span> ')+' <span class="tk-op">'+(corr||sl.length===0?"|":"||")+'</span> <span class="tk-g">'+esc(u.g)+'</span>)';
+  let ran2=u.g2?' <span class="tk-op">+</span> (<span class="tk-r">1</span> <span class="tk-op">|</span> <span class="tk-g">'+esc(u.g2)+'</span>)':"";
+  if(u.g2)ran='(<span class="tk-r">1</span> <span class="tk-op">|</span> <span class="tk-g">'+esc(u.g)+'</span>)';
+  const rhs=['<span class="tk-f">1</span>'].concat(fixTok).join(' <span class="tk-op">+</span> ')+' <span class="tk-op">+</span> '+ran+ran2;
+  document.getElementById("formula").innerHTML='<span class="tk-y">'+esc(u.y)+'</span> <span class="tk-op">~</span> '+rhs;
+}
+
+/* ==================================================================
+   7. 計画行列の作成
+   ================================================================== */
+function buildDesign(){
+  const d=DATA,u=usedGroupVars(),fx=selectedFixed(),sl=selectedSlopes();
+  if(!u.y||!u.g)throw new Error("目的変数と群変数を選んでください。");
+  const used=[u.y,u.g].concat(u.g2?[u.g2]:[]).concat(fx.map(f=>f.name));
+  const rows=[],dropIdx=[];
+  d.rows.forEach((r,i)=>{
+    let ok=true;
+    for(const v of used){if(isMiss(r[v])){ok=false;break;}}
+    if(ok&&!isFinite(numOf(r[u.y])))ok=false;
+    if(ok)rows.push(r);else dropIdx.push(i);});
+  if(rows.length<8)throw new Error("欠測を除くと解析できる行が足りません（"+rows.length+"行）。");
+  const y=rows.map(r=>numOf(r[u.y]));
+  const gval=rows.map(r=>String(r[u.g]));
+  const g2val=u.g2?rows.map(r=>String(r[u.g2])):null;
+  const topGid=u.g2?g2val:gval;
+  const subKey=u.g2?rows.map((r,i)=>g2val[i]+" ▸ "+gval[i]):null;
+  // 群平均（Lv.2 群で計算）
+  const gmeanOf={};
+  function groupMeans(vals){
+    const s={},c={};
+    for(let i=0;i<vals.length;i++){const k=gval[i];s[k]=(s[k]||0)+vals[i];c[k]=(c[k]||0)+1;}
+    const m={};for(const k in s)m[k]=s[k]/c[k];return m;}
+  const terms=[];  // {label, values:[], varName, kind, note}
+  fx.forEach(f=>{
+    if(f.kind==="num"){
+      const raw=rows.map(r=>numOf(r[f.name]));
+      if(f.opt==="none")terms.push({label:f.name,values:raw,varName:f.name,kind:"num",trans:"none"});
+      else if(f.opt==="grand"){const m=mean(raw);gmeanOf[f.name]={grand:m};
+        terms.push({label:f.name+"_c",values:raw.map(v=>v-m),varName:f.name,kind:"num",trans:"grand",center:m});}
+      else{const gm=groupMeans(raw),grand=mean(raw);gmeanOf[f.name]={gm:gm,grand:grand};
+        terms.push({label:f.name+"_cwc",values:raw.map((v,i)=>v-gm[gval[i]]),varName:f.name,kind:"num",trans:"group"});
+        if(f.opt==="groupplus")terms.push({label:f.name+"_群平均",values:rows.map((r,i)=>gm[gval[i]]-grand),varName:f.name,kind:"num",trans:"gmean",level2:true});}
+    }else{
+      const lv=Array.from(new Set(rows.map(r=>String(r[f.name])))).sort();
+      const ref=f.opt&&lv.includes(f.opt)?f.opt:lv[0];
+      lv.forEach(L=>{if(L===ref)return;
+        terms.push({label:f.name+"["+L+"]",values:rows.map(r=>String(r[f.name])===L?1:0),varName:f.name,kind:"cat",level:L,ref:ref});});
+    }});
+  // 交互作用
+  IX.forEach(p=>{
+    const A=terms.filter(t=>t.varName===p[0]&&t.trans!=="gmean"),B=terms.filter(t=>t.varName===p[1]&&t.trans!=="gmean");
+    A.forEach(a=>B.forEach(b=>{
+      terms.push({label:a.label+" × "+b.label,values:a.values.map((v,i)=>v*b.values[i]),varName:p[0]+":"+p[1],kind:"ix"});}));});
+  const xnames=["切片"].concat(terms.map(t=>t.label));
+  const N=rows.length,p=xnames.length;
+  const X=[];for(let i=0;i<N;i++){const row=new Float64Array(p);row[0]=1;
+    for(let j=0;j<terms.length;j++)row[j+1]=terms[j].values[i];X.push(row);}
+  // ランダム効果の計画行列
+  const znames=["切片"];const zcols=[];
+  if(!u.g2)sl.forEach(nm=>{
+    const t=terms.find(t=>t.varName===nm&&t.trans!=="gmean"&&t.kind==="num");
+    if(t){znames.push(t.label);zcols.push(t.values);}});
+  const q=znames.length;
+  const Z=[];for(let i=0;i<N;i++){const row=new Float64Array(q);row[0]=1;
+    for(let j=0;j<zcols.length;j++)row[j+1]=zcols[j][i];Z.push(row);}
+  // 階層の判定（群内で一定＝レベル2変数）
+  const isL2=xnames.map((nm,j)=>{
+    if(j===0)return true;
+    const seen={};for(let i=0;i<N;i++){const k=gval[i];
+      if(seen[k]===undefined)seen[k]=X[i][j];else if(Math.abs(seen[k]-X[i][j])>1e-12)return false;}
+    return true;});
+  return {y:y,X:X,Z:Z,gid:topGid,sub:subKey,gval:gval,g2val:g2val,rows:rows,dropped:dropIdx.length,
+    xnames:xnames,znames:znames,terms:terms,isL2:isL2,N:N,p:p,q:q,
+    yname:u.y,gname:u.g,g2name:u.g2,fx:fx,slopes:u.g2?[]:sl,three:!!u.g2,gmeanOf:gmeanOf};
+}
+
+/* ==================================================================
+   8. 推定の実行
+   ================================================================== */
+function nVarParams(m,corr,three){
+  const q=m.q;
+  return (corr?q*(q+1)/2:q)+(three?1:0);
+}
+function runAnalysis(){
+  const msg=document.getElementById("runmsg");
+  msg.innerHTML="推定しています…";
+  setTimeout(function(){
+  try{
+    const m=buildDesign();
+    const corr=document.getElementById("corr").checked&&m.q>1;
+    const reml=document.getElementById("reml").checked;
+    const t0=Date.now();
+    const fit=fitLMM(m.y,m.X,m.Z,m.gid,m.sub,corr,reml);
+    if(!fit.f)throw new Error("推定に失敗しました。変数の組み合わせを見直してください。");
+    // 分散共分散
+    const s2=fit.f.sigma2,Lam=fit.f.Lam;
+    const Sig=matmat(Lam,transpose(Lam)).map(r=>Array.from(r).map(v=>v*s2));
+    const tauSub=m.three?fit.f.tauS*fit.f.tauS*s2:0;
+    // 固定効果の検定
+    const XtXinv=inverseFromChol(fit.f.LX);
+    const se=[];for(let k=0;k<m.p;k++)se.push(Math.sqrt(Math.max(0,XtXinv[k][k]*s2)));
+    let dfs=satterthwaiteDF(fit),dfMethod="Satterthwaite";
+    const nG=new Set(m.gval).size;
+    if(!dfs||dfs.some(v=>v==null)){
+      dfMethod="Between–Within";
+      const nL2=m.isL2.filter(Boolean).length;
+      dfs=m.isL2.map(l2=>l2?Math.max(1,nG-nL2):Math.max(1,m.N-nG-(m.p-nL2)));
+    }
+    const fixed=m.xnames.map((nm,k)=>{
+      const b=fit.f.beta[k],s=se[k],df=dfs[k],t=b/s,p=pt2(t,df),tc=qt(0.975,df);
+      return {name:nm,b:b,se:s,df:df,t:t,p:p,lo:b-tc*s,hi:b+tc*s,l2:m.isL2[k]};});
+    // 無条件モデル（切片のみ）
+    const X1=[];for(let i=0;i<m.N;i++)X1.push(Float64Array.from([1]));
+    const Z1=[];for(let i=0;i<m.N;i++)Z1.push(Float64Array.from([1]));
+    const nullfit=fitLMM(m.y,X1,Z1,m.gid,m.sub,false,true);
+    const ns2=nullfit.f.sigma2,ntau=nullfit.f.Lam[0][0]*nullfit.f.Lam[0][0]*ns2;
+    const ntauSub=m.three?nullfit.f.tauS*nullfit.f.tauS*ns2:0;
+    const nullTot=ns2+ntau+ntauSub;
+    const iccNull=m.three?{top:ntau/nullTot,sub:ntauSub/nullTot,both:(ntau+ntauSub)/nullTot}:{top:ntau/nullTot};
+    // 現モデルのICC
+    const totVar=s2+Sig[0][0]+tauSub;
+    const icc=m.three?{top:Sig[0][0]/totVar,sub:tauSub/totVar,both:(Sig[0][0]+tauSub)/totVar}:{top:Sig[0][0]/totVar};
+    // BLUP・予測値
+    const bl=computeBLUP(fit);
+    // R^2（Nakagawa）
+    const fixPred=Array.from(bl.marginal);
+    const varF=variance(fixPred);
+    let varR=0;
+    for(let i=0;i<m.N;i++){let v=0;
+      for(let a=0;a<m.q;a++)for(let b2=0;b2<m.q;b2++)v+=m.Z[i][a]*Sig[a][b2]*m.Z[i][b2];
+      varR+=v;}
+    varR=varR/m.N+tauSub;
+    const R2m=varF/(varF+varR+s2),R2c=(varF+varR)/(varF+varR+s2);
+    // 尤度比検定：ランダム効果の必要性
+    const nvp=nVarParams(m,corr,m.three);
+    const thZero=fit.theta.map(()=>1e-7);
+    const devOLS=devianceOf(fit.groups,thZero,m.q,corr,m.p,m.N,m.hasSub,reml).dev;
+    let lrtSlope=null;
+    if(m.q>1){
+      const Zi=[];for(let i=0;i<m.N;i++)Zi.push(Float64Array.from([1]));
+      const f2=fitLMM(m.y,m.X,Zi,m.gid,m.sub,false,reml);
+      lrtSlope={dev:f2.dev,chi:f2.dev-fit.dev,df:nvp-(m.three?2:1),fit:f2};
+    }
+    const npar=m.p+nvp+1;
+    const aic=fit.dev+2*npar,bic=fit.dev+Math.log(m.N)*npar;
+    FIT={m:m,fit:fit,s2:s2,Sig:Sig,tauSub:tauSub,fixed:fixed,dfMethod:dfMethod,icc:icc,iccNull:iccNull,
+      nullfit:nullfit,ntau:ntau,ns2:ns2,ntauSub:ntauSub,blup:bl,R2m:R2m,R2c:R2c,varF:varF,varR:varR,
+      devOLS:devOLS,lrtSlope:lrtSlope,nvp:nvp,npar:npar,aic:aic,bic:bic,corr:corr,reml:reml,
+      nG:nG,nG2:m.three?new Set(m.g2val).size:0,elapsed:Date.now()-t0,XtXinv:XtXinv};
+    renderResults();renderGroups();renderDiag();renderReport();
+    enableSteps(true);
+    msg.innerHTML='<span style="color:var(--l2)">推定できました（'+(FIT.elapsed/1000).toFixed(1)+'秒）</span>';
+    showStep(2);
+  }catch(e){
+    msg.innerHTML='<span style="color:var(--l1)">'+esc(e.message||String(e))+'</span>';
+  }},30);
+}
+document.getElementById("runbtn").onclick=runAnalysis;
+
+/* ==================================================================
+   9. 作図ユーティリティ
+   ================================================================== */
+function niceTicks(lo,hi,n){
+  if(!(hi>lo)){hi=lo+1;}
+  const raw=(hi-lo)/Math.max(2,n),mag=Math.pow(10,Math.floor(Math.log10(raw))),norm=raw/mag;
+  const step=(norm<1.5?1:norm<3?2:norm<7?5:10)*mag;
+  const start=Math.ceil(lo/step)*step,out=[];
+  for(let v=start;v<=hi+1e-9;v+=step)out.push(Math.abs(v)<1e-12?0:v);
+  return out;}
+function Plot(w,h,ml,mr,mt,mb){
+  this.w=w;this.h=h;this.ml=ml;this.mr=mr;this.mt=mt;this.mb=mb;this.s=[];
+  this.x0=ml;this.x1=w-mr;this.y0=h-mb;this.y1=mt;}
+Plot.prototype.dom=function(xl,xh,yl,yh){
+  if(xh-xl<1e-12){xh=xl+1;xl=xl-1;} if(yh-yl<1e-12){yh=yl+1;yl=yl-1;}
+  const px=(xh-xl)*0.05,py=(yh-yl)*0.08;
+  this.xl=xl-px;this.xh=xh+px;this.yl=yl-py;this.yh=yh+py;return this;};
+Plot.prototype.X=function(v){return this.x0+(v-this.xl)/(this.xh-this.xl)*(this.x1-this.x0);};
+Plot.prototype.Y=function(v){return this.y0+(v-this.yl)/(this.yh-this.yl)*(this.y1-this.y0);};
+Plot.prototype.add=function(s){this.s.push(s);return this;};
+Plot.prototype.axes=function(xlab,ylab,xfmt,yfmt,noY,noX){
+  const xt=noX?[]:niceTicks(this.xl,this.xh,6),yt=noY?[]:niceTicks(this.yl,this.yh,5);
+  xfmt=xfmt||(v=>fmt(v,Math.abs(v)>=100?0:1));yfmt=yfmt||(v=>fmt(v,Math.abs(v)>=100?0:1));
+  yt.forEach(v=>{const y=this.Y(v);
+    this.add('<line x1="'+this.x0+'" x2="'+this.x1+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="#E4EBEF" stroke-width="1"/>');
+    this.add('<text x="'+(this.x0-7)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" font-size="10" font-family="var(--mono)" fill="#7B8F9D">'+yfmt(v)+'</text>');});
+  xt.forEach(v=>{const x=this.X(v);
+    this.add('<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+this.y0+'" y2="'+(this.y0+4)+'" stroke="#7B8F9D" stroke-width="1"/>');
+    this.add('<text x="'+x.toFixed(1)+'" y="'+(this.y0+16)+'" text-anchor="middle" font-size="10" font-family="var(--mono)" fill="#7B8F9D">'+xfmt(v)+'</text>');});
+  this.add('<line x1="'+this.x0+'" x2="'+this.x1+'" y1="'+this.y0+'" y2="'+this.y0+'" stroke="#7B8F9D" stroke-width="1"/>');
+  this.add('<line x1="'+this.x0+'" x2="'+this.x0+'" y1="'+this.y0+'" y2="'+this.y1+'" stroke="#7B8F9D" stroke-width="1"/>');
+  if(xlab)this.add('<text x="'+((this.x0+this.x1)/2)+'" y="'+(this.h-6)+'" text-anchor="middle" font-size="11" fill="#425A6B">'+esc(xlab)+'</text>');
+  if(ylab)this.add('<text transform="translate(13,'+((this.y0+this.y1)/2)+') rotate(-90)" text-anchor="middle" font-size="11" fill="#425A6B">'+esc(ylab)+'</text>');
+  return this;};
+Plot.prototype.svg=function(){return '<svg viewBox="0 0 '+this.w+' '+this.h+'" xmlns="http://www.w3.org/2000/svg" role="img">'+this.s.join("")+'</svg>';};
+function hueFor(i,n){const h=(i*137.508)%360;return 'hsl('+h.toFixed(0)+',42%,45%)';}
+
+/* ==================================================================
+   10. iii. 推定結果
+   ================================================================== */
+function renderResults(){
+  const F=FIT,m=F.m;
+  let h="";
+  /* --- 概要 --- */
+  h+='<div class="card"><h2>iii. 推定結果<span class="sub">'+esc(m.yname)+' を説明する</span></h2>';
+  h+='<div class="levelband"><span class="lv1">Lv.1 '+m.N+' 観測</span><span class="lv2">Lv.2 '+esc(m.gname)+' '+F.nG+'群</span>'
+    +(m.three?'<span class="lv3">Lv.3 '+esc(m.g2name)+' '+F.nG2+'群</span>':"")+'</div>';
+  h+='<div class="stats">'
+    +'<div class="stat"><div class="k">推定法</div><div class="v" style="font-size:16px">'+(F.reml?"REML":"最尤法 ML")+'</div></div>'
+    +'<div class="stat"><div class="k">ICC（無条件モデル）</div><div class="v">'+fmt(F.iccNull.both!=null?F.iccNull.both:F.iccNull.top,3)+'</div></div>'
+    +'<div class="stat"><div class="k">R&sup2; 周辺 / 条件付き</div><div class="v" style="font-size:17px">'+fmt(F.R2m,3)+' / '+fmt(F.R2c,3)+'</div></div>'
+    +'<div class="stat"><div class="k">AIC</div><div class="v">'+fmt(F.aic,1)+'</div></div>'
+    +'<div class="stat"><div class="k">-2 log L</div><div class="v">'+fmt(F.fit.dev,1)+'</div></div>'
+    +'</div>';
+  if(m.dropped>0)h+='<div class="msg">欠測のため '+m.dropped+' 行を除きました（解析に使ったのは '+m.N+' 行）。</div>';
+  const small=[];
+  const gc={};m.gval.forEach(g=>gc[g]=(gc[g]||0)+1);
+  const minN=Math.min.apply(null,Object.values(gc));
+  if(F.nG<10)small.push("群の数が "+F.nG+" と少なめです。群レベルの効果の推定は不安定になりがちです（目安として20群以上）。");
+  if(minN<2)small.push("1観測しかない群があります。群ごとの傾きの推定には各群に複数の観測が必要です。");
+  if(m.q>1&&F.lrtSlope&&F.lrtSlope.chi<0.01)small.push("ランダム傾きの分散がほぼ 0 と推定されました。傾きを外した単純なモデルで十分かもしれません。");
+  if(small.length)h+='<div class="msg">'+small.map(esc).join("<br>")+'</div>';
+  h+='</div>';
+
+  /* --- 固定効果 --- */
+  h+='<div class="card"><h2>固定効果<span class="sub">すべての群に共通する平均的な効果</span></h2>';
+  h+='<div class="tbl-wrap"><table><thead><tr><th class="l">項</th><th>推定値</th><th>標準誤差</th><th>自由度</th><th>t</th><th>p</th><th>95% 信頼区間</th><th class="l">層</th></tr></thead><tbody>';
+  F.fixed.forEach(f=>{
+    h+='<tr><td class="l">'+esc(f.name)+'</td>'
+      +'<td class="num">'+fmt(f.b,3)+'</td><td class="num">'+fmt(f.se,3)+'</td>'
+      +'<td class="num">'+fmt(f.df,1)+'</td><td class="num">'+fmt(f.t,2)+'</td>'
+      +'<td class="num'+(f.p<.05?" sig":"")+'">'+fmtP(f.p)+'</td>'
+      +'<td class="num">['+fmt(f.lo,2)+', '+fmt(f.hi,2)+']</td>'
+      +'<td class="l"><span class="pill '+(f.l2?"p2":"p1")+'">'+(f.l2?"Lv.2":"Lv.1")+'</span></td></tr>';});
+  h+='</tbody></table></div>';
+  h+='<p class="note">自由度は '+F.dfMethod+' 法で求めています。「層」は、その変数が群の中で変化するか（Lv.1）、群ごとに一定か（Lv.2）を示します。</p>';
+  h+='</div>';
+
+  /* --- ランダム効果 --- */
+  h+='<div class="card"><h2>ランダム効果<span class="sub">群ごとのばらつきの大きさ</span></h2>';
+  h+='<div class="tbl-wrap"><table><thead><tr><th class="l">レベル</th><th class="l">項</th><th>分散</th><th>標準偏差</th><th>全分散に占める割合</th></tr></thead><tbody>';
+  const totV=F.s2+F.Sig[0][0]+F.tauSub;
+  if(m.three){
+    h+='<tr><td class="l"><span class="pill p3">Lv.3</span> '+esc(m.g2name)+'</td><td class="l">切片</td><td class="num">'+fmt(F.Sig[0][0],3)+'</td><td class="num">'+fmt(Math.sqrt(F.Sig[0][0]),3)+'</td><td class="num">'+fmt(F.Sig[0][0]/totV*100,1)+'%</td></tr>';
+    h+='<tr><td class="l"><span class="pill p2">Lv.2</span> '+esc(m.gname)+'</td><td class="l">切片</td><td class="num">'+fmt(F.tauSub,3)+'</td><td class="num">'+fmt(Math.sqrt(F.tauSub),3)+'</td><td class="num">'+fmt(F.tauSub/totV*100,1)+'%</td></tr>';
+  }else{
+    for(let i=0;i<m.q;i++){
+      const v=F.Sig[i][i];
+      h+='<tr><td class="l">'+(i===0?'<span class="pill p2">Lv.2</span> '+esc(m.gname):"")+'</td><td class="l">'+esc(m.znames[i])+'</td>'
+        +'<td class="num">'+fmt(v,4)+'</td><td class="num">'+fmt(Math.sqrt(v),3)+'</td>'
+        +'<td class="num">'+(i===0?fmt(v/totV*100,1)+"%":"—")+'</td></tr>';}
+  }
+  h+='<tr><td class="l"><span class="pill p1">Lv.1</span> 残差</td><td class="l">個体内のばらつき</td><td class="num">'+fmt(F.s2,3)+'</td><td class="num">'+fmt(Math.sqrt(F.s2),3)+'</td><td class="num">'+fmt(F.s2/totV*100,1)+'%</td></tr>';
+  h+='</tbody></table></div>';
+  if(m.q>1&&F.corr){
+    h+='<h3>切片と傾きの相関</h3><div class="tbl-wrap"><table><thead><tr><th class="l">組み合わせ</th><th>相関</th></tr></thead><tbody>';
+    for(let i=1;i<m.q;i++){const r=F.Sig[i][0]/Math.sqrt(F.Sig[0][0]*F.Sig[i][i]);
+      h+='<tr><td class="l">切片 と '+esc(m.znames[i])+' の傾き</td><td class="num">'+fmt(r,3)+'</td></tr>';}
+    h+='</tbody></table></div>';
+    const r0=F.Sig[1][0]/Math.sqrt(F.Sig[0][0]*F.Sig[1][1]);
+    h+='<p class="note">'+(r0<-0.2?"相関が負：もともと水準の高い群ほど、この変数の効果が小さい傾向です。":
+      r0>0.2?"相関が正：もともと水準の高い群ほど、この変数の効果も大きい傾向です。":
+      "相関はほぼ 0：群の水準の高さと効果の大きさは関係が薄いようです。")+'</p>';
+  }
+  h+=varianceBar();
+  h+='<h3>級内相関係数 ICC</h3>';
+  h+='<div class="tbl-wrap"><table><thead><tr><th class="l">モデル</th><th>ICC</th><th class="l">意味</th></tr></thead><tbody>';
+  if(m.three){
+    h+='<tr><td class="l">無条件モデル（'+esc(m.g2name)+'）</td><td class="num">'+fmt(F.iccNull.top,3)+'</td><td class="l">上位群による違い</td></tr>';
+    h+='<tr><td class="l">無条件モデル（'+esc(m.gname)+'）</td><td class="num">'+fmt(F.iccNull.sub,3)+'</td><td class="l">同じ上位群の中の群による違い</td></tr>';
+    h+='<tr><td class="l">無条件モデル（合計）</td><td class="num">'+fmt(F.iccNull.both,3)+'</td><td class="l">個人差以外で説明される割合</td></tr>';
+  }else{
+    h+='<tr><td class="l">無条件モデル（説明変数なし）</td><td class="num">'+fmt(F.iccNull.top,3)+'</td><td class="l">全分散のうち群間の違いが占める割合</td></tr>';
+    h+='<tr><td class="l">いまのモデル（条件付き）</td><td class="num">'+fmt(F.icc.top,3)+'</td><td class="l">説明変数で調整した後の群間の違い</td></tr>';
+  }
+  const nbar=m.N/F.nG,deff=1+(nbar-1)*(F.iccNull.both!=null?F.iccNull.both:F.iccNull.top);
+  h+='<tr><td class="l">デザイン効果</td><td class="num">'+fmt(deff,2)+'</td><td class="l">1 + (平均群サイズ − 1) × ICC。2 を超えると群構造を無視した分析は危険</td></tr>';
+  h+='</tbody></table></div>';
+  h+='</div>';
+
+  /* --- 適合とモデル比較 --- */
+  h+='<div class="card"><h2>あてはまりとモデル比較</h2>';
+  h+='<div class="tbl-wrap"><table><thead><tr><th class="l">指標</th><th>値</th><th class="l">読み方</th></tr></thead><tbody>';
+  h+='<tr><td class="l">-2 log 尤度（'+(F.reml?"REML":"ML")+'）</td><td class="num">'+fmt(F.fit.dev,2)+'</td><td class="l">小さいほどあてはまりがよい</td></tr>';
+  h+='<tr><td class="l">AIC</td><td class="num">'+fmt(F.aic,2)+'</td><td class="l">パラメータ数 '+F.npar+' で調整</td></tr>';
+  h+='<tr><td class="l">BIC</td><td class="num">'+fmt(F.bic,2)+'</td><td class="l">AIC より簡潔なモデルを好む</td></tr>';
+  h+='<tr><td class="l">R&sup2;（周辺）</td><td class="num">'+fmt(F.R2m,3)+'</td><td class="l">固定効果だけで説明できる割合</td></tr>';
+  h+='<tr><td class="l">R&sup2;（条件付き）</td><td class="num">'+fmt(F.R2c,3)+'</td><td class="l">固定効果＋群の効果で説明できる割合</td></tr>';
+  h+='</tbody></table></div>';
+  h+='<h3>ランダム効果は必要か（尤度比検定）</h3>';
+  h+='<div class="tbl-wrap"><table><thead><tr><th class="l">比較</th><th>χ²</th><th>df</th><th>p</th><th class="l">判断</th></tr></thead><tbody>';
+  const chi0=F.devOLS-F.fit.dev,df0=F.nvp;
+  const p0=df0===1?0.5*(1-pchisq(chi0,1)):(1-pchisq(chi0,df0));
+  h+='<tr><td class="l">ランダム効果なし（通常の回帰）vs いまのモデル</td><td class="num">'+fmt(chi0,2)+'</td><td class="num">'+df0+'</td><td class="num'+(p0<.05?" sig":"")+'">'+fmtP(p0)+'</td>'
+    +'<td class="l">'+(p0<.05?"群ごとのばらつきを入れる意味がある":"群構造は弱い。通常の回帰でも大差ない")+'</td></tr>';
+  if(F.lrtSlope){
+    const ps=F.lrtSlope.df===1?0.5*(1-pchisq(F.lrtSlope.chi,1))+0.5*(1-pchisq(F.lrtSlope.chi,2)):(1-pchisq(F.lrtSlope.chi,F.lrtSlope.df));
+    h+='<tr><td class="l">切片のみランダム vs 傾きもランダム</td><td class="num">'+fmt(F.lrtSlope.chi,2)+'</td><td class="num">'+F.lrtSlope.df+'</td><td class="num'+(ps<.05?" sig":"")+'">'+fmtP(ps)+'</td>'
+      +'<td class="l">'+(ps<.05?"効果の大きさが群ごとに違う":"傾きは群ごとに変わらないとみてよい")+'</td></tr>';}
+  h+='</tbody></table></div>';
+  h+='<p class="note">分散が 0 という境界での検定になるため、通常のカイ二乗分布より p 値は小さめに補正しています（混合カイ二乗分布）。それでも保守的な目安として使ってください。</p>';
+  h+='</div>';
+
+  /* --- 読み取り --- */
+  h+='<div class="card"><h2>結果の読み取り</h2>'+readoutText()+'</div>';
+  document.getElementById("resultbox").innerHTML=h;
+}
+function varianceBar(){
+  const F=FIT,m=F.m,tot=F.s2+F.Sig[0][0]+F.tauSub;
+  const w=700,h=64,x0=10,x1=w-10;
+  const segs=[];
+  if(m.three){segs.push({v:F.Sig[0][0],c:"var(--l3)",lab:m.g2name});segs.push({v:F.tauSub,c:"var(--l2)",lab:m.gname});}
+  else segs.push({v:F.Sig[0][0],c:"var(--l2)",lab:m.gname+"（群間）"});
+  segs.push({v:F.s2,c:"var(--l1)",lab:"残差（群内）"});
+  let x=x0,s="";
+  segs.forEach(sg=>{const wd=(x1-x0)*sg.v/tot;
+    s+='<rect x="'+x.toFixed(1)+'" y="14" width="'+Math.max(0,wd).toFixed(1)+'" height="26" fill="'+sg.c+'"/>';
+    if(wd>52)s+='<text x="'+(x+wd/2).toFixed(1)+'" y="31" text-anchor="middle" font-size="11" fill="#fff" font-family="var(--mono)">'+(sg.v/tot*100).toFixed(1)+'%</text>';
+    s+='<text x="'+(x+2).toFixed(1)+'" y="54" font-size="10.5" fill="#425A6B">'+esc(sg.lab)+'</text>';
+    x+=wd;});
+  return '<h3>分散の分け前</h3><figure><svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg">'+s+'</svg>'
+    +'<figcaption>目的変数のばらつきが、どの層から来ているかの内訳です。</figcaption></figure>';
+}
+
+function readoutText(){
+  const F=FIT,m=F.m;
+  const icc=(F.iccNull.both!=null?F.iccNull.both:F.iccNull.top);
+  let s='<div class="readout">';
+  s+='まず群構造の強さです。説明変数を入れない無条件モデルでの ICC は <b>'+fmt(icc,3)+'</b>。'
+   +esc(m.yname)+' のばらつきのうち <b>'+fmt(icc*100,1)+'%</b> が'+(m.three?"上位の層":esc(m.gname)+"間の違い")+'によるもので、'
+   +(icc<0.05?'群による違いは小さめです。それでも群構造を無視すると標準誤差を見誤るので、混合モデルで扱う意味はあります。':
+     icc<0.15?'一般的な教育・心理データでよく見られる水準です。群を無視した分析では p 値が甘くなります。':
+     '群による違いがかなり大きく、群を無視した分析は明らかに不適切です。')+'<br>';
+  const sigs=F.fixed.filter(f=>f.name!=="切片"&&f.p<0.05);
+  if(sigs.length===0){
+    s+='固定効果のうち、5% 水準で有意なものはありませんでした。効果がないと断定するのではなく、'
+      +'サンプルサイズ（特に群の数 '+F.nG+'）と信頼区間の幅を合わせて見てください。<br>';
+  }else{
+    s+='固定効果では、';
+    s+=sigs.map(f=>'<b>'+esc(f.name)+'</b>（b = '+fmt(f.b,3)+', p '+(f.p<.001?"< .001":"= "+fmtP(f.p))+'）').join("、");
+    s+=' が有意でした。';
+    const f0=sigs[0];
+    s+='たとえば '+esc(f0.name)+' が 1 単位大きいとき、'+esc(m.yname)+' は平均して '
+      +fmt(Math.abs(f0.b),2)+' だけ'+(f0.b>0?"高く":"低く")+'なります'
+      +(f0.l2?'（この変数は群ごとに一定なので、群と群の比較です）':'（同じ群の中での比較です）')+'。<br>';
+  }
+  if(m.q>1){
+    for(let i=1;i<m.q;i++){
+      const sdS=Math.sqrt(F.Sig[i][i]),bF=F.fixed.find(f=>f.name===m.znames[i]);
+      if(!bF)continue;
+      s+='<b>'+esc(m.znames[i])+'</b> の傾きは群ごとに揺れ、その標準偏差は '+fmt(sdS,3)+' でした。'
+       +'平均的な傾き '+fmt(bF.b,3)+' に対し、おおよそ 95% の群の傾きは '
+       +fmt(bF.b-1.96*sdS,2)+' 〜 '+fmt(bF.b+1.96*sdS,2)+' の範囲に入る計算です。'
+       +((bF.b-1.96*sdS)*(bF.b+1.96*sdS)<0?'この範囲は 0 をまたぐので、<b>効果の向きすら群によって違う</b>可能性があります。':'向きはどの群でも同じと考えてよさそうです。')+'<br>';}
+  }
+  s+='あてはまりは、固定効果だけで '+fmt(F.R2m*100,1)+'%、群ごとの効果まで含めると '+fmt(F.R2c*100,1)+'% を説明しています。'
+   +(F.R2c-F.R2m>0.15?'その差が大きいので、「誰が」ではなく「どの群か」が結果をかなり左右しています。':'')+'</div>';
+  return s;
+}
+
+/* ==================================================================
+   11. iv. 群ごとの効果
+   ================================================================== */
+var ANIM={state:0,timer:null};
+function renderGroups(){
+  const F=FIT,m=F.m;
+  const topLabel=m.three?m.g2name:m.gname;
+  let h='<div class="card"><h2>iv. 群ごとの効果<span class="sub">平均からのズレ（BLUP）</span></h2>';
+  h+='<p class="note">ランダム効果の推定値は、その群の観測から得られる推定と全体平均との「重み付き平均」になります。'
+   +'観測が少ない群ほど全体平均へ引き寄せられる（<b>縮約</b>）のが混合モデルの特徴です。</p>';
+  h+=shrinkFigure();
+  h+='</div>';
+  h+='<div class="card"><h2>キャタピラプロット<span class="sub">'+esc(topLabel)+'ごとの切片のズレと 95% 区間</span></h2>';
+  h+=caterpillar(0);
+  if(m.q>1)for(let i=1;i<m.q;i++)h+='<h3>'+esc(m.znames[i])+' の傾きのズレ</h3>'+caterpillar(i);
+  h+='<p class="note">区間が 0 をまたがない群は、全体平均とはっきり違うと言える群です。</p></div>';
+  // 表
+  h+='<div class="card"><h2>群ごとの推定値</h2><div class="tbl-wrap"><table><thead><tr><th class="l">'+esc(topLabel)+'</th><th>n</th>';
+  m.znames.forEach(z=>{h+='<th>'+esc(z)+'のズレ</th>';});
+  h+='<th>群の予測水準</th></tr></thead><tbody>';
+  const re=F.blup.re.slice().sort((a,b)=>b.b[0]-a.b[0]);
+  re.forEach(r=>{
+    h+='<tr><td class="l">'+esc(r.key)+'</td><td class="num">'+r.n+'</td>';
+    r.b.forEach((v,i)=>{h+='<td class="num">'+(v>=0?"+":"")+fmt(v,3)+'</td>';});
+    h+='<td class="num">'+fmt(F.fixed[0].b+r.b[0],2)+'</td></tr>';});
+  h+='</tbody></table></div>';
+  if(m.three){
+    h+='<h3>'+esc(m.gname)+'（Lv.2）ごとの切片のズレ</h3><div class="tbl-wrap"><table><thead><tr><th class="l">'+esc(m.gname)+'</th><th>ズレ</th></tr></thead><tbody>';
+    F.blup.re.forEach(r=>{if(r.sub)r.sub.forEach(s=>{h+='<tr><td class="l">'+esc(s.key)+'</td><td class="num">'+(s.b>=0?"+":"")+fmt(s.b,3)+'</td></tr>';});});
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+  document.getElementById("groupbox").innerHTML=h;
+  bindShrink();
+}
+function caterpillar(k){
+  const F=FIT,m=F.m;
+  const re=F.blup.re.slice().sort((a,b)=>a.b[k]-b.b[k]);
+  const n=re.length,w=700,h=Math.max(180,Math.min(560,40+n*15));
+  const P=new Plot(w,h,54,16,14,34);
+  let lo=Infinity,hi=-Infinity;
+  re.forEach(r=>{lo=Math.min(lo,r.b[k]-1.96*r.se[k]);hi=Math.max(hi,r.b[k]+1.96*r.se[k]);});
+  P.dom(lo,hi,-0.5,n-0.5);
+  P.axes(m.znames[k]==="切片"?"切片のズレ":m.znames[k]+"の傾きのズレ","",null,null,true);
+  P.add('<line x1="'+P.X(0).toFixed(1)+'" x2="'+P.X(0).toFixed(1)+'" y1="'+P.y1+'" y2="'+P.y0+'" stroke="#B58718" stroke-width="1.4" stroke-dasharray="4 3"/>');
+  re.forEach((r,i)=>{
+    const y=P.Y(i),a=P.X(r.b[k]-1.96*r.se[k]),b=P.X(r.b[k]+1.96*r.se[k]);
+    const sig=(r.b[k]-1.96*r.se[k])*(r.b[k]+1.96*r.se[k])>0;
+    P.add('<line x1="'+a.toFixed(1)+'" x2="'+b.toFixed(1)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+(sig?"#2C6E60":"#A9B9C3")+'" stroke-width="1.6"/>');
+    P.add('<circle cx="'+P.X(r.b[k]).toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="'+(sig?"#2C6E60":"#7B8F9D")+'"/>');
+    if(n<=34)P.add('<text x="'+(P.x0-7)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="end" font-size="9.5" fill="#7B8F9D">'+esc(String(r.key).slice(0,12))+'</text>');});
+  return '<figure>'+P.svg()+'<figcaption>点が推定値、横線が 95% 予測区間。緑は 0 を含まない群です。</figcaption></figure>';
+}
+function shrinkFigure(){
+  const F=FIT,m=F.m;
+  // x 軸に使う変数
+  let xi=-1,xlab="";
+  if(m.q>1){xi=m.xnames.indexOf(m.znames[1]);xlab=m.znames[1];}
+  else{for(let j=1;j<m.p;j++){const t=m.terms[j-1];if(t&&t.kind==="num"&&t.trans!=="gmean"){xi=j;xlab=t.label;break;}}}
+  const groups=F.fit.groups;
+  const w=700,h=380,P=new Plot(w,h,56,16,16,44);
+  const gkeys=groups.map(g=>g.key);
+  if(xi<0){
+    // 群平均 → 縮約後の群水準
+    const obs=groups.map(g=>mean(Array.from(g.y)));
+    const est=F.blup.re.map(r=>F.fixed[0].b+r.b[0]);
+    const all=obs.concat(est);
+    P.dom(-0.35,1.35,Math.min.apply(null,all),Math.max.apply(null,all));
+    P.axes("","群の水準",null,null,false,true);
+    P.add('<text x="'+P.X(0).toFixed(1)+'" y="'+(P.y0+18)+'" text-anchor="middle" font-size="11" fill="#425A6B">群ごとの平均（単純集計）</text>');
+    P.add('<text x="'+P.X(1).toFixed(1)+'" y="'+(P.y0+18)+'" text-anchor="middle" font-size="11" fill="#425A6B">混合モデルの推定</text>');
+    groups.forEach((g,i)=>{
+      const c=hueFor(i,groups.length);
+      P.add('<line x1="'+P.X(0).toFixed(1)+'" y1="'+P.Y(obs[i]).toFixed(1)+'" x2="'+P.X(1).toFixed(1)+'" y2="'+P.Y(est[i]).toFixed(1)+'" stroke="'+c+'" stroke-width="1.2" opacity=".75"/>');
+      P.add('<circle cx="'+P.X(0).toFixed(1)+'" cy="'+P.Y(obs[i]).toFixed(1)+'" r="3.2" fill="'+c+'"/>');
+      P.add('<circle cx="'+P.X(1).toFixed(1)+'" cy="'+P.Y(est[i]).toFixed(1)+'" r="3.2" fill="'+c+'" opacity=".55"/>');});
+    P.add('<line x1="'+P.x0+'" x2="'+P.x1+'" y1="'+P.Y(F.fixed[0].b).toFixed(1)+'" y2="'+P.Y(F.fixed[0].b).toFixed(1)+'" stroke="#A5384E" stroke-width="1.4" stroke-dasharray="5 3"/>');
+    return '<figure>'+P.svg()+'<figcaption>左は各群をばらばらに集計した平均、右は混合モデルの推定。赤い破線は全体平均。観測数の少ない群ほど全体平均側へ引き寄せられます。</figcaption></figure>';
+  }
+  // 回帰直線の束（縮約アニメーション）
+  const y=m.y,X=m.X;
+  const xs=[],ys=[];for(let i=0;i<m.N;i++){xs.push(X[i][xi]);ys.push(y[i]);}
+  const xlo=Math.min.apply(null,xs),xhi=Math.max.apply(null,xs);
+  P.dom(xlo,xhi,Math.min.apply(null,ys),Math.max.apply(null,ys));
+  P.axes(xlab,m.yname);
+  const lines=[];
+  groups.forEach((g,gi)=>{
+    const gx=[],gy=[];
+    for(let a=0;a<g.n;a++){gx.push(g.X[a][xi]);gy.push(g.y[a]);}
+    // 個別OLS
+    let a0,a1;
+    const mx=mean(gx),my=mean(gy);let sxx=0,sxy=0;
+    for(let a=0;a<gx.length;a++){sxx+=(gx[a]-mx)*(gx[a]-mx);sxy+=(gx[a]-mx)*(gy[a]-my);}
+    if(gx.length>=3&&sxx>1e-9){a1=sxy/sxx;a0=my-a1*mx;}else{a1=0;a0=my;}
+    // 混合モデルの群直線（他の共変量は群平均で固定）
+    const re=F.blup.re[gi];
+    let b0=F.fixed[0].b+re.b[0];
+    for(let j=1;j<m.p;j++){if(j===xi)continue;
+      let s=0;for(let a=0;a<g.n;a++)s+=g.X[a][j];
+      b0+=F.fixed[j].b*(s/g.n);}
+    let b1=F.fixed[xi].b;
+    if(m.q>1){const zk=m.znames.indexOf(m.xnames[xi]);if(zk>0)b1+=re.b[zk];}
+    const gxlo=Math.min.apply(null,gx),gxhi=Math.max.apply(null,gx);
+    lines.push({c:hueFor(gi,groups.length),
+      A:[gxlo,a0+a1*gxlo,gxhi,a0+a1*gxhi],
+      B:[gxlo,b0+b1*gxlo,gxhi,b0+b1*gxhi]});});
+  for(let i=0;i<m.N;i++)P.add('<circle cx="'+P.X(xs[i]).toFixed(1)+'" cy="'+P.Y(ys[i]).toFixed(1)+'" r="1.8" fill="#95A8B4" opacity=".5"/>');
+  lines.forEach((L,i)=>{
+    P.add('<line class="glines" data-i="'+i+'" x1="'+P.X(L.A[0]).toFixed(1)+'" y1="'+P.Y(L.A[1]).toFixed(1)+'" x2="'+P.X(L.A[2]).toFixed(1)+'" y2="'+P.Y(L.A[3]).toFixed(1)+'" stroke="'+L.c+'" stroke-width="1.5" opacity=".8"/>');});
+  const fb0=F.fixed[0].b+ (function(){let add=0;for(let j=1;j<m.p;j++){if(j===xi)continue;let s=0;for(let i=0;i<m.N;i++)s+=X[i][j];add+=F.fixed[j].b*(s/m.N);}return add;})();
+  P.add('<line x1="'+P.X(xlo).toFixed(1)+'" y1="'+P.Y(fb0+F.fixed[xi].b*xlo).toFixed(1)+'" x2="'+P.X(xhi).toFixed(1)+'" y2="'+P.Y(fb0+F.fixed[xi].b*xhi).toFixed(1)+'" stroke="#A5384E" stroke-width="2.6"/>');
+  window.__SHRINK={lines:lines,P:P};
+  return '<figure>'+P.svg()+'<figcaption>細い線が群ごとの直線、太い赤線が固定効果（全体の平均的な関係）。'
+    +'ボタンで「群ごとにばらばらに引いた直線」と「混合モデルの直線」を見比べられます。</figcaption></figure>'
+    +'<div class="btnrow"><button class="btn sec" id="shbtn">混合モデルの直線に切り替える</button>'
+    +'<span class="note" id="shmsg">いまは <b>群ごとに独立に引いた回帰直線</b> を表示しています</span></div>'
+    +'<div class="legend"><span style="color:#A5384E"><i style="border-color:#A5384E"></i>固定効果（全体）</span>'
+    +'<span style="color:#7B8F9D"><i class="dot"></i>観測値</span></div>';
+}
+function bindShrink(){
+  const btn=document.getElementById("shbtn");if(!btn||!window.__SHRINK)return;
+  ANIM.state=0;
+  btn.onclick=function(){
+    const S=window.__SHRINK,els=document.querySelectorAll("line.glines");
+    const to=ANIM.state?0:1;
+    const reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const dur=reduce?0:700,t0=Date.now();
+    function draw(t){
+      els.forEach(el=>{const L=S.lines[+el.dataset.i];
+        const from=ANIM.state?L.B:L.A,tgt=ANIM.state?L.A:L.B;
+        const c=[0,1,2,3].map(k=>from[k]+(tgt[k]-from[k])*t);
+        el.setAttribute("x1",S.P.X(c[0]).toFixed(1));el.setAttribute("y1",S.P.Y(c[1]).toFixed(1));
+        el.setAttribute("x2",S.P.X(c[2]).toFixed(1));el.setAttribute("y2",S.P.Y(c[3]).toFixed(1));});}
+    function step(){const e=dur?Math.min(1,(Date.now()-t0)/dur):1;
+      const t=e<0.5?2*e*e:1-Math.pow(-2*e+2,2)/2;
+      draw(t);
+      if(e<1)requestAnimationFrame(step);
+      else{ANIM.state=to;
+        btn.textContent=to?"群ごとの直線に戻す":"混合モデルの直線に切り替える";
+        document.getElementById("shmsg").innerHTML=to?'いまは <b>混合モデルが推定した群ごとの直線</b>（縮約後）を表示しています':'いまは <b>群ごとに独立に引いた回帰直線</b> を表示しています';}}
+    requestAnimationFrame(step);};
+}
+
+/* ==================================================================
+   12. v. 診断
+   ================================================================== */
+function renderDiag(){
+  const F=FIT,m=F.m;
+  const fitted=F.blup.fitted,resid=m.y.map((v,i)=>v-fitted[i]);
+  const sdr=Math.sqrt(F.s2),std=resid.map(r=>r/sdr);
+  let h='<div class="card"><h2>v. 診断<span class="sub">前提が壊れていないかを見る</span></h2>';
+  // 残差 vs 予測
+  {
+    const P=new Plot(700,320,58,16,16,44);
+    P.dom(Math.min.apply(null,Array.from(fitted)),Math.max.apply(null,Array.from(fitted)),Math.min.apply(null,std),Math.max.apply(null,std));
+    P.axes("予測値（群の効果込み）","標準化残差");
+    P.add('<line x1="'+P.x0+'" x2="'+P.x1+'" y1="'+P.Y(0).toFixed(1)+'" y2="'+P.Y(0).toFixed(1)+'" stroke="#B58718" stroke-width="1.3" stroke-dasharray="4 3"/>');
+    for(let i=0;i<m.N;i++)P.add('<circle cx="'+P.X(fitted[i]).toFixed(1)+'" cy="'+P.Y(std[i]).toFixed(1)+'" r="2.2" fill="#2C6E60" opacity=".5"/>');
+    h+='<h3>残差と予測値</h3><figure>'+P.svg()+'<figcaption>横に一様な帯状に散っていれば良好。右に行くほど広がる（ラッパ形）なら分散不均一、曲線を描くなら関係が直線でない可能性があります。</figcaption></figure>';
+  }
+  // QQ
+  h+='<div class="row"><div style="flex:1 1 320px">'+qqPlot(std,"標準化残差（Lv.1）")+'</div>';
+  const b0=F.blup.re.map(r=>r.b[0]);
+  h+='<div style="flex:1 1 320px">'+qqPlot(b0,(m.three?m.g2name:m.gname)+"の切片（Lv.2）")+'</div></div>';
+  h+='<p class="note">点が対角線に沿っていれば正規分布の仮定と整合的です。端が反り返る程度なら大きな問題にはなりませんが、'
+    +'極端に外れる点はその群・その観測を確認する価値があります。</p>';
+  // 群サイズ
+  const gc={};m.gval.forEach(g=>gc[g]=(gc[g]||0)+1);
+  const sizes=Object.values(gc).sort((a,b)=>a-b);
+  h+='<h3>群の大きさ</h3><div class="stats">'
+    +'<div class="stat"><div class="k">群の数</div><div class="v">'+F.nG+'</div></div>'
+    +'<div class="stat"><div class="k">最小 / 中央 / 最大</div><div class="v" style="font-size:17px">'+sizes[0]+' / '+sizes[Math.floor(sizes.length/2)]+' / '+sizes[sizes.length-1]+'</div></div>'
+    +'<div class="stat"><div class="k">平均群サイズ</div><div class="v">'+fmt(m.N/F.nG,1)+'</div></div>'
+    +'<div class="stat"><div class="k">推定の反復回数</div><div class="v">'+F.fit.iter+'</div></div></div>';
+  // 注意
+  const warn=[];
+  const skew=(function(){const mu=mean(std);let s2=0,s3=0;std.forEach(v=>{s2+=(v-mu)*(v-mu);s3+=Math.pow(v-mu,3);});
+    s2/=std.length;s3/=std.length;return s3/Math.pow(s2,1.5);})();
+  if(Math.abs(skew)>1)warn.push("残差の歪度が "+fmt(skew,2)+" とやや偏っています。目的変数の変換（対数など）を検討してもよいかもしれません。");
+  const big=std.filter(v=>Math.abs(v)>3).length;
+  if(big>0)warn.push("標準化残差の絶対値が 3 を超える観測が "+big+" 件あります（全体の "+fmt(big/m.N*100,1)+"%）。データの入力ミスがないか確認してください。");
+  if(F.nG<20)warn.push("群の数が "+F.nG+" です。群レベルの効果や分散の推定は、群が少ないと下振れしやすいことが知られています。");
+  if(m.q>1&&Math.abs(F.Sig[1][0]/Math.sqrt(F.Sig[0][0]*F.Sig[1][1]))>0.95)warn.push("切片と傾きの相関が ±1 に近く、モデルが過剰に複雑（特異）である可能性があります。相関の推定を外すか、ランダム傾きを外すことを検討してください。");
+  h+=warn.length?'<div class="msg">'+warn.map(esc).join("<br>")+'</div>':'<div class="msg ok">目立った問題は見つかりませんでした。</div>';
+  h+='</div>';
+  document.getElementById("diagbox").innerHTML=h;
+}
+function qqPlot(v,lab){
+  const a=v.slice().sort((x,y)=>x-y),n=a.length;
+  const mu=mean(a),s=sd(a);
+  const th=[],ob=[];
+  for(let i=0;i<n;i++){th.push(qnorm((i+0.5)/n));ob.push((a[i]-mu)/s);}
+  const P=new Plot(400,300,50,14,14,42);
+  const lo=Math.min(th[0],ob[0]),hi=Math.max(th[n-1],ob[n-1]);
+  P.dom(lo,hi,lo,hi);P.axes("理論分位点",lab);
+  P.add('<line x1="'+P.X(lo).toFixed(1)+'" y1="'+P.Y(lo).toFixed(1)+'" x2="'+P.X(hi).toFixed(1)+'" y2="'+P.Y(hi).toFixed(1)+'" stroke="#B58718" stroke-width="1.3"/>');
+  for(let i=0;i<n;i++)P.add('<circle cx="'+P.X(th[i]).toFixed(1)+'" cy="'+P.Y(ob[i]).toFixed(1)+'" r="2.1" fill="#2C6E60" opacity=".62"/>');
+  return '<figure>'+P.svg()+'<figcaption>'+esc(lab)+' の正規 Q-Q プロット</figcaption></figure>';
+}
+
+/* ==================================================================
+   13. vi. レポート
+   ================================================================== */
+function bt(s){return "`"+s+"`";}
+function rFormula(){
+  const F=FIT,m=F.m;
+  const fx=m.xnames.slice(1).map(bt).join(" + ");
+  let ran="(1"+(m.q>1?" + "+m.znames.slice(1).map(bt).join(" + "):"")+(F.corr||m.q===1?" | ":" || ")+bt(m.gname)+")";
+  if(m.three)ran="(1 | "+bt(m.g2name)+") + (1 | "+bt(m.gname)+")";
+  return bt(m.yname)+" ~ "+(fx?fx+" + ":"")+ran;
+}
+function csvEscape(v){const s=String(v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function analysisCSV(){
+  const F=FIT,m=F.m;
+  const head=[m.yname,m.gname].concat(m.three?[m.g2name]:[]).concat(m.xnames.slice(1));
+  const lines=[head.map(csvEscape).join(",")];
+  for(let i=0;i<m.N;i++){
+    const row=[m.y[i],m.gval[i]].concat(m.three?[m.g2val[i]]:[]);
+    for(let j=1;j<m.p;j++)row.push(Number(m.X[i][j].toFixed(8)));
+    lines.push(row.map(csvEscape).join(","));}
+  return lines.join("\n");
+}
+function rCode(){
+  const F=FIT,m=F.m;
+  let s="";
+  s+="# ============================================================\n";
+  s+="#  混合モデル（線形混合効果モデル）\n";
+  s+="#  混合モデルラボが行った分析を R で再現するコードです。\n";
+  s+="#  データはこのコードに埋め込んであります（中心化・ダミー化は適用済み）。\n";
+  s+="# ============================================================\n";
+  s+="library(lme4)\nlibrary(lmerTest)   # Satterthwaite の自由度と p 値\n\n";
+  s+="dat <- read.csv(text = \"\n"+analysisCSV().replace(/"/g,'\\"')+"\n\", check.names = FALSE, stringsAsFactors = TRUE)\n\n";
+  s+="# --- 推定 ---\n";
+  s+="m <- lmer("+rFormula()+",\n          data = dat, REML = "+(F.reml?"TRUE":"FALSE")+")\n";
+  s+="summary(m)\nconfint(m, method = \"Wald\")\n\n";
+  s+="# --- 無条件モデルと ICC ---\n";
+  let nullf=bt(m.yname)+" ~ 1 + "+(m.three?"(1 | "+bt(m.g2name)+") + (1 | "+bt(m.gname)+")":"(1 | "+bt(m.gname)+")");
+  s+="m0 <- lmer("+nullf+", data = dat, REML = TRUE)\n";
+  s+="vc <- as.data.frame(VarCorr(m0))\nvc$vcov / sum(vc$vcov)   # ICC\n\n";
+  s+="# --- ランダム効果の必要性（尤度比検定）---\n";
+  s+="m_ols <- lm("+bt(m.yname)+" ~ "+(m.xnames.length>1?m.xnames.slice(1).map(bt).join(" + "):"1")+", data = dat)\n";
+  s+="anova(m, m_ols)   # 境界での検定なので p 値は保守的に読む\n\n";
+  if(m.q>1){
+    s+="# 切片のみのモデルとの比較（ランダム傾きは必要か）\n";
+    s+="m_int <- lmer("+bt(m.yname)+" ~ "+(m.xnames.length>1?m.xnames.slice(1).map(bt).join(" + ")+" + ":"")+"(1 | "+bt(m.gname)+"), data = dat, REML = "+(F.reml?"TRUE":"FALSE")+")\n";
+    s+="anova(m, m_int, refit = FALSE)\n\n";}
+  s+="# --- 効果量（Nakagawa の R^2）と群ごとの効果 ---\n";
+  s+="# install.packages(\"performance\") が必要\n";
+  s+="# performance::r2_nakagawa(m)\nranef(m)\n\n";
+  s+="# --- 診断 ---\n";
+  s+="plot(fitted(m), resid(m)); abline(h = 0, lty = 2)\nqqnorm(resid(m)); qqline(resid(m))\n";
+  s+="qqnorm(ranef(m)$"+bt(m.gname)+"[,1]); qqline(ranef(m)$"+bt(m.gname)+"[,1])\n";
+  return s;
+}
+function paperText(){
+  const F=FIT,m=F.m;
+  const icc=(F.iccNull.both!=null?F.iccNull.both:F.iccNull.top);
+  const lv=m.three?("3 水準（"+m.g2name+"／"+m.gname+"／個体）"):"2 水準";
+  let s="【方法】\n";
+  s+="データが"+esc(m.gname)+"に入れ子になっている（同じ"+esc(m.gname)+"に属する観測は互いに独立でない）ため、"+lv+"の線形混合効果モデルを用いた。";
+  s+=esc(m.yname)+"を目的変数とし、"+(m.xnames.length>1?esc(m.xnames.slice(1).join("、"))+"を固定効果として投入した":"固定効果は切片のみとした")+"。";
+  s+=esc(m.gname)+"を変量効果のグループ化変数とし、切片"+(m.q>1?"および"+esc(m.znames.slice(1).join("、"))+"の傾き":"")+"が"+esc(m.gname)+"ごとに変動することを許した。";
+  const cw=m.terms.filter(t=>t.trans==="group"||t.trans==="gmean");
+  if(cw.length)s+="群内効果と群間効果を分離するため、"+esc(Array.from(new Set(cw.map(t=>t.varName))).join("、"))+"は群平均中心化を行った。";
+  s+="パラメータは"+(F.reml?"制限最尤法（REML）":"最尤法（ML）")+"で推定し、固定効果の自由度は"+F.dfMethod+"法で近似した。";
+  s+="分析には R の lme4 パッケージ（lmerTest 併用）に相当する計算を用いた。\n\n";
+  s+="【結果】\n";
+  s+="無条件モデルにおける級内相関係数は ICC = "+fmt(icc,3)+" であり、"+esc(m.yname)+"の分散の "+fmt(icc*100,1)+"% が"+esc(m.gname)+"間の差によって説明された。\n";
+  const rows=F.fixed.filter(f=>f.name!=="切片");
+  s+="固定効果の推定結果は次のとおりであった。切片は "+fmt(F.fixed[0].b,2)+"（SE = "+fmt(F.fixed[0].se,2)+"）であった。";
+  rows.forEach(f=>{
+    s+=esc(f.name)+"の効果は b = "+fmt(f.b,3)+"（SE = "+fmt(f.se,3)+", 95%CI ["+fmt(f.lo,2)+", "+fmt(f.hi,2)+"], t("+fmt(f.df,1)+") = "+fmt(f.t,2)+", p "+(f.p<.001?"< .001":"= "+f.p.toFixed(3).replace(/^0/,""))+"）で"+(f.p<.05?"有意であった":"有意ではなかった")+"。";});
+  s+="\n変量効果については、"+esc(m.gname)+"の切片の分散は "+fmt(F.Sig[0][0],3)+"（SD = "+fmt(Math.sqrt(F.Sig[0][0]),3)+"）、残差分散は "+fmt(F.s2,3)+"（SD = "+fmt(Math.sqrt(F.s2),3)+"）であった。";
+  if(m.q>1){for(let i=1;i<m.q;i++)s+=esc(m.znames[i])+"の傾きの分散は "+fmt(F.Sig[i][i],4)+"（SD = "+fmt(Math.sqrt(F.Sig[i][i]),3)+"）"+(F.corr?"、切片との相関は r = "+fmt(F.Sig[i][0]/Math.sqrt(F.Sig[0][0]*F.Sig[i][i]),2):"")+" であった。";}
+  s+="モデル全体の説明力は、周辺 R² = "+fmt(F.R2m,3)+"、条件付き R² = "+fmt(F.R2c,3)+" であった（AIC = "+fmt(F.aic,1)+"）。\n\n";
+  s+="【限界】\n";
+  s+="本分析は観察データに基づくため、推定された係数を因果効果として解釈することはできない。";
+  s+="また"+esc(m.gname)+"の数は "+F.nG+" であり、"+(F.nG<30?"群レベルの分散推定は下振れする可能性がある。":"群レベルの推定に必要な数は概ね確保されているが、群レベル変数の検出力には限界がある。");
+  s+="残差の正規性と分散均一性は図により確認したが、逸脱がある場合は変換や頑健推定の併用を検討する必要がある。";
+  return s;
+}
+
+function renderReport(){
+  const F=FIT,m=F.m;
+  let h='<div class="card"><h2>vi. レポート<span class="sub">解説・記述例・R コード・書き出し</span></h2>';
+  h+='<h3>この分析は何をしているのか</h3>';
+  h+='<p class="note">通常の回帰分析は「すべての観測が互いに独立」を前提にします。ところが同じ'+esc(m.gname)+'に属する観測どうしは似ていることが多く、'
+   +'この前提が崩れると標準誤差が小さく出すぎて、本当は差がないものを「有意」と判定してしまいます。<br>'
+   +'混合モデルは、ばらつきを <b>'+(m.three?"3 つ":"2 つ")+'の層</b>に分けて扱うことでこの問題を解きます。'
+   +'いまのデータでは、全分散のうち '+fmt((F.Sig[0][0]+F.tauSub)/(F.s2+F.Sig[0][0]+F.tauSub)*100,1)+'% が群の違い、'
+   +fmt(F.s2/(F.s2+F.Sig[0][0]+F.tauSub)*100,1)+'% が群の中の個体差でした。</p>';
+  h+='<h3>用語の対応</h3><div class="tbl-wrap"><table><thead><tr><th class="l">この画面の表記</th><th class="l">よくある別名</th><th class="l">意味</th></tr></thead><tbody>'
+   +'<tr><td class="l">固定効果</td><td class="l">fixed effects / 平均構造</td><td class="l">全体に共通する平均的な効果</td></tr>'
+   +'<tr><td class="l">ランダム効果</td><td class="l">変量効果 / random effects</td><td class="l">群ごとのズレ。ズレそのものではなく「ズレの分散」を推定する</td></tr>'
+   +'<tr><td class="l">BLUP</td><td class="l">経験ベイズ推定値 / 事後平均</td><td class="l">個々の群のズレの予測値。縮約がかかる</td></tr>'
+   +'<tr><td class="l">ICC</td><td class="l">級内相関 / 級内相関係数</td><td class="l">同じ群に属する 2 つの観測の相関</td></tr>'
+   +'<tr><td class="l">REML</td><td class="l">制限最尤法</td><td class="l">分散成分の偏りを減らす推定法。固定効果の異なるモデル同士は比較できない</td></tr>'
+   +'</tbody></table></div>';
+  h+='<h3>気をつけたいこと</h3><ul class="note" style="padding-left:1.2em">'
+   +'<li>固定効果の異なるモデルを尤度比検定で比べるときは、必ず ML（REML のチェックを外す）で推定し直してください。</li>'
+   +'<li>群レベルの変数（Lv.2）の効果は、実質的な標本サイズが「群の数」になります。群が少ないと検出力は上がりません。</li>'
+   +'<li>群平均中心化をすると、同じ変数の「群内効果」と「群間効果」を分けて解釈できます。中心化しない場合、係数は両者の混合物になります。</li>'
+   +'<li>ランダム傾きを増やすと推定は不安定になりがちです。相関が ±1 に張り付いたら、モデルを簡単にするサインです。</li></ul>';
+  h+='</div>';
+
+  h+='<div class="card"><h2>論文・報告書での記述例</h2>';
+  h+='<p class="note">数値はこの分析結果から自動で埋めています。専門用語や書式はご自身の分野の慣行に合わせて調整してください。</p>';
+  h+='<div class="quote" id="papertext">'+esc(paperText())+'</div>';
+  h+='<div class="btnrow"><button class="btn sec" data-copy="papertext">記述例をコピー</button></div></div>';
+
+  h+='<div class="card"><h2>R コード<span class="sub">lme4 / lmerTest・データ埋め込み済み</span></h2>';
+  h+='<p class="note">そのまま R（や JASP の R コンソール）に貼り付けて実行できます。データもコードの中に入っているので、ファイルの読み込みは不要です。</p>';
+  h+='<pre class="code" id="rcode">'+esc(rCode())+'</pre>';
+  h+='<div class="btnrow"><button class="btn sec" data-copy="rcode">R コードをコピー</button>'
+    +'<button class="btn sec" data-save="r">ファイルとして保存</button></div></div>';
+
+  h+='<div class="card"><h2>書き出し</h2>';
+  h+='<div class="btnrow">'
+    +'<button class="btn sec" data-out="fixed">固定効果の表</button>'
+    +'<button class="btn sec" data-out="var">分散成分</button>'
+    +'<button class="btn sec" data-out="blup">群ごとの効果（BLUP）</button>'
+    +'<button class="btn sec" data-out="data">予測値・残差つきデータ</button>'
+    +'</div>';
+  h+='<div id="outarea" style="margin-top:14px"></div></div>';
+  document.getElementById("reportbox").innerHTML=h;
+
+  document.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{
+    const el=document.getElementById(b.dataset.copy);
+    copyText(el.innerText,b);});
+  document.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>{
+    saveText("mixed_model.R",document.getElementById("rcode").innerText);});
+  document.querySelectorAll("[data-out]").forEach(b=>b.onclick=()=>showOutput(b.dataset.out));
+}
+function copyText(t,btn){
+  const done=()=>{const o=btn.textContent;btn.textContent="コピーしました";setTimeout(()=>btn.textContent=o,1600);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,()=>fallback());}
+  else fallback();
+  function fallback(){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();
+    try{document.execCommand("copy");done();}catch(e){}document.body.removeChild(ta);}
+}
+function saveText(name,text){
+  try{
+    const blob=new Blob([new Uint8Array([0xEF,0xBB,0xBF]),text],{type:"text/plain;charset=utf-8"});
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},400);
+  }catch(e){
+    const w=window.open("","_blank");
+    if(w){w.document.write("<pre>"+esc(text)+"</pre>");w.document.title=name;}
+  }
+}
+function outputCSV(kind){
+  const F=FIT,m=F.m;
+  if(kind==="fixed"){
+    const L=["項,推定値,標準誤差,自由度,t,p,CI下限,CI上限"];
+    F.fixed.forEach(f=>L.push([f.name,f.b,f.se,f.df,f.t,f.p,f.lo,f.hi].map(v=>typeof v==="number"?v.toFixed(6):csvEscape(v)).join(",")));
+    return L.join("\n");}
+  if(kind==="var"){
+    const L=["レベル,項,分散,標準偏差"];
+    if(m.three){L.push([m.g2name,"切片",F.Sig[0][0],Math.sqrt(F.Sig[0][0])].map(csvEscape).join(","));
+      L.push([m.gname,"切片",F.tauSub,Math.sqrt(F.tauSub)].map(csvEscape).join(","));}
+    else for(let i=0;i<m.q;i++)L.push([m.gname,m.znames[i],F.Sig[i][i],Math.sqrt(F.Sig[i][i])].map(csvEscape).join(","));
+    if(m.q>1&&F.corr)for(let i=1;i<m.q;i++)L.push([m.gname,"相関(切片,"+m.znames[i]+")",F.Sig[i][0]/Math.sqrt(F.Sig[0][0]*F.Sig[i][i]),""].map(csvEscape).join(","));
+    L.push(["残差","",F.s2,Math.sqrt(F.s2)].map(csvEscape).join(","));
+    L.push(["ICC(無条件)","",(F.iccNull.both!=null?F.iccNull.both:F.iccNull.top),""].map(csvEscape).join(","));
+    L.push(["R2周辺","",F.R2m,""].map(csvEscape).join(","));
+    L.push(["R2条件付き","",F.R2c,""].map(csvEscape).join(","));
+    return L.join("\n");}
+  if(kind==="blup"){
+    const L=[[m.three?m.g2name:m.gname,"n"].concat(m.znames.map(z=>z+"のズレ")).concat(m.znames.map(z=>z+"のSE")).map(csvEscape).join(",")];
+    F.blup.re.forEach(r=>L.push([r.key,r.n].concat(r.b.map(v=>v.toFixed(6))).concat(r.se.map(v=>v.toFixed(6))).map(csvEscape).join(",")));
+    return L.join("\n");}
+  if(kind==="data"){
+    const head=[m.yname,m.gname].concat(m.three?[m.g2name]:[]).concat(m.xnames.slice(1)).concat(["予測値_固定効果のみ","予測値_群込み","残差"]);
+    const L=[head.map(csvEscape).join(",")];
+    for(let i=0;i<m.N;i++){
+      const row=[m.y[i],m.gval[i]].concat(m.three?[m.g2val[i]]:[]);
+      for(let j=1;j<m.p;j++)row.push(Number(m.X[i][j].toFixed(6)));
+      row.push(F.blup.marginal[i].toFixed(6),F.blup.fitted[i].toFixed(6),(m.y[i]-F.blup.fitted[i]).toFixed(6));
+      L.push(row.map(csvEscape).join(","));}
+    return L.join("\n");}
+  return "";
+}
+function showOutput(kind){
+  const names={fixed:"固定効果",var:"分散成分",blup:"群ごとの効果",data:"予測値つきデータ"};
+  const txt=outputCSV(kind);
+  const el=document.getElementById("outarea");
+  el.innerHTML='<label class="fld">'+esc(names[kind])+'（CSV）</label>'
+    +'<textarea rows="10" id="outtext" readonly>'+esc(txt)+'</textarea>'
+    +'<div class="btnrow"><button class="btn sec" id="outcopy">コピー</button>'
+    +'<button class="btn sec" id="outsave">ファイルとして保存</button>'
+    +'<span class="note">保存できない環境では、上の枠の内容をコピーして表計算ソフトに貼り付けてください。</span></div>';
+  document.getElementById("outcopy").onclick=function(){copyText(txt,this);};
+  document.getElementById("outsave").onclick=()=>saveText(kind+".csv",txt);
+}
+
+/* ==================================================================
+   14. 起動
+   ================================================================== */
+(function(){
+  document.getElementById("rawdata").value=sample1();
+  loadData();
+  showStep(0);
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>主成分分析ラボ — データ分析ラボ</title>
+<meta name="description" content="たくさんの変数を少ない軸にまとめ直す。固有値からバイプロット、記述例まで。">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<link rel="stylesheet" href="../../assets/site.css?v=b63567b0">
+<style>:root{--al-cat:var(--al-c-structure)}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#structure">構造と測定</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>主成分分析ラボ</span><span class="al-gap"></span><a class="al-link al-primary" href="app.html">ツールを開く</a></div>
+<main>
+  <header class="tool-hero">
+    <div class="wrap">
+      <a class="chip" href="../../#structure"><i></i>構造と測定</a>
+      <h1>主成分分析ラボ</h1>
+      <p class="en">Principal Component Analysis</p>
+      <p class="lead">たくさんの変数を少ない軸にまとめ直す。固有値からバイプロット、記述例まで。</p>
+      <div class="actions">
+        <a class="btn primary" href="app.html">ツールを開く <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        
+      </div>
+    </div>
+  </header>
+  <div class="wrap doc">
+    <article>
+      <section>
+        <h2><span class="n">01</span>概要</h2>
+        <p>変数を選んで実行すると、固有値と寄与率、主成分負荷量、主成分得点、バイプロット、論文での記述例までを順に出します。</p>
+      </section>
+      <section>
+        <h2><span class="n">02</span>できること</h2>
+        <ul><li>相関行列（標準化）／分散共分散行列</li><li>主成分の数の決め方：固有値1以上・累積寄与率・個数指定</li><li>回転なし／バリマックス回転</li><li>スクリープロット、バイプロット（グループで色分け）</li><li>主成分得点、論文の記述例</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">03</span>使い方</h2>
+        <ol class="steps"><li>CSV・TSV を読み込むか貼り付ける（または例を選ぶ）</li><li>変数、ケース名の列、色分けの列を選ぶ</li><li>行列・主成分の数・回転を決める</li><li>「主成分分析を実行」を押す</li></ol><p class="note-box" style="margin-top:14px">「学力テスト」「商品評価」の例があります。まずはそれで動きを確かめるのがおすすめです。</p>
+      </section>
+      <section>
+        <h2><span class="n">04</span>読み込めるデータ</h2>
+        <p>CSV・TSV（1行目に変数名、1列目に ID や氏名）。</p>
+      </section>
+      <section>
+        <h2><span class="n">05</span>書き出せるもの</h2>
+        <ul><li>固有値と寄与率</li><li>主成分負荷量・主成分得点</li><li>図（PNG）と表（CSV）</li><li>論文の記述例</li></ul>
+      </section>
+      <section>
+        <h2><span class="n">06</span>注意</h2>
+        <ul class="notes"><li>欠測のあるケースは分析から除きます（除いた件数を表示します）。</li><li>計算はブラウザーの中で行われ、入力したデータがサーバーに送られることはありません。</li><li>出力される記述例や R コードは下書きです。数値と解釈は、研究の文脈と照らし合わせて確かめてください。</li></ul>
+      </section>
+    </article>
+    <aside class="side">
+      <div class="box">
+        <h3>このツール</h3>
+        <dl>
+          <dt>カテゴリ</dt><dd>構造と測定</dd>
+          <dt>入力</dt><dd>CSV・TSV</dd>
+          <dt>マニュアル</dt><dd>この説明ページのみ</dd>
+        </dl>
+      </div>
+      <div class="box">
+        <h3>構造と測定のツール</h3>
+        <ul><li><a href="../cluster/">クラスター分析ラボ</a></li><li aria-current="page"><a href="../pca/">主成分分析ラボ</a></li><li><a href="../factor/">因子分析ラボ</a></li><li><a href="../sem/">構造方程式モデリング・ラボ</a></li><li><a href="../g-theory/">一般化可能性理論ラボ</a></li><li><a href="../irt/">項目反応理論ラボ</a></li></ul>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <div>
+      <b>データ分析ラボ</b>
+      <p>ブラウザーだけで動く、統計解析と質的分析のツール集。どのツールもインストール不要で、計算はブラウザーの中で完結します。</p>
+      <p><a href="../../">ツールの一覧へ</a> ・ <a href="https://github.com/k518-2026/AnalysisLabs">ソースコード（GitHub）</a></p>
+    </div>
+    <div>
+      <p>© 2026 K.Yamamoto ・ MIT License</p>
+      <p>「SQS ソースエディタ Web」「SQS マーク読み取り」は、Apache License 2.0 で公開されている SQS（Shared Questionnaire System）をもとに作り直したものです。</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

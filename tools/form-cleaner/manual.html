@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>フォーム回答整形ラボ マニュアル — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#EDEBE3; --paper-2:#E4E1D6; --card:#FBFAF5;
+  --ink:#1C1E1C; --ink-2:#5B605B; --ink-3:#8B8F88;
+  --rule:#D3D0C4; --mark:#6E2846; --mark-soft:#F3E5EB;
+  --pencil:#3F5668; --pencil-soft:#E5EBEF; --flag:#A0601C; --ok:#38664A;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  --gothic: "Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic","Noto Sans JP","Meiryo",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:20px}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--gothic);font-size:15px;line-height:1.85;-webkit-text-size-adjust:100%}
+
+/* ---- 表紙 ---- */
+.cover{position:relative;background:var(--ink);color:#F3F1EA;padding:40px 0 34px}
+.cover::after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;
+  background:repeating-linear-gradient(to right,var(--mark) 0 14px,transparent 14px 26px)}
+.inner{max-width:1160px;margin:0 auto;padding:0 24px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:#B9AEB2;display:block;margin-bottom:8px}
+.cover h1{margin:0;font-size:clamp(24px,4.4vw,36px);font-weight:800;letter-spacing:.06em;line-height:1.3}
+.cover .sub{margin:10px 0 0;color:#C6C3B8;font-size:13.5px;max-width:62ch}
+
+/* ---- 版面 ---- */
+.layout{max-width:1160px;margin:0 auto;padding:0 24px 90px;display:grid;grid-template-columns:224px 1fr;gap:44px;align-items:start}
+nav.toc{position:sticky;top:24px;padding-top:34px;font-size:12.5px;line-height:1.6}
+nav.toc .t{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:10px}
+nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:4px 0 4px 12px;border-left:2px solid var(--rule)}
+nav.toc a:hover{color:var(--mark);border-left-color:var(--mark)}
+nav.toc a.on{color:var(--mark);border-left-color:var(--mark);font-weight:700}
+main{padding-top:34px;min-width:0}
+
+section{margin-bottom:52px;scroll-margin-top:16px}
+h2{font-size:20px;font-weight:800;letter-spacing:.05em;margin:0 0 6px;padding-bottom:9px;border-bottom:2px solid var(--ink);display:flex;align-items:baseline;gap:12px}
+h2 .num{font-family:var(--mono);font-size:12px;color:var(--mark);letter-spacing:.12em}
+h3{font-size:15px;font-weight:800;letter-spacing:.04em;margin:30px 0 8px;color:var(--ink)}
+h4{font-size:13.5px;font-weight:800;margin:20px 0 4px;color:var(--mark)}
+p{margin:0 0 14px;max-width:78ch}
+ul,ol{margin:0 0 14px;padding-left:1.35em;max-width:78ch}
+li{margin-bottom:5px}
+.lede{color:var(--ink-2);font-size:13.5px;margin-bottom:22px}
+code{font-family:var(--mono);font-size:.9em;background:var(--paper-2);padding:1px 5px;border-radius:2px}
+strong{font-weight:800}
+.mono{font-family:var(--mono)}
+
+table{border-collapse:collapse;width:100%;font-size:13px;margin:0 0 18px;background:var(--card)}
+th,td{border:1px solid var(--rule);padding:8px 11px;text-align:left;vertical-align:top}
+th{background:var(--paper-2);font-size:11.5px;letter-spacing:.07em;font-family:var(--mono);font-weight:700;color:var(--ink-2);white-space:nowrap}
+td.k{font-family:var(--mono);white-space:nowrap;font-weight:700;color:var(--mark)}
+
+.note,.warn,.tip{padding:12px 16px;font-size:13px;border-radius:0 3px 3px 0;margin:0 0 18px;max-width:78ch}
+.note{background:var(--pencil-soft);border-left:3px solid var(--pencil)}
+.warn{background:#FAF0E2;border-left:3px solid var(--flag)}
+.tip{background:var(--mark-soft);border-left:3px solid var(--mark)}
+.note b,.warn b,.tip b{display:block;font-size:11.5px;letter-spacing:.1em;font-family:var(--mono);margin-bottom:3px}
+.note b{color:var(--pencil)} .warn b{color:var(--flag)} .tip b{color:var(--mark)}
+
+pre{background:var(--ink);color:#E9E6DC;font-family:var(--mono);font-size:11.5px;line-height:1.7;
+  padding:14px 16px;overflow-x:auto;border-radius:3px;margin:0 0 18px}
+
+/* 手順ブロック */
+.stepbox{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--mark);padding:16px 18px;margin-bottom:16px}
+.stepbox .cap{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--mark);margin-bottom:6px}
+
+/* 水準チップの見本 */
+.levels{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 18px}
+.level{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--rule);border-radius:999px;padding:3px 12px 3px 4px}
+.level .bubble{width:40px;text-align:center;font-family:var(--mono);font-weight:700;font-size:13px;
+  border:2px solid var(--mark);border-radius:999px;background:var(--mark-soft);color:var(--mark);padding:2px 0}
+.level.tok .bubble{border-color:var(--pencil);background:var(--pencil-soft);color:var(--pencil)}
+.level .lab{font-size:12.5px}
+.level .n{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+
+/* 種類の色見本 */
+.kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:18px}
+.kind{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--rule);padding:10px 13px}
+.kind .n{font-weight:800;font-size:13.5px}
+.kind .d{font-size:12px;color:var(--ink-2);line-height:1.6}
+.k-likert{border-left-color:var(--mark)} .k-multi{border-left-color:var(--pencil)}
+.k-nominal{border-left-color:#7A7F52} .k-numeric{border-left-color:var(--ok)}
+.k-text{border-left-color:var(--flag)} .k-meta{border-left-color:var(--ink-3)}
+
+.arrowline{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13.5px;
+  background:var(--card);border:1px solid var(--rule);padding:12px 14px;margin-bottom:16px}
+.arrowline .a{font-family:var(--mono);color:var(--ink-3)}
+.arrowline .out{font-family:var(--mono);font-weight:800;color:var(--mark)}
+
+footer{border-top:1px solid var(--rule);margin-top:40px;padding-top:16px;font-size:11.5px;color:var(--ink-3)}
+
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;gap:0}
+  nav.toc{position:static;padding-top:26px;columns:2;column-gap:20px}
+  main{padding-top:20px}
+}
+@media print{
+  body{background:#fff;font-size:11pt}
+  .cover{background:#fff;color:#000;border-bottom:3px solid #000;padding:0 0 16px}
+  .cover .sub,.eyebrow{color:#444}
+  .cover::after{display:none}
+  nav.toc{display:none}
+  .layout{display:block;padding:0}
+  section{page-break-inside:avoid;margin-bottom:26px}
+  pre{background:#f2f2f2;color:#000;border:1px solid #999}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-prep);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#prep">データの準備</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>フォーム回答整形ラボ マニュアル</span><span class="al-gap"></span><a class="al-link" href="app.html">ツールを開く</a><a class="al-link" href="./">説明</a></div>
+
+
+<header class="cover">
+  <div class="inner">
+    <span class="eyebrow">User manual — form responses to analysis-ready data</span>
+    <h1>フォーム回答整形ラボ　使い方マニュアル</h1>
+    <p class="sub">GoogleフォームやMicrosoft Formsが書き出したCSVを読み込み、質問文を変数名に、選択肢を数値に置き換えて、分析用CSVと変数対応表を作るまでの手引きです。</p>
+  </div>
+</header>
+
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="t">CONTENTS</div>
+  <a href="#s0">はじめに</a>
+  <a href="#s1">01　CSVを読む</a>
+  <a href="#s2">02　変数を整える</a>
+  <a href="#s3">03　合成得点をつくる</a>
+  <a href="#s4">04　書き出す</a>
+  <a href="#s5">出力ファイルの中身</a>
+  <a href="#s6">自動判定のしくみ</a>
+  <a href="#s7">分析ソフトへの取り込み</a>
+  <a href="#s8">困ったときは</a>
+  <a href="#s9">用語の説明</a>
+  <a href="#s10">扱いの注意</a>
+</nav>
+
+<main>
+
+<!-- ===================== はじめに ===================== -->
+<section id="s0">
+  <h2><span class="num">00</span>はじめに</h2>
+
+  <h3>このアプリがすること</h3>
+  <p>アンケートの回答ファイルは、そのままでは分析に使えません。質問文がまるごと列名になっていたり、選択肢が「とてもそう思う」という文字のままだったり、複数選択が1つのセルに詰め込まれていたりするからです。このアプリは、その3つをまとめて整えます。</p>
+
+  <div class="arrowline">
+    <span>この授業の内容は理解できましたか</span><span class="a">&rarr;</span><span class="out">Q2</span>
+    <span class="a">｜</span>
+    <span>ややそう思う</span><span class="a">&rarr;</span><span class="out">4</span>
+    <span class="a">｜</span>
+    <span>演習問題, 動画教材</span><span class="a">&rarr;</span><span class="out">Q6_1=1  Q6_2=1</span>
+  </div>
+
+  <h3>用意するもの</h3>
+  <ul>
+    <li>Webブラウザー（Chrome、Edge、Safari、Firefox のいずれか。最近のものであれば何でも構いません）</li>
+    <li>フォームから書き出したCSVファイル</li>
+  </ul>
+  <p>インストールも会員登録も要りません。<code>フォーム回答整形ラボ.html</code> をダブルクリックすると、いつも使っているブラウザーで開きます。</p>
+
+  <div class="note"><b>SAFETY</b>
+    読み込んだファイルはブラウザーの中だけで処理され、外部のサーバーへは一切送信されません。インターネットにつながっていない状態でも動きます。ページを閉じるとデータは消えるので、書き出したファイルは必ず保存してください。</div>
+
+  <h3>元になるCSVの用意</h3>
+  <table>
+    <tr><th>フォーム</th><th>書き出し方</th></tr>
+    <tr><td class="k">Googleフォーム</td><td>編集画面の「回答」タブ →　右上のメニュー →　<b>回答をダウンロード（.csv）</b>。スプレッドシートに連携している場合は、そのシートを「ファイル → ダウンロード → カンマ区切り形式（.csv）」で書き出しても構いません。</td></tr>
+    <tr><td class="k">Microsoft Forms</td><td>「応答」タブ →　<b>結果のダウンロード</b>。Excelブック（.xlsx）で落ちてくるので、Excelで開いて「名前を付けて保存 → CSV UTF-8」で保存し直してください。</td></tr>
+    <tr><td class="k">その他</td><td>1行目が見出し、2行目以降が1人1行になっているCSVであれば読み込めます。区切り文字はカンマ・タブ・セミコロンのいずれでも自動判定します。</td></tr>
+  </table>
+
+  <div class="warn"><b>CHECK</b>
+    ファイルの<b>1行目が質問文の行</b>になっていることを確かめてください。集計表やグラフが上に付いていたり、見出しが2行にわたっていたりすると正しく読めません。その場合はExcelで余分な行を削ってから保存し直します。</div>
+
+  <h3>4つの工程</h3>
+  <p>画面上部のタブが工程です。左から順に進みますが、いつでも戻れます。設定は保持されるので、02と04を行き来しながら仕上げるのが実際の使い方です。</p>
+  <table>
+    <tr><th>工程</th><th>すること</th><th>省略</th></tr>
+    <tr><td class="k">01 CSVを読む</td><td>ファイルを置き、読み込み結果を確かめる</td><td>不可</td></tr>
+    <tr><td class="k">02 変数を整える</td><td>列ごとの種類・変数名・割り当て値を確かめて直す</td><td>可（自動判定のまま進める）</td></tr>
+    <tr><td class="k">03 合成得点をつくる</td><td>複数項目の平均点・合計点の列を追加する</td><td>可</td></tr>
+    <tr><td class="k">04 書き出す</td><td>出力の決まりを選び、ファイルを保存する</td><td>不可</td></tr>
+  </table>
+</section>
+
+<!-- ===================== 01 ===================== -->
+<section id="s1">
+  <h2><span class="num">01</span>CSVを読む</h2>
+  <p class="lede">最初の画面です。まずは「サンプルで試す」で一通りの流れを見てから、実際のファイルを入れることをおすすめします。</p>
+
+  <div class="stepbox">
+    <div class="cap">STEP</div>
+    <ol style="margin-bottom:0">
+      <li>点線の枠にCSVファイルをドラッグ＆ドロップします。「ファイルを選ぶ」からでも構いません。</li>
+      <li>読み込みが終わると、回答数・列数・文字コード・書き出し元が表示されます。</li>
+      <li>その下の表で、読み込んだままのデータ（先頭6行）を確かめます。</li>
+      <li>問題なければ「変数を整える →」へ進みます。</li>
+    </ol>
+  </div>
+
+  <h3>表示される4つの数字</h3>
+  <table>
+    <tr><th>項目</th><th>見るべきところ</th></tr>
+    <tr><td class="k">回答数</td><td>フォームの回答件数と一致しているか。少なければ、空行が混じっているか見出し行がずれています。</td></tr>
+    <tr><td class="k">列数</td><td>質問数と一致しているか。グリッド質問は項目の数だけ列になるので、質問数より多くなるのが普通です。</td></tr>
+    <tr><td class="k">文字コード</td><td>UTF-8 か Shift_JIS を自動判定した結果です。プレビューの日本語が化けていなければ問題ありません。</td></tr>
+    <tr><td class="k">書き出し元</td><td>見出しから Googleフォーム／Microsoft Forms／一般のCSV を推定します。判定結果によって処理が変わるわけではないので、違っていても支障はありません。</td></tr>
+  </table>
+
+  <p>右側には、判定できた列の種類の内訳（「評定尺度 8 / 複数選択 1 / 自由記述 2」など）が出ます。ここで極端に自由記述が多いときは、選択肢の表記ゆれで水準が増えすぎている可能性があります。</p>
+
+  <div class="warn"><b>WHEN IT FAILS</b>
+    日本語が化けるときは、Excelで開いて「CSV UTF-8（コンマ区切り）」で保存し直してください。「見出し行と回答行が読み取れませんでした」と出るときは、ファイルが空か、1行しかありません。</div>
+</section>
+
+<!-- ===================== 02 ===================== -->
+<section id="s2">
+  <h2><span class="num">02</span>変数を整える</h2>
+  <p class="lede">このアプリの中心になる画面です。1列につき1枚のカードが並びます。<b>自動判定はあくまで下書き</b>なので、ここで確かめて直すことが、結果の正しさを決めます。</p>
+
+  <h3>カードの読み方</h3>
+  <p>カードの左が元の質問文、矢印の右が出力される変数名です。左端の色帯が、判定された種類を表します。</p>
+
+  <div class="kinds">
+    <div class="kind k-likert"><div class="n">評定尺度</div><div class="d">順序のある選択肢。1〜5などの数値に置き換えます。平均を出したり相関を見たりする列です。</div></div>
+    <div class="kind k-nominal"><div class="n">単一選択</div><div class="d">順序のないカテゴリ（学部、職種など）。番号を振るか、0/1のダミー変数に展開します。</div></div>
+    <div class="kind k-multi"><div class="n">複数選択</div><div class="d">1つのセルに複数の答えが入っている列。選択肢ごとに0/1の列へ分けます。</div></div>
+    <div class="kind k-numeric"><div class="n">数値</div><div class="d">最初から数字で答えている列。そのまま数値として書き出します。</div></div>
+    <div class="kind k-text"><div class="n">自由記述</div><div class="d">文章の回答。数値化せず、文字のまま書き出します。</div></div>
+    <div class="kind k-meta"><div class="n">記録情報</div><div class="d">タイムスタンプ、ID、メールアドレス、氏名など、フォームが自動で付ける列です。</div></div>
+  </div>
+
+  <p>カードの下段には <span class="mono">n=58　欠測=2　水準=5</span> のような数字が出ます。n は答えた人の数、欠測は空欄の数、水準は選択肢の種類数です。<b>水準の数が想定より多いとき</b>は、表記ゆれ（全角と半角、末尾の空白など）が疑われます。</p>
+
+  <h3>水準チップ ── 丸の中の数字が出力される値</h3>
+  <p>評定尺度と単一選択のカードには、選択肢が丸付きで並びます。丸の中の数字が、そのまま分析用CSVに書き込まれる値です。右端の小さな数字は、その選択肢を選んだ人数です。</p>
+
+  <div class="levels">
+    <span class="level"><span class="bubble">1</span><span class="lab">まったくそう思わない</span><span class="n">3</span></span>
+    <span class="level"><span class="bubble">2</span><span class="lab">あまりそう思わない</span><span class="n">9</span></span>
+    <span class="level"><span class="bubble">3</span><span class="lab">どちらともいえない</span><span class="n">14</span></span>
+    <span class="level"><span class="bubble">4</span><span class="lab">ややそう思う</span><span class="n">21</span></span>
+    <span class="level"><span class="bubble">5</span><span class="lab">とてもそう思う</span><span class="n">11</span></span>
+  </div>
+
+  <ul>
+    <li>丸の中をクリックすると数字を書き換えられます。0から始めたい、中央を0にして &minus;2〜+2 にしたい、といった場合はここで直します。</li>
+    <li>順序が逆に判定されているときは、<b>「値の順を入れ替える」</b>を押せば一括で反転します。</li>
+    <li>複数選択のカードでは、青い丸が展開される列の番号です（<span class="mono">Q6_1</span>, <span class="mono">Q6_2</span> …）。こちらは値を変更できません。</li>
+  </ul>
+
+  <div class="levels">
+    <span class="level tok"><span class="bubble">1</span><span class="lab">演習問題</span><span class="n">38</span></span>
+    <span class="level tok"><span class="bubble">2</span><span class="lab">グループ討論</span><span class="n">27</span></span>
+    <span class="level tok"><span class="bubble">3</span><span class="lab">動画教材</span><span class="n">19</span></span>
+  </div>
+
+  <h3>種類を変える</h3>
+  <p>変数名の下のプルダウンで種類を変えられます。変えると、その列の水準や選択肢を判定し直します。よくあるのは次の3つです。</p>
+  <table>
+    <tr><th>状況</th><th>直し方</th></tr>
+    <tr><td>短い自由記述（「特になし」など数種類しかない）が<b>単一選択</b>と判定された</td><td>種類を「自由記述」に変える</td></tr>
+    <tr><td>順序があるのに<b>単一選択</b>と判定された（「週に1回／月に1回／年に1回」など）</td><td>種類を「評定尺度」に変え、丸の中の数字を順に振り直す</td></tr>
+    <tr><td>複数選択なのに<b>単一選択</b>と判定された（区切りが特殊、または回答が少ない）</td><td>種類を「複数選択」に変える</td></tr>
+  </table>
+
+  <h3>変数名</h3>
+  <p>変数名は自動で <span class="mono">Q1, Q2, Q3 …</span> と振られます。グリッド質問（「満足度 [教員の説明]」のような形）は、質問ごとに <span class="mono">Q5_1, Q5_2 …</span> とまとまります。記録情報だけは <span class="mono">timestamp</span>、<span class="mono">id</span>、<span class="mono">email</span> のように役割の名前が付きます。</p>
+  <p>入力欄を書き換えれば好きな名前にできます。<b>一度書き換えた名前は、その後に種類を変えても保持されます。</b>分析ソフトで扱いやすいよう、スペースと記号は自動で取り除かれ、数字で始まる名前には <span class="mono">X</span> が補われます。</p>
+
+  <div class="tip"><b>ADVICE</b>
+    日本語の変数名も使えますが、統計ソフトによっては文字化けや不具合の原因になります。<span class="mono">Q1</span> のような連番のままにして、意味は変数対応表（コードブック）で管理するのが安全です。</div>
+
+  <h3>逆転項目</h3>
+  <p>「この授業はつまらなかった」のように、他の項目と向きが逆の質問には <b>「逆転項目として反転する」</b> にチェックを入れます。丸の中の数字はそのままで、書き出すときだけ最小値と最大値を足した数から引いた値になります（1〜5なら 5,4,3,2,1）。コードブックの備考欄に「逆転処理済み」と記録されます。</p>
+
+  <h3>出力から外す</h3>
+  <p>各カードの「この列を出力に含める」のチェックを外すと、その列は書き出されません。<b>メールアドレスと氏名は、最初から外れた状態</b>になっています。上部のボタンでまとめて操作もできます。</p>
+  <ul>
+    <li><b>自由記述を外す</b> ── 数値データだけのファイルにしたいとき</li>
+    <li><b>記録情報を外す</b> ── タイムスタンプやIDも要らないとき</li>
+    <li><b>すべて含める</b> ── 外したものを戻したいとき</li>
+  </ul>
+  <p>列が多いときは、上部の検索欄に質問文の一部を入れて絞り込めます。種類のプルダウンで「評定尺度だけ表示」といった絞り込みもできます。</p>
+</section>
+
+<!-- ===================== 03 ===================== -->
+<section id="s3">
+  <h2><span class="num">03</span>合成得点をつくる</h2>
+  <p class="lede">同じものを測っている複数の項目をまとめて、1つの得点にする工程です。必要がなければ飛ばして構いません。</p>
+
+  <div class="stepbox">
+    <div class="cap">STEP</div>
+    <ol style="margin-bottom:0">
+      <li>変数名を入力します（例：<span class="mono">学習意欲</span>）。</li>
+      <li>「計算」で平均か合計を選びます。</li>
+      <li>項目のタグをクリックして選びます。選ぶと色が変わります。</li>
+      <li>右側にα係数が表示されるので確かめます。</li>
+      <li>「この合成得点を追加」を押します。いくつでも追加できます。</li>
+    </ol>
+  </div>
+
+  <h3>平均と合計</h3>
+  <p><b>平均</b>は元の項目と同じ目盛り（1〜5など）のままになるので、他の尺度と見比べやすくなります。項目数が違う尺度を並べるときも平均が便利です。<b>合計</b>は項目数を掛けた値になります。既存の尺度に「合計点で何点以上」といった基準があるときはこちらを使います。</p>
+
+  <h3>欠測があるとき</h3>
+  <table>
+    <tr><th>設定</th><th>動き</th><th>向いている場面</th></tr>
+    <tr><td class="k">答えた項目だけで計算</td><td>空欄の項目を除いて平均（合計）を出します。5項目中4項目に答えていれば、その4項目で計算します。</td><td>欠測が少なく、人数を減らしたくないとき</td></tr>
+    <tr><td class="k">1つでも欠測なら空欄</td><td>1項目でも空欄があれば、その人の合成得点は空欄になります。</td><td>厳密に扱いたいとき、論文で完全回答者に限定するとき</td></tr>
+  </table>
+  <div class="warn"><b>NOTE</b>
+    「合計」と「答えた項目だけで計算」を組み合わせると、答えた項目が少ない人ほど得点が低く出てしまいます。合計を使うときは「1つでも欠測なら空欄」を選ぶか、平均に切り替えてください。</div>
+
+  <h3>α係数の見方</h3>
+  <p>選んだ項目が同じものを測っているかの目安です（Cronbach's α）。完全回答者だけで計算した値と、その人数も併せて表示されます。</p>
+  <table>
+    <tr><th>値</th><th>おおよその読み</th></tr>
+    <tr><td class="k">.80 以上</td><td>十分にまとまっている</td></tr>
+    <tr><td class="k">.70 〜 .80</td><td>実用上の目安を満たす</td></tr>
+    <tr><td class="k">.70 未満</td><td>項目の向きが揃っているか（逆転処理の漏れ）、別のものを測る項目が混ざっていないかを見直す</td></tr>
+  </table>
+  <p>ただしαは項目数が多いほど高くなる性質があり、値だけで良し悪しは決まりません。低いときにまず疑うべきは、<b>逆転項目にチェックを入れ忘れていないか</b>です。02の画面に戻って確かめてください。</p>
+</section>
+
+<!-- ===================== 04 ===================== -->
+<section id="s4">
+  <h2><span class="num">04</span>書き出す</h2>
+  <p class="lede">出力の決まりを選ぶと、その場でプレビューが更新されます。表示されている中身が、そのままダウンロードされるファイルです。</p>
+
+  <h3>設定の一覧</h3>
+  <table>
+    <tr><th>設定</th><th>選択肢と意味</th></tr>
+    <tr><td class="k">選択肢の書き出し方</td><td><b>数値コード</b>＝丸の中の数字を書き出す（統計解析はこちら）。<b>選んだ文言のまま</b>＝「ややそう思う」という文字を書き出す（集計表や引用に使うとき）。</td></tr>
+    <tr><td class="k">単一選択の扱い</td><td><b>1つの列に番号</b>＝1列に1,2,3…と入れる。<b>0/1のダミー変数に展開</b>＝選択肢ごとに列を分ける（回帰分析にそのまま投入したいとき）。</td></tr>
+    <tr><td class="k">欠測の書き方</td><td>空欄／<span class="mono">NA</span>／<span class="mono">.</span>／<span class="mono">999</span>／<span class="mono">-99</span>。Rなら <span class="mono">NA</span> か空欄、SPSSなら <span class="mono">999</span> のような欠損値コードが扱いやすくなります。</td></tr>
+    <tr><td class="k">文字コード</td><td><b>UTF-8（Excelでそのまま開ける）</b>＝BOM付き。ふだんはこちらで構いません。<b>BOMなし</b>＝プログラムで読むときに先頭の余分な文字を避けたい場合。</td></tr>
+    <tr><td class="k">前後の空白と改行を取り除く</td><td>自由記述の改行がセルを壊すのを防ぎます。基本は入れたままにします。</td></tr>
+    <tr><td class="k">全角の英数字を半角にそろえる</td><td>「１」と「1」が別の選択肢として数えられるのを防ぎます。</td></tr>
+    <tr><td class="k">まったく同じ回答行を1つにまとめる</td><td>二重送信が疑われるときに使います。タイムスタンプを含めていると全列が一致することはまずないので、先に記録情報を外してから使ってください。</td></tr>
+    <tr><td class="k">全項目が空の行を捨てる</td><td>送信だけして何も答えていない行を取り除きます。</td></tr>
+    <tr><td class="k">最初の水準を基準にする</td><td>ダミー展開のとき、先頭の選択肢の列を作らず基準（参照カテゴリ）にします。回帰分析で共線性を避けるための設定です。</td></tr>
+    <tr><td class="k">欠測として扱う言葉</td><td>ここに書いた言葉は空欄と同じ扱いになります。初期値は「無回答、該当なし、特になし、未回答、なし」。読点で区切って足し引きしてください。</td></tr>
+  </table>
+
+  <div class="warn"><b>CAUTION</b>
+    「なし」を欠測として扱う設定は、<b>「なし」が正式な選択肢である質問</b>（例：「アレルギーの有無」）では困ります。そういう質問があるときは、欠測として扱う言葉から「なし」を消してください。</div>
+
+  <h3>上部の4つの数字</h3>
+  <p>出力後の回答数・変数の数・欠測率・除いた行数が出ます。<b>欠測率が想定より高いとき</b>は、欠測として扱う言葉に本来の選択肢が入っていないか、水準の表記ゆれで一部の回答が水準に一致していないかを疑ってください。</p>
+
+  <h3>ダウンロード</h3>
+  <p>画面下部の4つのボタンで保存します。<b>分析用CSVと対応表CSVは、必ずセットで保存してください。</b>数字だけのファイルは、対応表がないと半年後の自分にも読めません。</p>
+</section>
+
+<!-- ===================== 出力ファイル ===================== -->
+<section id="s5">
+  <h2><span class="num">05</span>出力ファイルの中身</h2>
+
+  <h3>分析用CSV（<span class="mono">◯◯_analysis.csv</span>）</h3>
+  <p>1行目が変数名、2行目以降が1人1行のデータです。そのまま R、SPSS、jamovi、HAD、Excel に読み込めます。</p>
+  <pre>timestamp,Q1,Q2,Q3,Q4,Q5_1,Q5_2,Q5_3,Q6_1,Q6_2,Q6_3,Q7
+2026/07/03 9:00:00,4,5,3,4,4,5,3,1,0,1,7.6
+2026/07/04 10:01:00,3,4,3,3,3,4,2,0,1,0,5.2</pre>
+
+  <h3>対応表CSV（<span class="mono">◯◯_codebook.csv</span>）</h3>
+  <p>どの変数がどの質問で、どの数字が何を意味するかの一覧です。論文の付録や、共同研究者への受け渡しにそのまま使えます。</p>
+  <table>
+    <tr><th>列</th><th>中身</th></tr>
+    <tr><td class="k">変数名</td><td>分析用CSVの列名</td></tr>
+    <tr><td class="k">元の見出し</td><td>フォームの質問文（そのまま）</td></tr>
+    <tr><td class="k">種類</td><td>評定尺度／単一選択／複数選択（0/1）／ダミー（0/1）／数値／自由記述／記録情報／平均得点／合計得点</td></tr>
+    <tr><td class="k">値の割り当て</td><td><span class="mono">1=まったくそう思わない / 2=…</span> の形。逆転処理をした列は、反転<b>後</b>の値で書かれます</td></tr>
+    <tr><td class="k">有効回答・欠測</td><td>その列の人数</td></tr>
+    <tr><td class="k">備考</td><td>「逆転処理済み」「答えた項目だけで計算」など</td></tr>
+  </table>
+
+  <h3>Rコード（<span class="mono">◯◯_read.R</span>）</h3>
+  <p>読み込みと値ラベルの付与を書いたスクリプトです。分析用CSVと同じフォルダーに置いて実行してください。</p>
+  <pre>dat &lt;- read.csv("survey_analysis.csv", fileEncoding = "UTF-8-BOM", stringsAsFactors = FALSE)
+
+# 値ラベル（必要に応じて factor に変換）
+dat$Q2 &lt;- factor(dat$Q2, levels = c(1, 2, 3, 4, 5),
+                 labels = c("まったくそう思わない", "あまりそう思わない",
+                            "どちらともいえない", "ややそう思う", "とてもそう思う"))
+
+# 評定尺度をまとめて数値として扱う場合
+items &lt;- c("Q2", "Q4", "Q5_1", "Q5_2", "Q5_3")
+num &lt;- sapply(dat[items], function(x) as.numeric(as.character(x)))
+summary(num)</pre>
+  <div class="note"><b>TIP</b>
+    平均や相関を出したい列は factor に変換しないでください。上のコードでは、ラベルを付けたうえで、必要なときだけ <span class="mono">as.numeric(as.character(x))</span> で数値に戻す形にしています。</div>
+
+  <h3>処理の記録（<span class="mono">◯◯_log.txt</span>）</h3>
+  <p>読み込んだファイル名、文字コード、選んだ設定、逆転処理をした変数、作った合成得点、除いた行数などを時刻付きで書き出したテキストです。<b>「どう処理したか」を後から説明できるようにするためのファイル</b>で、研究ノートや投稿論文の手続きの記述にそのまま使えます。</p>
+</section>
+
+<!-- ===================== しくみ ===================== -->
+<section id="s6">
+  <h2><span class="num">06</span>自動判定のしくみ</h2>
+  <p class="lede">なぜその判定になったのかが分かると、直すべきところの見当が付きます。</p>
+
+  <h3>記録情報の判定</h3>
+  <p>見出しが「タイムスタンプ」「メールアドレス」「ID」「開始時刻」「完了時刻」「名前」「合計点」などに一致する列を記録情報とします。このうち<b>メールアドレスと氏名は、最初から出力に含めません</b>。</p>
+
+  <h3>順序の推定</h3>
+  <p>選択肢の文字から、次の順に手がかりを探します。</p>
+  <ol>
+    <li><b>先頭の数字</b> ──「5：とてもそう思う」「1. まったく…」なら、その数字をそのまま値にします。「1年」「20代」のように区切り記号がなくても、全部の選択肢が異なる数字で始まっていれば使います。</li>
+    <li><b>強さを表す言葉</b> ── 「まったく・全く・非常に・とても・大変・かなり」を強い（2）、「やや・少し・まあ・どちらかといえば・あまり」を弱い（0.5）とみなします。</li>
+    <li><b>向き</b> ── 語尾が「〜ない／〜ません」なら負、「不満・苦手・遅い・悪い」なども負、それ以外は正とします。「どちらともいえない・普通・ちょうどよい・適切」は中央（0）に置きます。</li>
+  </ol>
+  <p>こうして計算した点数が<b>全部の選択肢で異なり、かつ3水準以上</b>あるときに「評定尺度」とし、小さい順に 1, 2, 3 … を割り当てます。点数が同じになる選択肢があるときは順序を決められないので「単一選択」にします。</p>
+
+  <div class="note"><b>EXAMPLE</b>
+    「とても遅い／やや遅い／ちょうどよい／やや速い／とても速い」は、遅いを負・ちょうどよいを中央として 1〜5 になります。一方「東京／大阪／名古屋」のように強さの言葉がない選択肢は、すべて同点となり単一選択になります。</div>
+
+  <h3>複数選択の判定</h3>
+  <p>セミコロン、カンマ、読点のいずれかを探し、<b>回答の12%以上でその記号が使われていて</b>、分割してできる選択肢が25種類以下、かつ元の回答の種類数より少なくなるときに複数選択とします。Googleフォームは <span class="mono">, </span>（カンマ＋空白）、Microsoft Forms は <span class="mono">;</span> で区切るのが標準です。</p>
+  <div class="warn"><b>LIMITATION</b>
+    選択肢の文言そのものにカンマが含まれていると、そこで分割されてしまいます。展開された選択肢のリストに不自然なものが混じっていたら、種類を「単一選択」に戻すか、元のCSVで区切り記号を別のものに置き換えてから読み込み直してください。</div>
+
+  <h3>自由記述の判定</h3>
+  <p>次のいずれかに当てはまる列を自由記述とします。</p>
+  <ul>
+    <li>回答の種類が20を超える</li>
+    <li>50字を超える回答がある</li>
+    <li>平均32字を超え、種類が6を超える</li>
+    <li>見出しに「自由・感想・意見・理由・コメント・要望・記述」などが含まれ、回答がほとんど重複していない</li>
+  </ul>
+
+  <h3>数値の判定</h3>
+  <p>すべての回答が数字だけ（カンマ・空白・％を除く）で、2種類以上あるときに数値とします。「5点」「3回」のように単位が付いていると数値とは判定されず、選択肢として扱われます。</p>
+</section>
+
+<!-- ===================== 取り込み ===================== -->
+<section id="s7">
+  <h2><span class="num">07</span>分析ソフトへの取り込み</h2>
+  <table>
+    <tr><th>ソフト</th><th>おすすめの設定と手順</th></tr>
+    <tr><td class="k">R</td><td>欠測の書き方を「空欄」か <span class="mono">NA</span>、文字コードを「BOMなし」にすると素直です。付属のRコードをそのまま実行してください。<span class="mono">readr::read_csv()</span> を使うなら BOM 付きでも問題ありません。</td></tr>
+    <tr><td class="k">SPSS</td><td>欠測の書き方を <span class="mono">999</span> にして書き出し、読み込み後に変数ビューで欠損値に <span class="mono">999</span> を指定します。値ラベルは対応表CSVの「値の割り当て」欄を見ながら入力します。</td></tr>
+    <tr><td class="k">jamovi / JASP</td><td>そのままCSVを開けます。欠測は「空欄」が扱いやすいです。読み込み後、評定尺度の列の測定水準を「順序」または「連続」に変えてください。</td></tr>
+    <tr><td class="k">Excel</td><td>文字コードを「UTF-8（Excelでそのまま開ける）」にすれば、ダブルクリックで文字化けせずに開きます。</td></tr>
+    <tr><td class="k">Python</td><td>「BOMなし」で書き出し、<span class="mono">pd.read_csv("survey_analysis.csv")</span> で読み込みます。欠測は空欄のままにしておくと <span class="mono">NaN</span> になります。</td></tr>
+  </table>
+
+  <h3>このあとの分析</h3>
+  <p>整形したCSVは、同じシリーズの各アプリにそのまま読み込めます。欠測が多いときは欠測データラボ、尺度の確認は信頼性・妥当性ラボや項目反応理論ラボ、というように使い分けてください。</p>
+</section>
+
+<!-- ===================== 困ったとき ===================== -->
+<section id="s8">
+  <h2><span class="num">08</span>困ったときは</h2>
+  <table>
+    <tr><th>症状</th><th>原因と対処</th></tr>
+    <tr><td>日本語が化ける</td><td>文字コードの判定が外れています。Excelで開いて「CSV UTF-8（コンマ区切り）」で保存し直してください。</td></tr>
+    <tr><td>「見出し行と回答行が読み取れませんでした」と出る</td><td>ファイルが空、1行しかない、または集計行がヘッダーになっています。1行目を質問文の行にしてください。</td></tr>
+    <tr><td>列数が質問数より多い</td><td>グリッド質問が項目ごとに列になっているためで、正常です。<span class="mono">Q5_1, Q5_2</span> のようにまとまっているか確かめてください。</td></tr>
+    <tr><td>同じ選択肢が2つの水準に分かれている</td><td>末尾の空白や全角半角の違いです。「全角の英数字を半角にそろえる」「前後の空白と改行を取り除く」の両方にチェックを入れてください。それでも残る場合は、元のCSVで表記を統一します。</td></tr>
+    <tr><td>順序が逆になっている</td><td>カードの「値の順を入れ替える」を押します。1問だけなら丸の中の数字を直接書き換えても構いません。</td></tr>
+    <tr><td>順序のある質問が単一選択になった</td><td>種類を「評定尺度」に変え、丸の中の数字を順に振り直してください。</td></tr>
+    <tr><td>複数選択が1列のままになっている</td><td>区切り記号が特殊か、その記号を使った回答が全体の12%に満たないためです。種類を「複数選択」に変えてください。</td></tr>
+    <tr><td>自由記述が単一選択になった</td><td>回答の種類が少ないと起きます。種類を「自由記述」に変えてください。</td></tr>
+    <tr><td>欠測率が異様に高い</td><td>「欠測として扱う言葉」に、正式な選択肢（「なし」など）が入っていないか確かめてください。</td></tr>
+    <tr><td>α係数が極端に低い</td><td>逆転項目のチェック漏れがほとんどです。02に戻って向きの違う項目を確認してください。</td></tr>
+    <tr><td>ダウンロードしたファイルが見当たらない</td><td>ブラウザーのダウンロードフォルダーに保存されています。ファイル名は元のCSV名＋<span class="mono">_analysis</span> などです。</td></tr>
+    <tr><td>編集した内容が消えた</td><td>ページを再読み込みすると最初からになります。CSVを読み込み直して、書き出しまで一度で進めてください。</td></tr>
+    <tr><td>動作が重い</td><td>回答数が数千を超えると、画面の更新に時間がかかることがあります。02の画面で検索欄を使って表示を絞ると軽くなります。</td></tr>
+  </table>
+</section>
+
+<!-- ===================== 用語 ===================== -->
+<section id="s9">
+  <h2><span class="num">09</span>用語の説明</h2>
+  <table>
+    <tr><td class="k">評定尺度</td><td>「まったくそう思わない」〜「とてもそう思う」のように、順序のある選択肢で答えてもらう形式。リッカート尺度とも呼びます。数値に置き換えて平均や相関を計算します。</td></tr>
+    <tr><td class="k">水準</td><td>1つの質問に用意された選択肢の種類。5件法なら水準は5です。</td></tr>
+    <tr><td class="k">ダミー変数</td><td>カテゴリを 0 と 1 の列に置き換えたもの。「教員かどうか」を1列で表します。回帰分析ではカテゴリをこの形にして投入します。</td></tr>
+    <tr><td class="k">基準（参照カテゴリ）</td><td>ダミー変数を作るとき、あえて列を作らない1つの水準。他の水準の係数は、この基準と比べた差として読みます。</td></tr>
+    <tr><td class="k">逆転項目</td><td>尺度の中で、他の項目と向きが逆に書かれている質問。合計する前に値を反転させる必要があります。</td></tr>
+    <tr><td class="k">合成得点</td><td>複数の項目をまとめた平均点または合計点。1つの概念を複数の質問で測ったときに作ります。</td></tr>
+    <tr><td class="k">α係数</td><td>複数の項目がどれくらい同じものを測っているかの指標。0〜1の値をとり、.70以上がひとつの目安とされます。</td></tr>
+    <tr><td class="k">欠測</td><td>答えられていない値。空欄のほか、「無回答」のような回答も欠測として扱えます。</td></tr>
+    <tr><td class="k">コードブック</td><td>変数名・質問文・値の意味をまとめた対応表。データを他人（と将来の自分）が読めるようにするための書類です。</td></tr>
+    <tr><td class="k">BOM</td><td>ファイル先頭に付ける、文字コードを示す目印。付けておくとExcelがUTF-8を正しく認識します。</td></tr>
+  </table>
+</section>
+
+<!-- ===================== 注意 ===================== -->
+<section id="s10">
+  <h2><span class="num">10</span>扱いの注意</h2>
+
+  <h3>個人情報</h3>
+  <p>メールアドレスと氏名の列は最初から出力に含まれませんが、<b>自由記述の中に氏名や所属が書かれていることがあります</b>。分析用CSVを共有する前に、自由記述の中身を必ず目で確かめてください。タイムスタンプも、回答者が少ない集団では個人の特定につながることがあります。</p>
+
+  <h3>処理の記録を残す</h3>
+  <p>どの選択肢に何番を割り当てたか、どの項目を逆転させたか、どの回答を欠測として扱ったかは、結果を左右する判断です。「処理の記録」を書き出して、分析用CSVと同じフォルダーに保存しておいてください。研究として発表するときは、この内容をもとに手続きを記述します。</p>
+
+  <h3>元のファイルは残す</h3>
+  <p>このアプリは元のCSVを書き換えません。それでも、フォームから落としたままのファイルは必ず別に保管しておいてください。判定の直しに気付いたとき、そこからやり直せます。</p>
+
+  <h3>自動判定を鵜呑みにしない</h3>
+  <p>選択肢の順序も、複数選択の区切りも、機械が文字から推測しているにすぎません。<b>書き出す前に、02の画面で全部のカードに一度目を通すこと</b>を習慣にしてください。特に、丸の中の数字が意図した順になっているかは、結果の解釈がまるごと変わるところです。</p>
+</section>
+
+<footer>
+  フォーム回答整形ラボ　使い方マニュアル ── 計算も変換もすべてブラウザーの中で完結し、外部への通信はありません。
+</footer>
+
+</main>
+</div>
+
+<script>
+const links = [...document.querySelectorAll('nav.toc a')];
+const secs = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const io = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if(!e.isIntersecting) return;
+    links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
+  });
+}, {rootMargin:'-10% 0px -75% 0px'});
+secs.forEach(s => io.observe(s));
+</script>
+</body>
+</html>
