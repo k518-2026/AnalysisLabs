@@ -53,7 +53,7 @@
         .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: var(--surface); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1.2; }
-        .stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; display: block; }
         
         .magnitude-box { background: #F8FAFC; border-left: 4px solid var(--secondary); padding: 16px 20px; border-radius: 4px; margin: 24px 0; font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
         .apa-box { background: #EEF2FF; padding: 20px; border-radius: 8px; border: 1px dashed #A5B4FC; color: #3730A3; font-style: italic; }
@@ -217,49 +217,118 @@
         return Math.abs(skew) < 2.0 && Math.abs(kurt) < 3.0; 
     }
 
+    // 順位をつける（同順位は平均順位）。tieSum は同順位の補正に使う Σ(t³ − t)
+    function rankWithTies(values) {
+        const idx = values.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
+        const ranks = new Array(values.length);
+        let tieSum = 0;
+        for (let i = 0; i < idx.length; ) {
+            let j = i;
+            while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++;
+            const r = (i + j) / 2 + 1;
+            for (let k = i; k <= j; k++) ranks[idx[k][1]] = r;
+            const t = j - i + 1;
+            if (t > 1) tieSum += t * t * t - t;
+            i = j + 1;
+        }
+        return { ranks, tieSum };
+    }
+    const twoSidedZ = z => 2 * (1 - jStat.normal.cdf(Math.abs(z), 0, 1));
+    const sum = arr => arr.reduce((a, b) => a + b, 0);
+
+    // matrix は「1行＝1人、1列＝1条件」の対応のあるデータ（欠測なし）
     const StatEngine = {
-        calcTTest: function(arr1, arr2, paired) {
-            if(paired) {
-                let diffs = arr1.map((v, i) => v - arr2[i]).filter(v => !isNaN(v));
-                const mean = jStat.mean(diffs), sd = jStat.stdev(diffs, true), n = diffs.length;
-                const t = mean / (sd / Math.sqrt(n));
-                const df = n - 1;
-                const p = (1 - jStat.studentt.cdf(Math.abs(t), df)) * 2;
-                const d = mean / sd;
-                return { stat: t, p: p, df: df, effectSize: d, effectName: "Cohen's d" };
-            } else {
-                const m1 = jStat.mean(arr1), m2 = jStat.mean(arr2);
-                const v1 = jStat.variance(arr1, true), v2 = jStat.variance(arr2, true);
-                const n1 = arr1.length, n2 = arr2.length;
-                const t = (m1 - m2) / Math.sqrt(v1/n1 + v2/n2);
-                const df = Math.pow(v1/n1 + v2/n2, 2) / (Math.pow(v1/n1, 2)/(n1-1) + Math.pow(v2/n2, 2)/(n2-1));
-                const p = (1 - jStat.studentt.cdf(Math.abs(t), df)) * 2;
-                const s = Math.sqrt(((n1-1)*v1 + (n2-1)*v2) / (n1+n2-2));
-                const d = (m1 - m2) / s;
-                return { stat: t, p: p, df: df, effectSize: d, effectName: "Cohen's d" };
-            }
+        // Welch の t 検定（効果量はプールした標準偏差による Cohen の d）
+        calcWelchT: function(a, b) {
+            const m1 = jStat.mean(a), m2 = jStat.mean(b);
+            const v1 = jStat.variance(a, true), v2 = jStat.variance(b, true);
+            const n1 = a.length, n2 = b.length;
+            const se2 = v1 / n1 + v2 / n2;
+            const t = (m1 - m2) / Math.sqrt(se2);
+            const df = se2 * se2 / (Math.pow(v1 / n1, 2) / (n1 - 1) + Math.pow(v2 / n2, 2) / (n2 - 1));
+            const p = 2 * (1 - jStat.studentt.cdf(Math.abs(t), df));
+            const d = (m1 - m2) / Math.sqrt(((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2));
+            return { statName: 't', stat: t, p, df, effectSize: d, effectName: "Cohen's d" };
         },
-        calcANOVA: function(groupsObj) {
-            const keys = Object.keys(groupsObj);
-            let totalData = [], k = keys.length, n = 0;
-            keys.forEach(k => { totalData = totalData.concat(groupsObj[k]); n += groupsObj[k].length; });
-            const grandMean = jStat.mean(totalData);
+        // 対応のある t 検定（効果量は差の平均 ÷ 差の標準偏差 = d_z）
+        calcPairedT: function(a, b) {
+            const diffs = a.map((v, i) => v - b[i]);
+            const n = diffs.length, mean = jStat.mean(diffs), sd = jStat.stdev(diffs, true);
+            const t = mean / (sd / Math.sqrt(n)), df = n - 1;
+            const p = 2 * (1 - jStat.studentt.cdf(Math.abs(t), df));
+            return { statName: 't', stat: t, p, df, effectSize: mean / sd, effectName: "Cohen's d_z" };
+        },
+        // Mann-Whitney の U 検定（正規近似・同順位補正・連続性補正。U は1つ目の群の値）
+        calcMannWhitney: function(a, b) {
+            const n1 = a.length, n2 = b.length, N = n1 + n2;
+            const { ranks, tieSum } = rankWithTies(a.concat(b));
+            const U = sum(ranks.slice(0, n1)) - n1 * (n1 + 1) / 2;
+            const mu = n1 * n2 / 2;
+            const sigma = Math.sqrt(n1 * n2 / 12 * ((N + 1) - tieSum / (N * (N - 1))));
+            const z = sigma > 0 ? (U - mu - Math.sign(U - mu) * 0.5) / sigma : 0;
+            return { statName: 'U', stat: U, z, p: sigma > 0 ? twoSidedZ(z) : 1, effectSize: Math.abs(z) / Math.sqrt(N), effectName: 'r' };
+        },
+        // Wilcoxon の符号付順位検定（差が0の組は除く。正規近似・同順位補正・連続性補正。V は正の差の順位和）
+        calcWilcoxonSR: function(a, b) {
+            const d = a.map((v, i) => v - b[i]).filter(x => x !== 0);
+            const n = d.length;
+            if (n === 0) return { statName: 'V', stat: 0, z: 0, p: 1, effectSize: 0, effectName: 'r', note: 'すべての組で差が0でした' };
+            const { ranks, tieSum } = rankWithTies(d.map(Math.abs));
+            const V = sum(ranks.filter((r, i) => d[i] > 0));
+            const mu = n * (n + 1) / 4;
+            const sigma = Math.sqrt(n * (n + 1) * (2 * n + 1) / 24 - tieSum / 48);
+            const z = sigma > 0 ? (V - mu - Math.sign(V - mu) * 0.5) / sigma : 0;
+            return { statName: 'V', stat: V, z, p: sigma > 0 ? twoSidedZ(z) : 1, effectSize: Math.abs(z) / Math.sqrt(n), effectName: 'r', zeros: a.length - n };
+        },
+        // 一元配置分散分析（対応なし）
+        calcANOVA: function(groupArrays) {
+            const all = [].concat(...groupArrays), k = groupArrays.length, n = all.length;
+            const gm = jStat.mean(all);
             let ssb = 0, ssw = 0;
-            keys.forEach(key => {
-                const arr = groupsObj[key];
-                const groupMean = jStat.mean(arr);
-                ssb += arr.length * Math.pow(groupMean - grandMean, 2);
-                arr.forEach(v => { ssw += Math.pow(v - groupMean, 2); });
+            groupArrays.forEach(arr => {
+                const m = jStat.mean(arr);
+                ssb += arr.length * Math.pow(m - gm, 2);
+                arr.forEach(v => { ssw += Math.pow(v - m, 2); });
             });
-            const dfb = k - 1, dfw = n - k;
-            const msb = ssb / dfb, msw = ssw / dfw;
-            const f = msb / msw;
-            const p = 1 - jStat.centralF.cdf(f, dfb, dfw);
-            const eta2 = ssb / (ssb + ssw);
-            return { stat: f, p: p, df1: dfb, df2: dfw, effectSize: eta2, effectName: "η²" };
+            const df1 = k - 1, df2 = n - k;
+            const f = (ssb / df1) / (ssw / df2);
+            return { statName: 'F', stat: f, p: 1 - jStat.centralF.cdf(f, df1, df2), df1, df2, effectSize: ssb / (ssb + ssw), effectName: 'η²' };
         },
-        calcNonPara2: function(arr1, arr2) {
-            return { stat: "算出中", p: "R出力参照", df: "-", effectSize: "-", effectName: "r" };
+        // 反復測定分散分析（1要因。球面性の補正なし。効果量は偏η²）
+        calcRMANOVA: function(matrix) {
+            const n = matrix.length, k = matrix[0].length;
+            const gm = jStat.mean([].concat(...matrix));
+            let ssCond = 0, ssSubj = 0, ssTotal = 0;
+            for (let j = 0; j < k; j++) ssCond += n * Math.pow(jStat.mean(matrix.map(r => r[j])) - gm, 2);
+            matrix.forEach(r => { ssSubj += k * Math.pow(jStat.mean(r) - gm, 2); r.forEach(v => { ssTotal += Math.pow(v - gm, 2); }); });
+            const ssErr = ssTotal - ssCond - ssSubj;
+            const df1 = k - 1, df2 = (k - 1) * (n - 1);
+            const f = (ssCond / df1) / (ssErr / df2);
+            return { statName: 'F', stat: f, p: 1 - jStat.centralF.cdf(f, df1, df2), df1, df2, effectSize: ssCond / (ssCond + ssErr), effectName: '偏η²' };
+        },
+        // Kruskal-Wallis 検定（同順位補正。効果量は η²_H = (H − k + 1) / (N − k)）
+        calcKruskal: function(groupArrays) {
+            const k = groupArrays.length, all = [].concat(...groupArrays), N = all.length;
+            const { ranks, tieSum } = rankWithTies(all);
+            let pos = 0, s = 0;
+            groupArrays.forEach(arr => { const R = sum(ranks.slice(pos, pos + arr.length)); s += R * R / arr.length; pos += arr.length; });
+            let H = 12 / (N * (N + 1)) * s - 3 * (N + 1);
+            const C = 1 - tieSum / (N * N * N - N);
+            if (C > 0) H /= C;
+            const df = k - 1;
+            return { statName: 'H', stat: H, df, p: 1 - jStat.chisquare.cdf(H, df), effectSize: Math.max(0, (H - k + 1) / (N - k)), effectName: 'η²_H' };
+        },
+        // Friedman 検定（行内の同順位補正。効果量は Kendall の W）
+        calcFriedman: function(matrix) {
+            const n = matrix.length, k = matrix[0].length;
+            const R = new Array(k).fill(0);
+            let tieSum = 0;
+            matrix.forEach(row => { const rr = rankWithTies(row); rr.ranks.forEach((r, j) => { R[j] += r; }); tieSum += rr.tieSum; });
+            let chi = 12 / (n * k * (k + 1)) * sum(R.map(x => x * x)) - 3 * n * (k + 1);
+            const C = 1 - tieSum / (n * (k * k * k - k));
+            if (C > 0) chi /= C;
+            const df = k - 1;
+            return { statName: 'χ²', stat: chi, df, p: 1 - jStat.chisquare.cdf(chi, df), effectSize: chi / (n * (k - 1)), effectName: "Kendall's W" };
         }
     };
 
@@ -270,51 +339,87 @@
 
         if (checked.length === 0) return alert("比較する項目をチェックしてください。");
 
-        let groups = {}, isWide = false;
+        const num = v => { const x = parseFloat(v); return isNaN(x) ? null : x; };
+        const blankCell = v => v === null || v === undefined || String(v).trim() === "";
+        let groups = {}, isWide = false, isPaired = false, dropped = 0;
         if (checked.length === 1 && grpCol !== "") {
-            rawData.forEach(r => {
-                const g = r[grpCol], v = parseFloat(r[checked[0]]);
-                if(g != null && !isNaN(v)) { if(!groups[g]) groups[g] = []; groups[g].push(v); }
-            });
+            if (idCol !== "") {
+                // 縦持ち＋ID：同じ ID の値を群ごとに対応づける。すべての群がそろった ID だけを使う
+                isPaired = true;
+                const byId = new Map(), levels = new Set();
+                rawData.forEach(r => {
+                    const g = r[grpCol], id = r[idCol], v = num(r[checked[0]]);
+                    if (blankCell(g) || blankCell(id) || v === null) return;
+                    levels.add(String(g));
+                    if (!byId.has(String(id))) byId.set(String(id), {});
+                    byId.get(String(id))[String(g)] = v;
+                });
+                const lv = [...levels].sort();
+                const complete = [...byId.values()].filter(o => lv.every(g => o[g] !== undefined));
+                dropped = byId.size - complete.length;
+                lv.forEach(g => { groups[g] = complete.map(o => o[g]); });
+            } else {
+                rawData.forEach(r => {
+                    const g = r[grpCol], v = num(r[checked[0]]);
+                    if (!blankCell(g) && v !== null) { const key = String(g); if (!groups[key]) groups[key] = []; groups[key].push(v); }
+                });
+            }
         } else if (checked.length >= 2) {
             isWide = true;
-            checked.forEach(c => {
-                groups[c] = [];
-                rawData.forEach(r => { const v = parseFloat(r[c]); if(!isNaN(v)) groups[c].push(v); });
-            });
+            if (grpCol === "") {
+                // 横持ち：同じ行を同じ対象として対応づける。どれかの列が欠けている行は除く
+                isPaired = true;
+                const rows = rawData.map(r => checked.map(c => num(r[c]))).filter(a => a.some(v => v !== null));
+                const complete = rows.filter(a => a.every(v => v !== null));
+                dropped = rows.length - complete.length;
+                checked.forEach((c, j) => { groups[c] = complete.map(a => a[j]); });
+            } else {
+                checked.forEach(c => {
+                    groups[c] = [];
+                    rawData.forEach(r => { const v = num(r[c]); if (v !== null) groups[c].push(v); });
+                });
+            }
         } else {
             return alert("比較できません。項目を2つ以上選ぶか、群分け項目を指定してください。");
         }
 
-        const gNames = Object.keys(groups).sort();
+        const gNames = isWide ? checked.slice() : Object.keys(groups).sort();
         const nGroups = gNames.length;
-        if(nGroups < 2) return alert("有効な比較群が2つ以上存在しません。データに数値が含まれているか確認してください。");
+        if (nGroups < 2) return alert("有効な比較群が2つ以上存在しません。データに数値が含まれているか確認してください。");
+        const minN = Math.min(...gNames.map(g => groups[g].length));
+        if (minN < 2) return alert(isPaired ? "対応のそろったデータが2件未満です。欠測や ID の指定を確認してください。" : "データ数が2件未満の群があります。");
 
-        const isPaired = idCol !== "" || (isWide && grpCol === "");
         const isNormal = gNames.every(g => checkNormality(groups[g]));
+        const arrays = gNames.map(g => groups[g]);
+        const matrix = isPaired ? arrays[0].map((_, i) => arrays.map(a => a[i])) : null;
 
-        let testType = "", postHoc = "-";
+        let testType = "", postHoc = "-", method = "";
         let jsRes = null;
 
         if (nGroups === 2) {
             if (isNormal) {
-                testType = isPaired ? "対応のあるt検定" : "Student / Welchのt検定";
-                jsRes = StatEngine.calcTTest(groups[gNames[0]], groups[gNames[1]], isPaired);
+                testType = isPaired ? "対応のあるt検定" : "Welchのt検定";
+                jsRes = isPaired ? StatEngine.calcPairedT(arrays[0], arrays[1]) : StatEngine.calcWelchT(arrays[0], arrays[1]);
             } else {
                 testType = isPaired ? "Wilcoxonの符号付順位検定" : "Mann-WhitneyのU検定";
-                jsRes = StatEngine.calcNonPara2(groups[gNames[0]], groups[gNames[1]]);
+                jsRes = isPaired ? StatEngine.calcWilcoxonSR(arrays[0], arrays[1]) : StatEngine.calcMannWhitney(arrays[0], arrays[1]);
+                method = "p 値は正規近似（同順位補正・連続性補正あり）です。標本が小さく同順位がないときは、R の正確検定の値と少し異なることがあります。";
             }
         } else {
             if (isNormal) {
                 testType = isPaired ? "反復測定分散分析" : "一元配置分散分析 (ANOVA)";
                 postHoc = isPaired ? "Bonferroni補正を伴うt検定" : "TukeyのHSD検定";
-                jsRes = StatEngine.calcANOVA(groups); 
+                jsRes = isPaired ? StatEngine.calcRMANOVA(matrix) : StatEngine.calcANOVA(arrays);
+                if (isPaired) method = "球面性の補正（Greenhouse-Geisser など）は行っていません。球面性の検定と補正後の値は R コードで確認してください。";
             } else {
                 testType = isPaired ? "Friedman検定" : "Kruskal-Wallis検定";
                 postHoc = isPaired ? "Nemenyi検定 / 調整済Wilcoxon" : "Dunnの検定";
-                jsRes = StatEngine.calcNonPara2(groups[gNames[0]], groups[gNames[1]]);
+                jsRes = isPaired ? StatEngine.calcFriedman(matrix) : StatEngine.calcKruskal(arrays);
+                method = "p 値はカイ二乗近似（同順位補正あり）です。";
             }
         }
+        if (dropped > 0) method = `欠測があるため ${dropped} 件を除き、対応のそろった ${minN} 件で分析しました。` + method;
+        if (jsRes.zeros) method += `差が0の組（${jsRes.zeros} 件）は除いて計算しています。`;
 
         document.getElementById('logicBadges').innerHTML = `
             <span class="badge badge-blue">比較: ${nGroups}群</span>
@@ -324,19 +429,22 @@
             ${postHoc !== '-' ? `<span class="badge badge-blue" style="background:#475569; color:white;">事後検定: ${postHoc}</span>` : ''}
         `;
 
+        const dfText = jsRes.df1 !== undefined ? `df = ${jsRes.df1}, ${jsRes.df2}` : (jsRes.df !== undefined ? `df = ${Number.isInteger(jsRes.df) ? jsRes.df : jsRes.df.toFixed(2)}` : (jsRes.z !== undefined ? `z = ${jsRes.z.toFixed(3)}` : ''));
         document.getElementById('statCards').innerHTML = `
             <div class="stat-card">
-                <span class="stat-label">統計量 (${nGroups===2?'t':'F'})</span>
-                <span class="stat-value">${typeof jsRes.stat === 'number' ? jsRes.stat.toFixed(3) : jsRes.stat}</span>
+                <span class="stat-label">統計量 (${jsRes.statName})</span>
+                <span class="stat-value">${jsRes.statName === 'U' || jsRes.statName === 'V' ? jsRes.stat.toFixed(1).replace(/\.0$/, '') : jsRes.stat.toFixed(3)}</span>
+                <span class="stat-label" style="margin-top:6px;">${dfText}</span>
             </div>
             <div class="stat-card">
                 <span class="stat-label">p値 (有意確率)</span>
-                <span class="stat-value" style="color: ${typeof jsRes.p==='number' && jsRes.p<0.05 ? 'var(--secondary)' : 'var(--text-main)'}">${typeof jsRes.p === 'number' ? (jsRes.p < 0.001 ? '< .001' : jsRes.p.toFixed(3)) : jsRes.p}</span>
+                <span class="stat-value" style="color: ${jsRes.p < 0.05 ? 'var(--secondary)' : 'var(--text-main)'}">${jsRes.p < 0.001 ? '< .001' : jsRes.p.toFixed(3)}</span>
             </div>
             <div class="stat-card">
                 <span class="stat-label">効果量 (${jsRes.effectName})</span>
-                <span class="stat-value">${typeof jsRes.effectSize === 'number' ? Math.abs(jsRes.effectSize).toFixed(3) : jsRes.effectSize}</span>
+                <span class="stat-value">${Math.abs(jsRes.effectSize).toFixed(3)}</span>
             </div>
+            ${method ? `<p style="grid-column:1/-1; margin:0; font-size:0.85rem; color:var(--text-muted);">※ ${method}</p>` : ''}
         `;
 
         let descTableHtml = '<div class="desc-table-wrapper"><table class="desc-table"><thead>';
@@ -396,18 +504,27 @@
             }).join("、");
         }
 
-        let apa = `各群の記述統計量は、${descText} であった。データの正規性を確認した後、${nGroups}群間の比較として${testType}を実施した。`;
+        // p 値と効果量の書き方（APA：1を超えない値は先頭の0を省く）
+        const f2 = x => x.toFixed(2);
+        const noLead = s => s.replace(/^(-?)0\./, '$1.');
+        const pText = jsRes.p < 0.001 ? 'p < .001' : `p = ${noLead(jsRes.p.toFixed(3))}`;
+        const es = Math.abs(jsRes.effectSize);
+        const sig = jsRes.p < 0.05;
+        let statText = '';
+        if (jsRes.statName === 't') statText = `t(${Number.isInteger(jsRes.df) ? jsRes.df : jsRes.df.toFixed(2)}) = ${f2(jsRes.stat)}, ${pText}, ${isPaired ? 'd_z' : 'd'} = ${f2(es)}`;
+        else if (jsRes.statName === 'U') statText = `U = ${jsRes.stat}, z = ${f2(jsRes.z)}, ${pText}, r = ${noLead(f2(es))}`;
+        else if (jsRes.statName === 'V') statText = `V = ${jsRes.stat}, z = ${f2(jsRes.z)}, ${pText}, r = ${noLead(f2(es))}`;
+        else if (jsRes.statName === 'F') statText = `F(${jsRes.df1}, ${jsRes.df2}) = ${f2(jsRes.stat)}, ${pText}, ${isPaired ? 'η²p' : 'η²'} = ${noLead(f2(es))}`;
+        else if (jsRes.statName === 'H') statText = `H(${jsRes.df}) = ${f2(jsRes.stat)}, ${pText}, η²H = ${noLead(f2(es))}`;
+        else statText = `χ²(${jsRes.df}) = ${f2(jsRes.stat)}, ${pText}, W = ${noLead(f2(es))}`;
+
+        let apa = `各群の記述統計量は、${descText} であった。歪度と尖度で分布の形を確認したうえで、${nGroups}群の比較として${testType}を実施した`;
+        apa += dropped > 0 ? `（欠測のある ${dropped} 件を除いた ${minN} 件）。` : `。`;
         if (nGroups === 2) {
-            if(isNormal) apa += `結果、両群間に有意な差が認められた (t(${jsRes.df.toFixed(1)}) = ${jsRes.stat.toFixed(2)}, p ${jsRes.p<0.001 ? '< .001' : '= '+jsRes.p.toFixed(3)}, Cohen's d = ${Math.abs(jsRes.effectSize).toFixed(2)}).`;
-            else apa += `結果、両群間に有意な差が認められた (W/U = [R出力値], p = [R出力値], r = [R出力値]).`;
+            apa += sig ? `その結果、両群の間に有意な差が認められた (${statText})。` : `その結果、両群の間に有意な差は認められなかった (${statText})。`;
         } else {
-            if(isNormal) {
-                apa += `結果、主効果は有意であった (F(${jsRes.df1}, ${jsRes.df2}) = ${jsRes.stat.toFixed(2)}, p ${jsRes.p<0.001 ? '< .001' : '= '+jsRes.p.toFixed(3)}, η² = ${jsRes.effectSize.toFixed(2)}). `;
-                apa += `これを受け事後検定として${postHoc}を実施した結果、[群A]は[群B]より有意に高い値を示した (p = [R出力値]).`;
-            } else {
-                apa += `結果、有意な差が認められた (χ²/H = [R出力値], p = [R出力値]). `;
-                apa += `これを受け事後検定として${postHoc}を実施した結果、[群A]は[群B]より有意に高い値を示した (p = [R出力値]).`;
-            }
+            apa += sig ? `その結果、群の間に有意な差が認められた (${statText})。` : `その結果、群の間に有意な差は認められなかった (${statText})。`;
+            if (sig) apa += `そこで事後検定として${postHoc}を実施した結果、[群A]と[群B]の間に有意な差が認められた (p = [R出力値])。`;
         }
         document.getElementById('apaArea').innerText = apa;
 
