@@ -41,6 +41,7 @@ const SOURCES = {
   'paired-text': { src: '01Comparative/05対応テキストマイニング/Index.html' },
   'classroom-talk': { src: '02Correlation/02授業発話分析ラボ/index.html' },
   'qda': { src: '04Structure-Grouping/05QDA/index.html' },
+  'scat': { src: '04Structure-Grouping/12SCAT分析ラボ/index.html' },
   'qda-lite': { src: '04Structure-Grouping/06QDA-Lite (全体スクロール対応版)/index.html' },
   'bootstrap': { src: '05Others/01ブートストラップ解析装置/index.html' },
   'meta-analysis': { src: '05Others/02メタ分析ラボ/meta_analysis_lab.html' },

@@ -10,7 +10,7 @@ https://k518-2026.github.io/AnalysisLabs/
 - 出力される記述例や R コードは下書きです。数値と解釈は、研究の文脈と照らし合わせて確かめてください。
 - 統計の計算はどれも完璧ではありません。大事な分析では、R・JASP などほかのソフトでも結果を確かめてください。
 
-## ツール一覧（33 本）
+## ツール一覧（34 本）
 
 ### 比べる
 
@@ -68,6 +68,7 @@ https://k518-2026.github.io/AnalysisLabs/
 | [対応テキストマイニング](https://k518-2026.github.io/AnalysisLabs/tools/paired-text/) | 同じ人の事前・事後の自由記述を ID で突き合わせ、消えた語・現れた語と共起ネットワークを示す。 |
 | [授業発話分析ラボ](https://k518-2026.github.io/AnalysisLabs/tools/classroom-talk/) | 授業の逐語録から、フランダース相互作用分析・発問の分類・IRF 連鎖・語彙を数えて見せる。 |
 | [QDA ワークベンチ](https://k518-2026.github.io/AnalysisLabs/tools/qda/) | インタビューや自由記述のコーディングから、カテゴリー化、行列、図、ストーリーラインまで。 |
+| [SCAT分析ラボ](https://k518-2026.github.io/AnalysisLabs/tools/scat/) | 大谷尚の SCAT の分析フォームで、4ステップのコーディングからストーリー・ライン、理論記述までを進める。 |
 | [QDA-Lite](https://k518-2026.github.io/AnalysisLabs/tools/qda-lite/) | テキストにコードを付けて、対象者ごとに集計する軽量版。感情辞書による抽出も。 |
 
 ### 推定を統合する

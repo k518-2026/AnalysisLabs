@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCAT分析ラボ — データ分析ラボ</title>
+<style>
+:root{
+  --paper:#EEF0EB; --card:#FBFBF8; --card2:#F3F4EF;
+  --ink:#1C2421; --ink2:#4F5A56; --ink3:#848E89;
+  --rule:#D4D9D0; --rule2:#E5E8E1;
+  --accent:#8E3A57; --accent-d:#6C2A41; --accent-l:#F4E6EB;
+  --s1:#2F5C8A; --s2:#1D6B64; --s3:#9B5A1F; --s4:#8E3A57; --s5:#6B6F75;
+  --warn:#A3452E; --ok:#3E6B4F;
+  --gothic:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP",Meiryo,sans-serif;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--gothic);font-size:14.5px;line-height:1.75;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent-d)}
+.wrap{max-width:1360px;margin:0 auto;padding:0 20px}
+
+/* 見出し */
+.masthead{padding-top:28px;padding-bottom:0;border-bottom:1px solid var(--rule)}
+.masthead .row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;justify-content:space-between}
+.masthead h1{margin:0;font-family:var(--mincho);font-size:34px;letter-spacing:.04em;line-height:1.2}
+.masthead .en{margin:4px 0 0;font:500 12px/1.4 var(--mono);letter-spacing:.14em;color:var(--ink3);text-transform:uppercase}
+.masthead p.lead{margin:10px 0 0;max-width:760px;color:var(--ink2)}
+.proj{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.proj input[type=text]{width:220px;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:4px;background:var(--card)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2)}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--accent-d);border-color:var(--accent-d)}
+.btn.ghost{background:var(--card);color:var(--ink);border-color:var(--rule)}
+.btn.ghost:hover{border-color:var(--ink2)}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* タブ */
+.tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--rule);margin-top:6px}
+.tab{flex:none;display:flex;align-items:center;gap:8px;padding:12px 16px;border:0;border-bottom:3px solid transparent;background:none;cursor:pointer;color:var(--ink2);font-weight:600}
+.tab b{font:600 12px/1 var(--mono);color:var(--ink3)}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab[aria-selected=true] b{color:var(--accent)}
+.tab .cnt{font:500 11.5px/1 var(--mono);color:var(--ink3)}
+
+.view{display:none;padding:24px 0 56px}
+.view.on{display:block}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px}
+@media (max-width:980px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px}
+.card + .card{margin-top:16px}
+.card h2{margin:0 0 8px;font-family:var(--mincho);font-size:20px;letter-spacing:.03em}
+.card h3{margin:0 0 6px;font-size:15px}
+.note{margin:0 0 12px;color:var(--ink2);font-size:13.5px}
+.hint{font-size:12.5px;color:var(--ink3)}
+.btnrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+textarea.big{width:100%;min-height:220px;padding:10px 12px;border:1px solid var(--rule);border-radius:4px;background:#fff;line-height:1.7;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:10px;font-size:13.5px}
+.opts label{display:inline-flex;align-items:center;gap:6px}
+.drop{margin-top:10px;padding:14px;border:1px dashed var(--rule);border-radius:4px;text-align:center;color:var(--ink3);font-size:13px}
+.drop.over{border-color:var(--accent);background:var(--accent-l);color:var(--accent-d)}
+
+/* SCAT の手順の説明 */
+.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{position:relative;padding:8px 0 8px 40px;border-top:1px dashed var(--rule2);font-size:13.5px}
+.steps li:first-child{border-top:0}
+.steps li i{position:absolute;left:0;top:9px;width:30px;height:22px;border-radius:3px;display:grid;place-items:center;color:#fff;font:600 12px/1 var(--mono);font-style:normal}
+.steps li b{display:block}
+.ref{margin:12px 0 0;padding:10px 12px;background:var(--card2);border-radius:4px;font-size:12.5px;color:var(--ink2);line-height:1.7}
+.ref p{margin:0 0 4px}
+
+/* 分析フォーム */
+.formbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 0;background:var(--paper);border-bottom:1px solid var(--rule)}
+.formbar .grow{flex:1}
+.formbar select{height:30px;border:1px solid var(--rule);border-radius:4px;background:var(--card);padding:0 6px}
+.scroll{overflow:auto;max-height:max(360px, calc(100vh - 150px));margin-top:12px;border:1px solid var(--rule);border-radius:6px;background:var(--card)}
+table.scat{border-collapse:collapse;width:100%;min-width:1180px;table-layout:fixed}
+table.scat th,table.scat td{border-bottom:1px solid var(--rule2);border-right:1px solid var(--rule2);vertical-align:top;padding:0}
+table.scat th{position:sticky;top:0;z-index:2;background:var(--card2);padding:8px 8px 6px;text-align:left;font-size:12.5px;line-height:1.45}
+table.scat th .k{display:inline-block;min-width:26px;padding:1px 5px;margin-right:4px;border-radius:3px;color:#fff;font:600 11.5px/1.5 var(--mono);text-align:center}
+table.scat th small{display:block;font-weight:400;color:var(--ink3);font-size:11.5px}
+table.scat td.no{width:52px;padding:8px 6px;text-align:center;font:500 12px/1.4 var(--mono);color:var(--ink3)}
+table.scat td.no .ops{display:flex;flex-direction:column;gap:2px;margin-top:6px;opacity:.0;transition:opacity .15s}
+table.scat tr:hover td.no .ops, table.scat td.no:focus-within .ops{opacity:1}
+table.scat td.no .ops button{border:1px solid var(--rule);background:var(--card);border-radius:3px;font-size:11px;line-height:1.5;cursor:pointer;padding:0}
+table.scat textarea{display:block;width:100%;min-height:44px;border:0;padding:8px;background:transparent;resize:none;line-height:1.65;font-size:13.5px;overflow:hidden}
+table.scat textarea:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fff}
+table.scat td.sp textarea{font-weight:600}
+table.scat td.tx textarea{font-family:var(--mincho);font-size:14px}
+table.scat td.c4 textarea{font-weight:600;color:var(--s4)}
+table[data-step="1"] .col1, table[data-step="2"] .col2, table[data-step="3"] .col3, table[data-step="4"] .col4, table[data-step="5"] .col5{background:#FFFDF3}
+table[data-step="1"] th.col1, table[data-step="2"] th.col2, table[data-step="3"] th.col3, table[data-step="4"] th.col4, table[data-step="5"] th.col5{box-shadow:inset 0 -3px 0 var(--accent)}
+tr.hit td{background:#FFF6D9}
+.empty{padding:40px 20px;text-align:center;color:var(--ink3)}
+#pick{position:absolute;z-index:50;display:none}
+
+/* 構成概念の一覧 */
+table.list{width:100%;border-collapse:collapse;font-size:13.5px}
+table.list th,table.list td{padding:7px 8px;border-bottom:1px solid var(--rule2);text-align:left;vertical-align:top}
+table.list th{font-size:12px;color:var(--ink3);font-weight:600}
+table.list td.num{font-family:var(--mono);color:var(--ink3);white-space:nowrap}
+.rowlink{border:0;background:none;padding:0 2px;color:var(--accent-d);cursor:pointer;font:500 12.5px/1.4 var(--mono);text-decoration:underline;text-underline-offset:2px}
+.tag{display:inline-block;padding:0 7px;border-radius:10px;font-size:11.5px;line-height:1.7}
+.tag.ok{background:#E3EEE6;color:var(--ok)}
+.tag.no{background:#F6E6E1;color:var(--warn)}
+
+/* ストーリー・ライン */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--rule);background:#fff;border-radius:14px;padding:2px 10px;font-size:13px;cursor:pointer;line-height:1.7}
+.chip.unused{border-color:var(--accent);color:var(--accent-d);font-weight:600}
+.chip.used{color:var(--ink3);background:var(--card2)}
+.chip.used::before{content:"✓ ";color:var(--ok)}
+.meter{height:6px;border-radius:3px;background:var(--rule2);overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--accent);width:0}
+.preview{padding:12px 14px;background:#fff;border:1px solid var(--rule2);border-radius:4px;font-family:var(--mincho);font-size:15px;line-height:1.95;white-space:pre-wrap;min-height:60px}
+.preview u{text-decoration:none;border-bottom:2px solid var(--accent);font-weight:600}
+ol.theory{margin:0;padding-left:1.6em;font-family:var(--mincho);font-size:15px;line-height:1.9}
+ol.theory li{margin:4px 0}
+
+pre.out{margin:0;padding:12px 14px;background:#fff;border:1px solid var(--rule2);border-radius:4px;font:12.5px/1.65 var(--mono);white-space:pre-wrap;max-height:420px;overflow:auto}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;padding:10px 16px;border-radius:4px;background:var(--ink);color:#fff;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+.toast.bad{background:var(--warn)}
+.foot{padding-top:20px;padding-bottom:40px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink3)}
+
+/* 印刷 */
+#printArea{display:none}
+@media print{
+  body{background:#fff}
+  body > *:not(#printArea){display:none !important}
+  #printArea{display:block;font-family:var(--mincho);font-size:10.5pt;color:#000}
+  #printArea h1{font-size:15pt;margin:0 0 4pt}
+  #printArea h2{font-size:12pt;margin:14pt 0 4pt;border-bottom:1px solid #000}
+  #printArea table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt}
+  #printArea th,#printArea td{border:1px solid #555;padding:3pt 4pt;vertical-align:top;white-space:pre-wrap;word-break:break-all}
+  #printArea th{background:#eee}
+  #printArea p{white-space:pre-wrap;margin:0 0 4pt}
+  @page{size:A4 landscape;margin:12mm}
+}
+</style>
+<!-- データ分析ラボ：共通の書体・配色・バー（scripts/import.js が追加） -->
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css?v=91cc935c">
+<link rel="stylesheet" href="../../assets/app-bar.css?v=c019fc8a">
+<style id="al-theme">:root{--al-cat:var(--al-c-text);--paper:var(--al-bg);--card:var(--al-surface);--card2:var(--al-surface-2);--ink:var(--al-ink);--ink2:var(--al-ink-2);--ink3:var(--al-ink-3);--rule:var(--al-line);--rule2:var(--al-line-2);--accent:var(--al-cat);--accent-d:var(--al-cat-deep);--accent-l:var(--al-cat-soft);--s4:var(--al-cat);--gothic:var(--al-sans);--mincho:var(--al-serif);--mono:var(--al-mono);}</style>
+</head>
+<body>
+<div class="al-bar" role="navigation" aria-label="データ分析ラボ"><a class="al-brand" href="../../"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="#F3F1EA"/><path d="M6.5 17.5v-4M10.2 17.5V8.5M13.9 17.5v-6M17.6 17.5v-11" stroke="#1B2320" stroke-width="2.3" stroke-linecap="round"/></svg><span>データ分析ラボ</span></a><span class="al-sep al-s1">/</span><a class="al-crumb" href="../../#text">質的・テキスト</a><span class="al-sep">/</span><span class="al-here"><i class="al-dot"></i>SCAT分析ラボ</span><span class="al-gap"></span><a class="al-link" href="./">説明</a></div>
+
+
+<header class="wrap masthead">
+  <div class="row">
+    <div>
+      <h1>SCAT分析ラボ</h1>
+      <p class="en">Steps for Coding and Theorization</p>
+      <p class="lead">質的データを4つのステップでコーディングし、テーマ・構成概念からストーリー・ラインと理論記述を書く作業を、分析フォームの上で進めます。コードを考えるのはあなたです。このツールは記録と見直しを助けます。データはこの端末の中だけに保存されます。</p>
+    </div>
+    <div class="proj">
+      <input type="text" id="projName" placeholder="分析の名前" aria-label="分析の名前">
+      <button class="btn ghost sm" id="btnOpen">開く</button>
+      <button class="btn sm" id="btnSave">保存</button>
+      <label class="chk" title="このブラウザーに自動で保存します"><input type="checkbox" id="autosave" checked>自動保存</label>
+      <input type="file" id="fileProject" accept=".json,application/json" hidden>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-view="data" aria-selected="true"><b>01</b>データ</button>
+    <button class="tab" role="tab" data-view="form" aria-selected="false"><b>02</b>コーディング<span class="cnt" id="cntRows"></span></button>
+    <button class="tab" role="tab" data-view="themes" aria-selected="false"><b>03</b>テーマ・構成概念<span class="cnt" id="cntThemes"></span></button>
+    <button class="tab" role="tab" data-view="story" aria-selected="false"><b>04</b>ストーリー・ライン</button>
+    <button class="tab" role="tab" data-view="theory" aria-selected="false"><b>05</b>理論記述</button>
+    <button class="tab" role="tab" data-view="export" aria-selected="false"><b>06</b>書き出す</button>
+  </nav>
+</header>
+
+<main class="wrap">
+
+<!-- 01 データ -->
+<section class="view on" id="v-data">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h2>データを読み込む</h2>
+        <p class="note">逐語録やフィールドノートを貼り付けるか、ファイルを読み込みます。区切った1つひとつ（セグメント）が、分析フォームの1行になります。</p>
+        <textarea class="big" id="rawText" placeholder="例）&#10;I：今日の授業を振り返ってみて、どうでしたか。&#10;A：前半は子どもたちがよく話していたと思います。&#10;A：でも、後半は私ばかり話していました。"></textarea>
+        <div class="opts">
+          <label><input type="radio" name="seg" value="line" checked>1行を1セグメントにする</label>
+          <label><input type="radio" name="seg" value="blank">空行で区切る</label>
+          <label><input type="checkbox" id="detectSpeaker" checked>行頭の発話者（「A：」「【A】」など）を分ける</label>
+        </div>
+        <div class="drop" id="drop">.txt / .csv / .tsv をここにドロップ、または <button class="btn ghost sm" id="btnFile">ファイルを選ぶ</button>
+          <input type="file" id="fileRaw" accept=".txt,.csv,.tsv,text/plain,text/csv" hidden>
+          <div class="hint" style="margin-top:6px">CSV の1行目に「テクスト」の列があれば、SCAT の分析フォーム（番号・発話者・テクスト・〈1〉〜〈5〉）として読み込みます。</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="btnLoad">分析フォームを作る</button>
+          <button class="btn ghost" id="btnAppend">いまのフォームの末尾に足す</button>
+          <button class="btn ghost" id="btnSample">記入例を入れる</button>
+          <span class="hint" id="loadMsg"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>セグメントの区切り方について</h3>
+        <p class="note" style="margin:0">SCAT では、データをセグメントに分けて分析フォームのテクスト欄に書き入れます。1つの発話が長いときは、意味のまとまりごとに行を分けてから読み込むと、コーディングしやすくなります。読み込んだあとも、コーディング画面で行の挿入・削除・分割ができます。</p>
+      </div>
+    </div>
+    <aside>
+      <div class="card">
+        <h2>SCAT の手順</h2>
+        <ol class="steps">
+          <li><i style="background:var(--s1)">〈1〉</i><b>テクスト中の注目すべき語句</b>データの中から、注目すべき語句を抜き出す。</li>
+          <li><i style="background:var(--s2)">〈2〉</i><b>テクスト中の語句の言いかえ</b>〈1〉を、テクストの外の語句で言いかえる。</li>
+          <li><i style="background:var(--s3)">〈3〉</i><b>左を説明するようなテクスト外の概念</b>〈2〉を説明するような、テクストの外の概念を書く。</li>
+          <li><i style="background:var(--s4)">〈4〉</i><b>テーマ・構成概念</b>前後や全体の文脈を考えながら、そこから浮かび上がるテーマ・構成概念を書く。</li>
+          <li><i style="background:var(--s5)">〈5〉</i><b>疑問・課題</b>分析の途中で生まれた疑問や、確かめたいことを書きとめる。</li>
+          <li><i style="background:var(--ink)">SL</i><b>ストーリー・ライン</b>〈4〉のテーマ・構成概念を紡いで、データに記述されている出来事に潜在する意味や意義を書く。</li>
+          <li><i style="background:var(--ink)">TH</i><b>理論記述</b>ストーリー・ラインをもとに、そこから言えることを理論として記述する。</li>
+        </ol>
+        <p class="hint" style="margin:10px 0 0">〈1〉から〈4〉へのコーディングでデータを脱文脈化し、ストーリー・ラインで再文脈化します。</p>
+        <div class="ref">
+          <p><b>SCAT の文献</b>（手法の詳しい説明と、研究で使うときの引用先）</p>
+          <p>大谷尚（2008）「4ステップコーディングによる質的データ分析手法SCATの提案―着手しやすく小規模データにも適用可能な理論化の手続き―」『名古屋大学大学院教育発達科学研究科紀要（教育科学）』54(2), 27–44.</p>
+          <p>大谷尚（2011）「SCAT: Steps for Coding and Theorization―明示的手続きで着手しやすく小規模データに適用可能な質的データ分析手法―」『感性工学』10(3), 155–160.</p>
+          <p>大谷尚（2019）『質的研究の考え方―研究方法論からSCATによる分析まで―』名古屋大学出版会.</p>
+          <p style="margin-top:6px">このツールは SCAT の開発者によるものではありません。手法の使い方は、上の文献に従ってください。</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- 02 コーディング -->
+<section class="view" id="v-form">
+  <div class="formbar">
+    <label class="chk">いま書いているステップ
+      <select id="stepSel">
+        <option value="0">強調しない</option>
+        <option value="1">〈1〉注目すべき語句</option>
+        <option value="2">〈2〉語句の言いかえ</option>
+        <option value="3">〈3〉テクスト外の概念</option>
+        <option value="4">〈4〉テーマ・構成概念</option>
+        <option value="5">〈5〉疑問・課題</option>
+      </select>
+    </label>
+    <span class="hint">テクスト欄で語句を選ぶと、〈1〉に写せます。</span>
+    <span class="grow"></span>
+    <span class="hint" id="progress"></span>
+    <button class="btn ghost sm" id="btnAddRow">行を足す</button>
+  </div>
+  <div class="scroll">
+    <table class="scat" id="scat" data-step="0">
+      <colgroup><col style="width:52px"><col style="width:84px"><col style="width:24%"><col><col><col><col><col style="width:12%"></colgroup>
+      <thead><tr>
+        <th>番号</th>
+        <th>発話者</th>
+        <th>テクスト</th>
+        <th class="col1"><span class="k" style="background:var(--s1)">〈1〉</span>テクスト中の注目すべき語句<small id="p1"></small></th>
+        <th class="col2"><span class="k" style="background:var(--s2)">〈2〉</span>テクスト中の語句の言いかえ<small id="p2"></small></th>
+        <th class="col3"><span class="k" style="background:var(--s3)">〈3〉</span>左を説明するようなテクスト外の概念<small id="p3"></small></th>
+        <th class="col4"><span class="k" style="background:var(--s4)">〈4〉</span>テーマ・構成概念（前後や全体の文脈を考慮して）<small id="p4"></small></th>
+        <th class="col5"><span class="k" style="background:var(--s5)">〈5〉</span>疑問・課題<small id="p5"></small></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="formEmpty">まだデータがありません。「01 データ」から読み込んでください。</div>
+  </div>
+  <button class="btn sm" id="pick">〈1〉に写す</button>
+</section>
+
+<!-- 03 テーマ・構成概念 -->
+<section class="view" id="v-themes">
+  <div class="grid2">
+    <div class="card">
+      <h2>〈4〉テーマ・構成概念の一覧</h2>
+      <p class="note">分析フォームの〈4〉に書いた語を、区切り文字で分けて集めています。同じ語が複数の行にあれば1つにまとめ、書かれた行の番号を並べます。番号を押すとその行へ移動します。</p>
+      <div class="opts" style="margin:0 0 10px">
+        <span class="hint">区切り文字</span>
+        <label><input type="checkbox" class="delim" value="nl" checked>改行</label>
+        <label><input type="checkbox" class="delim" value="、" checked>「、」</label>
+        <label><input type="checkbox" class="delim" value="," checked>カンマ</label>
+        <label><input type="checkbox" class="delim" value="/" checked>スラッシュ</label>
+        <label><input type="checkbox" class="delim" value="・">「・」</label>
+      </div>
+      <table class="list">
+        <thead><tr><th style="width:44px">#</th><th>テーマ・構成概念</th><th>書いた行</th><th style="width:130px">ストーリー・ライン</th></tr></thead>
+        <tbody id="themeRows"></tbody>
+      </table>
+      <div class="empty" id="themeEmpty">〈4〉がまだ書かれていません。</div>
+    </div>
+    <aside>
+      <div class="card">
+        <h3>〈5〉疑問・課題</h3>
+        <p class="note">分析の途中で書きとめた疑問・課題です。理論記述のあとの「さらに追究すべき点・課題」を書くときの手がかりになります。</p>
+        <table class="list"><tbody id="issueRows"></tbody></table>
+        <div class="empty" id="issueEmpty" style="padding:16px">まだありません。</div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- 04 ストーリー・ライン -->
+<section class="view" id="v-story">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h2>ストーリー・ライン</h2>
+        <p class="note">〈4〉のテーマ・構成概念を紡いで、データに記述されている出来事に潜在する意味や意義を書きます。右の語を押すと、カーソルの位置に入ります。</p>
+        <textarea class="big" id="storyline" placeholder="テーマ・構成概念を使って書きます"></textarea>
+        <h3 style="margin-top:16px">プレビュー <span class="hint">（使ったテーマ・構成概念に下線）</span></h3>
+        <div class="preview" id="storyPreview"></div>
+      </div>
+    </div>
+    <aside>
+      <div class="card">
+        <h3>テーマ・構成概念</h3>
+        <div class="meter"><i id="useMeter"></i></div>
+        <p class="hint" id="useMsg" style="margin:0 0 10px"></p>
+        <div class="chips" id="chips"></div>
+        <p class="hint" style="margin:12px 0 0">枠が色つきの語は、まだストーリー・ラインに入っていない語です。使わなかった語があるときは、その理由を分析の中で確かめてください。</p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- 05 理論記述 -->
+<section class="view" id="v-theory">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h2>理論記述</h2>
+        <p class="note">ストーリー・ラインをもとに、このデータから言えることを1行に1つずつ書きます。</p>
+        <textarea class="big" id="theory" placeholder="1行に1つの記述"></textarea>
+        <div class="btnrow">
+          <button class="btn ghost sm" id="btnSplitStory">ストーリー・ラインを文ごとに分けて下書きにする</button>
+          <span class="hint">いまの理論記述の末尾に足します</span>
+        </div>
+        <h3 style="margin-top:16px">プレビュー</h3>
+        <ol class="theory" id="theoryPreview"></ol>
+      </div>
+      <div class="card">
+        <h2>さらに追究すべき点・課題</h2>
+        <textarea class="big" id="issues" style="min-height:140px" placeholder="このデータの分析で残った問い、次に集めるべきデータなど"></textarea>
+        <div class="btnrow"><button class="btn ghost sm" id="btnPullIssues">〈5〉疑問・課題を下書きに足す</button></div>
+      </div>
+    </div>
+    <aside>
+      <div class="card">
+        <h3>ストーリー・ライン（参照用）</h3>
+        <div class="preview" id="storyRef" style="font-size:14px"></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- 06 書き出す -->
+<section class="view" id="v-export">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h2>書き出す</h2>
+        <p class="note">分析フォームは Excel で開ける CSV（BOM 付き UTF-8）で書き出します。フォームの下に、ストーリー・ライン、理論記述、さらに追究すべき点・課題が続きます。</p>
+        <div class="btnrow" style="margin-top:0">
+          <button class="btn" id="btnCsv">分析フォーム（CSV）</button>
+          <button class="btn ghost" id="btnMd">レポート（Markdown）</button>
+          <button class="btn ghost" id="btnPrint">印刷・PDF（A4 横）</button>
+          <button class="btn ghost" id="btnJson">プロジェクト（JSON）</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>論文の「分析方法」の記述例</h2>
+        <p class="note">いまの分析の件数を入れた下書きです。研究の実際に合わせて書き直してください。</p>
+        <pre class="out" id="methodText"></pre>
+        <div class="btnrow"><button class="btn ghost sm" id="btnCopyMethod">この文章をコピー</button></div>
+      </div>
+    </div>
+    <aside>
+      <div class="card">
+        <h3>いまの分析</h3>
+        <table class="list"><tbody id="summary"></tbody></table>
+      </div>
+    </aside>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap foot">SCAT分析ラボ ― 計算も保存もこのブラウザーの中で完結し、データが外部に送られることはありません。SCAT は大谷尚が開発した質的データ分析手法です。このツールは開発者によるものではありません。</footer>
+
+<div id="printArea"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ==========================================================================
+   状態
+   ========================================================================== */
+const KEY = 'scat-lab-project-v1';
+const COLS = ['c1', 'c2', 'c3', 'c4', 'c5'];
+let P = blank();
+let uid = 1;
+
+function blank() {
+  return { app: 'scat-lab', version: 1, name: '', rows: [], storyline: '', theory: '', issues: '', updated: '' };
+}
+function row(speaker, text, c) {
+  c = c || {};
+  return { id: uid++, speaker: speaker || '', text: text || '', c1: c.c1 || '', c2: c.c2 || '', c3: c.c3 || '', c4: c.c4 || '', c5: c.c5 || '' };
+}
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function toast(msg, bad) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'toast on' + (bad ? ' bad' : '');
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { t.className = 'toast'; }, 2600);
+}
+
+/* ==========================================================================
+   保存
+   ========================================================================== */
+let saveTimer;
+function touch() {
+  P.updated = new Date().toISOString();
+  if (!$('#autosave').checked) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) { toast('自動保存できませんでした。「保存」でファイルに残してください。', true); }
+  }, 400);
+}
+function loadProject(obj) {
+  if (!obj || !Array.isArray(obj.rows)) throw new Error('SCAT分析ラボのプロジェクトではありません');
+  P = Object.assign(blank(), obj);
+  P.rows = obj.rows.map(r => row(r.speaker, r.text, r));
+  renderAll();
+}
+function download(name, text, type) {
+  const blob = new Blob([text], { type: type || 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+const baseName = () => (P.name || 'SCAT分析').replace(/[\\/:*?"<>|]/g, '_');
+
+/* ==========================================================================
+   読み込み
+   ========================================================================== */
+function parseCSV(text, delim) {
+  const out = []; let rowA = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === delim) { rowA.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      rowA.push(cell); out.push(rowA); rowA = []; cell = '';
+    } else cell += ch;
+  }
+  if (cell !== '' || rowA.length) { rowA.push(cell); out.push(rowA); }
+  return out;
+}
+
+// SCAT の分析フォーム（CSV）として読めるか
+function fromFormCSV(text) {
+  const delim = (text.split('\n')[0].match(/\t/g) || []).length > (text.split('\n')[0].match(/,/g) || []).length ? '\t' : ',';
+  const t = parseCSV(text.replace(/^﻿/, ''), delim);
+  const hi = t.findIndex(r => r.some(c => /テク?スト/.test(c)));
+  if (hi < 0) return null;
+  const h = t[hi].map(c => c.trim());
+  const find = re => h.findIndex(c => re.test(c));
+  const ix = {
+    speaker: find(/発話者|話者/),
+    text: find(/^テク?スト$|テク?スト（|^テク?スト/),
+    c1: find(/[〈<＜]\s*1|注目すべき語句/),
+    c2: find(/[〈<＜]\s*2|言いかえ|言い換え/),
+    c3: find(/[〈<＜]\s*3|テク?スト外の概念/),
+    c4: find(/[〈<＜]\s*4|テーマ|構成概念/),
+    c5: find(/[〈<＜]\s*5|疑問|課題/),
+  };
+  const rows = [];
+  for (let i = hi + 1; i < t.length; i++) {
+    const r = t[i];
+    const text = ix.text >= 0 ? (r[ix.text] || '') : '';
+    // フォームの下に続くストーリー・ラインなどの行で止める
+    if (r.some(c => /^(ストーリー・?ライン|理論記述)/.test((c || '').trim()))) break;
+    if (!text.trim() && COLS.every(k => ix[k] < 0 || !(r[ix[k]] || '').trim())) continue;
+    const c = {};
+    COLS.forEach(k => { c[k] = ix[k] >= 0 ? (r[ix[k]] || '') : ''; });
+    rows.push(row(ix.speaker >= 0 ? r[ix.speaker] : '', text, c));
+  }
+  return rows;
+}
+
+const SPEAKER = /^\s*(?:【([^】]{1,16})】|［([^］]{1,16})］|\[([^\]]{1,16})\]|([^\s：:「」、。]{1,16})\s*[：:])\s*([\s\S]*)$/;
+function fromRaw(text) {
+  const mode = $('input[name=seg]:checked').value;
+  const detect = $('#detectSpeaker').checked;
+  const parts = mode === 'blank'
+    ? text.split(/\n\s*\n/).map(s => s.replace(/\s*\n\s*/g, ' ').trim())
+    : text.split(/\r?\n/).map(s => s.trim());
+  return parts.filter(Boolean).map(s => {
+    if (detect) {
+      const m = s.match(SPEAKER);
+      if (m && m[5].trim()) return row(m[1] || m[2] || m[3] || m[4], m[5].trim());
+    }
+    return row('', s);
+  });
+}
+
+function readInput() {
+  const text = $('#rawText').value;
+  if (!text.trim()) { toast('データが入っていません', true); return null; }
+  // 先頭の数行（書き出した CSV は1行目が分析の名前）に「テクスト」の見出しがあれば分析フォームとして読む
+  const head = text.split('\n').slice(0, 3);
+  const form = head.some(l => /テク?スト/.test(l) && /[,\t]/.test(l)) ? fromFormCSV(text) : null;
+  const rows = form && form.length ? form : fromRaw(text);
+  if (!rows.length) { toast('セグメントを取り出せませんでした', true); return null; }
+  return { rows, form: !!(form && form.length) };
+}
+
+$('#btnLoad').onclick = () => {
+  const r = readInput(); if (!r) return;
+  const coded = P.rows.some(x => COLS.some(k => x[k].trim()));
+  if (coded && !confirm('いまの分析フォームにはコーディングが書かれています。新しいデータで置き換えますか？（先に「保存」しておくと安全です）')) return;
+  P.rows = r.rows;
+  if (!coded) { P.storyline = ''; P.theory = ''; P.issues = ''; }
+  renderAll(); touch();
+  $('#loadMsg').textContent = `${r.rows.length} 行を読み込みました${r.form ? '（分析フォームとして）' : ''}`;
+  showView('form');
+};
+$('#btnAppend').onclick = () => {
+  const r = readInput(); if (!r) return;
+  P.rows.push(...r.rows);
+  renderAll(); touch();
+  $('#loadMsg').textContent = `${r.rows.length} 行を末尾に足しました`;
+};
+
+async function readFile(file) {
+  const buf = await file.arrayBuffer();
+  let text = new TextDecoder('utf-8').decode(buf);
+  if (text.includes('�')) {
+    try { text = new TextDecoder('shift_jis').decode(buf); } catch (e) { /* そのまま */ }
+  }
+  $('#rawText').value = text.replace(/^﻿/, '');
+  $('#loadMsg').textContent = `${file.name} を入れました。区切り方を確かめて「分析フォームを作る」を押してください。`;
+}
+$('#btnFile').onclick = () => $('#fileRaw').click();
+$('#fileRaw').onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); e.target.value = ''; };
+const drop = $('#drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); });
+
+/* 記入例（架空のインタビュー。コーディングは書き方を示すための例） */
+$('#btnSample').onclick = () => {
+  if (P.rows.length && !confirm('いまの分析フォームを記入例で置き換えますか？')) return;
+  const S = [
+    ['I', '初任の年に、授業でいちばん困ったことは何でしたか。'],
+    ['T', '話し合いをさせても、決まった子しか発言しないことでした。', { c1: '決まった子しか発言しない', c2: '発言者の固定化', c3: '参加の偏り／発言機会の不均衡', c4: '話し合いにおける参加の偏りへの戸惑い', c5: '「決まった子」とはどんな子か' }],
+    ['T', '最初は、指名を増やせば変わると思って、順番に当てていました。', { c1: '指名を増やせば変わる／順番に当てる', c2: '教師主導の指名による均等化', c3: '形式的平等の志向', c4: '形式的な発言機会の配分による解決の試み', c5: '' }],
+    ['T', 'でも、当てられた子は教科書の言葉をそのまま読むだけで、話し合いにはなりませんでした。', { c1: '教科書の言葉をそのまま読むだけ／話し合いにはならない', c2: '借り物の言葉による応答／対話の不成立', c3: '発言の量と質の乖離', c4: '発言の「量」の確保と対話の「質」との乖離の気づき', c5: '子どもはなぜ教科書の言葉を選んだのか' }],
+    ['T', '先輩に相談したら、「まず隣の人と話す時間をとってみたら」と言われて。', { c1: '先輩に相談／まず隣の人と話す時間', c2: '同僚からの助言／小さな単位での対話', c3: '同僚性／足場かけ', c4: '同僚性を通じた授業改善の手がかりの獲得', c5: '' }],
+    ['T', 'ペアで話してから全体に戻すと、前よりいろんな子が手を挙げるようになりました。', {}],
+    ['T', '自分の考えを一度だれかに聞いてもらえると、安心して言えるみたいです。', {}],
+    ['I', '今はどんなことを大事にしていますか。'],
+    ['T', '全員に発言させることより、全員が考えを持てる時間をつくることを大事にしています。', {}],
+  ];
+  P = blank();
+  P.name = '記入例：初任教員の授業づくり（架空）';
+  P.rows = S.map(([sp, tx, c]) => row(sp, tx, c));
+  renderAll(); touch();
+  $('#loadMsg').textContent = '記入例を入れました（架空のデータです。2〜5行目にコーディングの例があります）';
+  showView('form');
+};
+
+/* ==========================================================================
+   分析フォーム
+   ========================================================================== */
+function renderRows() {
+  const tb = $('#rows');
+  tb.innerHTML = P.rows.map((r, i) => `
+    <tr data-id="${r.id}">
+      <td class="no">${i + 1}<div class="ops">
+        <button data-op="up" title="上へ">↑</button>
+        <button data-op="down" title="下へ">↓</button>
+        <button data-op="ins" title="下に行を挿入">＋</button>
+        <button data-op="split" title="テクストのカーソル位置で2行に分ける">分</button>
+        <button data-op="del" title="この行を削除">×</button>
+      </div></td>
+      <td class="sp"><textarea data-k="speaker" rows="1" aria-label="${i + 1}行目の発話者">${esc(r.speaker)}</textarea></td>
+      <td class="tx"><textarea data-k="text" rows="1" aria-label="${i + 1}行目のテクスト">${esc(r.text)}</textarea></td>
+      ${COLS.map((k, j) => `<td class="${k} col${j + 1}"><textarea data-k="${k}" rows="1" aria-label="${i + 1}行目の〈${j + 1}〉">${esc(r[k])}</textarea></td>`).join('')}
+    </tr>`).join('');
+  $('#formEmpty').style.display = P.rows.length ? 'none' : 'block';
+  requestAnimationFrame(() => $$('#rows textarea').forEach(grow));
+  renderProgress();
+}
+function grow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+function rowOf(el) { const tr = el.closest('tr'); return tr && P.rows.find(r => r.id === +tr.dataset.id); }
+
+$('#rows').addEventListener('input', e => {
+  const t = e.target; if (t.tagName !== 'TEXTAREA') return;
+  const r = rowOf(t); if (!r) return;
+  r[t.dataset.k] = t.value;
+  grow(t);
+  // 同じ行の高さをそろえる
+  renderProgress(); touch();
+});
+$('#rows').addEventListener('click', e => {
+  const b = e.target.closest('button[data-op]'); if (!b) return;
+  const r = rowOf(b); const i = P.rows.indexOf(r);
+  const op = b.dataset.op;
+  if (op === 'up' && i > 0) [P.rows[i - 1], P.rows[i]] = [P.rows[i], P.rows[i - 1]];
+  else if (op === 'down' && i < P.rows.length - 1) [P.rows[i + 1], P.rows[i]] = [P.rows[i], P.rows[i + 1]];
+  else if (op === 'ins') P.rows.splice(i + 1, 0, row(r.speaker, ''));
+  else if (op === 'split') {
+    const ta = b.closest('tr').querySelector('textarea[data-k=text]');
+    const pos = lastCaret.id === r.id ? lastCaret.pos : -1;
+    if (pos <= 0 || pos >= r.text.length) { toast('テクスト欄で、分けたい位置にカーソルを置いてから押してください', true); return; }
+    const rest = r.text.slice(pos).trim();
+    r.text = r.text.slice(0, pos).trim();
+    P.rows.splice(i + 1, 0, row(r.speaker, rest));
+  } else if (op === 'del') {
+    if (COLS.some(k => r[k].trim()) && !confirm(`${i + 1}行目にはコーディングが書かれています。削除しますか？`)) return;
+    P.rows.splice(i, 1);
+  } else return;
+  renderAll(); touch();
+});
+const lastCaret = { id: 0, pos: -1 };
+$('#rows').addEventListener('keyup', trackCaret);
+$('#rows').addEventListener('mouseup', trackCaret);
+function trackCaret(e) {
+  const t = e.target;
+  if (t.tagName !== 'TEXTAREA' || t.dataset.k !== 'text') return;
+  const r = rowOf(t);
+  lastCaret.id = r.id; lastCaret.pos = t.selectionStart;
+  // 選んだ語句を〈1〉へ写すボタン
+  const sel = t.value.slice(t.selectionStart, t.selectionEnd).trim();
+  const pick = $('#pick');
+  if (sel && e.type === 'mouseup') {
+    pick.style.display = 'inline-flex';
+    pick.style.left = (e.pageX + 8) + 'px';
+    pick.style.top = (e.pageY + 12) + 'px';
+    pick.onclick = () => {
+      r.c1 = r.c1.trim() ? r.c1.replace(/\s+$/, '') + '／' + sel : sel;
+      const ta = document.querySelector(`tr[data-id="${r.id}"] textarea[data-k=c1]`);
+      ta.value = r.c1; grow(ta);
+      pick.style.display = 'none';
+      renderProgress(); touch();
+    };
+  } else pick.style.display = 'none';
+}
+document.addEventListener('mousedown', e => { if (e.target.id !== 'pick' && !e.target.closest('td.tx')) $('#pick').style.display = 'none'; });
+
+$('#btnAddRow').onclick = () => { P.rows.push(row('', '')); renderAll(); touch(); };
+$('#stepSel').onchange = e => { $('#scat').dataset.step = e.target.value; };
+
+function renderProgress() {
+  const n = P.rows.length;
+  COLS.forEach((k, j) => {
+    const f = P.rows.filter(r => r[k].trim()).length;
+    $('#p' + (j + 1)).textContent = n ? `${f} / ${n} 行` : '';
+  });
+  $('#cntRows').textContent = n ? n : '';
+  const c4 = P.rows.filter(r => r.c4.trim()).length;
+  $('#progress').textContent = n ? `${n} 行 ／〈4〉を書いた行 ${c4}` : '';
+}
+
+function jumpToRow(no) {
+  showView('form');
+  const tr = $$('#rows tr')[no - 1]; if (!tr) return;
+  $('#v-form').scrollIntoView({ block: 'start' });
+  tr.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  tr.classList.add('hit');
+  setTimeout(() => tr.classList.remove('hit'), 1800);
+  const ta = tr.querySelector('textarea[data-k=c4]');
+  if (ta) ta.focus({ preventScroll: true });
+}
+
+/* ==========================================================================
+   テーマ・構成概念
+   ========================================================================== */
+function delimRegex() {
+  const d = $$('.delim:checked').map(x => x.value);
+  const parts = [];
+  if (d.includes('nl')) parts.push('\\n');
+  if (d.includes('、')) parts.push('、');
+  if (d.includes(',')) parts.push(',', '，');
+  if (d.includes('/')) parts.push('/', '／');
+  if (d.includes('・')) parts.push('・');
+  return parts.length ? new RegExp('[' + parts.join('') + ']') : null;
+}
+function themes() {
+  const re = delimRegex();
+  const map = new Map();
+  P.rows.forEach((r, i) => {
+    const items = (re ? r.c4.split(re) : [r.c4]).map(s => s.trim()).filter(Boolean);
+    items.forEach(t => {
+      if (!map.has(t)) map.set(t, []);
+      if (!map.get(t).includes(i + 1)) map.get(t).push(i + 1);
+    });
+  });
+  return [...map.entries()].map(([name, rows]) => ({ name, rows }));
+}
+const used = name => P.storyline.includes(name);
+
+function renderThemes() {
+  const T = themes();
+  $('#cntThemes').textContent = T.length ? T.length : '';
+  $('#themeRows').innerHTML = T.map((t, i) => `<tr>
+    <td class="num">${i + 1}</td><td>${esc(t.name)}</td>
+    <td>${t.rows.map(n => `<button class="rowlink" data-row="${n}">${n}</button>`).join(' ')}</td>
+    <td>${used(t.name) ? '<span class="tag ok">使っている</span>' : '<span class="tag no">まだ使っていない</span>'}</td></tr>`).join('');
+  $('#themeEmpty').style.display = T.length ? 'none' : 'block';
+
+  const I = P.rows.map((r, i) => ({ n: i + 1, v: r.c5.trim() })).filter(x => x.v);
+  $('#issueRows').innerHTML = I.map(x => `<tr><td class="num"><button class="rowlink" data-row="${x.n}">${x.n}</button></td><td>${esc(x.v)}</td></tr>`).join('');
+  $('#issueEmpty').style.display = I.length ? 'none' : 'block';
+}
+$('#v-themes').addEventListener('click', e => { const b = e.target.closest('.rowlink'); if (b) jumpToRow(+b.dataset.row); });
+$$('.delim').forEach(c => c.onchange = () => { renderThemes(); renderStory(); });
+
+/* ==========================================================================
+   ストーリー・ライン
+   ========================================================================== */
+function renderStory() {
+  const T = themes();
+  const u = T.filter(t => used(t.name)).length;
+  $('#useMeter').style.width = T.length ? (u / T.length * 100) + '%' : '0';
+  $('#useMsg').textContent = T.length ? `${T.length} 個のうち ${u} 個を使っています` : '〈4〉がまだ書かれていません';
+  $('#chips').innerHTML = T.map(t => `<button class="chip ${used(t.name) ? 'used' : 'unused'}" data-name="${esc(t.name)}" title="行 ${t.rows.join(', ')}">${esc(t.name)}</button>`).join('');
+  $('#storyPreview').innerHTML = highlight(P.storyline, T) || '<span class="hint">まだ書かれていません</span>';
+  $('#storyRef').innerHTML = highlight(P.storyline, T) || '<span class="hint">まだ書かれていません</span>';
+}
+function highlight(text, T) {
+  if (!text.trim()) return '';
+  const names = T.map(t => t.name).filter(n => text.includes(n)).sort((a, b) => b.length - a.length);
+  if (!names.length) return esc(text);
+  const re = new RegExp(names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g');
+  let out = '', last = 0, m;
+  while ((m = re.exec(text))) { out += esc(text.slice(last, m.index)) + '<u>' + esc(m[0]) + '</u>'; last = m.index + m[0].length; }
+  return out + esc(text.slice(last));
+}
+$('#storyline').addEventListener('input', e => { P.storyline = e.target.value; renderStory(); touch(); });
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  const ta = $('#storyline');
+  const s = ta.selectionStart, en = ta.selectionEnd;
+  ta.value = ta.value.slice(0, s) + b.dataset.name + ta.value.slice(en);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = s + b.dataset.name.length;
+  P.storyline = ta.value; renderStory(); touch();
+});
+
+/* ==========================================================================
+   理論記述
+   ========================================================================== */
+function renderTheory() {
+  const lines = P.theory.split('\n').map(s => s.trim()).filter(Boolean);
+  $('#theoryPreview').innerHTML = lines.length ? lines.map(l => `<li>${esc(l.replace(/^[・\-\d０-９.)．）]+\s*/, ''))}</li>`).join('') : '<li class="hint" style="list-style:none">まだ書かれていません</li>';
+}
+$('#theory').addEventListener('input', e => { P.theory = e.target.value; renderTheory(); touch(); });
+$('#issues').addEventListener('input', e => { P.issues = e.target.value; touch(); });
+$('#btnSplitStory').onclick = () => {
+  const sents = P.storyline.split(/(?<=[。．！？])/).map(s => s.trim()).filter(Boolean);
+  if (!sents.length) { toast('ストーリー・ラインがまだ書かれていません', true); return; }
+  P.theory = (P.theory.trim() ? P.theory.replace(/\s+$/, '') + '\n' : '') + sents.join('\n');
+  $('#theory').value = P.theory; renderTheory(); touch();
+  toast('下書きにしました。一文ずつ、理論として言えることに書き直してください');
+};
+$('#btnPullIssues').onclick = () => {
+  const I = P.rows.map(r => r.c5.trim()).filter(Boolean);
+  if (!I.length) { toast('〈5〉疑問・課題がまだ書かれていません', true); return; }
+  P.issues = (P.issues.trim() ? P.issues.replace(/\s+$/, '') + '\n' : '') + I.map(s => '・' + s).join('\n');
+  $('#issues').value = P.issues; touch();
+};
+
+/* ==========================================================================
+   書き出し
+   ========================================================================== */
+const csvCell = v => /[",\r\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+function toCSV() {
+  const L = [];
+  if (P.name) L.push([P.name]);
+  L.push(['番号', '発話者', 'テクスト', '<1>テクスト中の注目すべき語句', '<2>テクスト中の語句の言いかえ', '<3>左を説明するようなテクスト外の概念', '<4>テーマ・構成概念（前後や全体の文脈を考慮して）', '<5>疑問・課題']);
+  P.rows.forEach((r, i) => L.push([i + 1, r.speaker, r.text, r.c1, r.c2, r.c3, r.c4, r.c5]));
+  L.push([]);
+  L.push(['ストーリー・ライン', P.storyline]);
+  L.push(['理論記述', P.theory]);
+  L.push(['さらに追究すべき点・課題', P.issues]);
+  return '﻿' + L.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+function toMarkdown() {
+  const cell = s => String(s || '').replace(/\|/g, '｜').replace(/\r?\n/g, '<br>');
+  const T = themes();
+  const L = [];
+  L.push(`# ${P.name || 'SCAT による分析'}`, '');
+  L.push('## 分析フォーム', '');
+  L.push('| 番号 | 発話者 | テクスト | 〈1〉テクスト中の注目すべき語句 | 〈2〉テクスト中の語句の言いかえ | 〈3〉左を説明するようなテクスト外の概念 | 〈4〉テーマ・構成概念 | 〈5〉疑問・課題 |');
+  L.push('|---|---|---|---|---|---|---|---|');
+  P.rows.forEach((r, i) => L.push(`| ${i + 1} | ${cell(r.speaker)} | ${cell(r.text)} | ${cell(r.c1)} | ${cell(r.c2)} | ${cell(r.c3)} | ${cell(r.c4)} | ${cell(r.c5)} |`));
+  L.push('', '## テーマ・構成概念', '');
+  T.forEach(t => L.push(`- ${t.name}（行 ${t.rows.join(', ')}）${used(t.name) ? '' : ' ※ストーリー・ラインで未使用'}`));
+  L.push('', '## ストーリー・ライン', '', P.storyline || '（未記入）');
+  L.push('', '## 理論記述', '');
+  const th = P.theory.split('\n').map(s => s.trim()).filter(Boolean);
+  L.push(th.length ? th.map(s => '- ' + s.replace(/^[・\-]\s*/, '')).join('\n') : '（未記入）');
+  L.push('', '## さらに追究すべき点・課題', '', P.issues || '（未記入）', '');
+  return L.join('\n');
+}
+function methodText() {
+  const n = P.rows.length;
+  const T = themes().length;
+  const speakers = [...new Set(P.rows.map(r => r.speaker.trim()).filter(Boolean))];
+  return `分析には、大谷（2008, 2011）が開発した質的データ分析手法 SCAT（Steps for Coding and Theorization）を用いた。` +
+    `データを ${n} のセグメントに分けて分析フォームに記入し${speakers.length ? `（発話者：${speakers.join('、')}）` : ''}、` +
+    `各セグメントについて〈1〉テクスト中の注目すべき語句、〈2〉それを言いかえるテクスト外の語句、〈3〉それを説明するようなテクスト外の概念、〈4〉そこから浮かび上がるテーマ・構成概念の順にコードを付した。` +
+    `得られた ${T} のテーマ・構成概念を紡いでストーリー・ラインを記述し、そこから理論記述を行った。\n\n` +
+    `【文献】\n大谷尚（2008）4ステップコーディングによる質的データ分析手法SCATの提案―着手しやすく小規模データにも適用可能な理論化の手続き―．名古屋大学大学院教育発達科学研究科紀要（教育科学），54(2)，27-44．\n` +
+    `大谷尚（2011）SCAT: Steps for Coding and Theorization―明示的手続きで着手しやすく小規模データに適用可能な質的データ分析手法―．感性工学，10(3)，155-160．`;
+}
+function renderExport() {
+  $('#methodText').textContent = methodText();
+  const T = themes();
+  const n = P.rows.length;
+  const f = k => P.rows.filter(r => r[k].trim()).length;
+  const th = P.theory.split('\n').filter(s => s.trim()).length;
+  $('#summary').innerHTML = [
+    ['セグメント（行）', n],
+    ['〈1〉を書いた行', f('c1')], ['〈2〉を書いた行', f('c2')], ['〈3〉を書いた行', f('c3')], ['〈4〉を書いた行', f('c4')],
+    ['テーマ・構成概念', T.length],
+    ['ストーリー・ラインで使った概念', T.filter(t => used(t.name)).length],
+    ['理論記述', th + ' 項目'],
+    ['最終更新', P.updated ? new Date(P.updated).toLocaleString('ja-JP') : '—'],
+  ].map(([k, v]) => `<tr><td>${k}</td><td class="num" style="text-align:right">${v}</td></tr>`).join('');
+}
+$('#btnCsv').onclick = () => { if (!P.rows.length) return toast('分析フォームが空です', true); download(baseName() + '_SCAT.csv', toCSV(), 'text/csv;charset=utf-8'); };
+$('#btnMd').onclick = () => download(baseName() + '_SCAT.md', toMarkdown(), 'text/markdown;charset=utf-8');
+$('#btnJson').onclick = $('#btnSave').onclick = () => { P.name = $('#projName').value.trim(); download(baseName() + '.scat.json', JSON.stringify(P, null, 1), 'application/json'); touch(); };
+$('#btnCopyMethod').onclick = async () => {
+  try { await navigator.clipboard.writeText(methodText()); toast('コピーしました'); }
+  catch (e) { toast('コピーできませんでした。文章を選んでコピーしてください', true); }
+};
+$('#btnPrint').onclick = () => {
+  const cell = s => esc(s || '');
+  const th = P.theory.split('\n').map(s => s.trim()).filter(Boolean);
+  $('#printArea').innerHTML = `<h1>${cell(P.name || 'SCAT による分析')}</h1>
+    <table><colgroup><col style="width:4%"><col style="width:6%"><col style="width:22%"><col><col><col><col><col style="width:11%"></colgroup>
+    <thead><tr><th>番号</th><th>発話者</th><th>テクスト</th><th>〈1〉テクスト中の注目すべき語句</th><th>〈2〉テクスト中の語句の言いかえ</th><th>〈3〉左を説明するようなテクスト外の概念</th><th>〈4〉テーマ・構成概念</th><th>〈5〉疑問・課題</th></tr></thead>
+    <tbody>${P.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${cell(r.speaker)}</td><td>${cell(r.text)}</td><td>${cell(r.c1)}</td><td>${cell(r.c2)}</td><td>${cell(r.c3)}</td><td>${cell(r.c4)}</td><td>${cell(r.c5)}</td></tr>`).join('')}</tbody></table>
+    <h2>ストーリー・ライン</h2><p>${cell(P.storyline)}</p>
+    <h2>理論記述</h2>${th.map(s => `<p>・${cell(s.replace(/^[・\-]\s*/, ''))}</p>`).join('')}
+    <h2>さらに追究すべき点・課題</h2><p>${cell(P.issues)}</p>`;
+  window.print();
+};
+
+$('#btnOpen').onclick = () => $('#fileProject').click();
+$('#fileProject').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const obj = JSON.parse(await f.text());
+    if (P.rows.length && !confirm('いまの分析を、開いたファイルの内容で置き換えますか？')) return;
+    loadProject(obj); touch(); toast(`${f.name} を開きました`);
+  } catch (err) { toast('開けませんでした：' + err.message, true); }
+};
+$('#projName').addEventListener('input', e => { P.name = e.target.value; touch(); });
+$('#autosave').onchange = e => { if (e.target.checked) touch(); else { try { localStorage.removeItem(KEY); } catch (err) { /* 無視 */ } } };
+
+/* ==========================================================================
+   画面の切り替え
+   ========================================================================== */
+function showView(id) {
+  $$('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view === id));
+  $$('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + id));
+  if (id === 'themes') renderThemes();
+  if (id === 'story') renderStory();
+  if (id === 'theory') { renderTheory(); renderStory(); }
+  if (id === 'export') renderExport();
+  if (id === 'form') requestAnimationFrame(() => $$('#rows textarea').forEach(grow));
+  window.scrollTo({ top: 0 });
+}
+$$('.tab').forEach(t => t.onclick = () => showView(t.dataset.view));
+
+function renderAll() {
+  $('#projName').value = P.name || '';
+  $('#storyline').value = P.storyline || '';
+  $('#theory').value = P.theory || '';
+  $('#issues').value = P.issues || '';
+  renderRows(); renderThemes(); renderStory(); renderTheory(); renderExport();
+}
+
+/* 起動：前回の自動保存を戻す */
+try {
+  const saved = localStorage.getItem(KEY);
+  if (saved) { loadProject(JSON.parse(saved)); toast('前回の分析を戻しました'); }
+  else renderAll();
+} catch (e) { renderAll(); }
+</script>
+</body>
+</html>
