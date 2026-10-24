@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ブートストラップ解析 — データ分析ラボ</title>
-<meta name="description" content="データを復元抽出で繰り返し、平均値・中央値・標準偏差の信頼区間を経験的に求める。">
+<meta name="description" content="データを復元抽出で繰り返し、平均値・中央値・標準偏差・相関係数の信頼区間を経験的に求める。">
 <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -21,7 +21,7 @@
       <a class="chip" href="../../#synthesis"><i></i>推定を統合する</a>
       <h1>ブートストラップ解析</h1>
       <p class="en">Bootstrap Resampling</p>
-      <p class="lead">データを復元抽出で繰り返し、平均値・中央値・標準偏差の信頼区間を経験的に求める。</p>
+      <p class="lead">データを復元抽出で繰り返し、平均値・中央値・標準偏差・相関係数の信頼区間を経験的に求める。</p>
       <div class="actions">
         <a class="btn primary" href="app.html">ツールを開く <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         
@@ -32,11 +32,11 @@
     <article>
       <section>
         <h2><span class="n">01</span>概要</h2>
-        <p>データから復元抽出を何千回も繰り返し、統計量の分布から信頼区間（パーセンタイル法）を求めます。1群の推定と2群の差に対応し、結果の読み方、論文の記述例、JASP の R コンソール用コードを出します。</p>
+        <p>データから復元抽出を何千回も繰り返し、統計量の分布から信頼区間（パーセンタイル法）を求めます。1群の推定、2群の差、2つの変数の相関係数に対応し、結果の読み方、論文の記述例、JASP の R コンソール用コードを出します。</p>
       </section>
       <section>
         <h2><span class="n">02</span>できること</h2>
-        <ul><li>1群の推定／2群の差</li><li>統計量：平均値・中央値・標準偏差</li><li>再標本化の回数（1,000〜50,000）と信頼水準（90・95・99%）</li><li>結果の読み方、方法・結果の記述例、R コード</li></ul>
+        <ul><li>1群の推定／2群の差／相関係数</li><li>統計量：平均値・中央値・標準偏差（2群の差は平均値・中央値）、ピアソンの相関係数</li><li>再標本化の回数（1,000〜50,000）と信頼水準（90・95・99%）</li><li>結果の読み方、方法・結果の記述例、R コード</li></ul>
       </section>
       <section>
         <h2><span class="n">03</span>使い方</h2>
@@ -44,7 +44,7 @@
       </section>
       <section>
         <h2><span class="n">04</span>読み込めるデータ</h2>
-        <p>CSV または貼り付け（先頭行を列名にできる）。2群の差では各群を別の列に。</p>
+        <p>CSV または貼り付け（先頭行を列名にできる）。2群の差では各群を別の列に。相関係数では、X と Y を別の列に（1行が1人分）。</p>
       </section>
       <section>
         <h2><span class="n">05</span>書き出せるもの</h2>

@@ -77,7 +77,7 @@ https://k518-2026.github.io/AnalysisLabs/
 
 | ツール | できること |
 |---|---|
-| [ブートストラップ解析](https://k518-2026.github.io/AnalysisLabs/tools/bootstrap/) | データを復元抽出で繰り返し、平均値・中央値・標準偏差の信頼区間を経験的に求める。 |
+| [ブートストラップ解析](https://k518-2026.github.io/AnalysisLabs/tools/bootstrap/) | データを復元抽出で繰り返し、平均値・中央値・標準偏差・相関係数の信頼区間を経験的に求める。 |
 | [メタ分析ラボ](https://k518-2026.github.io/AnalysisLabs/tools/meta-analysis/) | 複数の研究の効果量をそろえて統合し、森林プロット・異質性・出版バイアスを吟味する。 |
 
 ### データの準備

@@ -382,7 +382,7 @@ footer.site{
   <header class="site">
     <div>
       <h1 class="site-title">ブートストラップ解析装置<span class="unit">/ B‑resample</span></h1>
-      <p class="site-sub">データを復元抽出で繰り返し再標本化し、統計量の信頼区間を経験的に推定します。CSVのドラッグ&ドロップ、または貼り付けで開始できます。</p>
+      <p class="site-sub">データを復元抽出で繰り返し再標本化し、平均値・中央値・標準偏差・相関係数などの信頼区間を経験的に推定します。CSVのドラッグ&ドロップ、または貼り付けで開始できます。</p>
     </div>
     <div class="badge-row">
       <span class="badge">OFFLINE / 単一HTML</span>
@@ -436,6 +436,7 @@ footer.site{
           <div class="mode-toggle">
             <button type="button" id="modeSingleBtn" class="active" data-mode="single">1群の推定</button>
             <button type="button" id="modeDiffBtn" data-mode="diff">2群の差</button>
+            <button type="button" id="modeCorrBtn" data-mode="corr">相関係数</button>
           </div>
           <p class="help-text" id="modeHelp">1つの数値列について、統計量の信頼区間を推定します。</p>
 
@@ -455,6 +456,19 @@ footer.site{
               </div>
             </div>
             <p class="help-text">各群を別々の列に入力してください。行数（n）が異なっていても、空欄は無視して解析します。</p>
+          </div>
+          <div id="corrColWrap" class="hidden">
+            <div class="grid2">
+              <div>
+                <label class="field-label">変数 X の列</label>
+                <select id="colX"></select>
+              </div>
+              <div>
+                <label class="field-label">変数 Y の列</label>
+                <select id="colY"></select>
+              </div>
+            </div>
+            <p class="help-text">同じ行の2つの値を1組（ペア）として扱います。どちらかが空欄の行は除いて解析します。1行が1人分のデータになるように並べてください。</p>
           </div>
 
           <label class="field-label">統計量</label>
@@ -691,7 +705,35 @@ footer.site{
     return Math.sqrt(s/(n-1));
   }
   const STAT_FN = { mean: statMean, median: statMedian, sd: statSD };
-  const STAT_LABEL = { mean: '平均値', median: '中央値', sd: '標準偏差' };
+  const STAT_LABEL = { mean: '平均値', median: '中央値', sd: '標準偏差', pearson: 'ピアソンの相関係数' };
+
+  function statCorr(x, y){
+    const n = x.length;
+    if (n < 3) return NaN;
+    let mx = 0, my = 0;
+    for (let i=0;i<n;i++){ mx += x[i]; my += y[i]; }
+    mx /= n; my /= n;
+    let sxx = 0, syy = 0, sxy = 0;
+    for (let i=0;i<n;i++){
+      const dx = x[i]-mx, dy = y[i]-my;
+      sxx += dx*dx; syy += dy*dy; sxy += dx*dy;
+    }
+    const d = Math.sqrt(sxx*syy);
+    return d > 0 ? sxy/d : NaN;
+  }
+
+  /* 行（ペア）ごとに復元抽出する。XとYの組み合わせは崩さない */
+  function resamplePairs(x, y){
+    const n = x.length;
+    const rx = new Array(n), ry = new Array(n);
+    for (let i=0;i<n;i++){ const k = (Math.random()*n) | 0; rx[i] = x[k]; ry[i] = y[k]; }
+    return [rx, ry];
+  }
+
+  function numOrNaN(s){
+    if (s === '' || s === null || s === undefined) return NaN;
+    return Number(String(s).replace(/,/g,''));
+  }
 
   function resampleArray(data){
     const n = data.length;
@@ -814,27 +856,40 @@ footer.site{
     $('colSingle').innerHTML = opts || '<option value="">数値列が見つかりません</option>';
     $('colA').innerHTML = opts || '<option value="">数値列が見つかりません</option>';
     $('colB').innerHTML = opts || '<option value="">数値列が見つかりません</option>';
-    if (names.length > 1) $('colB').selectedIndex = 1;
+    $('colX').innerHTML = opts || '<option value="">数値列が見つかりません</option>';
+    $('colY').innerHTML = opts || '<option value="">数値列が見つかりません</option>';
+    if (names.length > 1){ $('colB').selectedIndex = 1; $('colY').selectedIndex = 1; }
   }
 
   /* ===================== 解析設定 UI ===================== */
   $('modeSingleBtn').addEventListener('click', () => setMode('single'));
   $('modeDiffBtn').addEventListener('click', () => setMode('diff'));
+  $('modeCorrBtn').addEventListener('click', () => setMode('corr'));
   function setMode(mode){
     state.mode = mode;
     $('modeSingleBtn').classList.toggle('active', mode==='single');
     $('modeDiffBtn').classList.toggle('active', mode==='diff');
+    $('modeCorrBtn').classList.toggle('active', mode==='corr');
     $('singleColWrap').classList.toggle('hidden', mode!=='single');
     $('diffColWrap').classList.toggle('hidden', mode!=='diff');
+    $('corrColWrap').classList.toggle('hidden', mode!=='corr');
     $('modeHelp').textContent = mode==='single'
       ? '1つの数値列について、統計量の信頼区間を推定します。'
-      : '2つの独立した群（列）について、統計量の差の信頼区間を推定します（群A − 群B）。';
+      : mode==='diff'
+        ? '2つの独立した群（列）について、統計量の差の信頼区間を推定します（群A − 群B）。'
+        : '2つの数値列（X と Y）について、同じ行をペアとして引き直し、ピアソンの相関係数の信頼区間を推定します。';
     const statSelect = $('statSelect');
     const cur = state.stat;
-    statSelect.innerHTML = mode==='single'
-      ? '<option value="mean">平均値</option><option value="median">中央値</option><option value="sd">標準偏差</option>'
-      : '<option value="mean">平均値の差（A−B）</option><option value="median">中央値の差（A−B）</option>';
-    statSelect.value = ['mean','median'].includes(cur) ? cur : 'mean';
+    if (mode === 'single'){
+      statSelect.innerHTML = '<option value="mean">平均値</option><option value="median">中央値</option><option value="sd">標準偏差</option>';
+      statSelect.value = ['mean','median','sd'].includes(cur) ? cur : 'mean';
+    } else if (mode === 'diff'){
+      statSelect.innerHTML = '<option value="mean">平均値の差（A−B）</option><option value="median">中央値の差（A−B）</option>';
+      statSelect.value = ['mean','median'].includes(cur) ? cur : 'mean';
+    } else {
+      statSelect.innerHTML = '<option value="pearson">ピアソンの相関係数 r</option>';
+      statSelect.value = 'pearson';
+    }
     state.stat = statSelect.value;
   }
   $('statSelect').addEventListener('change', e => state.stat = e.target.value);
@@ -869,6 +924,17 @@ footer.site{
       const data = state.numericColumns[name];
       if (!data || data.length < 2) return null;
       return { type:'single', name, data };
+    } else if (state.mode === 'corr'){
+      const nameX = $('colX').value, nameY = $('colY').value;
+      const sx = state.columns[nameX], sy = state.columns[nameY];
+      if (!sx || !sy || nameX === nameY) return null;
+      const x = [], y = [];
+      for (let r=0; r<Math.min(sx.length, sy.length); r++){
+        const a = numOrNaN(sx[r]), b = numOrNaN(sy[r]);
+        if (Number.isFinite(a) && Number.isFinite(b)){ x.push(a); y.push(b); }
+      }
+      if (x.length < 3 || !Number.isFinite(statCorr(x, y))) return null;
+      return { type:'corr', nameX, nameY, x, y };
     } else {
       const nameA = $('colA').value, nameB = $('colB').value;
       const a = state.numericColumns[nameA], b = state.numericColumns[nameB];
@@ -881,7 +947,9 @@ footer.site{
     if (state.running) return;
     const sel = getSelectedData();
     if (!sel){
-      alert('有効な数値列を選択してください（各群 n≥2 が必要です）。');
+      alert(state.mode === 'corr'
+        ? '相関係数には、異なる2つの数値列が必要です（有効な行が3組以上で、どちらの列も値がすべて同じではないこと）。'
+        : '有効な数値列を選択してください（各群 n≥2 が必要です）。');
       return;
     }
     const B = state.B;
@@ -903,7 +971,9 @@ footer.site{
     const chunk = Math.max(200, Math.floor(B/80));
 
     function pointEstimate(){
-      return sel.type === 'single' ? statFn(sel.data) : (statFn(sel.a) - statFn(sel.b));
+      if (sel.type === 'single') return statFn(sel.data);
+      if (sel.type === 'corr') return statCorr(sel.x, sel.y);
+      return statFn(sel.a) - statFn(sel.b);
     }
 
     function step(){
@@ -911,6 +981,15 @@ footer.site{
       for (; i < end; i++){
         if (sel.type === 'single'){
           results[i] = statFn(resampleArray(sel.data));
+        } else if (sel.type === 'corr'){
+          /* まれに引き直した結果の片方が全部同じ値になり r が定義できないので、引き直しをやり直す */
+          let v = NaN, tries = 0;
+          while (!Number.isFinite(v) && tries < 50){
+            const p = resamplePairs(sel.x, sel.y);
+            v = statCorr(p[0], p[1]);
+            tries++;
+          }
+          results[i] = v;
         } else {
           results[i] = statFn(resampleArray(sel.a)) - statFn(resampleArray(sel.b));
         }
@@ -952,12 +1031,14 @@ footer.site{
     const bootMean = statMean(results);
     const bootSE = statSD(results);
     const bias = bootMean - pointEst;
-    const crossesZero = (sel.type === 'diff') ? (lo <= 0 && hi >= 0) : null;
+    const crossesZero = (sel.type !== 'single') ? (lo <= 0 && hi >= 0) : null;
 
     // --- 統計サマリー表示 ---
     const statLabel = sel.type === 'single'
       ? STAT_LABEL[state.stat] + '（' + sel.name + '）'
-      : STAT_LABEL[state.stat] + '（' + sel.nameA + ' − ' + sel.nameB + '）';
+      : sel.type === 'corr'
+        ? STAT_LABEL[state.stat] + '（' + sel.nameX + ' と ' + sel.nameY + '）'
+        : STAT_LABEL[state.stat] + '（' + sel.nameA + ' − ' + sel.nameB + '）';
 
     const grid = $('statGrid');
     grid.innerHTML =
@@ -968,13 +1049,17 @@ footer.site{
       cell(Math.round(state.ciLevel*100)+'% CI 下限', fmt(lo), true) +
       cell(Math.round(state.ciLevel*100)+'% CI 上限', fmt(hi), true) +
       cell('反復回数 B', fmtInt(B), false) +
-      cell('標本サイズ', sel.type==='single' ? ('n='+sel.data.length) : ('nA='+sel.a.length+', nB='+sel.b.length), false);
+      cell('標本サイズ', sel.type==='single' ? ('n='+sel.data.length) : sel.type==='corr' ? ('n='+sel.x.length+'（ペア数）') : ('nA='+sel.a.length+', nB='+sel.b.length), false);
     function cell(k,v,accent){ return '<div class="stat-cell'+(accent?' accent':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
 
-    drawHistogram(results, lo, hi, pointEst, true, sel.type==='diff');
+    drawHistogram(results, lo, hi, pointEst, true, sel.type!=='single');
 
     const noticeWrap = $('ciNoticeWrap');
-    if (sel.type === 'diff'){
+    if (sel.type === 'corr'){
+      noticeWrap.innerHTML = crossesZero
+        ? '<div class="notice warn">信頼区間は 0 をまたいでいます。XとYの間に相関があるとは言い切れません（相関なし、と矛盾しない結果です）。</div>'
+        : '<div class="notice sig">信頼区間は 0 を含んでいません。データ上、相関が0であるとは考えにくいことを示唆します。ただし、相関があることは原因と結果の関係を意味しません。</div>';
+    } else if (sel.type === 'diff'){
       noticeWrap.innerHTML = crossesZero
         ? '<div class="notice warn">信頼区間は 0 をまたいでいます。2群の差が0でないとは言い切れません（帰無仮説「差なし」と矛盾しない結果です）。</div>'
         : '<div class="notice sig">信頼区間は 0 を含んでいません。データ上、差が0であるとは考えにくいことを示唆します（有意水準 '+((1-state.ciLevel)*100).toFixed(0)+'% 相当の目安）。</div>';
@@ -998,6 +1083,7 @@ footer.site{
  /* ===================== Rコード動的生成 ===================== */
   function renderRCode(sel, B) {
     const isDiff = (sel.type === 'diff');
+    const isCorr = (sel.type === 'corr');
     const alpha = 1 - state.ciLevel;
     const loProb = (alpha / 2).toFixed(3);
     const hiProb = (1 - alpha / 2).toFixed(3);
@@ -1008,7 +1094,20 @@ footer.site{
     code += `set.seed(123) # 再現性を確保するためのシード値\n`;
     code += `B <- ${B}       # リサンプリング回数\n\n`;
 
-    if (!isDiff) {
+    if (isCorr) {
+      code += `# --- データ定義 (アプリから自動生成) ---\n`;
+      code += `x <- c(${sel.x.join(', ')})\n`;
+      code += `y <- c(${sel.y.join(', ')})\n`;
+      code += `n <- length(x)\n\n`;
+      code += `# --- リサンプリングの実行（行＝ペアごとに引き直す） ---\n`;
+      code += `results <- numeric(B)\n`;
+      code += `for (i in 1:B) {\n`;
+      code += `  idx <- sample(n, size = n, replace = TRUE)\n`;
+      code += `  results[i] <- cor(x[idx], y[idx])\n`;
+      code += `}\n\n`;
+      code += `# --- 点推定値の計算 ---\n`;
+      code += `point_est <- cor(x, y)\n`;
+    } else if (!isDiff) {
       code += `# --- データ定義 (アプリから自動生成) ---\n`;
       code += `target <- c(${sel.data.join(', ')})\n`;
       code += `n <- length(target)\n\n`;
@@ -1155,10 +1254,11 @@ footer.site{
   function renderInterpretation(sel, pointEst, se, bias, lo, hi, B, crossesZero){
     const level = Math.round(state.ciLevel*100);
     const isDiff = sel.type === 'diff';
+    const isCorr = sel.type === 'corr';
     let html = '';
 
     html += '<h4>この結果が意味すること</h4>';
-    html += '<p>手元のデータから重複を許して同じ大きさの標本を' + fmtInt(B) + '回作り直し（復元抽出）、その都度' + (isDiff ? '2群の統計量の差' : '統計量') + 'を計算しました。この' + fmtInt(B) + '個の値の集まりが「ブートストラップ分布」で、上のヒストグラムがその形です。分布の中央' + level + '%にあたる範囲（パーセンタイル法）を信頼区間としています。</p>';
+    html += '<p>手元のデータから重複を許して同じ大きさの標本を' + fmtInt(B) + '回作り直し（復元抽出）、その都度' + (isCorr ? '相関係数' : isDiff ? '2群の統計量の差' : '統計量') + 'を計算しました。' + (isCorr ? 'X と Y の値は、同じ行どうしをペアのまま引き直しています（1行＝1人分）。' : '') + 'この' + fmtInt(B) + '個の値の集まりが「ブートストラップ分布」で、上のヒストグラムがその形です。分布の中央' + level + '%にあたる範囲（パーセンタイル法）を信頼区間としています。</p>';
 
     html += '<h4>点推定値・SE・信頼区間の読み方</h4>';
     html += '<ul>';
@@ -1171,6 +1271,16 @@ footer.site{
     if (isDiff){
       html += '<h4>2群の差について</h4>';
       html += '<p>信頼区間が0を' + (crossesZero ? 'またいでいるため、2群の差が0ではないと積極的には言えません。' : 'またいでいないため、2群の差は0ではなさそうだと示唆されます。') + 'ただし、これは有意性検定そのものではなく、あくまで信頼区間に基づく目安である点に留意してください。</p>';
+    }
+
+    if (isCorr){
+      html += '<h4>相関係数について</h4>';
+      html += '<p>信頼区間が0を' + (crossesZero ? 'またいでいるため、相関があるとは積極的には言えません。' : 'またいでいないため、相関はなさそうではない（0ではなさそうだ）と示唆されます。') + '区間の幅が広いときは、相関の強さを決めきれていないということです。人数が少ないほど、幅は広くなります。</p>';
+      html += '<ul>';
+      html += '<li>相関係数は、2つの変数の<b>直線的な関係</b>の強さを表します。曲線的な関係は捉えられません。</li>';
+      html += '<li>少数の外れ値が、相関係数を大きく動かすことがあります。散布図で確かめてください。</li>';
+      html += '<li>相関があっても、一方が原因でもう一方が結果だとは言えません。第三の変数が両方に影響しているかもしれません。</li>';
+      html += '</ul>';
     }
 
     html += '<h4>注意点・限界</h4>';
@@ -1186,13 +1296,18 @@ footer.site{
   function renderWriteup(sel, statLabel, pointEst, se, lo, hi, B, crossesZero){
     const level = Math.round(state.ciLevel*100);
     const isDiff = sel.type === 'diff';
+    const isCorr = sel.type === 'corr';
 
-    const methods = isDiff
+    const methods = isCorr
+      ? ('統計解析にはノンパラメトリック・ブートストラップ法を用いた。' + escapeHTML(sel.nameX) + 'と' + escapeHTML(sel.nameY) + 'の組（n = ' + sel.x.length + '）を行ごとに復元抽出して同サイズの標本を生成し、ピアソンの相関係数を算出する試行を B = ' + fmtInt(B) + ' 回繰り返すことで、相関係数のブートストラップ分布を構築した。信頼区間はパーセンタイル法により算出した（信頼水準 ' + level + '%）。解析にはJavaScriptによる実装を用いた。')
+      : isDiff
       ? ('統計解析にはノンパラメトリック・ブートストラップ法を用いた。群A（' + escapeHTML(sel.nameA) + ', n = ' + sel.a.length + ')および群B（' + escapeHTML(sel.nameB) + ', n = ' + sel.b.length + '）それぞれから復元抽出により同サイズの標本を生成する操作を独立に行い、両群の' + STAT_LABEL[state.stat] + 'の差（A−B）を算出する試行を B = ' + fmtInt(B) + ' 回繰り返すことで、差のブートストラップ分布を構築した。信頼区間はパーセンタイル法により算出した（信頼水準 ' + level + '%）。解析にはJavaScriptによる実装を用いた。')
       : ('統計解析にはノンパラメトリック・ブートストラップ法を用いた。原データ（n = ' + sel.data.length + '）から同サイズの標本を復元抽出により生成する操作を B = ' + fmtInt(B) + ' 回繰り返し、各回で' + STAT_LABEL[state.stat] + 'を算出することでブートストラップ分布を構築した。信頼区間はパーセンタイル法により算出した（信頼水準 ' + level + '%）。解析にはJavaScriptによる実装を用いた。');
 
     let results;
-    if (isDiff){
+    if (isCorr){
+      results = (escapeHTML(sel.nameX) + 'と' + escapeHTML(sel.nameY) + 'のピアソンの相関係数についてブートストラップ法（B = ' + fmtInt(B) + '）を用いて' + level + '%信頼区間を算出したところ、r = ' + fmt(pointEst) + '（' + level + '% CI [' + fmt(lo) + ', ' + fmt(hi) + ']、ブートストラップSE = ' + fmt(se) + '）であった。信頼区間は0を' + (crossesZero ? '含んでいた。' : '含んでいなかった。'));
+    } else if (isDiff){
       results = (escapeHTML(sel.nameA) + 'と' + escapeHTML(sel.nameB) + 'の' + STAT_LABEL[state.stat].replace('（A−B）','') + 'についてブートストラップ法（B = ' + fmtInt(B) + '）を用いて' + level + '%信頼区間を算出したところ、差の点推定値は ' + fmt(pointEst) + '（' + level + '% CI [' + fmt(lo) + ', ' + fmt(hi) + ']、ブートストラップSE = ' + fmt(se) + '）であった。信頼区間は0を' + (crossesZero ? '含んでいた。' : '含んでいなかった。'));
     } else {
       results = (escapeHTML(sel.name) + 'の' + STAT_LABEL[state.stat] + 'についてブートストラップ法（B = ' + fmtInt(B) + '）を用いて' + level + '%信頼区間を推定したところ、[' + fmt(lo) + ', ' + fmt(hi) + ']であった（点推定値 = ' + fmt(pointEst) + '、ブートストラップSE = ' + fmt(se) + '）。');
