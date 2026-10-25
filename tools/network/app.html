@@ -925,7 +925,7 @@ function renderOverview(){
     ["ノード数（人数）", G.n, "人"],
     ["エッジ数（関係数）", G.m, "本"],
     ["密度", fmt(s.density), ""],
-    ["平均次数", fmt(s.avgDeg,2), ""],
+    [d?"平均次数（出る線の本数）":"平均次数", fmt(s.avgDeg,2), ""],
     ["連結成分の数", s.components, "個"],
     ["最大成分の大きさ", s.largest, "人"],
     ["孤立点", s.isolates, "人"],
@@ -1040,6 +1040,7 @@ function renderRead(){
   ${d?`<p class="body"><strong>相互性 ${fmt(s.reciprocity)}<\/strong>は、向けた関係が返ってきている割合です。${s.reciprocity<.3?"一方通行が目立ち、地位や人気の差が表れている可能性があります。":"多くの関係が双方向で、対等なやりとりが中心です。"}<\/p>`:""}
   ${s.assortativity!==null?`<p class="body"><strong>次数の同類性 ${fmt(s.assortativity)}<\/strong>。正なら「多くつながる人同士がつながる」（コア－周辺が明確）、負なら「多い人と少ない人がつながる」（ハブ＆スポーク型）傾向です。<\/p>`:""}
   ${(iso.length||peri.length)?`<div class="note warn"><b>周辺にいる人<\/b><br>${iso.length?`誰ともつながっていない：${iso.map(esc).join("、")}<br>`:""}${peri.length?`つながりが1人だけ：${peri.slice(0,12).map(esc).join("、")}${peri.length>12?" ほか":""}`:""}<br>実践場面では、この人たちへの働きかけが最も効果を持ちやすい部分です。<\/div>`:""}
+  ${d?`<div class="note"><b>向き合う関係の扱い<\/b><br>お互いに向け合った関係（A→B と B→A）は、固有ベクトル中心性・制約度・コミュニティ検出で「重み2の1本の線」として計算しています（Rコードも同じ）。1本（重み1）にまとめて計算すると、これらの値は変わります。<\/div>`:""}
   <div class="note"><b>解釈上の注意<\/b><br>中心性の値は、誰を調査対象に含めたか（境界設定）と、関係をどう尋ねたか（設問文）に強く依存します。回答漏れが1件あるだけで媒介中心性は大きく動くため、欠測の扱いを必ず明記してください。また、ネットワーク構造から因果を読み取ることはできません。<\/div>`;
   $("#tab-read").innerHTML=html;
 }
@@ -1053,7 +1054,7 @@ function renderPaper(){
 本研究では、${G.n}名を対象に${d?"「誰に相談するか」等の指名式":"相互の関係"}データを収集し、${dstr}${wstr}ネットワークとして分析した。分析には社会ネットワーク分析の標準的指標を用い、各行為者について次数中心性、媒介中心性、近接中心性、固有ベクトル中心性、およびクラスター係数を算出した。下位集団の検出にはモジュラリティ最大化に基づくLouvain法を用いた。${G.weighted?"最短経路の算出にあたっては、関係の強さの逆数を距離として扱った。":""}媒介中心性および近接中心性は、ネットワークサイズの影響を除くため標準化した値を用いた。
 
 【結果】
-分析対象ネットワークは${G.n}個のノードと${G.m}本のエッジから構成され、密度は${fmt(s.density)}、平均次数は${fmt(s.avgDeg,2)}であった。${s.components>1?`ネットワークは${s.components}個の連結成分に分かれており、最大成分は${s.largest}名（全体の${Math.round(s.largest/G.n*100)}%）を含んでいた。`:"ネットワーク全体は単一の連結成分を形成していた。"}最大成分における平均経路長は${fmt(s.avgPath,2)}、直径は${fmt(s.diameter,2)}であり、平均クラスター係数は${fmt(s.avgClustering)}（推移性${fmt(s.transitivity)}）であった。次数中心化は${fmt(s.centralization)}であり、${s.centralization>=.4?"一部の行為者に関係が集中する構造が示された":"関係は比較的均等に分布していた"}。${d?`関係の相互性は${fmt(s.reciprocity)}であった。`:""}
+分析対象ネットワークは${G.n}個のノードと${G.m}本のエッジから構成され、密度は${fmt(s.density)}、${d?"平均出次数":"平均次数"}は${fmt(s.avgDeg,2)}であった。${s.components>1?`ネットワークは${s.components}個の連結成分に分かれており、最大成分は${s.largest}名（全体の${Math.round(s.largest/G.n*100)}%）を含んでいた。`:"ネットワーク全体は単一の連結成分を形成していた。"}最大成分における平均経路長は${fmt(s.avgPath,2)}、直径は${fmt(s.diameter,2)}であり、平均クラスター係数は${fmt(s.avgClustering)}（推移性${fmt(s.transitivity)}）であった。次数中心化は${fmt(s.centralization)}であり、${s.centralization>=.4?"一部の行為者に関係が集中する構造が示された":"関係は比較的均等に分布していた"}。${d?`関係の相互性は${fmt(s.reciprocity)}であった。`:""}
 　行為者レベルでは、${hub.name}が最も高い次数中心性（${fmt(hub.degree)}）を示し、${bro.name}が最も高い媒介中心性（${fmt(bro.betweenness)}）を示した。${hub.name===bro.name?"すなわち、関係数の多さと橋渡し的位置が同一の行為者に集中していた。":"関係数が多い行為者と、集団間の橋渡し的位置を占める行為者は必ずしも一致しなかった。"}
 　Louvain法による下位集団の検出の結果、${s.communities}個のコミュニティが抽出され、モジュラリティは${fmt(s.modularity)}であった。${s.modularity>=.3?"この値は、当該ネットワークが明確な下位集団構造をもつことを示している。":"この値は、下位集団への分割が比較的弱いことを示している。"}
 
@@ -1079,6 +1080,8 @@ function renderR(){
   const all=G.names.map(q).join(", ");
   const code=
 `# ネットワーク分析ラボ｜igraph で再現するためのコード（データ埋め込み済み）
+# 画面の数値と同じになるように、近接中心性・次数中心化・平均次数などの定義を合わせてあります。
+# 向き合う関係（A→B と B→A）は、画面と同じく「重み2の1本の線」として扱います。
 # install.packages("igraph")
 library(igraph)
 
@@ -1091,25 +1094,36 @@ edges <- data.frame(
 vertices <- data.frame(name = c(${all}), stringsAsFactors = FALSE)
 
 g <- graph_from_data_frame(edges, directed = ${G.directed?"TRUE":"FALSE"}, vertices = vertices)
-${G.weighted?"# 重みが大きいほど「近い」ため、最短経路では逆数を距離として使う\nE(g)$dist <- 1 / E(g)$weight":"E(g)$weight <- 1"}
+${G.weighted?"# 重みが大きいほど「近い」ため、最短経路では逆数を距離として使う\nE(g)$dist <- 1 / E(g)$weight":"# 重みなし：最短経路は線の本数で数える（weight 列は、同じ線が重複したときの本数。ふつうは 1）"}
 
 ## 全体の指標
 vcount(g); ecount(g)
 edge_density(g)
-mean(degree(g, mode = "all"))
+${G.directed?"ecount(g) / vcount(g)          # 1人あたりの出る線の本数（画面の「平均次数」）":"mean(degree(g))"}
 components(g)$no
-mean_distance(g, directed = ${G.directed?"TRUE":"FALSE"})
+mean_distance(g, directed = ${G.directed?"TRUE":"FALSE"}, weights = ${G.weighted?"E(g)$dist":"NA"})
 diameter(g, weights = ${G.weighted?"E(g)$dist":"NA"})
 transitivity(g, type = "global")
-centr_degree(g)$centralization
-${G.directed?"reciprocity(g)":"assortativity_degree(g)"}
+${G.directed?"centr_degree(as_undirected(g, mode = \"collapse\"), loops = FALSE)$centralization":"centr_degree(g, loops = FALSE)$centralization"}
+${G.directed?`reciprocity(g)
+# 次数の同類性（画面と同じ：向きのある線ごとに、両端の次数（向きを無視した次数）の相関を求める）
+d_und <- degree(as_undirected(g, mode = "collapse"))
+ij <- ends(g, E(g), names = FALSE)
+cor(c(d_und[ij[, 1]], d_und[ij[, 2]]), c(d_und[ij[, 2]], d_und[ij[, 1]]))`:"assortativity_degree(g)"}
 
 ## 個人の指標
+# 近接中心性：たどり着ける人の割合を掛ける Wasserman–Faust の定義（画面と同じ）。
+# igraph の closeness(normalized = TRUE) は、この割合を掛けないため、値が違います。
+D <- distances(g, mode = "out", weights = ${G.weighted?"E(g)$dist":"NA"})
+closeness_wf <- sapply(seq_len(vcount(g)), function(i) {
+  d <- D[i, -i]; d <- d[is.finite(d)]; r <- length(d)
+  if (r == 0) 0 else (r / sum(d)) * (r / (vcount(g) - 1))
+})
 res <- data.frame(
   name        = V(g)$name,
   degree      = degree(g, mode = "all"),
   betweenness = betweenness(g, weights = ${G.weighted?"E(g)$dist":"NA"}, normalized = TRUE),
-  closeness   = closeness(g, weights = ${G.weighted?"E(g)$dist":"NA"}, normalized = TRUE),
+  closeness   = closeness_wf,
   eigen       = eigen_centrality(g, directed = FALSE)$vector,
   pagerank    = page_rank(g)$vector,
   clustering  = transitivity(g, type = "local", isolates = "zero"),
@@ -1118,8 +1132,14 @@ res <- data.frame(
 res[order(-res$betweenness), ]
 
 ## コミュニティ検出（Louvain）
-cl <- cluster_louvain(as.undirected(g, mode = "collapse"))
+# Louvain 法は実行のたびに結果が少し変わりうるため、乱数の種を決めておく
+u <- as_undirected(g, mode = "collapse")
+set.seed(1)
+cl <- cluster_louvain(u)
 modularity(cl); sizes(cl); membership(cl)
+# 画面（ツール）が見つけたまとまり C1, C2, ... での Q（画面の値と一致）
+tool_membership <- c(${R.rows.map(r=>r.community+1).join(", ")})
+modularity(u, tool_membership)
 
 ## 描画
 set.seed(1)
