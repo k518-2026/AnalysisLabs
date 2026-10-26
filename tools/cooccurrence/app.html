@@ -101,6 +101,21 @@
   }
   .radio-row{display:flex; gap:14px; align-items:center; font-size:12.5px;}
   .radio-row label{display:flex; align-items:center; gap:5px; font-weight:500;}
+  .kwic-body{display:grid; grid-template-columns:1fr 1fr; gap:16px 22px;}
+  @media (max-width:900px){ .kwic-body{grid-template-columns:1fr;} }
+  .kwic-label{font-weight:600; font-size:13px; margin-bottom:6px;}
+  .kwic-list{margin:0; padding-left:1.6em; font-size:13px; line-height:1.75; max-height:360px; overflow:auto;}
+  .kwic-list li{margin-bottom:4px;}
+  .kwic-list mark{background:rgba(200,101,27,.22); color:inherit; padding:0 2px; border-radius:2px;}
+  .kwic-body > .note{grid-column:1 / -1;}
+  .join-note p{margin:6px 0; font-size:13px; line-height:1.7;}
+  .cmp-list{display:flex; flex-wrap:wrap; gap:4px 14px; max-height:150px; overflow:auto; font-size:12.5px; margin:4px 0 8px;}
+  .cmp-item{display:inline-flex; align-items:center; gap:4px; cursor:pointer; white-space:nowrap;}
+  svg.net circle, svg.net-big circle{cursor:pointer;}
+  svg.net line, svg.net-big line{cursor:pointer;}
+  .join-field{grid-column:1 / -1;}
+  .join-row{display:flex; flex-wrap:wrap; gap:6px 22px; align-items:center; font-size:13px;}
+  .join-chk{display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
   .stopword-field{grid-column:1 / -1;}
   .stopword-field textarea{min-height:52px; font-family:var(--mono); font-size:12px;}
   .pos-field{grid-column:1 / -1;}
@@ -222,6 +237,8 @@
     padding:5px 12px; font-size:13px; font-weight:700;
   }
   .chip .cnt{font-family:var(--mono); font-size:11px; font-weight:500; color:var(--ink-soft);}
+  .net-mark{color:var(--common); font-size:10px; margin-right:4px;}
+  .simple-warn{font-size:12.5px; line-height:1.7; color:var(--ink-soft); background:rgba(200,101,27,.08); border-left:3px solid #C8651B; padding:8px 12px; margin:0 0 14px; border-radius:4px;}
 
   .interp-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;}
   @media (max-width:760px){ .interp-grid{grid-template-columns:1fr;} }
@@ -291,6 +308,8 @@
     <label for="kuroBase">辞書の配布元URL（校内・社内ネットワークでCDNが遮断される場合に指定）</label>
     <input type="text" id="kuroBase" placeholder="例: https://example.org/kuromoji-0.1.2" spellcheck="false">
   </div>
+
+  <p class="simple-warn" id="simpleWarn"><b>簡易モードの注意：</b>ひらがなの語（「ない」「ある」「とても」など）や、動詞・形容詞の活用語尾は、語として数えません。そのため、否定（「楽しくない」）や、ひらがなで書かれた語は図に現れません。品詞も推定です。動詞・形容詞や否定を扱うときは、「高精度モードを読み込む」を使ってください。</p>
 
   <div class="input-grid">
     <div class="card text-panel a">
@@ -366,6 +385,15 @@
           <label class="pos-chk other"><input type="checkbox" class="posBox" value="other"> その他</label>
         </div>
         <div class="hint" id="posHint">チェックした品詞の語だけをネットワークに使用（形態素解析器なしのため品詞は推定値）</div>
+      </div>
+      <div class="field join-field">
+        <label>語のまとめ方（任意）</label>
+        <div class="join-row">
+          <label class="join-chk"><input type="checkbox" id="optCompound"> 続けて出る名詞を1語にまとめる（複合語）</label>
+          <label class="join-chk">同じ連なりが <input type="number" id="compoundMin" value="2" min="2" max="50" style="width:56px"> 回以上出たとき（A・Bの合計）</label>
+          <label class="join-chk"><input type="checkbox" id="optNegation"> 否定を、前の語にむすびつける（高精度モードのみ）</label>
+        </div>
+        <div class="hint">例：「データ」「分析」→「データ分析」。「楽しい」＋「ない」→「楽しい（否定）」。どちらも初期状態は切です。入れると、語の数や共起が変わります。使った設定は、報告に書いてください。</div>
       </div>
       <div class="field stopword-field">
         <label for="stopwords">ストップワード（カンマ区切り・編集可）</label>
@@ -456,6 +484,20 @@
       </div>
     </div>
 
+    <div class="card pairs-panel join-note hidden" id="joinNote"></div>
+
+    <div class="card pairs-panel kwic-panel hidden" id="kwicPanel">
+      <div class="rank-head"><h3 id="kwicTitle">元の文</h3><span class="mini"><button class="ghost-btn" id="kwicClose" type="button">閉じる</button></span></div>
+      <div id="kwicBody" class="kwic-body"></div>
+    </div>
+
+    <div class="card pairs-panel base-panel" id="basePanel">
+      <div class="rank-head"><h3>違いは偶然の範囲か（基準線と並べ替え検定）</h3><span class="mini">REFERENCE</span></div>
+      <p class="note">A と B の類似度が低いとき、それが「別々の文章だから」なのか、「同じ文章でもこれくらいはばらつく」のかを見分ける目安です。A と B の文を混ぜて割り直したときの類似度（<b>並べ替え</b>）と、A・B の文を半分に割ったときの類似度（<b>基準線</b>）を、いまの設定のまま計算して並べます。</p>
+      <div id="baseBody"></div>
+      <p class="note">注意：文を1つずつ入れ替えて計算しています。同じ話題が続く文章のように、文どうしが独立でない場合は、p 値が小さく出やすくなります。結果は「目安」として使い、元の文に戻って確かめてください。</p>
+    </div>
+
     <div class="rank-grid">
       <div class="card pairs-panel rank">
         <div class="rank-head"><h3>ワードランキング A</h3><span class="mini">TEXT A</span></div>
@@ -477,7 +519,7 @@
 
     <div class="card pairs-panel common-list-panel">
       <div class="rank-head"><h3>共通語リスト（上位10語）</h3><span class="mini" id="commonCount">0 語</span></div>
-      <p class="note">両テキストに共通して出現した語のうち、合計頻度が多い上位10語。チップの数値は A / B の頻度</p>
+      <p class="note">両テキストに共通して出現した語（<b>全体の語彙</b>から数えたもの。ネットワークに載らなかった語も含む）のうち、合計頻度が多い上位10語。チップの数値は A / B の頻度。<span class="net-mark">●</span>は、2つのネットワークの<b>どちらにも図として載っている</b>語（上の「共通語彙数」はこの語だけを数えています）</p>
       <div id="commonChips" class="chips"></div>
       <div id="commonEmpty" class="empty-note" style="display:none; margin-top:10px;">共通語が見つかりませんでした。上位ノード数を増やすか、ストップワードを見直してください。</div>
     </div>
@@ -673,55 +715,136 @@
     return null;   // 助詞・助動詞・記号・接頭詞・フィラーなど
   }
 
-  function tokenizeSentenceKuro(sentence, stopSet, minLen, allowedPOS){
-    const out = [];
+  // ---------- 語の取り出し：複合語のまとめ・否定のむすびつけ（任意） ----------
+  // 各トークンを「項目」に直してから、(1) 否定のむすびつけ → (2) 複合語のまとめ → (3) 除外語・文字数・品詞の絞り込み、の順に処理する。
+  //   項目 = {surf: 文中の表記, word: 数える語, pos: noun/verb/adj/adv/other/null, noun: 名詞か, joinPrev: 直前の項目とくっついているか, stopKey: 除外語の照合に使う語}
+  //   joinCtx: null（そのまま） / {mode:'collect', cand:Map}（連なりを数える） / {mode:'apply', adopt:Set}（採用した連なりを1語にする）
+  const NEG_SUFFIX = '（否定）';
+
+  function kuroBase(t){ return (t.basic_form && t.basic_form !== '*') ? t.basic_form : t.surface_form; }
+
+  // 「ない」「ぬ」にあたるトークンか（助動詞の「ない」、または補助の形容詞「ない」）
+  function isKuroNeg(t){
+    if(!t) return false;
+    const b = kuroBase(t);
+    if(t.pos === '助動詞') return b === 'ない' || b === 'ぬ';
+    if(t.pos === '形容詞' && t.pos_detail_1 === '非自立') return b === 'ない';
+    return false;
+  }
+
+  // kuromoji のトークン列から項目を作る（トークン列だけを受け取る純粋な関数。試験しやすいように分けてある）
+  function kuroItemsFrom(raw, negation){
+    const items = [];
+    for(let i = 0; i < raw.length; i++){
+      const t = raw[i];
+      const pos = mapKuroPOS(t);
+      const base = kuroBase(t);
+      let item = {surf:t.surface_form, word:base, stopKey:base, pos:pos, noun:(pos === 'noun'), joinPrev:true};
+      if(negation && (pos === 'verb' || pos === 'adj')){
+        let k = i + 1;
+        // 「楽しくはない」「分かりもしない」のように、間に「は」「も」が1つだけ入るものも結ぶ
+        if(raw[k] && raw[k].pos === '助詞' && (raw[k].surface_form === 'は' || raw[k].surface_form === 'も')) k++;
+        if(isKuroNeg(raw[k])){
+          item = {surf:raw.slice(i, k + 1).map(x => x.surface_form).join(''), word:base + NEG_SUFFIX, stopKey:base,
+                  pos:pos, noun:false, joinPrev:true};
+          i = k;
+        }
+      }
+      items.push(item);
+    }
+    return items;
+  }
+
+  function kuroItems(sentence, negation){
     let raw;
     try{ raw = kuroTokenizer.tokenize(sentence); }
     catch(e){ return null; }   // 失敗したら簡易モードに落とす
-    raw.forEach(t => {
-      const pos = mapKuroPOS(t);
-      if(!pos) return;
-      const word = (t.basic_form && t.basic_form !== '*') ? t.basic_form : t.surface_form;
-      if(word.length < minLen || stopSet.has(word)) return;
-      if(allowedPOS && !allowedPOS.has(pos)) return;
-      out.push({word, pos});
+    return kuroItemsFrom(raw, negation);
+  }
+
+  // 簡易モード：漢字・カタカナ・英数字の連続を1項目にする。文中でぴったりくっついているものは joinPrev
+  function simpleItems(sentence, lang){
+    const items = [];
+    if(lang === 'ja'){
+      const re = new RegExp(RE_JP.source, 'g');
+      let m, prevEnd = -1;
+      while((m = re.exec(sentence))){
+        const t = m[0];
+        const pos = guessPOS(t, 'ja');
+        items.push({surf:t, word:t, stopKey:t, pos:pos, noun:(pos === 'noun' && !/^[0-9０-９]+$/.test(t)), joinPrev:(m.index === prevEnd)});
+        prevEnd = m.index + t.length;
+      }
+    } else {
+      const raw = sentence.toLowerCase().match(RE_EN) || [];
+      raw.forEach(t => items.push({surf:t, word:t, stopKey:t, pos:guessPOS(t, 'en'), noun:false, joinPrev:false}));
+    }
+    return items;
+  }
+
+  // 続けて出る名詞を、最大4つまで1語にまとめる。連なり全体が採用語（adopt）のときだけまとめる
+  function joinCompounds(items, joinCtx){
+    if(!joinCtx) return items;
+    const out = [];
+    let i = 0;
+    while(i < items.length){
+      if(!items[i].noun){ out.push(items[i]); i++; continue; }
+      let j = i;
+      while(j + 1 < items.length && items[j + 1].noun && items[j + 1].joinPrev && (j + 1 - i) < 4) j++;
+      if(j === i){ out.push(items[i]); i++; continue; }
+      const chain = items.slice(i, j + 1);
+      const joined = chain.map(x => x.surf).join('');
+      if(joinCtx.mode === 'collect'){
+        joinCtx.cand.set(joined, (joinCtx.cand.get(joined) || 0) + 1);
+        chain.forEach(x => out.push(x));
+      } else if(joinCtx.adopt.has(joined)){
+        out.push({surf:joined, word:joined, stopKey:joined, pos:'noun', noun:true, joinPrev:chain[0].joinPrev});
+      } else {
+        chain.forEach(x => out.push(x));
+      }
+      i = j + 1;
+    }
+    return out;
+  }
+
+  function itemsToToks(items, stopSet, minLen, allowedPOS){
+    const out = [];
+    items.forEach(it => {
+      if(!it.pos) return;
+      if(it.word.length < minLen || stopSet.has(it.stopKey)) return;
+      if(allowedPOS && !allowedPOS.has(it.pos)) return;
+      out.push({word:it.word, pos:it.pos, surf:it.surf});
     });
     return out;
   }
 
-  function tokenizeSentence(sentence, lang, stopSet, minLen, allowedPOS){
-    if(lang === 'ja' && kuroTokenizer){
-      const r = tokenizeSentenceKuro(sentence, stopSet, minLen, allowedPOS);
-      if(r) return r;
-    }
-    let raw;
-    if(lang === 'ja'){
-      raw = sentence.match(RE_JP) || [];
-    } else {
-      raw = (sentence.toLowerCase().match(RE_EN)) || [];
-    }
-    const out = [];
-    raw.forEach(t => {
-      const key = lang === 'ja' ? t : t.toLowerCase();
-      if(t.length < minLen || stopSet.has(key)) return;
-      const pos = guessPOS(t, lang);
-      if(allowedPOS && !allowedPOS.has(pos)) return;
-      out.push({word:t, pos});
-    });
-    return out;
+  function tokenizeSentence(sentence, lang, stopSet, minLen, allowedPOS, joinCtx, negation){
+    let items = null;
+    if(lang === 'ja' && kuroTokenizer) items = kuroItems(sentence, negation);
+    if(!items) items = simpleItems(sentence, lang);
+    items = joinCompounds(items, joinCtx);
+    return itemsToToks(items, stopSet, minLen, allowedPOS);
   }
 
   function pairKey(a,b){ return a < b ? a+'\u0000'+b : b+'\u0000'+a; }
 
-  function buildRawGraph(text, opts){
+  // 文ごとに語を取り出す。recs = [{text, toks:[{word,pos,surf}]}]
+  function tokenizeText(text, opts, joinCtx){
     const lang = detectLang(text);
-    const sentences = splitSentences(text);
+    const recs = splitSentences(text).map(s => ({
+      text: s,
+      toks: tokenizeSentence(s, lang, opts.stopSet, opts.minLen, opts.allowedPOS, joinCtx, opts.negation)
+    }));
+    return {lang, recs};
+  }
+
+  // 文の集まりから、頻度と共起を数える（並べ替え検定でも、文の部分集合に対して使う）
+  function graphFromRecs(recs, opts){
     const freq = new Map();
     const posMap = new Map(); // word -> pos
     const coOccur = new Map();
 
-    sentences.forEach(sentence => {
-      const toks = tokenizeSentence(sentence, lang, opts.stopSet, opts.minLen, opts.allowedPOS);
+    recs.forEach(rec => {
+      const toks = rec.toks;
       toks.forEach(tk => posMap.set(tk.word, tk.pos));
       if(opts.mode === 'sentence'){
         const seen = new Set();
@@ -747,7 +870,15 @@
       }
     });
 
-    return { lang, freq, posMap, coOccur, totalTokens: [...freq.values()].reduce((a,b)=>a+b,0) };
+    return { freq, posMap, coOccur, totalTokens: [...freq.values()].reduce((a,b)=>a+b,0) };
+  }
+
+  function buildRawGraph(text, opts){
+    const t = tokenizeText(text, opts, opts.joinCtx || null);
+    const g = graphFromRecs(t.recs, opts);
+    g.lang = t.lang;
+    g.recs = t.recs;
+    return g;
   }
 
   function trimGraph(raw, topN, minEdge){
@@ -822,7 +953,7 @@
     node.on('mouseenter', function(ev,d){
       d3.select(this).attr('stroke', '#1B2430').attr('stroke-width', 2.5);
       link.attr('stroke-opacity', l => (l.source.id===d.id || l.target.id===d.id) ? 0.95 : 0.12);
-      showTip(`<b>${d.id}</b><br>出現頻度: ${d.freq}`, ev.clientX, ev.clientY);
+      showTip(`<b>${d.id}</b><br>出現頻度: ${d.freq}<br><span style="opacity:.75">クリックで元の文を表示</span>`, ev.clientX, ev.clientY);
     }).on('mousemove', ev => { tooltip.style.left=(ev.clientX+14)+'px'; tooltip.style.top=(ev.clientY+10)+'px'; })
       .on('mouseleave', function(){
       d3.select(this).attr('stroke', '#fff').attr('stroke-width', 1.5);
@@ -830,8 +961,11 @@
       hideTip();
     });
 
+    node.on('click', (ev, d) => { if(opts.onNode) opts.onNode(d); });
+    link.on('click', (ev, d) => { if(opts.onLink) opts.onLink(d); });
+
     link.on('mouseenter', function(ev,d){
-      showTip(`<b>${d.source.id||d.source}</b> – <b>${d.target.id||d.target}</b><br>共起回数: ${d.weight}`, ev.clientX, ev.clientY);
+      showTip(`<b>${d.source.id||d.source}</b> – <b>${d.target.id||d.target}</b><br>共起回数: ${d.weight}<br><span style="opacity:.75">クリックで元の文を表示</span>`, ev.clientX, ev.clientY);
     }).on('mousemove', ev => { tooltip.style.left=(ev.clientX+14)+'px'; tooltip.style.top=(ev.clientY+10)+'px'; })
       .on('mouseleave', hideTip);
 
@@ -861,11 +995,14 @@
     if(!LAST) return;
     const {graphA, graphB, nodeIdsA, nodeIdsB, edgeKeyA, edgeKeyB, colorForNode} = LAST;
 
+    const linkWords = d => [(d.source.id||d.source), (d.target.id||d.target)];
     renderNetwork($('svgA'), cloneNodes(graphA.nodes), cloneEdges(graphA.edges), {
+      onNode: d => showKwic([d.id], 'a'), onLink: d => showKwic(linkWords(d), 'a'),
       nodeColor: d => (nodeIdsB.has(d.id) ? 'var(--common)' : 'var(--a)'),
       edgeColor: d => edgeKeyB.has(pairKey(d.source.id||d.source, d.target.id||d.target)) ? 'var(--common)' : '#9AA6AE'
     });
     renderNetwork($('svgB'), cloneNodes(graphB.nodes), cloneEdges(graphB.edges), {
+      onNode: d => showKwic([d.id], 'b'), onLink: d => showKwic(linkWords(d), 'b'),
       nodeColor: d => (nodeIdsA.has(d.id) ? 'var(--common)' : 'var(--b)'),
       edgeColor: d => edgeKeyA.has(pairKey(d.source.id||d.source, d.target.id||d.target)) ? 'var(--common)' : '#9AA6AE'
     });
@@ -884,6 +1021,7 @@
       else combinedEdgeMap.set(k, {source:e.source, target:e.target, weight:e.weight, origin:'b'});
     });
     renderNetwork($('svgCompare'), [...combinedNodeMap.values()], [...combinedEdgeMap.values()], {
+      onNode: d => showKwic([d.id], 'both'), onLink: d => showKwic(linkWords(d), 'both'),
       nodeColor: d => colorForNode(d.id),
       edgeColor: d => d.origin==='both' ? 'var(--common)' : (d.origin==='a' ? 'var(--a)' : 'var(--b)')
     });
@@ -921,6 +1059,164 @@
     svg.append('text').attr('x',cx+r-14).attr('y',cy+18).attr('font-size',10).attr('font-family','var(--mono)').attr('fill','#5B6672').text('100%');
   }
 
+  // ---------- 元の文を確かめる（KWIC） ----------
+  function escHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function closeKwic(){ $('kwicPanel').classList.add('hidden'); }
+  // 文の中の、対象の語の表記を強調する（活用形・まとめた語は、文中の表記で強調する）
+  function highlightSentence(rec, words){
+    const surfs = [...new Set(rec.toks.filter(t => words.includes(t.word)).map(t => t.surf))]
+      .filter(Boolean).sort((a,b) => b.length - a.length);
+    let html = escHtml(rec.text);
+    surfs.forEach(sf => {
+      const e = escHtml(sf).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      html = html.replace(new RegExp(e, 'g'), m => `<mark>${m}</mark>`);
+    });
+    return html;
+  }
+  function kwicList(label, recs, words){
+    const hit = recs.filter(r => words.every(w => r.toks.some(t => t.word === w)));
+    const LIM = 30;
+    const items = hit.slice(0, LIM).map(r => `<li>${highlightSentence(r, words)}</li>`).join('');
+    return `<div class="kwic-col"><div class="kwic-label">${label}　<span class="mini">${hit.length} 文${hit.length > LIM ? `（先頭の ${LIM} 文を表示）` : ''}</span></div>` +
+      (hit.length ? `<ol class="kwic-list">${items}</ol>` : '<p class="note">この語（組）を含む文はありません。</p>') + '</div>';
+  }
+  // which: 'a' | 'b' | 'both'
+  function showKwic(words, which){
+    if(!LAST) return;
+    const title = words.length === 1 ? `「${words[0]}」を含む元の文` : `「${words[0]}」と「${words[1]}」が同じ文に出ている元の文`;
+    $('kwicTitle').textContent = title;
+    let body = '';
+    if(which !== 'b') body += kwicList('テキストA', LAST.recsA, words);
+    if(which !== 'a') body += kwicList('テキストB', LAST.recsB, words);
+    body += '<p class="note">語の切り出しや、否定、偶然の組み合わせがないかを、元の文で確かめてください。「共起」は、同じ文（スライド窓のときは前後の語）に出たことを数えたものです。</p>';
+    $('kwicBody').innerHTML = body;
+    const p = $('kwicPanel');
+    p.classList.remove('hidden');
+    p.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+  $('kwicClose').addEventListener('click', closeKwic);
+  $('joinNote').addEventListener('change', ev => {
+    const t = ev.target;
+    if(!t.classList || !t.classList.contains('cmp-box')) return;
+    if(t.checked) compoundExclude.delete(t.dataset.w); else compoundExclude.add(t.dataset.w);
+    $('runBtn').click();
+  });
+
+  // ---------- 語のまとめ方（複合語・否定）の記録 ----------
+  // 「まとめない」にした連なり（チェックを外したもの）。実行をまたいで保つ
+  const compoundExclude = new Set();
+  function renderJoinNote(info){
+    const el = $('joinNote');
+    const parts = [];
+    if(info.compound){
+      const list = info.adopted.map(([w,c]) =>
+        `<label class="cmp-item"><input type="checkbox" class="cmp-box" data-w="${escHtml(w)}" ${compoundExclude.has(w) ? '' : 'checked'}> ${escHtml(w)}（${c}）</label>`).join('');
+      parts.push(`<p><b>複合語のまとめ：入</b>（同じ連なりが A・B の合計で ${info.compoundMin} 回以上のもの）。` +
+        (info.adopted.length ? `1語にまとめた連なり ${info.adoptedUsed} 組（候補 ${info.adopted.length} 組）。<span class="note">語として不自然な連なり（辞書の切り方による誤りなど）は、チェックを外すと、まとめずに数え直します。</span></p><div class="cmp-list">${list}</div>` : 'まとめた連なりはありません。</p>'));
+    }
+    if(info.negation) parts.push('<p><b>否定のむすびつけ：入</b>（高精度モード）。「楽しい」＋「ない」は「楽しい（否定）」という別の語になります。</p>');
+    if(info.negationIgnored) parts.push('<p><b>否定のむすびつけ：働いていません。</b>簡易モードでは、ひらがなの「ない」を語として取り出さないため、否定を見分けられません。「高精度モードを読み込む」を使ってください。</p>');
+    if(parts.length){ el.innerHTML = '<div class="rank-head"><h3>語のまとめ方の設定</h3><span class="mini">OPTION</span></div>' + parts.join('') + '<p class="note">この設定は、報告に書いてください。Rコードには反映されません。</p>'; el.classList.remove('hidden'); }
+    else { el.innerHTML = ''; el.classList.add('hidden'); }
+  }
+
+  // ---------- 基準線と並べ替え検定 ----------
+  // 同じ乱数の種を使うので、同じデータ・同じ設定なら、いつも同じ結果になる（検算プログラムと突き合わせられる）
+  const BASE_R = 200, BASE_SEED = 20261026;
+  function mulberry32(seed){
+    let a = seed >>> 0;
+    return function(){
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffleInPlace(arr, rng){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(rng() * (i + 1));
+      const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+  }
+  function simOf(rawX, rawY, topN, minEdge){
+    const gX = trimGraph(rawX, topN, minEdge), gY = trimGraph(rawY, topN, minEdge);
+    const eX = new Set(gX.edges.map(e => pairKey(e.source, e.target)));
+    const eY = new Set(gY.edges.map(e => pairKey(e.source, e.target)));
+    const nX = gX.nodeSet, nY = gY.nodeSet;
+    const cn = [...nX].filter(n => nY.has(n)).length, un = new Set([...nX, ...nY]).size;
+    const ce = [...eX].filter(k => eY.has(k)).length, ue = new Set([...eX, ...eY]).size;
+    return {nodeJ: un ? cn/un : 0, edgeJ: ue ? ce/ue : 0, nodesX: gX.nodes.length, nodesY: gY.nodes.length, edgesX: gX.edges.length, edgesY: gY.edges.length};
+  }
+  function quantileOf(sorted, p){ return sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1) + 0.5))]; }
+  function summarizeVals(vals, obs){
+    const s = [...vals].sort((a,b) => a - b);
+    const mean = vals.reduce((a,b) => a + b, 0) / vals.length;
+    const r = {mean, lo: quantileOf(s, 0.025), hi: quantileOf(s, 0.975)};
+    if(obs !== undefined) r.pLow = (1 + vals.filter(v => v <= obs).length) / (vals.length + 1);   // 実際より類似度が低くなった割合（片側）
+    return r;
+  }
+  // 文の集まり A・B から、(1) 実際の類似度、(2) A と B の文を混ぜて割り直した類似度、(3) A・B それぞれを半分に割った類似度、を求める
+  function computeBaseline(recsA, recsB, opts, topN, minEdge, R){
+    const A = recsA.filter(r => r.toks.length), B = recsB.filter(r => r.toks.length);
+    const obs = simOf(graphFromRecs(A, opts), graphFromRecs(B, opts), topN, minEdge);
+    const out = {obs, R, nA: A.length, nB: B.length};
+    {
+      const pool = A.concat(B), idx = pool.map((_, i) => i), rng = mulberry32(BASE_SEED + 3);
+      const nv = [], ev = [];
+      for(let r = 0; r < R; r++){
+        shuffleInPlace(idx, rng);
+        const g1 = idx.slice(0, A.length).map(i => pool[i]), g2 = idx.slice(A.length).map(i => pool[i]);
+        const s = simOf(graphFromRecs(g1, opts), graphFromRecs(g2, opts), topN, minEdge);
+        nv.push(s.nodeJ); ev.push(s.edgeJ);
+      }
+      out.perm = {node: summarizeVals(nv, obs.nodeJ), edge: summarizeVals(ev, obs.edgeJ)};
+    }
+    const selfSplit = (recs, seed) => {
+      if(recs.length < 4) return null;
+      const idx = recs.map((_, i) => i), rng = mulberry32(seed), half = Math.floor(recs.length / 2);
+      const nv = [], ev = [];
+      for(let r = 0; r < R; r++){
+        shuffleInPlace(idx, rng);
+        const g1 = idx.slice(0, half).map(i => recs[i]), g2 = idx.slice(half).map(i => recs[i]);
+        const s = simOf(graphFromRecs(g1, opts), graphFromRecs(g2, opts), topN, minEdge);
+        nv.push(s.nodeJ); ev.push(s.edgeJ);
+      }
+      return {node: summarizeVals(nv), edge: summarizeVals(ev)};
+    };
+    out.selfA = selfSplit(A, BASE_SEED + 1);
+    out.selfB = selfSplit(B, BASE_SEED + 2);
+    return out;
+  }
+  const pct = x => Math.round(x * 100) + '%';
+  const rng95 = s => `${pct(s.mean)}（${pct(s.lo)}〜${pct(s.hi)}）`;
+  function renderBaseline(info){
+    const body = $('baseBody');
+    body.innerHTML = '<p class="note">計算中…（文を入れ替えて ' + BASE_R + ' 回くり返します）</p>';
+    const token = (renderBaseline.token = (renderBaseline.token || 0) + 1);
+    setTimeout(() => {
+      if(token !== renderBaseline.token || !LAST) return;
+      const t0 = performance.now();
+      const res = computeBaseline(LAST.recsA, LAST.recsB, LAST.opts, LAST.topN, LAST.minEdge, BASE_R);
+      LAST.baseline = res;
+      const small = (res.obs.nodesX < 5 || res.obs.nodesY < 5);
+      let rows = `<tr><td>実際の A と B</td><td class="num">${pct(res.obs.nodeJ)}</td><td class="num">${pct(res.obs.edgeJ)}</td></tr>`;
+      rows += `<tr><td>A と B の文を混ぜて、A・B の文数に割り直したとき（${res.R}回の平均と95％範囲）</td><td class="num">${rng95(res.perm.node)}</td><td class="num">${rng95(res.perm.edge)}</td></tr>`;
+      if(res.selfA) rows += `<tr><td>A の文だけを、ランダムに半分に割ったとき</td><td class="num">${rng95(res.selfA.node)}</td><td class="num">${rng95(res.selfA.edge)}</td></tr>`;
+      if(res.selfB) rows += `<tr><td>B の文だけを、ランダムに半分に割ったとき</td><td class="num">${rng95(res.selfB.node)}</td><td class="num">${rng95(res.selfB.edge)}</td></tr>`;
+      const pn = res.perm.node.pLow, pe = res.perm.edge.pLow;
+      const verdict = (p) => p < 0.05 ? '偶然のばらつきでは説明しにくい（実際のほうが似ていない）' : '偶然のばらつきの範囲に入っている';
+      let text = '';
+      if(small){
+        text = '<p><b>ネットワークに載った語が5語未満の側があります。</b>この設定では類似度が安定しないので、結果は参考になりません。最小共起回数や上位ノード数を見直してから、読んでください。</p>';
+      } else {
+        text = `<p>実際の類似度以下になった割り直しの割合は、語彙で ${(pn*100).toFixed(1)}％（p＝${pn.toFixed(3)}）、共起パターンで ${(pe*100).toFixed(1)}％（p＝${pe.toFixed(3)}）でした。語彙の違いは<b>${verdict(pn)}</b>。共起パターンの違いは<b>${verdict(pe)}</b>。</p>`;
+      }
+      text += `<p class="note">（A ${res.nA} 文、B ${res.nB} 文。同じ乱数の種で計算するので、同じデータ・同じ設定なら、いつも同じ結果になります。計算時間 ${Math.round(performance.now() - t0)} ミリ秒）</p>`;
+      body.innerHTML = `<table class="pairs"><thead><tr><th>比べ方</th><th style="text-align:right">語彙の類似度</th><th style="text-align:right">共起パターンの類似度</th></tr></thead><tbody>${rows}</tbody></table>${text}`;
+    }, 30);
+  }
+
   // ---------- main run ----------
   $('runBtn').addEventListener('click', () => {
     const rawA = $('textA').value.trim();
@@ -942,10 +1238,30 @@
       windowSize: parseInt($('windowSize').value)||5,
       minLen: parseInt($('minLen').value)||2,
       stopSet,
-      allowedPOS
+      allowedPOS,
+      negation: $('optNegation').checked && !!kuroTokenizer,
+      joinCtx: null
     };
     const topN = parseInt($('topN').value)||25;
     const minEdge = parseInt($('minEdge').value)||2;
+
+    // 複合語のまとめ：A・B の両方で連なりを数え、合計が基準以上のものだけを1語にする（A・Bで同じ採用語を使う）
+    const compound = $('optCompound').checked;
+    const compoundMin = Math.max(2, parseInt($('compoundMin').value)||2);
+    let adopted = [], adoptedUsed = 0;
+    if(compound){
+      const cand = new Map();
+      const ctx = {mode:'collect', cand};
+      tokenizeText(rawA, opts, ctx);
+      tokenizeText(rawB, opts, ctx);
+      // 基準以上の連なりのうち、利用者が「まとめない」にしたものは採用しない
+      adopted = [...cand.entries()].filter(([w,c]) => c >= compoundMin).sort((a,b) => b[1]-a[1]);
+      const adopt = new Set(adopted.filter(([w]) => !compoundExclude.has(w)).map(([w]) => w));
+      opts.joinCtx = {mode:'apply', adopt};
+      adoptedUsed = adopt.size;
+    }
+    const useNegation = $('optNegation').checked;
+    const negationIgnored = useNegation && !kuroTokenizer;
 
     const rawGraphA = buildRawGraph(rawA, opts);
     const rawGraphB = buildRawGraph(rawB, opts);
@@ -973,9 +1289,13 @@
 
     // store for slider-driven redraws (fresh copies each time so the sim can mutate freely)
     LAST = { graphA, graphB, nodeIdsA, nodeIdsB, edgeKeyA, edgeKeyB, colorForNode,
-             rawGraphA, rawGraphB, commonNodes };
+             rawGraphA, rawGraphB, commonNodes,
+             recsA: rawGraphA.recs, recsB: rawGraphB.recs, opts, topN, minEdge };
     hasRun = true;
     redrawNetworks();
+    closeKwic();
+    renderJoinNote({compound, compoundMin, adopted, adoptedUsed, negation: opts.negation, negationIgnored});
+    renderBaseline({nodeJaccard, edgeJaccard});
 
     // ---- stats text ----
     $('statA').textContent = `語彙 ${graphA.nodes.length} / 共起 ${graphA.edges.length}`;
@@ -990,11 +1310,11 @@
     const rows = [
       ['テキストA 総語数（延べ）', rawGraphA.totalTokens],
       ['テキストB 総語数（延べ）', rawGraphB.totalTokens],
-      ['共通語彙数', commonNodes.length],
-      ['Aのみの語彙数', nodeIdsA.size - commonNodes.length],
-      ['Bのみの語彙数', nodeIdsB.size - commonNodes.length],
+      ['共通語彙数（図に載った語）', commonNodes.length],
+      ['Aのみの語彙数（図に載った語）', nodeIdsA.size - commonNodes.length],
+      ['Bのみの語彙数（図に載った語）', nodeIdsB.size - commonNodes.length],
       ['共通の共起ペア数', commonEdgeKeys.length],
-      ['語彙のJaccard類似度', Math.round(nodeJaccard*100) + '%'],
+      ['語彙のJaccard類似度（図に載った語）', Math.round(nodeJaccard*100) + '%'],
     ];
     rows.forEach(([label, val]) => {
       const li = document.createElement('li');
@@ -1055,7 +1375,8 @@
     const commonWords = [...freqA.keys()].filter(w => freqB.has(w))
       .map(w => ({w, a:freqA.get(w), b:freqB.get(w), sum:freqA.get(w)+freqB.get(w)}))
       .sort((x,y)=>y.sum - x.sum);
-    $('commonCount').textContent = commonWords.length + ' 語';
+    const netCommonSet = new Set(commonNodes);
+    $('commonCount').textContent = `全体で ${commonWords.length} 語（うち図に載った語 ${commonNodes.length} 語）`;
     const chips = $('commonChips');
     chips.innerHTML = '';
     if(commonWords.length === 0){
@@ -1065,7 +1386,8 @@
       commonWords.slice(0, 10).forEach(c => {
         const span = document.createElement('span');
         span.className = 'chip';
-        span.innerHTML = `${c.w}<span class="cnt">A${c.a} / B${c.b}</span>`;
+        const onNet = netCommonSet.has(c.w) ? '<span class="net-mark" title="2つのネットワークのどちらにも図として載っている語">●</span>' : '';
+        span.innerHTML = `${onNet}${c.w}<span class="cnt">A${c.a} / B${c.b}</span>`;
         chips.appendChild(span);
       });
     }
@@ -1120,7 +1442,7 @@
       ${denser ? `<p>ネットワークの密度はテキスト${denser}の方が高く、語彙間の結びつきがより緊密であることを示唆する。</p>` : ''}`;
 
     // ---- academic writing examples ----
-    const methodsTxt = `本研究では、2種類のテキストデータ（テキストA・テキストB）を対象に共起ネットワーク分析を行った。テキストを文単位に分割したうえで、${kuroTokenizer ? '形態素解析器kuromoji.js（IPADIC辞書）を用いて語を抽出し、活用語は基本形に統一したうえで' : '字種・語尾・語彙ヒントにもとづく簡易的な語抽出をおこない、'}品詞が${posSel}である語を分析対象とした。共起の判定は${modeLabel}を単位とし、同一単位内に出現する語の組を共起とみなした。出現頻度上位${topN}語をノードとして採用し、共起回数が${minEdge}回以上の語対をエッジとして描画した。ネットワークの可視化には力学モデル（force-directed layout）を用い、ノードの大きさを出現頻度、エッジの太さを共起回数に対応させた。`;
+    const methodsTxt = `本研究では、2種類のテキストデータ（テキストA・テキストB）を対象に共起ネットワーク分析を行った。テキストを文単位に分割したうえで、${kuroTokenizer ? '形態素解析器kuromoji.js（IPADIC辞書）を用いて語を抽出し、活用語は基本形に統一したうえで' : '字種・語尾・語彙ヒントにもとづく簡易的な語抽出をおこない、'}品詞が${posSel}である語を分析対象とした。${compound ? `続けて出現する名詞のうち、2つのテキストの合計で${compoundMin}回以上出現した連なり（${adoptedUsed}組）を1語（複合語）として扱った。` : ''}${opts.negation ? '動詞・形容詞に否定の助動詞が続く場合は、「語（否定）」として別の語とした。' : ''}共起の判定は${modeLabel}を単位とし、同一単位内に出現する語の組を共起とみなした。出現頻度上位${topN}語をノードとして採用し、共起回数が${minEdge}回以上の語対をエッジとして描画した。ネットワークの可視化には力学モデル（force-directed layout）を用い、ノードの大きさを出現頻度、エッジの太さを共起回数に対応させた。`;
 
     const resultsTxt = `テキストAのネットワークはノード数${dA.n}、エッジ数${dA.m}（平均次数${dA.avgDeg.toFixed(2)}、密度${dA.density.toFixed(3)}）であり、${dA.hub[0]}が次数${dA.hub[1]}で最大の中心性を示した。テキストBのネットワークはノード数${dB.n}、エッジ数${dB.m}（平均次数${dB.avgDeg.toFixed(2)}、密度${dB.density.toFixed(3)}）であり、${dB.hub[0]}が中心的な語として観察された。両テキストに共通する語は${commonWords.length}語、共通する共起ペアは${commonEdgeKeys.length}組であり、語彙のJaccard係数は${nodeJaccard.toFixed(2)}、共起ペアのJaccard係数は${edgeJaccard.toFixed(2)}であった。`;
 
@@ -1183,7 +1505,7 @@ for (i in seq_along(sentences)) {
 #  共起ネットワーク比較（テキストA / テキストB）
 #  R + RMeCab + igraph
 #  ※ このアプリの設定を反映して自動生成されたスクリプトです
-# ============================================================
+${(compound || opts.negation) ? '#  ※ 注意：画面の「複合語のまとめ」「否定のむすびつけ」は、このRコードには反映されません。\n' : ''}# ============================================================
 
 # --- パッケージ ---
 # install.packages("igraph")
@@ -1216,8 +1538,8 @@ build_network <- function(path) {
   sentences <- trimws(sentences)
   sentences <- sentences[nchar(sentences) > 0]
 
-  # 出現頻度
-  all_words <- unlist(lapply(sentences, extract_words))
+  # 出現頻度（${rMode === 'sentence' ? 'このアプリの文単位と同じ定義：1つの文の中の重複を除き、「その語が出た文の数」を数える' : 'このアプリのスライド窓と同じ定義：語の出現回数そのもの'}）
+  all_words <- unlist(lapply(sentences, ${rMode === 'sentence' ? 'function(s) unique(extract_words(s))' : 'extract_words'}))
   freq <- sort(table(all_words), decreasing = TRUE)
   top_words <- names(head(freq, top_n))
 
@@ -1571,6 +1893,7 @@ cat("\\n[B] 次数上位:\\n"); print(head(sort(degree(gB), decreasing = TRUE), 
       $('modePill').classList.add('on');
       btn.classList.add('hidden');
       $('kuroBaseRow').classList.add('hidden');
+      $('simpleWarn').classList.add('hidden');
       $('posHint').textContent = 'チェックした品詞の語だけをネットワークに使用（kuromoji.jsによる形態素解析。活用語は基本形にそろえます）';
       // 補助動詞はノードにしても意味を持ちにくいので、目に見える形でストップワードに足す
       const sw = $('stopwords');

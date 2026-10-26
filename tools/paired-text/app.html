@@ -106,6 +106,10 @@ legend{font-size:12px;font-weight:700;letter-spacing:.1em;padding:0 6px}
 .ledger{border-top:none}
 .lrow{display:grid;grid-template-columns:1fr 168px 1fr;align-items:center;border-bottom:1px solid var(--line);min-height:46px}
 .lrow:nth-child(even){background:#FAFBFD}
+.lrow.warn{background:#FFF6E8 !important;box-shadow:inset 3px 0 0 #E08A2E}
+.use-pair{display:block;font-family:inherit;font-size:11px;letter-spacing:0;color:var(--ink,#333);margin-top:2px;cursor:pointer}
+.use-pair input{vertical-align:-2px;margin-right:3px}
+.approx-note{flex-basis:100%;color:#9A5A12;font-size:12px;line-height:1.6;margin-top:4px}
 .chip{font-family:"JetBrains Mono",monospace;font-size:13px;padding:5px 10px;border-radius:2px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cell-pre{text-align:right;padding:8px 14px}
 .cell-post{text-align:left;padding:8px 14px}
@@ -274,6 +278,7 @@ footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);font-si
     <p class="step-note">抽出する品詞と、共起ネットワークのしきい値。あとから変えて何度でも実行できます。</p></div>
   </div>
   <div class="step-body">
+    <p class="hint" id="simpleWarn" style="margin:0 0 12px;padding:8px 12px;border-left:3px solid #C2306B;background:rgba(194,48,107,.07);border-radius:4px;line-height:1.7"><b>簡易モードの注意：</b>語の切り出しと品詞は、文字の種類と語尾からの推定です。ひらがなだけの語（「ない」など）は多くが数えられず、否定（「楽しくない」）は見分けられません。動詞は漢字の語幹だけが残ります。動詞・形容詞や否定を扱うときは、「高精度モードを読み込む」を使ってください。</p>
     <fieldset>
       <legend>抽出する品詞</legend>
       <div class="pos-grid" id="posGrid"></div>
@@ -577,7 +582,9 @@ function charClass(c){
   return 'other';
 }
 const VERB_TAIL = /^(する|し[てたまなよ]|します|しない|され|せる|さ|る|れる|られ|り|ります|った|って|う|え|えた|く|いた|き|ける|む|んだ|ぶ|つ|ぐ|ず|ぬ|べ|め|げ|ろ|よう)/;
-const ADJ_TAIL = /^(い|かった|くて|く|ければ|さ|そう|かっ)/;
+const ADJ_TAIL = /^(い|かった|くて|く|ければ|さ|かっ)/;
+/* 「大変そう」「便利そう」のように、漢字のあとに「そう」が来るもの（様態）。形容詞ではなく、形容動詞の語幹として扱う */
+const SOU_TAIL = /^そう/;
 const ADV_WORDS = new Set(['とても','すこし','少し','かなり','もっと','ずっと','あまり','よく','ぜんぜん','まったく','いつも','すぐ','やはり','たしかに','とくに']);
 const INTERJ = new Set(['はい','いいえ','ありがとう','おはよう','こんにちは','すごい','すごく']);
 
@@ -625,8 +632,8 @@ function tokenizeSimple(text, dictWords){
     if(r.cls==='digit'){ tokens.push({surface:r.s, base:r.s, pos:'数'}); continue; }
     if(r.cls==='latin'){ tokens.push({surface:r.s, base:r.s.toLowerCase(), pos:'名詞'}); continue; }
     if(r.cls==='kata'){
-      const s = r.s.replace(/ー+$/,'');
-      tokens.push({surface:r.s, base:s||r.s, pos: s.length>=4 ? '名詞' : '名詞'});
+      // 語尾の長音符は取らない（「エラー」を「エラ」にすると別の語になる）
+      tokens.push({surface:r.s, base:r.s, pos:'名詞'});
       continue;
     }
     if(r.cls==='kanji'){
@@ -637,6 +644,7 @@ function tokenizeSimple(text, dictWords){
         else if(/^(きい|きく|きか|きな)/.test(tail)){ pos='形容詞'; base = r.s+'きい'; }            // 大きい
         else if(VERB_TAIL.test(tail)){ pos='動詞'; }                                                // 語幹のみ残す
         else if(ADJ_TAIL.test(tail)){ pos='形容詞'; base = r.s+'い'; }                              // 面白い・良い
+        else if(SOU_TAIL.test(tail)){ pos='形容動詞'; }                                             // 大変そう・便利そう（語幹のみ）
       }
       tokens.push({surface:r.s, base, pos});
       continue;
@@ -1106,7 +1114,7 @@ function drawNetwork(ctx, net, kind, opts, W, H, scale, view, fit){
 /* ============================================================
    7. アプリの状態と実行
    ============================================================ */
-const state = {nets:{}, kinds:{}, current:'comp', result:null, changeRows:[], pairRows:[], writing:'', filter:'all', ledgerFold:null, ledgerRows:0,
+const state = {rejected:new Set(), nets:{}, kinds:{}, current:'comp', result:null, changeRows:[], pairRows:[], writing:'', filter:'all', ledgerFold:null, ledgerRows:0,
                view:{k:1, tx:0, ty:0}, tf:null};
 
 function netOpts(){
@@ -1191,6 +1199,15 @@ function run(){
 
   setTimeout(()=>{
     const m = matchIds(pre, post, st.idThr);
+    // 近似一致は別人を結びつけることがある。利用者が「使わない」にした組は、対応から外して未対応に戻す
+    m.rejected = [];
+    m.pairs = m.pairs.filter(p=>{
+      if(/^近似一致/.test(p.method) && state.rejected.has(p.pre.id+'\t'+p.post.id)){
+        m.rejected.push(p); m.preOnly.push(p.pre); m.postOnly.push(p.post);
+        return false;
+      }
+      return true;
+    });
     const preDocs = m.pairs.map(p=>({id:p.pre.id, ...processDoc(p.pre.text, st)}));
     const postDocs = m.pairs.map(p=>({id:p.post.id, ...processDoc(p.post.text, st)}));
     // 未対応も単独ネットワークには含める
@@ -1222,23 +1239,35 @@ function run(){
 function renderLedger(m){
   const counts = {};
   m.pairs.forEach(p=>{const key=p.method.replace(/（.*/,''); counts[key]=(counts[key]||0)+1;});
+  const rej = m.rejected || [];
+  const rejPre = new Set(rej.map(p=>p.pre.id)), rejPost = new Set(rej.map(p=>p.post.id));
+  const nApprox = m.pairs.filter(p=>/^近似一致/.test(p.method)).length + rej.length;
   $('#ledgerLegend').innerHTML =
-    Object.entries(counts).map(([k,v])=>`<span><span class="dot" style="background:var(--post)"></span>${esc(k)} ${v}組</span>`).join('') +
-    `<span><span class="dot" style="background:#C7CED8"></span>未対応 ${m.preOnly.length + m.postOnly.length}件</span>`;
+    Object.entries(counts).map(([k,v])=>`<span><span class="dot" style="background:${k==='近似一致'?'#E08A2E':'var(--post)'}"></span>${esc(k)} ${v}組</span>`).join('') +
+    (rej.length ? `<span><span class="dot" style="background:#E08A2E"></span>近似一致を使わない ${rej.length}組</span>` : '') +
+    `<span><span class="dot" style="background:#C7CED8"></span>未対応 ${m.preOnly.length + m.postOnly.length}件</span>` +
+    (nApprox ? `<span class="approx-note">※ 近似一致は、IDが似ているだけの別人を結びつけることがあります。各組を確かめ、違うときは「使う」のチェックを外してください（外した組は未対応になります）。</span>` : '');
   const rows = [];
+  const approxRow = (p, used)=>`<div class="lrow warn">
+      <div class="cell-pre"><span class="chip pre">${esc(p.pre.id)}</span></div>
+      <div class="link"><span>${esc(p.method)}${used?'':'・除外中'}</span>
+        <label class="use-pair"><input type="checkbox" class="use-pair-box" data-pre="${esc(p.pre.id)}" data-post="${esc(p.post.id)}" ${used?'checked':''}> この組を使う</label></div>
+      <div class="cell-post"><span class="chip post">${esc(p.post.id)}</span></div></div>`;
   m.pairs.forEach(p=>{
+    if(/^近似一致/.test(p.method)){ rows.push(approxRow(p, true)); return; }
     rows.push(`<div class="lrow">
       <div class="cell-pre"><span class="chip pre">${esc(p.pre.id)}</span></div>
       <div class="link"><span>${esc(p.method)}</span></div>
       <div class="cell-post"><span class="chip post">${esc(p.post.id)}</span></div></div>`);
   });
-  m.preOnly.forEach(p=>{
+  rej.forEach(p=>rows.push(approxRow(p, false)));
+  m.preOnly.filter(p=>!rejPre.has(p.id)).forEach(p=>{
     rows.push(`<div class="lrow">
       <div class="cell-pre"><span class="chip pre">${esc(p.id)}</span></div>
       <div class="link dashed"><span>対応なし</span></div>
       <div class="cell-post"><span class="chip none">—</span></div></div>`);
   });
-  m.postOnly.forEach(p=>{
+  m.postOnly.filter(p=>!rejPost.has(p.id)).forEach(p=>{
     rows.push(`<div class="lrow">
       <div class="cell-pre"><span class="chip none">—</span></div>
       <div class="link dashed"><span>対応なし</span></div>
@@ -1758,6 +1787,14 @@ $('#posGrid').innerHTML = POS_LIST.map(p=>
   `<label class="chk"><input type="checkbox" value="${p}" ${POS_DEFAULT.includes(p)?'checked':''}>${p}</label>`).join('');
 
 $('#runBtn').addEventListener('click', run);
+/* 近似一致の組を「使う／使わない」で切り替える（チェックを外すと、その組は未対応に戻して集計し直す） */
+$('#ledger').addEventListener('change', e=>{
+  const t = e.target;
+  if(!t.classList || !t.classList.contains('use-pair-box')) return;
+  const key = t.dataset.pre + '\t' + t.dataset.post;
+  if(t.checked) state.rejected.delete(key); else state.rejected.add(key);
+  run();
+});
 $('#ledgerToggle').addEventListener('click', ()=>{
   state.ledgerFold = !$('#ledgerWrap').classList.contains('folded');
   applyLedgerFold(state.ledgerFold);
@@ -2193,6 +2230,7 @@ $('#loadKuromoji').addEventListener('click', async ()=>{
     $('#modePill').classList.add('on');
     btn.classList.add('hidden');
     if($('#kuroBaseRow')) $('#kuroBaseRow').classList.add('hidden');
+    if($('#simpleWarn')) $('#simpleWarn').classList.add('hidden');
     if(state.result){
       msg.textContent = '読み込みました。高精度モードで解析し直しています…';
       setTimeout(()=>{ run(); msg.textContent = '読み込みました。'; }, 30);
