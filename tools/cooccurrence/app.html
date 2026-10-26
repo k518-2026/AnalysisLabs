@@ -1502,7 +1502,7 @@ for (i in seq_along(sentences)) {
   words <- extract_words(sentences[i])
   n <- length(words)
   if (n < 2) next
-  for (a in seq_len(n)) {
+  for (a in seq_len(n - 1)) {                      # 最後の語は、その後ろに組む相手がいない
     for (b in (a + 1):min(a + window_size, n)) {
       if (words[a] == words[b]) next
       key <- paste(sort(c(words[a], words[b])), collapse = "\\t")
@@ -1550,7 +1550,9 @@ build_network <- function(path) {
 
   # 出現頻度（${rMode === 'sentence' ? 'このアプリの文単位と同じ定義：1つの文の中の重複を除き、「その語が出た文の数」を数える' : 'このアプリのスライド窓と同じ定義：語の出現回数そのもの'}）
   all_words <- unlist(lapply(sentences, ${rMode === 'sentence' ? 'function(s) unique(extract_words(s))' : 'extract_words'}))
-  freq <- sort(table(all_words), decreasing = TRUE)
+  # 同じ頻度の語は、最初に出てきた順に並べる（このアプリと同じ。上位の切れ目に同数の語が並ぶとき、同じ語が選ばれる）
+  freq <- table(all_words)
+  freq <- freq[order(-as.integer(freq), match(names(freq), unique(all_words)))]
   top_words <- names(head(freq, top_n))
 
 ${coBlock}

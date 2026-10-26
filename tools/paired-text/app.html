@@ -1573,32 +1573,34 @@ post <- read.csv("post.csv", stringsAsFactors = FALSE, fileEncoding = "UTF-8")
 names(pre)  <- c("id", "text")
 names(post) <- c("id", "text")
 
-# ---- 3. IDの対応づけ（ずれていたら近いIDを探す） -------------
-norm_id <- function(x) tolower(gsub("[[:space:]_\\\\-\\\\.]", "", x))
+# ---- 3. IDの対応づけ（画面と同じ順序：完全一致 → 表記をそろえて一致 → 番号が一致 → 近い順） --
+# ※画面は、全角・半角を NFKC でそろえてから比べる。このコードでは、IDが半角にそろっている前提
+norm_id    <- function(x) tolower(gsub("[[:space:]_·・–—.-]", "", x))
+num_part   <- function(x) { m <- str_extract(x, "[0-9]+"); ifelse(is.na(m), NA_character_, as.character(as.integer(m))) }
+alpha_part <- function(x) gsub("[^a-z]", "", tolower(x))
+id_key     <- function(x) ifelse(is.na(num_part(x)), NA_character_, paste0(alpha_part(x), "#", num_part(x)))
 
 match_ids <- function(pre, post, maxdist = ID_MAXDIST) {
   a <- norm_id(pre$id); b <- norm_id(post$id)
+  ka <- id_key(pre$id); kb <- id_key(post$id)
   used <- rep(FALSE, length(b))
-  res <- data.frame(pre_id = character(0), post_id = character(0),
-                    method = character(0), stringsAsFactors = FALSE)
-  for (i in seq_along(a)) {
-    j <- which(b == a[i] & !used)[1]                      # 表記をそろえて一致
-    method <- "exact"
-    if (is.na(j)) {                                       # 数字部分で一致
-      na <- str_extract(a[i], "[0-9]+"); nb <- str_extract(b, "[0-9]+")
-      j <- which(!is.na(na) & nb == na & !used)[1]; method <- "number"
-    }
-    if (is.na(j) && maxdist > 0) {                        # 近似一致
-      d <- stringdist(a[i], b, method = "lv"); d[used] <- Inf
-      if (min(d) <= maxdist) { j <- which.min(d); method <- paste0("fuzzy(", min(d), ")") }
-    }
-    if (!is.na(j)) {
-      used[j] <- TRUE
-      res <- rbind(res, data.frame(pre_id = pre$id[i], post_id = post$id[j],
-                                   method = method, stringsAsFactors = FALSE))
+  jpre <- rep(NA_integer_, nrow(pre)); method <- rep(NA_character_, nrow(pre))
+  # 1回目：完全一致 → 表記をそろえて一致 → 番号が一致（英字の部分も同じもの。A01 と A1 は一致、A10 と B10 は不一致）
+  for (i in seq_len(nrow(pre))) {
+    j <- which(post$id == pre$id[i] & !used)[1]; m <- "exact"
+    if (is.na(j)) { j <- which(b == a[i] & !used)[1]; m <- "normalized" }
+    if (is.na(j) && !is.na(ka[i])) { j <- which(!is.na(kb) & kb == ka[i] & !used)[1]; m <- "number" }
+    if (!is.na(j)) { used[j] <- TRUE; jpre[i] <- j; method[i] <- m }
+  }
+  # 2回目：まだ相手がいないIDだけ、編集距離が近いものを探す（似ているだけの別人を結ぶことがある。結果を必ず確かめる）
+  if (maxdist > 0) for (i in which(is.na(jpre))) {
+    d <- stringdist(a[i], b, method = "lv"); d[used] <- Inf
+    if (length(d) && min(d) <= maxdist) {
+      j <- which.min(d); used[j] <- TRUE; jpre[i] <- j; method[i] <- paste0("fuzzy(", min(d), ")")
     }
   }
-  res
+  ok <- !is.na(jpre)
+  data.frame(pre_id = pre$id[ok], post_id = post$id[jpre[ok]], method = method[ok], stringsAsFactors = FALSE)
 }
 pairs <- match_ids(pre, post)
 cat("対応した組:", nrow(pairs), "/ 事前", nrow(pre), "件, 事後", nrow(post), "件\\n")
