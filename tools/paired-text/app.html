@@ -1537,6 +1537,8 @@ function buildRCode(st, m){
   return `# ============================================================
 # 対応のある2テキスト（事前・事後）の比較テキストマイニング
 # Webアプリの設定をそのまま再現したスクリプト
+# ※ 語の扱いは、画面の「高精度モード」と同じ（名詞の非自立・代名詞・接尾・特殊、動詞の非自立は使わない）。
+#    画面が簡易モードのときは、数値が一致しません。
 # 生成日: ${new Date().toLocaleDateString('ja-JP')}
 # ============================================================
 
@@ -1623,12 +1625,16 @@ tokenize_df <- function(df) {
       mr <- RMeCabText(tmp); unlink(tmp)
       w <- vapply(mr, function(x) ifelse(x[8] == "*", x[1], x[8]), "")
       p <- vapply(mr, function(x) x[2], "")
+      p2 <- vapply(mr, function(x) x[3], "")
       data.frame(pair = df$pair[i], id = df$id[i],
                  unit = paste0(df$pair[i], "-", u),
-                 term = w, pos = p, stringsAsFactors = FALSE)
+                 term = w, pos = p, pos2 = p2, stringsAsFactors = FALSE)
     }))
   })
+  # 画面の高精度モード（kuromoji.js）と同じく、名詞のうち非自立・代名詞・接尾・特殊、動詞のうち非自立は使わない
   bind_rows(out) %>%
+    filter(!(pos == "名詞" & pos2 %in% c("非自立", "代名詞", "接尾", "特殊")),
+           !(pos == "動詞" & pos2 == "非自立")) %>%
     filter(pos %in% POS_KEEP,
            !term %in% STOPWORDS,
            nchar(term) >= MIN_NCHAR,

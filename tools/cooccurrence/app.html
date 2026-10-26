@@ -1515,7 +1515,7 @@ for (i in seq_along(sentences)) {
 #  共起ネットワーク比較（テキストA / テキストB）
 #  R + RMeCab + igraph
 #  ※ このアプリの設定を反映して自動生成されたスクリプトです
-${(compound || opts.negation) ? '#  ※ 注意：画面の「複合語のまとめ」「否定のむすびつけ」は、このRコードには反映されません。\n' : ''}# ============================================================
+${(compound || opts.negation) ? '#  ※ 注意：画面の「複合語のまとめ」「否定のむすびつけ」は、このRコードには反映されません。\n' : ''}${kuroTokenizer ? '' : '#  ※ 注意：このRコードの語の扱いは、画面の「高精度モード」と同じです。画面が簡易モードのときは、数値が一致しません。\n'}# ============================================================
 
 # --- パッケージ ---
 # install.packages("igraph")
@@ -1531,14 +1531,25 @@ min_edge   <- ${rMinEdge}                    # 最小共起回数
 stopwords  <- c(${rStop})
 
 # --- 語の抽出関数（品詞・文字数・ストップワードでフィルタ）---
+# 品詞の扱いは、画面の高精度モード（kuromoji.js・IPADIC辞書）と同じ。
+#   名詞のうち、非自立・代名詞・接尾・特殊は使わない（「こと」「もの」「これ」など）。数は「その他」。
+#   動詞のうち、非自立・接尾は使わない。形容詞のうち、非自立は使わない。語は基本形（原形）にそろえる。
 extract_words <- function(sentence) {
   if (nchar(sentence) == 0) return(character(0))
-  res <- unlist(RMeCabC(sentence))
-  pos <- names(res)
-  keep <- pos %in% target_pos &
-          nchar(res) >= min_len &
-          !(res %in% stopwords)
-  as.character(res[keep])
+  tmp <- tempfile(fileext = ".txt"); writeLines(sentence, tmp, useBytes = TRUE)
+  mr <- RMeCabText(tmp); unlink(tmp)
+  if (length(mr) == 0) return(character(0))
+  p1 <- vapply(mr, function(x) x[2], ""); p2 <- vapply(mr, function(x) x[3], "")
+  w  <- vapply(mr, function(x) ifelse(x[8] == "*", x[1], x[8]), "")
+  pos <- ifelse(p1 == "名詞",
+                ifelse(p2 %in% c("非自立", "代名詞", "接尾", "特殊"), NA,
+                       ifelse(p2 == "数", "その他", ifelse(p2 == "形容動詞語幹", "形容詞", "名詞"))),
+         ifelse(p1 == "動詞", ifelse(p2 %in% c("非自立", "接尾"), NA, "動詞"),
+         ifelse(p1 == "形容詞", ifelse(p2 == "非自立", NA, "形容詞"),
+         ifelse(p1 == "副詞", "副詞",
+         ifelse(p1 %in% c("連体詞", "接続詞", "感動詞"), "その他", NA)))))
+  keep <- !is.na(pos) & pos %in% target_pos & nchar(w) >= min_len & !(w %in% stopwords)
+  as.character(w[keep])
 }
 
 # --- ネットワーク構築関数 ---
