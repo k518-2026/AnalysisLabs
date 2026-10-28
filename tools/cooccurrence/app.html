@@ -113,6 +113,10 @@
   .cmp-item{display:inline-flex; align-items:center; gap:4px; cursor:pointer; white-space:nowrap;}
   svg.net circle, svg.net-big circle{cursor:pointer;}
   svg.net line, svg.net-big line{cursor:pointer;}
+  .layout-bar{display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; margin:0 0 12px; font-size:13px;}
+  .layout-bar select{font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);}
+  .lb-item{display:inline-flex; align-items:center; gap:6px;}
+  .net-note{font-size:11.5px; color:var(--ink-soft); min-height:1.2em; margin:4px 2px 0; line-height:1.5;}
   .join-field{grid-column:1 / -1;}
   .join-row{display:flex; flex-wrap:wrap; gap:6px 22px; align-items:center; font-size:13px;}
   .join-chk{display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
@@ -458,6 +462,21 @@
       <span><span class="dot" style="background:var(--b)"></span>Bのみ</span>
       <span><span class="dot" style="background:var(--common)"></span>共通</span>
       <span style="color:var(--ink-soft)">｜ノードの大きさ＝出現頻度、線の太さ＝共起回数</span>
+    </div>
+
+    <div class="layout-bar" id="layoutBar">
+      <label class="lb-item">配置
+        <select id="layoutMode">
+          <option value="auto">自動（つながりの強い語を近くに）</option>
+          <option value="cluster">まとまり別</option>
+          <option value="concentric">同心円（つながりの多い語を中心に）</option>
+          <option value="circle">円形</option>
+          <option value="columns">3列（比較：Aのみ｜共通｜Bのみ）</option>
+        </select>
+      </label>
+      <label class="lb-item"><input type="checkbox" id="labelAvoid" checked> ラベルが重ならないようにする</label>
+      <button class="ghost-btn" id="relayout" type="button">配置をやり直す</button>
+      <button class="ghost-btn" id="fitView" type="button">全体表示</button>
     </div>
 
     <div class="net-grid">
@@ -918,6 +937,360 @@
   }
   function hideTip(){ tooltip.style.opacity = 0; }
 
+  /* ============================================================
+     NetLayout --- 共起ネットワークの配置エンジン（外部ライブラリなし・2つのアプリで共通）
+     配置の種類: auto（力学配置） / circle（円形） / concentric（同心円） / cluster（まとまり別） / columns（3列）
+     どの配置も、同じ入力・同じ乱数の種なら、いつも同じ結果になる。
+     使い方:  const L = NetLayout.compute(nodes, edges, {W, H, pad, layout, seed, radius, ...});
+              L.pos[id] = {x, y}（画面の座標・視野に収まっている）、L.rScale（円を小さくした倍率。1以下）
+              const lab = NetLayout.labels(nodes, L.pos, {W, H, radius, fontSize, all});  lab[id] = {x, y, anchor, hidden}
+     nodes: [{id, freq}]   edges: [{source, target, weight}]（source/target は id または {id}）
+     ============================================================ */
+  const NetLayout = (function(){
+    function mulberry32(seed){
+      let a = seed >>> 0;
+      return function(){
+        a = (a + 0x6D2B79F5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const idOf = v => (v && typeof v === 'object') ? v.id : v;
+
+    // ---- 準備：隣接・次数・連結成分・まとまり ----
+    function prepare(nodes, edges){
+      const index = new Map(nodes.map((n, i) => [n.id, i]));
+      const E = [];
+      edges.forEach(e => {
+        const a = index.get(idOf(e.source)), b = index.get(idOf(e.target));
+        if(a === undefined || b === undefined || a === b) return;
+        E.push({a, b, w: +e.weight || 1});
+      });
+      const adj = nodes.map(() => []);
+      E.forEach(e => { adj[e.a].push({j: e.b, w: e.w}); adj[e.b].push({j: e.a, w: e.w}); });
+      const deg = adj.map(l => l.length);
+      return {index, E, adj, deg};
+    }
+    function components(n, adj){
+      const comp = new Array(n).fill(-1); let c = 0;
+      for(let s = 0; s < n; s++){
+        if(comp[s] >= 0) continue;
+        const stack = [s]; comp[s] = c;
+        while(stack.length){ const u = stack.pop(); adj[u].forEach(({j}) => { if(comp[j] < 0){ comp[j] = c; stack.push(j); } }); }
+        c++;
+      }
+      return {comp, count: c};
+    }
+    // まとまり（コミュニティ）：ラベル伝播法。順序を固定して、同点のときは小さい番号を取るので、結果はいつも同じ
+    function communities(nodes, edges){
+      const P = prepare(nodes, edges), n = nodes.length;
+      const lab = nodes.map((_, i) => i);
+      const order = nodes.map((_, i) => i).sort((x, y) => (P.deg[y] - P.deg[x]) || (x - y));
+      for(let it = 0; it < 30; it++){
+        let changed = false;
+        for(const u of order){
+          const score = new Map();
+          P.adj[u].forEach(({j, w}) => score.set(lab[j], (score.get(lab[j]) || 0) + w));
+          if(!score.size) continue;
+          let best = lab[u], bs = -1;
+          [...score.entries()].sort((p, q) => p[0] - q[0]).forEach(([l, s]) => { if(s > bs + 1e-9){ bs = s; best = l; } });
+          if(best !== lab[u]){ lab[u] = best; changed = true; }
+        }
+        if(!changed) break;
+      }
+      const remap = new Map(); let k = 0;
+      const m = {};
+      lab.forEach((l, i) => { if(!remap.has(l)) remap.set(l, k++); m[nodes[i].id] = remap.get(l); });
+      return {of: m, count: k};
+    }
+
+    // ---- 力学配置（Fruchterman-Reingold）。部分集合（nodeIdx）だけを対象にできる ----
+    function forceLayout(P, nodeIdx, box, o, rng){
+      const n = nodeIdx.length, pos = new Array(n);
+      if(n === 1) return [{x: box.w / 2, y: box.h / 2}];
+      const loc = new Map(nodeIdx.map((g, i) => [g, i]));
+      const links = [];
+      P.E.forEach(e => { if(loc.has(e.a) && loc.has(e.b)) links.push({a: loc.get(e.a), b: loc.get(e.b), w: e.w}); });
+      const wmax = Math.max(1, ...links.map(l => l.w));
+      const k = Math.sqrt(box.w * box.h / n) * o.len;
+      // 初期位置：次数の大きい語を中心側に、小さい語を外側に（円周上に並べる）
+      const ord = nodeIdx.map((g, i) => i).sort((x, y) => (P.deg[nodeIdx[y]] - P.deg[nodeIdx[x]]) || (x - y));
+      ord.forEach((i, r) => {
+        const ang = 2 * Math.PI * r / n + rng() * 0.3, rad = Math.min(box.w, box.h) * (0.12 + 0.3 * r / n);
+        pos[i] = {x: box.w / 2 + Math.cos(ang) * rad, y: box.h / 2 + Math.sin(ang) * rad * (box.h / box.w)};
+      });
+      const iters = o.iters, t0 = Math.min(box.w, box.h) / 6;
+      const dx = new Float64Array(n), dy = new Float64Array(n);
+      for(let it = 0; it < iters; it++){
+        const t = t0 * (1 - it / iters) + 0.5;
+        dx.fill(0); dy.fill(0);
+        for(let i = 0; i < n; i++) for(let j = i + 1; j < n; j++){
+          let ux = pos[i].x - pos[j].x, uy = pos[i].y - pos[j].y, d2 = ux * ux + uy * uy;
+          if(d2 < 0.01){ ux = rng() - 0.5; uy = rng() - 0.5; d2 = 0.01; }
+          const d = Math.sqrt(d2), f = (k * k / d) * o.rep;
+          dx[i] += ux / d * f; dy[i] += uy / d * f; dx[j] -= ux / d * f; dy[j] -= uy / d * f;
+        }
+        links.forEach(l => {
+          const ux = pos[l.a].x - pos[l.b].x, uy = pos[l.a].y - pos[l.b].y, d = Math.max(0.01, Math.hypot(ux, uy));
+          const f = (d * d / k) * (0.5 + 0.5 * l.w / wmax) * o.att;
+          dx[l.a] -= ux / d * f; dy[l.a] -= uy / d * f; dx[l.b] += ux / d * f; dy[l.b] += uy / d * f;
+        });
+        for(let i = 0; i < n; i++){
+          dx[i] += (box.w / 2 - pos[i].x) * o.grav; dy[i] += (box.h / 2 - pos[i].y) * o.grav;
+          if(o.anchor){ const a = o.anchor(nodeIdx[i]); if(a){ dx[i] += (a.x - pos[i].x) * a.sx; dy[i] += (a.y - pos[i].y) * a.sy; } }
+          const d = Math.max(0.01, Math.hypot(dx[i], dy[i])), s = Math.min(d, t);
+          pos[i].x += dx[i] / d * s; pos[i].y += dy[i] / d * s;
+        }
+      }
+      return pos;
+    }
+    function bbox(pts){
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      pts.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
+      return {x0, y0, x1, y1, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0)};
+    }
+    // 箱を段に並べる（棚詰め）。箱の並びは、大きいものから
+    function shelfPack(boxes, W, H, gap){
+      const order = boxes.map((b, i) => i).sort((p, q) => (boxes[q].w * boxes[q].h) - (boxes[p].w * boxes[p].h) || p - q);
+      // 全体が W:H に近くなる行の幅を探す
+      let best = null;
+      for(let rowW = Math.max(...boxes.map(b => b.w)); rowW <= boxes.reduce((s, b) => s + b.w + gap, 0) + 1; rowW *= 1.12){
+        let x = 0, y = 0, rowH = 0, maxX = 0; const place = new Array(boxes.length);
+        order.forEach(i => {
+          const b = boxes[i];
+          if(x > 0 && x + b.w > rowW){ x = 0; y += rowH + gap; rowH = 0; }
+          place[i] = {x, y}; x += b.w + gap; rowH = Math.max(rowH, b.h); maxX = Math.max(maxX, x - gap);
+        });
+        const tw = maxX, th = y + rowH, sc = Math.min(W / tw, H / th);
+        if(!best || sc > best.sc) best = {sc, place, tw, th};
+      }
+      return best;
+    }
+
+    // ---- 画面に収めて、円どうしの重なりをほどく ----
+    function fitTo(pos, W, H, pad, rad, extra){
+      const pts = pos.map((p, i) => ({x: p.x, y: p.y})).concat(extra || []);
+      const b = bbox(pts), rmax = (extra && extra.length) ? 0 : Math.max(...rad);
+      const sx = (W - 2 * pad - 2 * rmax) / b.w, sy = (H - 2 * pad - 2 * rmax) / b.h, s = Math.min(sx, sy);
+      const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+      const fit = pos.map(p => ({x: W / 2 + (p.x - cx) * s, y: H / 2 + (p.y - cy) * s}));
+      fit.tf = {s, cx, cy, W, H};
+      return fit;
+    }
+    function separate(pos, rad, W, H, pad, gap, iters){
+      const n = pos.length;
+      for(let it = 0; it < iters; it++){
+        let moved = false;
+        for(let i = 0; i < n; i++) for(let j = i + 1; j < n; j++){
+          let ux = pos[i].x - pos[j].x, uy = pos[i].y - pos[j].y, d = Math.hypot(ux, uy);
+          const need = rad[i] + rad[j] + gap;
+          if(d < need){
+            if(d < 0.01){ ux = (i % 2 ? 1 : -1); uy = 0.3; d = Math.hypot(ux, uy); }
+            const push = (need - d) / 2;
+            pos[i].x += ux / d * push; pos[i].y += uy / d * push; pos[j].x -= ux / d * push; pos[j].y -= uy / d * push; moved = true;
+          }
+        }
+        for(let i = 0; i < n; i++){
+          pos[i].x = Math.max(pad + rad[i], Math.min(W - pad - rad[i], pos[i].x));
+          pos[i].y = Math.max(pad + rad[i], Math.min(H - pad - rad[i], pos[i].y));
+        }
+        if(!moved) break;
+      }
+      // まだ重なっているか
+      let over = 0;
+      for(let i = 0; i < n; i++) for(let j = i + 1; j < n; j++) if(Math.hypot(pos[i].x - pos[j].x, pos[i].y - pos[j].y) < rad[i] + rad[j] + gap - 0.5) over++;
+      return over;
+    }
+
+    function compute(nodes, edges, opt){
+      const o = Object.assign({W: 600, H: 400, pad: 14, layout: 'auto', seed: 1, rep: 1, len: 1, att: 1, grav: 0.02, iters: 300,
+                               gap: 3, radius: () => 8, groupOf: null, labelRoom: 0}, opt || {});
+      const n = nodes.length, out = {pos: {}, rScale: 1, communities: null};
+      if(!n) return out;
+      const P = prepare(nodes, edges), rng = mulberry32(o.seed * 7919 + 13);
+      const rad0 = nodes.map(nd => o.radius(nd));
+      const W = o.W, H = o.H;
+      const PH = Math.max(250, Math.min(1000, 1000 * H / W));   // 配置の基準になる平面（幅1000）の高さ。画面の縦横比に合わせる
+      let pos;   // 抽象座標（あとで画面に収める）
+      let regionBoxes = null;
+      const comm = communities(nodes, edges); out.communities = comm.of;
+
+      if(o.layout === 'circle'){
+        // まとまりごとに隣り合わせて、次数の大きい順に円周へ
+        const ord = nodes.map((nd, i) => i).sort((x, y) => (comm.of[nodes[x].id] - comm.of[nodes[y].id]) || (P.deg[y] - P.deg[x]) || (x - y));
+        pos = new Array(n);
+        ord.forEach((i, r) => { const a = -Math.PI / 2 + 2 * Math.PI * r / n; pos[i] = {x: Math.cos(a), y: Math.sin(a)}; });
+      } else if(o.layout === 'concentric'){
+        // 次数の大きい語を中心に、小さい語ほど外側の輪へ。輪の中は、まとまり順
+        const ord = nodes.map((nd, i) => i).sort((x, y) => (P.deg[y] - P.deg[x]) || ((nodes[y].freq || 0) - (nodes[x].freq || 0)) || (x - y));
+        pos = new Array(n);
+        let ring = 0, placed = 0;
+        while(placed < n){
+          const cap = ring === 0 ? 1 : Math.max(6, Math.round(6 * ring * 1.15));
+          const members = ord.slice(placed, placed + cap).sort((x, y) => (comm.of[nodes[x].id] - comm.of[nodes[y].id]) || (x - y));
+          members.forEach((i, r) => { const a = -Math.PI / 2 + (ring % 2 ? Math.PI / members.length : 0) + 2 * Math.PI * r / members.length; pos[i] = {x: Math.cos(a) * ring, y: Math.sin(a) * ring}; });
+          placed += members.length; ring++;
+        }
+      } else if(o.layout === 'cluster'){
+        // まとまりごとに力学配置し、箱を並べる
+        const groups = []; for(let c = 0; c < comm.count; c++) groups.push([]);
+        nodes.forEach((nd, i) => groups[comm.of[nd.id]].push(i));
+        const parts = groups.map(g => {
+          const side = Math.sqrt(g.length) * 120;
+          const sub = forceLayout(P, g, {w: side, h: side}, Object.assign({}, o, {iters: Math.min(o.iters, 250)}), rng);
+          const b = bbox(sub);
+          return {g, sub, b, w: b.w + 60, h: b.h + 60};
+        });
+        const pack = shelfPack(parts, 1000, PH, 40);
+        pos = new Array(n);
+        parts.forEach((p, k) => p.g.forEach((gi, i) => { pos[gi] = {x: pack.place[k].x + 30 + p.sub[i].x - p.b.x0, y: pack.place[k].y + 30 + p.sub[i].y - p.b.y0}; }));
+      } else if(o.layout === 'regions' && o.regionOf){
+        // 5つの区画（左＝事前のみ／右＝事後のみ／中央の上＝増加・中＝変化なし・下＝減少）に、語を入れる。
+        // 中央の3区画の高さは、語の数に応じて決める。区画の中は、つながりを見ながら力学配置
+        const mem = {gone: [], new: [], up: [], same: [], down: []};
+        nodes.forEach((nd, i) => { const r = o.regionOf(nd); (mem[r] || mem.same).push(i); });
+        const wgt = k => mem[k].length ? Math.pow(mem[k].length, 0.7) : 0.35;
+        const tot = wgt('up') + wgt('same') + wgt('down'), gapY = 40, avail = PH - 2 * gapY;
+        const hUp = avail * wgt('up') / tot, hSame = avail * wgt('same') / tot, hDown = avail * wgt('down') / tot;
+        const box = {
+          gone: {x0: 0, y0: 0, x1: 230, y1: PH}, new: {x0: 770, y0: 0, x1: 1000, y1: PH},
+          up: {x0: 300, y0: 0, x1: 700, y1: hUp},
+          same: {x0: 300, y0: hUp + gapY, x1: 700, y1: hUp + gapY + hSame},
+          down: {x0: 300, y0: hUp + hSame + 2 * gapY, x1: 700, y1: PH}
+        };
+        pos = new Array(n);
+        regionBoxes = {};
+        Object.keys(mem).forEach(k => { regionBoxes[k] = Object.assign({count: mem[k].length}, box[k]); });
+        Object.keys(mem).forEach(k => {
+          const g = mem[k]; if(!g.length) return;
+          const b = box[k], bw = b.x1 - b.x0, bh = b.y1 - b.y0;
+          const sub = forceLayout(P, g, {w: bw, h: bh}, o, rng);
+          const sb = bbox(sub);
+          g.forEach((gi, i) => {
+            const fx = g.length === 1 ? 0.5 : (sub[i].x - sb.x0) / sb.w, fy = g.length === 1 ? 0.5 : (sub[i].y - sb.y0) / sb.h;
+            pos[gi] = {x: b.x0 + bw * (0.06 + 0.88 * fx), y: b.y0 + bh * (0.07 + 0.86 * fy)};
+          });
+        });
+      } else if(o.layout === 'columns' && o.groupOf){
+        // 左列・中央・右列（比較ネットワーク用）。各列の中は、つながりを見ながら縦に並べる
+        // 各列の中は、隣の列とのつながりの平均の高さで並べ替えを何度か行い（重心法）、線の交差を減らす。高さは等間隔
+        const colX = {L: 150, C: 500, R: 850};
+        const cols = {L: [], C: [], R: []};
+        nodes.forEach((nd, i) => cols[o.groupOf(nd) || 'C'].push(i));
+        Object.keys(cols).forEach(c => cols[c].sort((x, y) => ((nodes[y].freq || 0) - (nodes[x].freq || 0)) || (x - y)));
+        const yOf = new Array(n).fill(PH / 2);
+        const setY = c => { const m = cols[c].length; cols[c].forEach((gi, r) => { yOf[gi] = m <= 1 ? PH / 2 : PH * r / (m - 1); }); };
+        ['L', 'C', 'R'].forEach(setY);
+        for(let sweep = 0; sweep < 8; sweep++){
+          ['L', 'C', 'R', 'C', 'L'].forEach(c => {
+            const bary = new Map();
+            cols[c].forEach(gi => {
+              let s = 0, w = 0;
+              P.adj[gi].forEach(({j, w: ww}) => { if((o.groupOf(nodes[j]) || 'C') !== c){ s += yOf[j] * ww; w += ww; } });
+              bary.set(gi, w ? s / w : yOf[gi]);
+            });
+            cols[c].sort((x, y) => (bary.get(x) - bary.get(y)) || (x - y));
+            setY(c);
+          });
+        }
+        pos = new Array(n);
+        Object.keys(cols).forEach(c => {
+          const m = cols[c].length, stagger = m > 12;
+          cols[c].forEach((gi, r) => { pos[gi] = {x: colX[c] + (stagger ? (r % 2 ? 70 : -70) : 0), y: yOf[gi]}; });
+        });
+      } else {
+        // auto：連結成分ごとに力学配置し、成分の箱を並べる
+        const C = components(n, P.adj), groups = []; for(let c = 0; c < C.count; c++) groups.push([]);
+        nodes.forEach((nd, i) => groups[C.comp[i]].push(i));
+        if(groups.length === 1){
+          pos = forceLayout(P, groups[0], {w: 1000, h: PH}, o, rng);
+        } else {
+          const parts = groups.map(g => {
+            const side = Math.sqrt(g.length) * 130;
+            const sub = forceLayout(P, g, {w: side, h: side}, o, rng);
+            const b = bbox(sub);
+            return {g, sub, b, w: b.w + 50, h: b.h + 50};
+          });
+          const pack = shelfPack(parts, 1000, PH, 30);
+          pos = new Array(n);
+          parts.forEach((p, k) => p.g.forEach((gi, i) => { pos[gi] = {x: pack.place[k].x + 25 + p.sub[i].x - p.b.x0, y: pack.place[k].y + 25 + p.sub[i].y - p.b.y0}; }));
+        }
+      }
+
+      // 画面に収め、円の重なりをほどく。ほどけないときは、円を少し小さくして、もう一度
+      let rs = 1, over = 0, fin;
+      for(let attempt = 0; attempt < 5; attempt++){
+        const rad = rad0.map(r => r * rs);
+        const extra = [];
+        if(regionBoxes) Object.keys(regionBoxes).forEach(k => { const b = regionBoxes[k]; if(b.count){ extra.push({x: b.x0, y: b.y0}, {x: b.x1, y: b.y1}); } });
+        fin = fitTo(pos, W, H, o.pad + o.labelRoom, rad, extra);
+        over = separate(fin, rad, W, H, o.pad, o.gap, 120);
+        if(over === 0) break;
+        rs *= 0.85;
+      }
+      out.rScale = rs; out.overlaps = over;
+      nodes.forEach((nd, i) => { out.pos[nd.id] = fin[i]; });
+      // 区画の配置のとき：区画の枠を、画面の座標で返す（背景と名前を描くため）
+      if(o.layout === 'regions' && regionBoxes){
+        const tf = fin.tf; out.regionBoxes = {};
+        Object.keys(regionBoxes).forEach(k => {
+          const b = regionBoxes[k];
+          if(!b.count) return;
+          out.regionBoxes[k] = {x0: tf.W / 2 + (b.x0 - tf.cx) * tf.s, y0: tf.H / 2 + (b.y0 - tf.cy) * tf.s,
+                                x1: tf.W / 2 + (b.x1 - tf.cx) * tf.s, y1: tf.H / 2 + (b.y1 - tf.cy) * tf.s, count: b.count};
+        });
+      }
+      return out;
+    }
+
+    // ---- ラベルの配置：円の上・下・右・左・斜めの候補から、重ならない位置を選ぶ。選べないものは hidden（all のときは、いちばん重ならない位置） ----
+    function labels(nodes, pos, o){
+      const W = o.W, H = o.H, fs = o.fontSize || 11, res = {};
+      const wid = o.measure ? (s => o.measure(String(s)) + 3)
+        : (s => { let w = 3; for(const ch of String(s)){ w += /[\u0000-ÿ]/.test(ch) ? fs * 0.6 : fs * 1.04; } return w; });
+      const rects = [];
+      nodes.forEach(nd => { const p = pos[nd.id], r = o.radius(nd); rects.push({x0: p.x - r, y0: p.y - r, x1: p.x + r, y1: p.y + r, node: true}); });
+      const hit = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+      const order = nodes.map((nd, i) => i).sort((x, y) => ((nodes[y].freq || 0) - (nodes[x].freq || 0)) || (x - y));
+      const placed = (o.blocks || []).map(b => ({x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1}));   // ほかの文字（区画の名前など）も、よける
+      order.forEach(i => {
+        const nd = nodes[i], p = pos[nd.id], r = o.radius(nd), w = wid(nd.id), h = fs * 1.25, g = 3;
+        const cands = [
+          {x: p.x, y: p.y - r - g, anchor: 'middle', box: () => ({x0: p.x - w / 2, x1: p.x + w / 2, y0: p.y - r - g - h, y1: p.y - r - g})},
+          {x: p.x, y: p.y + r + g + h * 0.85, anchor: 'middle', box: () => ({x0: p.x - w / 2, x1: p.x + w / 2, y0: p.y + r + g, y1: p.y + r + g + h})},
+          {x: p.x + r + g, y: p.y + h * 0.3, anchor: 'start', box: () => ({x0: p.x + r + g, x1: p.x + r + g + w, y0: p.y - h / 2, y1: p.y + h / 2})},
+          {x: p.x - r - g, y: p.y + h * 0.3, anchor: 'end', box: () => ({x0: p.x - r - g - w, x1: p.x - r - g, y0: p.y - h / 2, y1: p.y + h / 2})},
+          {x: p.x + r * 0.7 + g, y: p.y - r * 0.7 - g, anchor: 'start', box: () => ({x0: p.x + r * 0.7 + g, x1: p.x + r * 0.7 + g + w, y0: p.y - r * 0.7 - g - h, y1: p.y - r * 0.7 - g})},
+          {x: p.x - r * 0.7 - g, y: p.y - r * 0.7 - g, anchor: 'end', box: () => ({x0: p.x - r * 0.7 - g - w, x1: p.x - r * 0.7 - g, y0: p.y - r * 0.7 - g - h, y1: p.y - r * 0.7 - g})},
+          {x: p.x + r * 0.7 + g, y: p.y + r * 0.7 + g + h * 0.85, anchor: 'start', box: () => ({x0: p.x + r * 0.7 + g, x1: p.x + r * 0.7 + g + w, y0: p.y + r * 0.7 + g, y1: p.y + r * 0.7 + g + h})},
+          {x: p.x - r * 0.7 - g, y: p.y + r * 0.7 + g + h * 0.85, anchor: 'end', box: () => ({x0: p.x - r * 0.7 - g - w, x1: p.x - r * 0.7 - g, y0: p.y + r * 0.7 + g, y1: p.y + r * 0.7 + g + h})}
+        ];
+        let best = null, bestScore = 1e9;
+        cands.forEach(c => {
+          const b = c.box();
+          let score = 0;
+          if(b.x0 < 2 || b.y0 < 2 || b.x1 > W - 2 || b.y1 > H - 2) score += 1000;
+          rects.forEach((q, j) => { if(j !== i && q.node && hit(b, q)) score += 40; });
+          placed.forEach(q => { if(hit(b, q)) score += 100; });
+          if(score < bestScore){ bestScore = score; best = {c, b}; }
+        });
+        if(bestScore >= 100 && !o.all){ res[nd.id] = {x: p.x, y: p.y, cy: p.y, anchor: 'middle', hidden: true}; return; }
+        placed.push(best.b);
+        res[nd.id] = {x: best.c.x, y: best.c.y, cy: (best.b.y0 + best.b.y1) / 2, anchor: best.c.anchor, hidden: false};
+      });
+      return res;
+    }
+
+    return {compute, labels, communities, mulberry32};
+  })();
+
+
+  // 配置の設定（画面の「配置」欄）。同じ設定・同じ種なら、いつも同じ配置になる
+  const LAYOUT = {mode:'auto', seed:1, avoid:true};
+  const ZOOMS = new Map();
+
   function renderNetwork(svgEl, nodes, edges, opts){
     const svg = d3.select(svgEl);
     svg.selectAll('*').remove();
@@ -926,7 +1299,14 @@
     svg.attr('viewBox', [0,0,width,height]);
 
     const g = svg.append('g');
-    svg.call(d3.zoom().scaleExtent([0.4,4]).on('zoom', (ev) => g.attr('transform', ev.transform)));
+    const zoom = d3.zoom().scaleExtent([0.4,4]).on('zoom', (ev) => g.attr('transform', ev.transform));
+    svg.call(zoom);
+    ZOOMS.set(svgEl, zoom);
+
+    // 図の下の注記（省略したラベルの数など）
+    let note = svgEl.parentNode.querySelector('.net-note');
+    if(!note){ note = document.createElement('div'); note.className = 'net-note'; svgEl.insertAdjacentElement('afterend', note); }
+    note.textContent = '';
 
     if(nodes.length === 0){
       svg.append('text').attr('x', width/2).attr('y', height/2).attr('text-anchor','middle')
@@ -940,25 +1320,59 @@
     const wExtent = d3.extent(edges, d => d.weight);
     const wScale = d3.scaleLinear().domain(wExtent[0]===wExtent[1]?[0,wExtent[1]]:wExtent).range([1, P.edgeMax]);
 
-    const sim = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(edges).id(d=>d.id).distance(d => P.distance - Math.min(P.distance*0.55, wScale(d.weight)*8)).strength(P.linkStrength))
-      .force('charge', d3.forceManyBody().strength(P.charge))
-      .force('center', d3.forceCenter(width/2, height/2))
-      .force('collide', d3.forceCollide(d => rScale(d.freq) + P.collide));
+    // 配置：描画パラメーターの値を、配置エンジンの強さに読み替える（反発力＝広がり、リンク距離＝語どうしの間隔、リンク強度＝引き寄せ、衝突半径の余白＝円どうしのすきま）
+    const mode = (LAYOUT.mode === 'columns' && !opts.groupOf) ? 'auto' : LAYOUT.mode;
+    const L = NetLayout.compute(nodes, edges, {
+      W: width, H: height, pad: 10, labelRoom: P.label + 6, layout: mode, seed: LAYOUT.seed,
+      radius: d => rScale(d.freq), groupOf: opts.groupOf,
+      rep: Math.min(3, Math.max(0.3, Math.abs(P.charge) / 220)), len: P.distance / 70,
+      att: Math.min(2, Math.max(0.2, P.linkStrength / 0.5)), gap: 2 + P.collide * 0.4
+    });
+    const rr = d => rScale(d.freq) * L.rScale;
+    nodes.forEach(d => { const p = L.pos[d.id]; d.x = p.x; d.y = p.y; });
+    const byId = new Map(nodes.map(d => [d.id, d]));
+    edges.forEach(e => { e.source = byId.get(e.source.id || e.source); e.target = byId.get(e.target.id || e.target); });
+    const lab = NetLayout.labels(nodes, L.pos, {W: width, H: height, fontSize: P.label, radius: rr, all: !LAYOUT.avoid});
+    const labOff = new Map(nodes.map(d => [d.id, {dx: lab[d.id].x - d.x, dy: lab[d.id].y - d.y}]));
+    const hiddenN = nodes.filter(d => lab[d.id].hidden).length;
+    const notes = [];
+    if(hiddenN) notes.push(`ラベル ${hiddenN} 個は、重なるため省略しています（円にマウスを重ねると語が出ます）。`);
+    if(LAYOUT.mode === 'columns' && !opts.groupOf) notes.push('「3列」は、比較ネットワークだけに使います。この図は「自動」で配置しています。');
+    if(L.rScale < 1) notes.push('円どうしが重なるため、円を少し小さくしています。');
+    note.textContent = notes.join(' ');
 
     const link = g.append('g').selectAll('line').data(edges).join('line')
       .attr('stroke', d => opts.edgeColor ? opts.edgeColor(d) : '#9AA6AE')
       .attr('stroke-opacity', 0.65)
-      .attr('stroke-width', d => wScale(d.weight));
+      .attr('stroke-width', d => wScale(d.weight))
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
 
     const node = g.append('g').selectAll('circle').data(nodes).join('circle')
-      .attr('r', d => rScale(d.freq))
+      .attr('r', rr)
       .attr('fill', d => opts.nodeColor(d))
       .attr('stroke', '#fff').attr('stroke-width', 1.5)
+      .attr('cx', d => d.x).attr('cy', d => d.y)
       .call(d3.drag()
-        .on('start', (ev,d) => { if(!ev.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
-        .on('drag', (ev,d) => { d.fx=ev.x; d.fy=ev.y; })
-        .on('end', (ev,d) => { if(!ev.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }));
+        .on('drag', (ev, d) => {
+          d.x = ev.x; d.y = ev.y;
+          d3.select(ev.sourceEvent.target).attr('cx', d.x).attr('cy', d.y);
+          link.filter(l => l.source === d).attr('x1', d.x).attr('y1', d.y);
+          link.filter(l => l.target === d).attr('x2', d.x).attr('y2', d.y);
+          const o = labOff.get(d.id);
+          label.filter(t => t === d).attr('x', d.x + o.dx).attr('y', d.y + o.dy);
+        }));
+
+    // ラベルは円の上に重ねて描く
+    const label = g.append('g').selectAll('text').data(nodes).join('text')
+      .text(d => d.id)
+      .attr('font-size', P.label)
+      .attr('font-family', 'var(--body)')
+      .attr('fill', '#1B2430')
+      .attr('text-anchor', d => lab[d.id].anchor)
+      .attr('pointer-events', 'none')
+      .attr('display', d => lab[d.id].hidden ? 'none' : null)
+      .attr('x', d => lab[d.id].x).attr('y', d => lab[d.id].y);
+
 
     node.on('mouseenter', function(ev,d){
       d3.select(this).attr('stroke', '#1B2430').attr('stroke-width', 2.5);
@@ -978,21 +1392,6 @@
       showTip(`<b>${d.source.id||d.source}</b> – <b>${d.target.id||d.target}</b><br>共起回数: ${d.weight}<br><span style="opacity:.75">クリックで元の文を表示</span>`, ev.clientX, ev.clientY);
     }).on('mousemove', ev => { tooltip.style.left=(ev.clientX+14)+'px'; tooltip.style.top=(ev.clientY+10)+'px'; })
       .on('mouseleave', hideTip);
-
-    const label = g.append('g').selectAll('text').data(nodes).join('text')
-      .text(d => d.id)
-      .attr('font-size', P.label)
-      .attr('font-family', 'var(--body)')
-      .attr('fill', '#1B2430')
-      .attr('text-anchor','middle')
-      .attr('pointer-events','none')
-      .attr('dy', d => -(rScale(d.freq)+6));
-
-    sim.on('tick', () => {
-      link.attr('x1', d=>d.source.x).attr('y1', d=>d.source.y).attr('x2', d=>d.target.x).attr('y2', d=>d.target.y);
-      node.attr('cx', d=>d.x).attr('cy', d=>d.y);
-      label.attr('x', d=>d.x).attr('y', d=>d.y);
-    });
   }
 
   // Latest computed graphs, so parameter sliders can re-render without recomputing.
@@ -1030,7 +1429,18 @@
       if(combinedEdgeMap.has(k)){ combinedEdgeMap.get(k).origin = 'both'; }
       else combinedEdgeMap.set(k, {source:e.source, target:e.target, weight:e.weight, origin:'b'});
     });
+    // 3列のときは、いちばん語の多い列に合わせて、図の高さを広げる（語が重ならないように）
+    const cmpSvg = $('svgCompare');
+    if(!cmpSvg.dataset.h0) cmpSvg.dataset.h0 = String(cmpSvg.clientHeight || 440);
+    let cmpH = +cmpSvg.dataset.h0;
+    if(LAYOUT.mode === 'columns'){
+      const cnt = {L:0, C:0, R:0};
+      combinedNodeMap.forEach((n, id) => { cnt[(nodeIdsA.has(id) && nodeIdsB.has(id)) ? 'C' : (nodeIdsA.has(id) ? 'L' : 'R')]++; });
+      cmpH = Math.max(cmpH, 18 * Math.max(cnt.L, cnt.C, cnt.R) + 60);
+    }
+    cmpSvg.style.height = cmpH + 'px';
     renderNetwork($('svgCompare'), [...combinedNodeMap.values()], [...combinedEdgeMap.values()], {
+      groupOf: d => (nodeIdsA.has(d.id) && nodeIdsB.has(d.id)) ? 'C' : (nodeIdsA.has(d.id) ? 'L' : 'R'),
       onNode: d => showKwic([d.id], 'both'), onLink: d => showKwic(linkWords(d), 'both'),
       nodeColor: d => colorForNode(d.id),
       edgeColor: d => d.origin==='both' ? 'var(--common)' : (d.origin==='a' ? 'var(--a)' : 'var(--b)')
@@ -1167,7 +1577,20 @@
     return r;
   }
   // 文の集まり A・B から、(1) 実際の類似度、(2) A と B の文を混ぜて割り直した類似度、(3) A・B それぞれを半分に割った類似度、を求める
-  function computeBaseline(recsA, recsB, opts, topN, minEdge, R){
+  // 画面が固まらないように、80ミリ秒ごとに処理を譲る。progress(終わった回数, 全部の回数) で進み具合を知らせる。
+  // 乱数の種と計算の順序は変えていないので、結果は小分けにしない場合と同じ
+  async function computeBaseline(recsA, recsB, opts, topN, minEdge, R, progress, cancelled){
+    let last = performance.now(), done = 0;
+    const total = R * 3;
+    const tick = async () => {
+      done++;
+      if(performance.now() - last > 80){
+        if(progress) progress(done, total);
+        await new Promise(r => setTimeout(r, 0));
+        last = performance.now();
+        if(cancelled && cancelled()) throw new Error('cancelled');
+      }
+    };
     const A = recsA.filter(r => r.toks.length), B = recsB.filter(r => r.toks.length);
     const obs = simOf(graphFromRecs(A, opts), graphFromRecs(B, opts), topN, minEdge);
     const out = {obs, R, nA: A.length, nB: B.length};
@@ -1179,10 +1602,11 @@
         const g1 = idx.slice(0, A.length).map(i => pool[i]), g2 = idx.slice(A.length).map(i => pool[i]);
         const s = simOf(graphFromRecs(g1, opts), graphFromRecs(g2, opts), topN, minEdge);
         nv.push(s.nodeJ); ev.push(s.edgeJ);
+        await tick();
       }
       out.perm = {node: summarizeVals(nv, obs.nodeJ), edge: summarizeVals(ev, obs.edgeJ)};
     }
-    const selfSplit = (recs, seed) => {
+    const selfSplit = async (recs, seed) => {
       if(recs.length < 4) return null;
       const idx = recs.map((_, i) => i), rng = mulberry32(seed), half = Math.floor(recs.length / 2);
       const nv = [], ev = [];
@@ -1191,11 +1615,12 @@
         const g1 = idx.slice(0, half).map(i => recs[i]), g2 = idx.slice(half).map(i => recs[i]);
         const s = simOf(graphFromRecs(g1, opts), graphFromRecs(g2, opts), topN, minEdge);
         nv.push(s.nodeJ); ev.push(s.edgeJ);
+        await tick();
       }
       return {node: summarizeVals(nv), edge: summarizeVals(ev)};
     };
-    out.selfA = selfSplit(A, BASE_SEED + 1);
-    out.selfB = selfSplit(B, BASE_SEED + 2);
+    out.selfA = await selfSplit(A, BASE_SEED + 1);
+    out.selfB = await selfSplit(B, BASE_SEED + 2);
     return out;
   }
   const pct = x => Math.round(x * 100) + '%';
@@ -1204,10 +1629,16 @@
     const body = $('baseBody');
     body.innerHTML = '<p class="note">計算中…（文を入れ替えて ' + BASE_R + ' 回くり返します）</p>';
     const token = (renderBaseline.token = (renderBaseline.token || 0) + 1);
-    setTimeout(() => {
+    setTimeout(async () => {
       if(token !== renderBaseline.token || !LAST) return;
       const t0 = performance.now();
-      const res = computeBaseline(LAST.recsA, LAST.recsB, LAST.opts, LAST.topN, LAST.minEdge, BASE_R);
+      let res;
+      try{
+        res = await computeBaseline(LAST.recsA, LAST.recsB, LAST.opts, LAST.topN, LAST.minEdge, BASE_R,
+          (d, n) => { if(token === renderBaseline.token) body.innerHTML = `<p class="note">計算中… ${Math.min(100, Math.round(d / n * 100))}％（文を入れ替えて ${BASE_R} 回くり返します。文章が長いと、時間がかかります）</p>`; },
+          () => token !== renderBaseline.token || !LAST);
+      }catch(e){ return; }   // 条件を変えて、もう一度生成されたときは、前の計算をやめる
+      if(token !== renderBaseline.token || !LAST) return;
       LAST.baseline = res;
       const small = (res.obs.nodesX < 5 || res.obs.nodesY < 5);
       let rows = `<tr><td>実際の A と B</td><td class="num">${pct(res.obs.nodeJ)}</td><td class="num">${pct(res.obs.edgeJ)}</td></tr>`;
@@ -1226,6 +1657,14 @@
       body.innerHTML = `<table class="pairs"><thead><tr><th>比べ方</th><th style="text-align:right">語彙の類似度</th><th style="text-align:right">共起パターンの類似度</th></tr></thead><tbody>${rows}</tbody></table>${text}`;
     }, 30);
   }
+
+  // ---------- 配置の操作 ----------
+  $('layoutMode').addEventListener('change', () => { LAYOUT.mode = $('layoutMode').value; if(hasRun) redrawNetworks(); });
+  $('labelAvoid').addEventListener('change', () => { LAYOUT.avoid = $('labelAvoid').checked; if(hasRun) redrawNetworks(); });
+  $('relayout').addEventListener('click', () => { LAYOUT.seed += 1; if(hasRun) redrawNetworks(); });
+  $('fitView').addEventListener('click', () => {
+    ZOOMS.forEach((zoom, el) => d3.select(el).transition().duration(250).call(zoom.transform, d3.zoomIdentity));
+  });
 
   // ---------- main run ----------
   $('runBtn').addEventListener('click', () => {
